@@ -6,7 +6,7 @@ OPTIMIZE_FLAGS       = -O3 -finline-functions
 CXXFLAGS             = -Wall -g 
 CFLAGS               =
 LDFLAGS              = 
-INCS                 = -I ./ 
+INCS                 = -I ./ -I ./fastflow/
 LIBS                 = 
 INCLUDES             =
 TARGET               = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
@@ -37,7 +37,7 @@ clean:
 	-rm -fr *.o *~ *.so*
 cleanall:
 	make -C ./inspectors cleanall
-	-rm -fr *.o *~ 
+	-rm -fr *.o *~ *.so*
 	-rm -fr $(TARGET)
 lib:
 	ar rs libdpi.a *.o inspectors/*.o

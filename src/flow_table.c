@@ -607,7 +607,9 @@ void dpi_flow_table_check_expiration_v4(
 		u_int16_t partition_id,
 		u_int32_t current_time){
 	u_int32_t i;
+#if !DPI_USE_MTF
 	ipv4_flow_t* current;
+#endif
 	for(i=db->partitions[partition_id].partition.
 			 informations.lowest_index;
 	    i<=db->partitions[partition_id].partition.
@@ -652,7 +654,9 @@ void dpi_flow_table_check_expiration_v6(
 
 
 	u_int32_t i;
+#if !DPI_USE_MTF
 	ipv6_flow_t* current;
+#endif
 	for(i=db->partitions[partition_id].partition.
 		  informations.lowest_index;
 		i<=db->partitions[partition_id].partition.

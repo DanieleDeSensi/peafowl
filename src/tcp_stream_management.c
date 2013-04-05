@@ -242,8 +242,6 @@ dpi_tcp_reordering_reordered_segment_t
 			    received_seq_num,
 			    tracking->expected_seq_num[pkt->direction]);
 
-	u_int32_t ack=ntohl(tcph->ack_seq);
-
 	if(received_seq_num==expected_seq_num){
 		debug_print("%s\n", "Received in order segment");
 		to_return.status=DPI_TCP_REORDERING_STATUS_IN_ORDER;
