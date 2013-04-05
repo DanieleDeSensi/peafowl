@@ -1,8 +1,8 @@
 CC                   = gcc 
-CXX 		     	 = g++ 
+CXX                  = g++ 
 LINK_OPT             = 
 VERSION              = 
-OPTIMIZE_FLAGS       = -O6
+OPTIMIZE_FLAGS       = -O3
 CXXFLAGS             = -Wall -g 
 CFLAGS               =
 LDFLAGS              = 

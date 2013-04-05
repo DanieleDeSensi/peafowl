@@ -136,9 +136,6 @@ static dpi_inspector_callback
  * @param num_table_partitions The number of partitions of the hash table.
  * @return A pointer to the state of the library otherwise.
  */
-#if DPI_ENABLE_MP_API == 0
-static
-#endif
 dpi_library_state_t* dpi_init_stateful_num_partitions(
 		       u_int32_t size_v4, u_int32_t size_v6,
 		       u_int32_t max_active_v4_flows,
@@ -734,12 +731,6 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
  *          more needed (e.g. after calling
  *          dpi_state*_get_app_protocol(..)).
  */
-#if DPI_ENABLE_MP_API == 0
-static
-#if DPI_USE_INLINING == 1
-inline
-#endif
-#endif
 int8_t mp_dpi_extract_packet_infos(
 		       dpi_library_state_t *state, const unsigned char* p_pkt,
 		       u_int32_t p_length, dpi_pkt_infos_t *pkt_infos,

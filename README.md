@@ -72,20 +72,35 @@ At the moment, data and metadata extraction is supported for the following proto
 
 Usage
 ================================================================================================================
-To use the framework, is sufficient to run a "make", a "make lib", include the ["api.h"](api.h) header and to 
-link libdpi.a.
+Fetch the framework typing:
 
-The framework can be used in two different modes: Stateful and Stateless.
-+ Stateful: is suited for applications which don't have a  concept of 'flow'. In this case the user simply pass to
-the library a stream of packets without concerning about how to store the flow. All the flow management and storing
-will be done by the library.
+```
+$ git clone git://github.com/DanieleDeSensi/Peafowl.git
+$ cd Peafowl
+```
 
-+ Stateless: is suited for applications which already have a concept of 'flow'. In this case the framework demand 
-the storage of the flow data to the application. The user application should be modified in order to store with 
-their own flow informations also the informations needed by the framework to identify the protocols.
+If you only need the sequential API, compile it with:
 
+```
+$ make seq 
+```
 
-The stateful API is based on 3 main calls:
+otherwise, if you also need the API with multicores support, compile it with:
+
+```
+$ make par
+```
+
+After that, install it with
+
+```
+$ make install
+```
+
+At this point, your application can use Peafowl by including the ["src/api.h"](src/api.h) header and by 
+linking lib/libdpi.a for the sequential version or lib/libmpdpi.a for the version with multicore support.
+
+The API is based on 3 main calls:
 
 + ```dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS)```:
 used to initialize the state of the framework. It requires the size of the tables that the framework will use
@@ -101,8 +116,8 @@ be required as parameter for most of the framework calls;
  
 + ```dpi_terminate(state)```: used to terminate the framework. 
 
-For the other API calls (e.g. for stateless mode or to enable/disable protocol inspectors or to enable/disable 
-TCP stream reassembly and IP defragmentation please refer to the documentation in ["api.h"](api.h)).
+For other API calls (e.g. to enable/disable protocol inspectors or to enable/disable TCP stream reassembly and IP 
+defragmentation please refer to the documentation in ["src/api.h"](src/api.h)).
 
 Demo application
 ---------------------------------------------------------------------------------------------------------------------
@@ -281,6 +296,15 @@ from the table.
 The framework also performs IP defragmentation and TCP stream reassembly, in such a way that the protocol is 
 correctly identified also when its data is split among multiple fragments or segments. Moreover, this is useful
 to avoid evasion attacks that use IP fragmentation and TCP segmentation.
+
+The framework can be used in two different modes: Stateful and Stateless.
++ Stateful: is suited for applications which don't have a  concept of 'flow'. In this case the user simply pass to
+the library a stream of packets without concerning about how to store the flow. All the flow management and storing
+will be done by the library.
+
++ Stateless: is suited for applications which already have a concept of 'flow'. In this case the framework demand 
+the storage of the flow data to the application. The user application should be modified in order to store with 
+their own flow informations also the informations needed by the framework to identify the protocols.
 
 A more detailed description can be found in the thesis which lead to the development of this framework: [Thesis.pdf](Thesis.pdf)
 

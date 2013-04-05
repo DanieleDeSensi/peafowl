@@ -97,14 +97,8 @@ enum hashes{
 #define DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE 1
 
 
-#define DPI_ENABLE_MP_API 1
-
 #ifndef DPI_THREAD_SAFETY_ENABLED
-#if defined(DPI_ENABLE_MP_API) && DPI_ENABLE_MP_API == 1
 	#define DPI_THREAD_SAFETY_ENABLED 1
-#else
-	#define DPI_THREAD_SAFETY_ENABLED 0
-#endif
 #endif
 
 #define __STDC_FORMAT_MACROS //To enable inttypes.h macros also for g++
