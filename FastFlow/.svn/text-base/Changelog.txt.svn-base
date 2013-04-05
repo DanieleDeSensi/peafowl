@@ -1,0 +1,123 @@
+* 23/12/12 - v.2.0.1
+   - Distributed version ported and tested on Win7 64-bit.
+   - little fix on allocator.hpp, freesegment now release aligned memory 
+     to avoid stack corruption on Win platform that requires symmetric 
+	 primitives for aligned memory allocation and deallocation.
+   - Winsock.h (windows.h) and winsock2.h incompatibility issue partially resolved.
+     <ff/dnode.h> should be included before other includes to avoid the problem. It
+	 includes winsock2.h that is required by zeromq.  
+* 04/07/12 - v.2.0.0
+   - fixed compilation ploblems on Windows 7 64bit using Visual Studio 10
+     (cmake -G "Visual Studio 10 Win64" ...)
+   - added class ff_dinout that allows to have a single dnode with both
+     input and output external channels.
+   - added the class ff_ofarm to implement the ordered farm template
+   - NO_DEFAULT_MAPPING compilation flag added 
+   - added the map template that can be used to compute map, map-reduce
+     and data-parallel patterns.
+   - Added the possibility to have multi-input Emitter in a farm template
+     (useful to collapse in a single thread the Collector and the Emitter 
+     in a 2-stage pipeline of 2 farms).
+   - Changed the thread start order in the farm skeleton. The old one was:
+     collector (if present), all workers, emitter; now it is: emitter,
+     all workers, and finally the collector (if present).
+   - Added the class threadMapper for implementing threads mapping. 
+   - Implemented the spinBarrier which has a lower overhead when the 
+     number of thread is high.
+   - Fixed problems in ffTime and ffwTime for application with nested patterns.
+   - The distributed communication patterns implemented so far are: 
+     Unicast, Broadcast, Scatter, Gather_All, FromAny, OnDemand
+   - first distributed implementation based on ZeroMQ message library
+   - dnode class added, minor changes to node class
+* not-released - v.1.2.0
+   - added a new implementation of the unbounded MPMC queue
+   - added an implementation of the bounded Multi-Producer/Multi-Consumer 
+     queue by Dmitry Vyukov (www.1024cores.net)
+   - implemented all_gather
+   - moved from int to unsigned long for embedded atomic operations
+   - performance improvements in the ff_allocator for the test one to many
+   - Micheal Scott 2-locks MPMC queue implementation (two methods mp_push 
+     and mp_pop have been added to the dSPSC queue)
+* 22/04/11 - v.1.1.1
+   - accelerator support implemented for the pipeline
+   - ff_send_out improvment: more control over the number of retries, return
+     value added
+   - barrier protocol re-worked, now is possible to create and to start a 
+     pipeline or a farm (or an accelerator) from inside a pipeline's node or 
+     a farm's worker/emitter/collector 
+   - added ffwTime which considers only the time spent in the svc methods
+   - changed the value of FF_GO_ON
+   - fixed SWSR_Ptr_Buffer length method (unsigned long --> long)
+   - fixed a bug which prevents to have a farm whose workers are D&C skeleton
+     (see test_multi_masterworker test)
+   - added the possibility to define workers' input queue size for the 
+     on-demand scheduling policy (default value is 1 slot)
+* 22/04/11 - v.1.1.0
+   - MSqueue reworked, now it is not in the experimental state.
+     The queue is working also on Windows OS and OSX. Removed DCAS and used CAS.
+   - removed some performance problems on Windows OS. 
+   - slightly modified MPMC interface and usage
+   - added Quicksort algo implementation which uses MPMC queue 
+     (both in blocking and non-blocking version)
+   - fixed some compilation problem under OSx
+* 01/04/11 - v.1.0.9
+   - fixes return type error in node.hpp ubuffer.hpp and buffer.hpp
+   - added the method get_channel_id() in the emitter and collector class
+     the method returns the id of the worker thread from which an input task
+     is coming from
+   - added the fibonacci and the quicksort examples
+   - added basic interface for pinning threads to CPUs
+   - added multipush and mpush to SWSR buffer (experimental code)
+   - added mpush to uSWSR queue (experimental code)
+   - more tests
+   - improved cmake test
+   - improved performance for fine grain D&C computation (farm+feedback)
+     by changing the losetime_in method in the lb class.
+   - added Multi-Producers/Multi-Consumers queue (MSqueue by Michael and Scott) 
+     (EXPERIMENTAL code )
+   - added abstraction_dcas from liblfds (www.liblfds.org), no powerpc support yet!
+   - fixed some bugs in the allocator
+   - posix_memalign implemented in the allocator
+   - ticket-spinlock from Linux kernel (EXPERIMENTAL code only for Linux)
+   - added two lock-based methods in uSWSR queue (mp_push and mc_pop)
+   - fixed missing files in CMakeLists.txt
+   - fixed deadlock situation when pipeline with feedback channel is created (torus pattern)
+   - implemented a Deferred Reclamation strategy based on number of free in the allocator
+   - added the ff_queue implementation of a SPSC queue by Dmitry Vyukov (www.1024cores.net)
+   - first porting on Windows OS
+* 01/09/10 - v.1.0.0
+   - New release
+   - some bugs fixed
+   - unbounded SWSR queue improved (removed all locks)
+   - added dynqueue (dynamic list-based queue)
+   - all .hpp files moved into the ff directory
+   - more tests added
+   - cmake compilation support (thanks to Fedor Sakharov)
+   - improved the accelerator sturcture (added FF_EOS_NOFREEZE tag)
+   - added the management of second level streams
+   - added the 'stop' method in the farm and pipeline skeleton
+   - fixed ffStats method when run_then_freeze is called multiple times
+   - one memory leak removed
+   - removed some warnings related to strict-aliasing 
+* 22/03/10 - v.1.0.0rc2
+   - Moved to LGPLv3 license. 
+   - More tests and applications (including pbzip2). 
+   - FastFlow Allocator improved. 
+   - Fixed some minor bugs. 
+   - Added the broadcast_task method.
+* 03/02/10 - v.1.0.0rc1 
+   - Minor API revision. 
+   - Improved FastFlow accelerator support. 
+   - More tests and applications,(Nokia QT Mandelbrot and NQueens)
+   - Simple execution trace support.
+   - Allocator improved. 
+* 16/11/09 - v.0.9.7
+   - Major API revision: patterns are no longer object factories but objects. 
+   - Support for arbitrary nesting of pipe, farm, and loop at high-level layer.
+   - First version of the Divide&Conquer pattern (no examples yet).
+   - First version of the FastFlow's Accelerator.
+* 19/10/09 - v.0.6.1
+   - FastFlow-swps3 Smith-Waterman application added.
+* 15/10/09 - v.0.5.0
+   - First release. 
+   - Support for farm skeleton/pattern.
