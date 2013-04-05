@@ -19,15 +19,9 @@ all:
 seq:
 	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0
 	make -C ./src lib
-	make -C ./test
-	make -C ./test test
-	make -C ./demo
 par:
 	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1
 	make -C ./src lib
-	make -C ./test
-	make -C ./test test
-	make -C ./demo
 install:
 	cp ./lib/lib* /usr/lib/
 uninstall:
