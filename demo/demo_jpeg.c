@@ -3,7 +3,7 @@
  *
  * This demo application dumps on the disk all the jpeg images carried by HTTP packets
  * captured from a .pcap file or from the network.
- * Each dump file is named: "dump_test/[srcIP]:[srcPort]_to_[dstIP]:[dstPort]_at_[timestamp]
+ * Each dump file is named: "dump_test/[srcIP]:[srcPort]_to_[dstIP]:[dstPort]_at_[timestamp].jpeg
  *
  * Created on: 19/10/2012
  *
@@ -61,12 +61,12 @@ void contentype_cb(dpi_http_message_informations_t* http_informations, const u_c
 
 
 		char filename[MAX_FILENAME_SIZE];
-		sprintf(filename, "demo_jpeg_dump/%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32"", src_string, ntohs(pkt->srcport), dst_string, ntohs(pkt->dstport), pkt->processing_time);
+		sprintf(filename, "demo_jpeg_dump/%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32".jpeg", src_string, ntohs(pkt->srcport), dst_string, ntohs(pkt->dstport), pkt->processing_time);
 
 		u_int32_t j=0;
 		/** File already exists. **/
 		while(access(filename, F_OK)!=-1){
-			sprintf(filename, "demo_jpeg_dump/%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32"_%"PRIu32"", src_string, ntohs(pkt->srcport), dst_string, ntohs(pkt->dstport), pkt->processing_time, ++j);
+			sprintf(filename, "demo_jpeg_dump/%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32"_%"PRIu32".jpeg", src_string, ntohs(pkt->srcport), dst_string, ntohs(pkt->dstport), pkt->processing_time, ++j);
 		}
 		*flow_specific_user_data=fopen(filename, "w");
 		assert(*flow_specific_user_data);

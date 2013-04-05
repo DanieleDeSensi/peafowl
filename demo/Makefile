@@ -6,8 +6,8 @@ OPTIMIZE_FLAGS       =  -O6 -finline-functions
 CXXFLAGS             = -Wall -g -DDPI_DEBUG
 CFLAGS               =
 LDFLAGS              = 
-INCS                 = -I ./
-LIBS                 = -lpcap -L../ -ldpi -lpthread -lm
+INCS                 = -I ../src/
+LIBS                 = -lpcap -L../lib/ -ldpi -lpthread -lm
 INCLUDES             =
 TARGET               = demo_identification demo_jpeg
 
@@ -22,5 +22,8 @@ all: $(TARGET)
 %: %.cpp 
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
 clean: 
-	-rm -fr *.o *~ demo_jpeg_dump/* $(TARGET)
+	-rm -fr *.o *~ demo_jpeg_dump/*.jpeg $(TARGET)
+cleanall:
+	make clean
+	-rm -fr $(TARGET)
 
