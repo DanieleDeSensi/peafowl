@@ -326,3 +326,10 @@ A more detailed description can be found in the thesis which lead to the develop
 Advanced usage
 ================================================================================================================
 Details on how to add new protocols and on different configuration parameters can be found in [README_ADVANCED.md](README_ADVANCED.md)
+
+Contributions
+================================================================================================================
+Peafowl has been mainly developed by Daniele De Sensi (d.desensi.software@gmail.com).
+
+I would like to thank Prof. Marco Danelutto, Dr. Luca Deri and Dr. Massimo Torquati for their essential help and
+valuable advices.
