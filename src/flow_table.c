@@ -505,7 +505,7 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(u_int32_t size,
 }
 
 
-void mp_dpi_flow_table_delete_flow_v4(
+void mc_dpi_flow_table_delete_flow_v4(
 		dpi_flow_DB_v4_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
 		u_int16_t partition_id, ipv4_flow_t* to_delete){
@@ -542,7 +542,7 @@ void mp_dpi_flow_table_delete_flow_v4(
 #endif
 }
 
-void mp_dpi_flow_table_delete_flow_v6(
+void mc_dpi_flow_table_delete_flow_v6(
 		dpi_flow_DB_v6_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
 		u_int16_t partition_id,
@@ -584,7 +584,7 @@ void dpi_flow_table_delete_flow_v4(
 		dpi_flow_DB_v4_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
 		ipv4_flow_t* to_delete){
-	mp_dpi_flow_table_delete_flow_v4(db, flow_cleaner_callback,
+	mc_dpi_flow_table_delete_flow_v4(db, flow_cleaner_callback,
 			                         0, to_delete);
 }
 
@@ -592,7 +592,7 @@ void dpi_flow_table_delete_flow_v6(
 		dpi_flow_DB_v6_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
 		ipv6_flow_t* to_delete){
-	mp_dpi_flow_table_delete_flow_v6(db, flow_cleaner_callback,
+	mc_dpi_flow_table_delete_flow_v6(db, flow_cleaner_callback,
 			                         0, to_delete);
 }
 
@@ -622,7 +622,7 @@ void dpi_flow_table_check_expiration_v4(
 #if DPI_USE_MTF
 		while(current_time-db->table[i].prev->last_timestamp>
 	            DPI_FLOW_TABLE_MAX_IDLE_TIME){
-			mp_dpi_flow_table_delete_flow_v4(db,
+			mc_dpi_flow_table_delete_flow_v4(db,
 					                         flow_cleaner_callback,
 					                         partition_id,
 					                         db->table[i].prev);
@@ -632,7 +632,7 @@ void dpi_flow_table_check_expiration_v4(
 		while(current!=&(db->table[i])){
 			if(current_time-db->table[i].prev->last_timestamp>
 	             DPI_FLOW_TABLE_MAX_IDLE_TIME){
-				mp_dpi_flow_table_delete_flow_v4(db,
+				mc_dpi_flow_table_delete_flow_v4(db,
 						                         flow_cleaner_callback,
 						                         partition_id,
 						                         db->table[i].prev);
@@ -670,7 +670,7 @@ void dpi_flow_table_check_expiration_v6(
 #if DPI_USE_MTF
 		while(current_time-db->table[i].prev->last_timestamp>
 					DPI_FLOW_TABLE_MAX_IDLE_TIME){
-			mp_dpi_flow_table_delete_flow_v6(db,
+			mc_dpi_flow_table_delete_flow_v6(db,
 					                         flow_cleaner_callback,
 					                         partition_id,
 					                         db->table[i].prev);
@@ -680,7 +680,7 @@ void dpi_flow_table_check_expiration_v6(
 		while(current!=&(db->table[i])){
 			if(current_time-db->table[i].prev->last_timestamp>
 				    DPI_FLOW_TABLE_MAX_IDLE_TIME){
-				mp_dpi_flow_table_delete_flow_v6(db,
+				mc_dpi_flow_table_delete_flow_v6(db,
 						                         flow_cleaner_callback,
 						                         partition_id,
 						                         db->table[i].prev);
@@ -710,7 +710,7 @@ void print_flow(ipv4_flow_t* iterator) {
 #endif
 
 
-ipv4_flow_t* mp_dpi_flow_table_find_or_create_flow_v4(
+ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
 		dpi_library_state_t* state, u_int16_t partition_id,
 		u_int32_t index, dpi_pkt_infos_t *pkt_infos){
 
@@ -829,14 +829,14 @@ u_int32_t dpi_compute_v4_hash_function(
 ipv4_flow_t* dpi_flow_table_find_or_create_flow_v4(
 		dpi_library_state_t* state,
 		dpi_pkt_infos_t* pkt_infos){
-	return mp_dpi_flow_table_find_or_create_flow_v4(
+	return mc_dpi_flow_table_find_or_create_flow_v4(
 			state, 0,
 			dpi_compute_v4_hash_function(
 					(dpi_flow_DB_v4_t*) state->db4, pkt_infos),
 					pkt_infos);
 }
 
-ipv6_flow_t* mp_dpi_flow_table_find_or_create_flow_v6(
+ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
 		dpi_library_state_t* state,
 		u_int16_t partition_id,
 		u_int32_t index,
@@ -958,7 +958,7 @@ u_int32_t dpi_compute_v6_hash_function(
 ipv6_flow_t* dpi_flow_table_find_or_create_flow_v6(
 		dpi_library_state_t* state,
 		dpi_pkt_infos_t* pkt_infos){
-	return mp_dpi_flow_table_find_or_create_flow_v6(
+	return mc_dpi_flow_table_find_or_create_flow_v6(
 			state, 0,
 			dpi_compute_v6_hash_function(
 					(dpi_flow_DB_v6_t*) state->db6, pkt_infos),
@@ -1038,7 +1038,7 @@ void dpi_flow_table_delete_v4(
 					i<=db->partitions[j].partition.informations.
 					      highest_index; ++i){
 					while(db->table[i].next!=&(db->table[i])){
-						mp_dpi_flow_table_delete_flow_v4(
+						mc_dpi_flow_table_delete_flow_v4(
 								db, flow_cleaner_callback,
 								j, db->table[i].next);
 					}
@@ -1087,7 +1087,7 @@ void dpi_flow_table_delete_v6(
 					i<=db->partitions[j].partition.
 					       informations.highest_index; ++i){
 					while(db->table[i].next!=&(db->table[i])){
-						mp_dpi_flow_table_delete_flow_v6(
+						mc_dpi_flow_table_delete_flow_v6(
 								db, flow_cleaner_callback,
 								j, db->table[i].next);
 					}

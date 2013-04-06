@@ -17,11 +17,11 @@ TARGET               =
 all:
 	make seq 
 seq:
-	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0
-	make -C ./src lib
+	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
+	make -C ./src seqlib
 par:
-	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1
-	make -C ./src lib
+	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1 par
+	make -C ./src parlib
 install:
 	cp ./lib/lib* /usr/lib/
 uninstall:

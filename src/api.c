@@ -731,7 +731,7 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
  *          more needed (e.g. after calling
  *          dpi_state*_get_app_protocol(..)).
  */
-int8_t mp_dpi_extract_packet_infos(
+int8_t mc_dpi_extract_packet_infos(
 		       dpi_library_state_t *state, const unsigned char* p_pkt,
 		       u_int32_t p_length, dpi_pkt_infos_t *pkt_infos,
 		       u_int32_t current_time, int tid){
@@ -1100,7 +1100,7 @@ int8_t dpi_parse_L3_L4_headers(dpi_library_state_t *state,
 	 * We can pass any thread id, indeed in this case we don't
 	 * need lock synchronization.
 	 **/
-	return mp_dpi_extract_packet_infos(state, p_pkt, p_length, pkt_infos,
+	return mc_dpi_extract_packet_infos(state, p_pkt, p_length, pkt_infos,
 			                           current_time, 0);
 }
 

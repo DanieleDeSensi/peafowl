@@ -987,7 +987,7 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 		       u_int32_t max_active_v4_flows,
 		       u_int32_t max_active_v6_flows,
 		       u_int16_t num_table_partitions);
-int8_t mp_dpi_extract_packet_infos(
+int8_t mc_dpi_extract_packet_infos(
 		       dpi_library_state_t *state,
 		       const unsigned char* p_pkt,
 		       u_int32_t p_length, dpi_pkt_infos_t *pkt_infos,

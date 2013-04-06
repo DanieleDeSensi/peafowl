@@ -142,7 +142,7 @@ void dpi_flow_table_delete_flow_v6(
 
 
 /**
- * They are used directly only in mpdpi. Should never be used directly
+ * They are used directly only in mc_dpi. Should never be used directly
  * by the user.
  **/
 u_int32_t dpi_compute_v4_hash_function(
@@ -153,20 +153,20 @@ u_int32_t dpi_compute_v6_hash_function(
 		dpi_flow_DB_v6_t *db,
 		const dpi_pkt_infos_t* const pkt_infos);
 
-ipv4_flow_t* mp_dpi_flow_table_find_or_create_flow_v4(
+ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
 		dpi_library_state_t* state, u_int16_t partition_id,
 		u_int32_t index, dpi_pkt_infos_t* pkt_infos);
 
-ipv6_flow_t* mp_dpi_flow_table_find_or_create_flow_v6(
+ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
 		dpi_library_state_t* state, u_int16_t partition_id,
 		u_int32_t index, dpi_pkt_infos_t* pkt_infos);
 
-void mp_dpi_flow_table_delete_flow_v4(
+void mc_dpi_flow_table_delete_flow_v4(
 		dpi_flow_DB_v4_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
 		u_int16_t partition_id, ipv4_flow_t* to_delete);
 
-void mp_dpi_flow_table_delete_flow_v6(
+void mc_dpi_flow_table_delete_flow_v6(
 		dpi_flow_DB_v6_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
 		u_int16_t partition_id, ipv6_flow_t* to_delete);

@@ -10,12 +10,12 @@ LDFLAGS              =
 INCS                 = -I ./ -I ./fastflow/
 LIBS                 = 
 INCLUDES             =
-TARGET               = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
+SEQTARGET            = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
+PARTARGET            = worker.o mc_dpi_api.o
 
-.PHONY: clean cleanall install uninstall test
+.PHONY: clean cleanall install uninstall test seqlib parlib
 .SUFFIXES: .cpp .o
 
-all: $(TARGET)
 tcp_stream_management.o: tcp_stream_management.c
 	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c tcp_stream_management.c -o tcp_stream_management.o
 utils.o: utils.cpp
@@ -30,16 +30,26 @@ hash_functions.o: hash_functions.cpp
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c hash_functions.cpp -o hash_functions.o
 flow_table.o: flow_table.c
 	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c flow_table.c -o flow_table.o
-api.o: api.c *.h 
+api.o: api.c
 	make -C ./inspectors
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c api.c -o api.o 
+	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c api.c -o api.o
+worker.o: worker.cpp
+	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c worker.cpp  -o worker.o 
+mc_dpi_api.o: mc_dpi_api.cpp 
+	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c mc_dpi_api.cpp -o mc_dpi_api.o 
 clean: 
 	make -C ./inspectors clean
-	-rm -fr *.o *~ *.so*
+	-rm -fr *.o *~ *.a
 cleanall:
 	make -C ./inspectors cleanall
-	-rm -fr *.o *~ *.so*
-	-rm -fr $(TARGET)
-lib:
-	ar rs libdpi.a *.o inspectors/*.o
-	mv libdpi.a ../lib/libdpi.a
+	-rm -fr *.o *~ *.a
+	-rm -fr $(SEQTARGET) $(PARTARGET)
+seq: $(SEQTARGET)
+seqlib:
+	ar rs libdpi.a $(SEQTARGET) inspectors/*.o
+	mv libdpi.a ../lib/libdpi.a	
+par: $(SEQTARGET) $(PARTARGET)
+parlib:
+	make seqlib
+	ar rs libmpdpi.a $(SEQTARGET) $(PARTARGET) inspectors/*.o
+	mv libmpdpi.a ../lib/libmpdpi.a
