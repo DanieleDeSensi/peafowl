@@ -6,7 +6,7 @@ carried by IP (IPv4 and IPv6) packets and to extract and process data and metada
 For example, is possible to write applications that process any possible kind of data and metadata carried by an 
 HTTP connection (e.g. Host, User-Agent, Content-Type, HTTP body, etc..). It's important to notice that the
 application programmer needs only to focus on the way these information are processed, since their extraction
-is completely and trasparently performed by the framework. Accordingly, using Peafowl is possible to implement
+is completely and transparently performed by the framework. Accordingly, using Peafowl is possible to implement
 different kinds of applications like:
 
 + URL filtering (for parental control or access control)
@@ -16,8 +16,15 @@ different kinds of applications like:
 + Quality of Service and Traffic shaping (e.g. to give higher priority to VoIP traffic)
 
 To correctly identify the protocol also when its data is split among multiple IP fragments and/or TCP segments 
-and to avoid the possibility of evation attacks, if required, the framework can perform IP defragmentation and 
+and to avoid the possibility of evasion attacks, if required, the framework can perform IP defragmentation and 
 TCP stream reassembly.
+
+Peafowl also provide the possibility to exploit the parallelism of current multicore machines, splitting the
+processing load among the available cores. This feature is particularly useful when some complex processing
+is required on the content of the packets (e.g. complex pattern matching, audio/video processing, etc...).
+This possibility have been implemented by using [FastFlow](http://calvados.di.unipi.it/dokuwiki/doku.php?id=ffnamespace:about),
+a parallel programming framework for multicore platforms based upon non-blocking lock-free/fence-free 
+synchronization mechanisms.
 
 Supported protocols
 ================================================================================================================
@@ -97,8 +104,10 @@ After that, install it with
 $ make install
 ```
 
+Sequential version
+------------------------------------------------------------------------------------------------------------
 At this point, your application can use Peafowl by including the ["src/api.h"](src/api.h) header and by 
-linking lib/libdpi.a for the sequential version or lib/libmpdpi.a for the version with multicore support.
+linking lib/libdpi.a.
 
 The API is based on 3 main calls:
 
@@ -118,6 +127,12 @@ be required as parameter for most of the framework calls;
 
 For other API calls (e.g. to enable/disable protocol inspectors or to enable/disable TCP stream reassembly and IP 
 defragmentation please refer to the documentation in ["src/api.h"](src/api.h)).
+
+Multicore version
+------------------------------------------------------------------------------------------------------------------ 
+You can take advantage of the multicore version by including the ["src/mc_api.h"](src/mc_api.h) header and by 
+linking lib/libmpdpi.a. Since the user manual for the multicore version of Peafowl is not yet available, if you 
+need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
 
 Demo application
 ---------------------------------------------------------------------------------------------------------------------
