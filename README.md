@@ -15,6 +15,9 @@ different kinds of applications like:
 + Data leak prevention
 + Quality of Service and Traffic shaping (e.g. to give higher priority to VoIP traffic)
 
+Peafowl is not tied to any specific technology for packet capture. Accordingly, you can capture the packets using 
+pcap, sockets, PF_RING or whatever technology you prefer.
+
 To correctly identify the protocol also when its data is split among multiple IP fragments and/or TCP segments 
 and to avoid the possibility of evasion attacks, if required, the framework can perform IP defragmentation and 
 TCP stream reassembly.
