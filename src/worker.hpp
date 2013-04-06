@@ -31,7 +31,8 @@
 #include <ff/svector.hpp>
 
 #include "api.h"
-#include "mc_dpi_api.h"
+#include "mc_api.h"
+#include "config.h"
 
 #define DPI_DEBUG_MP_WORKER 0
 #define worker_debug_print(fmt, ...)      \
@@ -69,11 +70,11 @@ typedef struct L7_output_task{
 typedef struct mc_dpi_task{
 	union input_output_task{
 		L3_L4_input_task_struct
-			L3_L4_input_task_t[DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE];
+			L3_L4_input_task_t[DPI_MULTICORE_DEFAULT_GRAIN_SIZE];
 		L3_L4_output_task_struct
-			L3_L4_output_task_t[DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE];
+			L3_L4_output_task_t[DPI_MULTICORE_DEFAULT_GRAIN_SIZE];
 		L7_output_task_struct
-			L7_output_task_t[DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE];
+			L7_output_task_t[DPI_MULTICORE_DEFAULT_GRAIN_SIZE];
 	}input_output_task_t;
 	char padding[DPI_CACHE_LINES_PADDING_REQUIRED(
 			sizeof(input_output_task_t))];

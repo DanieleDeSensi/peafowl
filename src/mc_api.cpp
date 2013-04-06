@@ -25,7 +25,7 @@
  */
 
 
-#include "mc_dpi_api.h"
+#include "mc_api.h"
 #include "worker.hpp"
 #include <stddef.h>
 #include <vector>
@@ -42,8 +42,8 @@
 
 
 enum tids{
-	DPI_MULTIPROCESSOR_STATUS_UPDATER_TID=1
-   ,DPI_MULTIPROCESSOR_WORKER_RECONFIGURATOR_TID
+	DPI_MULTICORE_STATUS_UPDATER_TID=1
+   ,DPI_MULTICORE_WORKER_RECONFIGURATOR_TID
 };
 
 
@@ -82,8 +82,8 @@ typedef struct mc_dpi_library_state{
 	/*                 Nodes for double farm.             */
 	/******************************************************/
 	dpi::dpi_L3_L4_emitter* L3_L4_emitter;
-#if DPI_MULTIPROCESSOR_L3_L4_FARM_TYPE == \
-	DPI_MULTIPROCESSOR_L3_L4_ORDERED_FARM
+#if DPI_MULTICORE_L3_L4_FARM_TYPE == \
+	DPI_MULTICORE_L3_L4_ORDERED_FARM
 	ff::ff_ofarm* L3_L4_farm;
 #else
 	ff::ff_farm<>* L3_L4_farm;
@@ -119,14 +119,14 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	/*         Create the first farm.         */
 	/******************************************/
 	void* tmp;
-#if DPI_MULTIPROCESSOR_L3_L4_FARM_TYPE == \
-	DPI_MULTIPROCESSOR_L3_L4_ORDERED_FARM
+#if DPI_MULTICORE_L3_L4_FARM_TYPE == \
+	DPI_MULTICORE_L3_L4_ORDERED_FARM
 	tmp=malloc(sizeof(ff::ff_ofarm));
 	assert(tmp);
 	state->L3_L4_farm=new (tmp) ff::ff_ofarm(
 			false,
-			DPI_MULTIPROCESSOR_L3_L4_FARM_INPUT_BUFFER_SIZE,
-			DPI_MULTIPROCESSOR_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
 			false, available_procs, true);
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_emitter));
 	assert(tmp);
@@ -142,8 +142,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	assert(tmp);
 	state->L3_L4_farm=new (tmp) ff::ff_farm<>(
 			false,
-			DPI_MULTIPROCESSOR_L3_L4_FARM_INPUT_BUFFER_SIZE,
-			DPI_MULTIPROCESSOR_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
 			false, available_procs, true);
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_emitter));
 	assert(tmp);
@@ -154,8 +154,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 			mapping[last_mapped], state->tasks_pool);
 	last_mapped=(last_mapped+1)%available_procs;
 	state->L3_L4_farm->add_emitter(state->L3_L4_emitter);
-#if DPI_MULTIPROCESSOR_L3_L4_FARM_TYPE == \
-	DPI_MULTIPROCESSOR_L3_L4_ON_DEMAND
+#if DPI_MULTICORE_L3_L4_FARM_TYPE == \
+	DPI_MULTICORE_L3_L4_ON_DEMAND
 	state->L3_L4_farm->set_scheduling_ondemand(1024);
 #endif
 #endif
@@ -182,8 +182,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 			               dpi::dpi_L3_L4_collector(mapping[last_mapped]);
 	assert(state->L3_L4_collector);
 	last_mapped=(last_mapped+1)%available_procs;
-#if DPI_MULTIPROCESSOR_L3_L4_FARM_TYPE == \
-	DPI_MULTIPROCESSOR_L3_L4_ORDERED_FARM
+#if DPI_MULTICORE_L3_L4_FARM_TYPE == \
+	DPI_MULTICORE_L3_L4_ORDERED_FARM
 	state->L3_L4_farm->setCollectorF(state->L3_L4_collector);
 #else
 	assert(state->L3_L4_farm->add_collector(state->L3_L4_collector)>=0);
@@ -195,8 +195,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	tmp=malloc(sizeof(ff::ff_farm<dpi::dpi_L7_scheduler>));
 	assert(tmp);
 	state->L7_farm=new (tmp) ff::ff_farm<dpi::dpi_L7_scheduler>(
-			false, DPI_MULTIPROCESSOR_L7_FARM_INPUT_BUFFER_SIZE,
-			DPI_MULTIPROCESSOR_L7_FARM_OUTPUT_BUFFER_SIZE, false,
+			false, DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE, false,
 			available_procs, true);
 
 	tmp=malloc(sizeof(dpi::dpi_L7_emitter));
@@ -236,8 +236,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	assert(tmp);
 	state->pipeline=new (tmp) ff::ff_pipeline(
 			false,
-			DPI_MULTIPROCESSOR_PIPELINE_INPUT_BUFFER_SIZE,
-			DPI_MULTIPROCESSOR_PIPELINE_OUTPUT_BUFFER_SIZE,
+			DPI_MULTICORE_PIPELINE_INPUT_BUFFER_SIZE,
+			DPI_MULTICORE_PIPELINE_OUTPUT_BUFFER_SIZE,
 			true);
 
 	state->pipeline->add_stage(state->L3_L4_farm);
@@ -255,8 +255,8 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 	u_int16_t last_mapped=0;
 	state->single_farm=new ff::ff_farm<dpi::dpi_L7_scheduler>(
 			false,
-			DPI_MULTIPROCESSOR_L7_FARM_INPUT_BUFFER_SIZE,
-			DPI_MULTIPROCESSOR_L7_FARM_OUTPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
+			DPI_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE,
 			false, available_procs, true);
 	assert(state->single_farm);
 
@@ -347,7 +347,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	state->terminating=0;
 	ff::init_unlocked(&(state->state_update_lock));
 	ff::spin_lock(&(state->state_update_lock),
-				  DPI_MULTIPROCESSOR_STATUS_UPDATER_TID);
+				  DPI_MULTICORE_STATUS_UPDATER_TID);
 
 	u_int8_t parallelism_form;
 	parallelism_form=parallelism_details.parallelism_form;
@@ -387,12 +387,12 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	/******************************/
 	/*   Create the tasks pool.   */
 	/******************************/
-#if DPI_MULTIPROCESSOR_USE_TASKS_POOL
+#if DPI_MULTICORE_USE_TASKS_POOL
 	void* tmp;
 	assert(posix_memalign((void**) &tmp, DPI_CACHE_LINE_SIZE,
 		   sizeof(ff::SWSR_Ptr_Buffer)+DPI_CACHE_LINE_SIZE)==0);
 	state->tasks_pool=new (tmp) ff::SWSR_Ptr_Buffer(
-			DPI_MULTIPROCESSOR_TASKS_POOL_SIZE);
+			DPI_MULTICORE_TASKS_POOL_SIZE);
 	state->tasks_pool->init();
 #endif
 
@@ -454,8 +454,8 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state){
 				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
 			state->L3_L4_emitter->~dpi_L3_L4_emitter();
 			free(state->L3_L4_emitter);
-#if DPI_MULTIPROCESSOR_L3_L4_FARM_TYPE ==\
-	DPI_MULTIPROCESSOR_L3_L4_ORDERED_FARM
+#if DPI_MULTICORE_L3_L4_FARM_TYPE ==\
+	DPI_MULTICORE_L3_L4_ORDERED_FARM
 			state->L3_L4_farm->~ff_ofarm();
 #else
 			state->L3_L4_farm->~ff_farm();
@@ -501,7 +501,7 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state){
 		}
 		dpi_terminate(state->sequential_state);
 
-#if DPI_MULTIPROCESSOR_USE_TASKS_POOL
+#if DPI_MULTICORE_USE_TASKS_POOL
 		state->tasks_pool->~SWSR_Ptr_Buffer();
 		free(state->tasks_pool);
 #endif
@@ -555,7 +555,7 @@ void mc_dpi_freeze(mc_dpi_library_state_t* state){
 	if(likely(!state->is_frozen)){
 		debug_print("%s\n","[mc_dpi_api.cpp]: Acquiring freeze lock.");
 		ff::spin_lock(&(state->state_update_lock),
-				DPI_MULTIPROCESSOR_STATUS_UPDATER_TID);
+				DPI_MULTICORE_STATUS_UPDATER_TID);
 		debug_print("%s\n","[mc_dpi_api.cpp]: Freeze lock acquired, "
 				    "sending freeze message.");
 		if(state->parallel_module_type==
@@ -612,7 +612,7 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 		debug_print("%s\n","[mc_dpi_api.cpp]: Skeleton started, "
 				    "unlocking state update lock.");
 		ff::spin_unlock(&(state->state_update_lock),
-				DPI_MULTIPROCESSOR_STATUS_UPDATER_TID);
+				DPI_MULTICORE_STATUS_UPDATER_TID);
 		debug_print("%s\n\n","[mc_dpi_api.cpp]: State update "
 				    "lock unlocked.");
 		state->is_frozen=0;

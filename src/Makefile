@@ -11,7 +11,7 @@ INCS                 = -I ./ -I ./fastflow/
 LIBS                 = 
 INCLUDES             =
 SEQTARGET            = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
-PARTARGET            = worker.o mc_dpi_api.o
+PARTARGET            = worker.o mc_api.o
 
 .PHONY: clean cleanall install uninstall test seqlib parlib
 .SUFFIXES: .cpp .o
@@ -35,8 +35,8 @@ api.o: api.c
 	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c api.c -o api.o
 worker.o: worker.cpp
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c worker.cpp  -o worker.o 
-mc_dpi_api.o: mc_dpi_api.cpp 
-	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c mc_dpi_api.cpp -o mc_dpi_api.o 
+mc_api.o: mc_api.cpp 
+	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c mc_api.cpp -o mc_api.o 
 clean: 
 	make -C ./inspectors clean
 	-rm -fr *.o *~ *.a

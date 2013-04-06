@@ -25,7 +25,6 @@
  */
 
 #include "worker.hpp"
-#include "mc_dpi_api.h"
 #include "flow_table.h"
 #include <pthread.h>
 #include <stdlib.h>
@@ -46,7 +45,7 @@ mc_dpi_task_t* dpi_allocate_task(){
 	r=(mc_dpi_task_t*) numa_alloc_onnode(sizeof(mc_dpi_task_t),
 			           DPI_NUMA_AWARE_TASKS_NODE);
 #else
-	#if DPI_MULTIPROCESSOR_ALIGN_TASKS
+	#if DPI_MULTICORE_ALIGN_TASKS
 		assert(posix_memalign((void**) &r, DPI_CACHE_LINE_SIZE,
 			   sizeof(mc_dpi_task_t))==0);
 	#else
@@ -64,7 +63,7 @@ void dpi_free_task(mc_dpi_task_t* task){
 #if DPI_NUMA_AWARE
 	numa_free(task, sizeof(mc_dpi_task_t));
 #else
-	#if DPI_MULTIPROCESSOR_ALIGN_TASKS
+	#if DPI_MULTICORE_ALIGN_TASKS
 		free(task);
 	#else
 		delete task;
@@ -100,8 +99,8 @@ int dpi_L3_L4_emitter::svc_init(){
 
 	if(!initialized){
 		/** Fill the task pool. **/
-#if DPI_MULTIPROCESSOR_USE_TASKS_POOL
-		for(uint i=0; i<DPI_MULTIPROCESSOR_TASKS_POOL_SIZE; i++){
+#if DPI_MULTICORE_USE_TASKS_POOL
+		for(uint i=0; i<DPI_MULTICORE_TASKS_POOL_SIZE; i++){
 			tasks_pool->push(dpi_allocate_task());
 		}
 #endif
@@ -120,7 +119,7 @@ void* dpi_L3_L4_emitter::svc(void* task){
 		return (void*) ff::FF_EOS;
 	}
 
-#if DPI_MULTIPROCESSOR_USE_TASKS_POOL
+#if DPI_MULTICORE_USE_TASKS_POOL
 	if(!tasks_pool->empty()){
 		tasks_pool->pop((void**) &r);
 	}else{
@@ -130,7 +129,7 @@ void* dpi_L3_L4_emitter::svc(void* task){
 	r=dpi_allocate_task();
 #endif
 
-	for(uint i=0; i<DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE; i++){
+	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		packet=(*(*cb))(*user_data);
 		if(unlikely(packet.pkt==NULL)){
 			worker_debug_print("%s\n", "[worker.cpp]: No more task to "
@@ -170,7 +169,7 @@ dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
                                    proc_id(proc_id){
 	assert(posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE,
 		   sizeof(L3_L4_input_task_struct)*
-		   DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE)==0);
+		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE)==0);
 }
 
 dpi_L3_L4_worker::~dpi_L3_L4_worker(){
@@ -194,11 +193,11 @@ void* dpi_L3_L4_worker::svc(void* task){
 	 * the generated output tasks.
 	 **/
 	memcpy(in, real_task->input_output_task_t.L3_L4_input_task_t,
-			DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE*
+			DPI_MULTICORE_DEFAULT_GRAIN_SIZE*
 			sizeof(L3_L4_input_task_struct));
 
 	dpi_pkt_infos_t pkt_infos;
-	for(uint i=0; i<DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE; i++){
+	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
         __builtin_prefetch(&(in[i+2]), 0, 0);
         __builtin_prefetch((in[i+2]).pkt, 0, 0);
 
@@ -323,7 +322,7 @@ void* dpi_L7_emitter::svc(void* task){
 	mc_dpi_task_t* out;
 	uint pfs;
 
-	for(uint i=0; i<DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE; i++){
+	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
         __builtin_prefetch(&(real_task->input_output_task_t.
         		L3_L4_output_task_t[i+4]), 0, 0);
 		destination_worker=real_task->input_output_task_t.
@@ -335,16 +334,16 @@ void* dpi_L7_emitter::svc(void* task){
         __builtin_prefetch(&(partially_filled[destination_worker].
         		input_output_task_t.L3_L4_output_task_t[pfs]), 1, 0);
 
-		if(pfs+1==DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE){
+		if(pfs+1==DPI_MULTICORE_DEFAULT_GRAIN_SIZE){
 			assert(waiting_tasks_size!=0);
 			out=waiting_tasks[--waiting_tasks_size];
 			memcpy(out->input_output_task_t.L3_L4_output_task_t,
 				   partially_filled[destination_worker].
 				   	   input_output_task_t.L3_L4_output_task_t,
 				   sizeof(L3_L4_output_task_struct)*
-				   	   (DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE-1));
+				   	   (DPI_MULTICORE_DEFAULT_GRAIN_SIZE-1));
 			out->input_output_task_t.L3_L4_output_task_t
-				[DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE-1]=
+				[DPI_MULTICORE_DEFAULT_GRAIN_SIZE-1]=
 						real_task->input_output_task_t.
 							L3_L4_output_task_t[i];
 			lb->set_victim(destination_worker);
@@ -372,7 +371,7 @@ dpi_L7_worker::dpi_L7_worker(dpi_library_state_t* state,
 	                         proc_id(proc_id){
 	assert(posix_memalign((void**) &this->temp, DPI_CACHE_LINE_SIZE,
 				          (sizeof(L3_L4_output_task_struct)*
-				        		  DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE)+
+				        		  DPI_MULTICORE_DEFAULT_GRAIN_SIZE)+
 				          DPI_CACHE_LINE_SIZE)==0);
 }
 
@@ -397,10 +396,10 @@ void* dpi_L7_worker::svc(void* task){
 	ipv6_flow_t* ipv6_flow;
 
 	memcpy(temp, real_task->input_output_task_t.L3_L4_output_task_t,
-		   DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE*
+		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE*
 		   	   sizeof(L3_L4_output_task_struct));
 
-	for(uint i=0; i<DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE; i++){
+	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		real_task->input_output_task_t.L7_output_task_t[i].user_pointer=
 				temp[i].user_pointer;
 		ipv4_flow=NULL;
@@ -491,14 +490,14 @@ int dpi_L7_collector::svc_init(){
 void* dpi_L7_collector::svc(void* task){
 	mc_dpi_processing_result_t r;
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
-	for(uint i=0; i<DPI_MULTIPROCESSOR_DEFAULT_GRAIN_SIZE; i++){
+	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		r.result=real_task->input_output_task_t.L7_output_task_t[i].
 				result;
 		r.user_pointer=real_task->input_output_task_t.
 				L7_output_task_t[i].user_pointer;
 		(*(*cb))(&r, *user_data);
 	}
-#if DPI_MULTIPROCESSOR_USE_TASKS_POOL
+#if DPI_MULTICORE_USE_TASKS_POOL
 	if(tasks_pool->available()){
 		tasks_pool->push(task);
 	}else{
@@ -511,7 +510,7 @@ void* dpi_L7_collector::svc(void* task){
 }
 
 void dpi_L7_collector::svc_end(){
-#if DPI_MULTIPROCESSOR_USE_TASKS_POOL
+#if DPI_MULTICORE_USE_TASKS_POOL
 	mc_dpi_task_t* task=NULL;
 	while(!tasks_pool->empty()){
 		tasks_pool->pop((void**) &task);
