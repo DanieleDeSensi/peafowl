@@ -1,5 +1,5 @@
 /*
- * http_pm_mc_pfring.cc
+ * http_pm_mc_pfring.cpp
  *
  * This demo application analyzes the HTTP traffic (reordering the TCP packets to have
  * a well-formed stream), and searches for specific patterns (contained into a file 

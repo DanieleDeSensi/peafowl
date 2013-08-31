@@ -1,3 +1,36 @@
+/*
+ * http_pm_seq.cpp
+ *
+ * This demo application loads in memory all the packets contained into a specified
+ * .pcap file.
+ * After that, it analyzes all the HTTP traffic (reordering the TCP packets to have
+ * a well-formed stream), and searches for specific patterns (contained into a file 
+ * specified by a command line parameter) inside the HTTP body.
+ *
+ * Created on: 29/08/2013
+ *
+ * =========================================================================
+ *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *
+ *  This file is part of Peafowl.
+ *
+ *  Peafowl is free software: you can redistribute it and/or
+ *  modify it under the terms of the Lesser GNU General Public
+ *  License as published by the Free Software Foundation, either
+ *  version 3 of the License, or (at your option) any later version.
+
+ *  Peafowl is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  Lesser GNU General Public License for more details.
+ *
+ *  You should have received a copy of the Lesser GNU General Public
+ *  License along with Peafowl.
+ *  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * =========================================================================
+ */
+
 #define _POSIX_C_SOURCE 1
 #include <cstdlib>
 #include <cstring>
@@ -7,11 +40,11 @@
 #include <stdexcept>
 #include <utility>
 #include <typeinfo>
-#include "timer.h"
-#include "trie.h"
-#include "signatures.h"
+#include "pattern_matching_lib/timer.h"
+#include "pattern_matching_lib/trie.h"
+#include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include "../../api.h"
+#include <api.h>
 #include <pcap.h>
 #include <netinet/in.h>
 #include <net/ethernet.h>

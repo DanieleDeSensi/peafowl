@@ -1,3 +1,37 @@
+/*
+ * http_pm_mc.cpp
+ *
+ * This demo application loads in memory all the packets contained into a specified
+ * .pcap file.
+ * After that, it analyzes all the HTTP traffic (reordering the TCP packets to have
+ * a well-formed stream), and searches for specific patterns (contained into a file 
+ * specified by a command line parameter) inside the HTTP body using a certain number
+ * of cores (specified by the user).
+ *
+ * Created on: 29/08/2013
+ *
+ * =========================================================================
+ *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *
+ *  This file is part of Peafowl.
+ *
+ *  Peafowl is free software: you can redistribute it and/or
+ *  modify it under the terms of the Lesser GNU General Public
+ *  License as published by the Free Software Foundation, either
+ *  version 3 of the License, or (at your option) any later version.
+
+ *  Peafowl is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  Lesser GNU General Public License for more details.
+ *
+ *  You should have received a copy of the Lesser GNU General Public
+ *  License along with Peafowl.
+ *  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * =========================================================================
+ */
+
 #define _POSIX_C_SOURCE 1
 #include <cstdlib>
 #include <cstring>
@@ -33,8 +67,6 @@ typedef struct pcap_packets_memory{
 	u_int32_t* sizes;
 	u_int32_t num_packets;
 	u_int32_t next_packet_to_sent;
-	u_int32_t performed_iterations;
-	u_int32_t iterations_to_perform;
 }pcap_packets_memory_t;
 
 mc_dpi_packet_reading_result_t reading_cb(void* user_data){
@@ -43,17 +75,13 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	pcap_packets_memory_t* packets=(pcap_packets_memory_t*) user_data;
 
 	if(packets->next_packet_to_sent==packets->num_packets){
-		++packets->performed_iterations;
-		packets->next_packet_to_sent=0;
-	}
-
-	if(packets->performed_iterations<packets->iterations_to_perform){
-		r.pkt=packets->packets[packets->next_packet_to_sent];
-	}else{
 		r.pkt=NULL;
 		printf("Sending EOS!\n");
 		fflush(stdout);
+	}else{
+		r.pkt=packets->packets[packets->next_packet_to_sent];
 	}
+
 	r.current_time=time(NULL);
 	r.length=packets->sizes[packets->next_packet_to_sent];
 	++packets->next_packet_to_sent;
@@ -93,8 +121,8 @@ int main(int argc, char **argv){
 	ff_mapThreadToCpu(mapping[0], -20);
 
 	try {
-		if (argc<5){
-			cerr << "Usage: " << argv[0] << " virus-signatures-file input-file num_iterations par_degree\n";
+		if (argc<4){
+			cerr << "Usage: " << argv[0] << " virus-signatures-file input-file par_degree\n";
 			exit(EXIT_FAILURE);
 		}
 
@@ -102,8 +130,7 @@ int main(int argc, char **argv){
     
 		char const *virus_signatures_file_name=argv[1];
 		char const *input_file_name=argv[2];
-		u_int16_t num_iterations=atoi(argv[3]);
-		u_int16_t num_workers=atoi(argv[4]);
+		u_int16_t num_workers=atoi(argv[3]);
 
     
 		ifstream signatures;
@@ -196,9 +223,7 @@ int main(int argc, char **argv){
 		pcap_packets_memory_t x;
 		x.packets=packets;
 		x.sizes=sizes;
-		x.performed_iterations=0;
 		x.next_packet_to_sent=0;
-		x.iterations_to_perform=num_iterations;
 		x.num_packets=num_packets;
 
 
