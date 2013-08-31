@@ -89,16 +89,10 @@ $ git clone git://github.com/DanieleDeSensi/Peafowl.git
 $ cd Peafowl
 ```
 
-If you only need the sequential API, compile it with:
+Compile it with:
 
 ```
-$ make seq 
-```
-
-otherwise, if you also need the API with multicores support, compile it with:
-
-```
-$ make par
+$ make
 ```
 
 After that, install it with
@@ -134,7 +128,7 @@ defragmentation please refer to the documentation in ["src/api.h"](src/api.h)).
 Multicore version
 ------------------------------------------------------------------------------------------------------------------ 
 You can take advantage of the multicore version by including the ["src/mc_api.h"](src/mc_api.h) header and by 
-linking lib/libmpdpi.a. Since the user manual for the multicore version of Peafowl is not yet available, if you 
+linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available, if you 
 need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
 
 Demo application
@@ -289,13 +283,20 @@ int main(int argc, char** argv){
 }
 ```
 
+Other demos
+---------------------------------------------------------------------------------------------------------------------
 More demo applications can be found in [demo](demo) folder:
 
-+ [demo_identification.c](demo/demo_identification.c): Given a .pcap file, it identifies the protocol of all the 
-  packets contained in it.
-+ [demo_jpeg.c](demo/demo_jpeg.c): Dumps on the disk all the jpeg images carried by HTTP packets captured from a .pcap 
++ [protocol_identification_identification.c](demo/protocol_identification/protocol_identification.c): Given a .pcap file, 
+  it identifies the protocol of all the packets contained in it.
++ [jpeg_dump.c](demo/dump_jpeg/dump_jpeg.c): Dumps on the disk all the jpeg images carried by HTTP packets captured from a .pcap 
   file or from the network.
-
++ ```http_pattern_matching```: Searches in all the HTTP bodies a set of patterns (e.g. viruses signatures, an [example](demo/http_pattern_matching/signatures.example) 
+  of a signatures set is provided). The TCP stream is analyzed in the correct order and the pattern is correctly identified also when splitted 
+  over multiple TCP segmentes. 
+  It is possible to use this demo to read data [sequentially](demo/http_pattern_matching/http_pm_seq.cc) from a .pcap file, 
+  to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cc) from a .pcap file, or to read data from the 
+  [network](demo/http_pattern_matching/http_pm_mc.cc) by using [PF_RING.](http://www.ntop.org) (PF_RING needs to be installed).
 
 How it works
 ================================================================================================================
