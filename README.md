@@ -174,7 +174,7 @@ int main(int argc, char** argv){
 	char* pcap_filename=argv[1];
 	char errbuf[PCAP_ERRBUF_SIZE];
 
-	dpi_library_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, 
+	dpi_framework_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, 
 	                                             MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
 	u_int64_t bytes_contained=0;
 
@@ -298,6 +298,27 @@ More demo applications can be found in [demo](demo) folder:
   to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cpp) from a .pcap file, or to read data from the 
   [network](demo/http_pattern_matching/http_pm_mc.cpp) by using [PF_RING.](http://www.ntop.org/products/pf_ring/) (PF_RING needs to be installed).
 
+Experimental results
+================================================================================================================
+Extensive tests have been done from the point of view of the performance. We will show here only some of the results
+we obtained (other results and comparison with similar tools can be found in [Thesis.pdf](Thesis.pdf)).
+
+Protocol identification
+---------------------------------------------------------------------------------------------------------------------
+First of all, we computed the bandwidth (in millions of packets per second) of the multicore version of the framework 
+over different datasets, obtaining the following results:
+
+![Multicore protocol identification: bandwidth](results/bandwidth_protocol_identification.pdf)
+
+HTTP pattern matching
+---------------------------------------------------------------------------------------------------------------------
+In this test, we computed the bandwidth (in millions of packets per second) of the HTTP pattern matching application
+varying the number of worker threads used by the framework. We executed this test both on data read from the network
+with PF_RING and on data read by preloading a .pcap file in main memory and the reading data from the memory, 
+obtaining very similar results.
+
+![HTTP pattern matching application: bandwidth](results/bandwidth_app.pdf)
+
 How it works
 ================================================================================================================
 To identify the application protocol, packets are classified in bidirectional sets of packets all sharing the 
@@ -318,8 +339,8 @@ to avoid evasion attacks that use IP fragmentation and TCP segmentation.
 
 The framework can be used in two different modes: Stateful and Stateless.
 + Stateful: is suited for applications which don't have a  concept of 'flow'. In this case the user simply pass to
-the library a stream of packets without concerning about how to store the flow. All the flow management and storing
-will be done by the library.
+the framework a stream of packets without concerning about how to store the flow. All the flow management and storing
+will be done by the framework.
 
 + Stateless: is suited for applications which already have a concept of 'flow'. In this case the framework demand 
 the storage of the flow data to the application. The user application should be modified in order to store with 
