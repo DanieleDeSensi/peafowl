@@ -296,7 +296,7 @@ More demo applications can be found in [demo](demo) folder:
   over multiple TCP segmentes. 
   It is possible to use this demo to read data [sequentially](demo/http_pattern_matching/http_pm_seq.cpp) from a .pcap file, 
   to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cpp) from a .pcap file, or to read data from the 
-  [network](demo/http_pattern_matching/http_pm_mc.cpp) by using [PF_RING.](http://www.ntop.org) (PF_RING needs to be installed).
+  [network](demo/http_pattern_matching/http_pm_mc.cpp) by using [PF_RING.](http://www.ntop.org/products/pf_ring/) (PF_RING needs to be installed).
 
 How it works
 ================================================================================================================
