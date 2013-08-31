@@ -294,9 +294,9 @@ More demo applications can be found in [demo](demo) folder:
 + ```http_pattern_matching```: Searches in all the HTTP bodies a set of patterns (e.g. viruses signatures, an [example](demo/http_pattern_matching/signatures.example) 
   of a signatures set is provided). The TCP stream is analyzed in the correct order and the pattern is correctly identified also when splitted 
   over multiple TCP segmentes. 
-  It is possible to use this demo to read data [sequentially](demo/http_pattern_matching/http_pm_seq.cc) from a .pcap file, 
-  to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cc) from a .pcap file, or to read data from the 
-  [network](demo/http_pattern_matching/http_pm_mc.cc) by using [PF_RING.](http://www.ntop.org) (PF_RING needs to be installed).
+  It is possible to use this demo to read data [sequentially](demo/http_pattern_matching/http_pm_seq.cpp) from a .pcap file, 
+  to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cpp) from a .pcap file, or to read data from the 
+  [network](demo/http_pattern_matching/http_pm_mc.cpp) by using [PF_RING.](http://www.ntop.org/products/pf_ring/) (PF_RING needs to be installed).
 
 How it works
 ================================================================================================================
