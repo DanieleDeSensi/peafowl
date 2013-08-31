@@ -1,3 +1,45 @@
+/*
+ * http_pm_mc_pfring.cc
+ *
+ * This demo application analyzes the HTTP traffic (reordering the TCP packets to have
+ * a well-formed stream), and searches for specific patterns (contained into a file 
+ * specified by a command line parameter) inside the HTTP body.
+ * The traffic is captured by using PF_RING (low latency network capture mechanism).
+ *
+ * Over high bandwidth networks, getting the timestamp for each received packet
+ * could have a very negative impact over the bandwidth of the application. In order 
+ * to have low latency timestamping, in this example we perform it by reading the
+ * CPU clock. To correctly perform this kind of timestamping the macro 
+ * CLOCK_FREQ must be set with the correct CPU frequency (in Hz) and the
+ * 'cpu-freq' tool should be used to set the CPU frequency manager to 'performance'.
+ *
+ * For low bandwidth networks this is not really needed and time(NULL) or gettimeofday
+ * can be used for timestamping.
+ *
+ * Created on: 29/08/2013
+ *
+ * =========================================================================
+ *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *
+ *  This file is part of Peafowl.
+ *
+ *  Peafowl is free software: you can redistribute it and/or
+ *  modify it under the terms of the Lesser GNU General Public
+ *  License as published by the Free Software Foundation, either
+ *  version 3 of the License, or (at your option) any later version.
+
+ *  Peafowl is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  Lesser GNU General Public License for more details.
+ *
+ *  You should have received a copy of the Lesser GNU General Public
+ *  License along with Peafowl.
+ *  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * =========================================================================
+ */
+
 #define _POSIX_C_SOURCE 1
 #include <cstdlib>
 #include <cstring>
@@ -7,11 +49,11 @@
 #include <stdexcept>
 #include <utility>
 #include <typeinfo>
-#include "timer.h"
-#include "trie.h"
-#include "signatures.h"
+#include "pattern_matching_lib/timer.h"
+#include "pattern_matching_lib/trie.h"
+#include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include "../mp_dpi_api.h"
+#include <mc_api.h>
 #include <pcap.h>
 #include <netinet/in.h>
 #include <net/ethernet.h>
@@ -20,33 +62,41 @@
 #include <ff/utils.hpp>
 #include <ff/ubuffer.hpp>
 
+
 // #define USE_PF_RING_CLUSTER  1
 
-#define ALARM_SLEEP  1
+#define ALARM_SLEEP 10 //Interval (seconds) between two successive stats print
 
 #include <time.h>
 #include <signal.h>
+extern "C" {
 #include <pfring.h>
+}
 
 using namespace antivirus;
 #define CAPACITY_CHUNK 1000
-#define SCANNER_POOL_SIZE 4096
+#define SCANNER_POOL_SIZE 8192  //4096
 #define CLOCK_FREQ 2000000000L
+#define TEST_DURATION_SECS 120
 
+#define SNAPLEN 2000
 
 #define AVAILABLE_CORES 16
 static u_int16_t mapping[AVAILABLE_CORES]=
-{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+  {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 
 static struct timeval startTime;
-unsigned long long numPkts = 0, numBytes = 0;
+u_int64_t numPkts = 0, numBytes = 0;
 pfring *ring;
 ff::SWSR_Ptr_Buffer *pkt_buff;
 int verbose = 0;
+unsigned long num_pkt_buffers = 128000;
+//unsigned long num_pkt_buffers = 32000;
+
 
 static ff::uSWSR_Ptr_Buffer* scanner_pool;
 
-dpi_mp_packet_reading_result_t reading_cb(void* user_data){
+mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	static unsigned long last_ts=getticks();
 	static u_int32_t last_sec=0;
 #ifdef USE_PF_RING_CLUSTER
@@ -59,10 +109,13 @@ dpi_mp_packet_reading_result_t reading_cb(void* user_data){
 
 	if(numPkts == 0) gettimeofday(&startTime, NULL);
 
+	while(pkt_buff->empty()){;}
+	/**
 	if(pkt_buff->empty()) {
 		printf("Not enough buffer available: please start over\n");
 		exit(-1);
 	}
+	**/
 
 	pkt_buff->pop(&pkt_handle);
 
@@ -72,7 +125,7 @@ dpi_mp_packet_reading_result_t reading_cb(void* user_data){
 #ifdef USE_PF_RING_CLUSTER
 		rc = pfring_recv_pkt_buff(ring, pkt_handle, &hdr, 1);
 #else
-		rc = pfring_recv(ring, (u_char**)&pkt_handle, 1500, &hdr, 1);
+		rc = pfring_recv(ring, (u_char**)&pkt_handle, SNAPLEN, &hdr, 1);
 #endif
 
 		if(rc < 0) {
@@ -81,7 +134,7 @@ dpi_mp_packet_reading_result_t reading_cb(void* user_data){
 		} else if(rc == 0) {
 			continue;
 		} else {
-			dpi_mp_packet_reading_result_t r;
+			mc_dpi_packet_reading_result_t r;
 			const unsigned char *p = (const unsigned char*)pkt_handle;
 
 			r.pkt = &p[14];
@@ -94,14 +147,14 @@ dpi_mp_packet_reading_result_t reading_cb(void* user_data){
 			r.length=hdr.caplen-14;
 			r.user_pointer=pkt_handle;
 
-			numPkts++, numBytes += hdr.len;
+			numPkts++, numBytes += r.length; // hdr.len;
 			return r;
 		}
 	} /* while */
 }
 
 
-void processing_cb(mp_dpi_processing_result_t* processing_result, void* user_data){
+void processing_cb(mc_dpi_processing_result_t* processing_result, void* user_data){
 	pkt_buff->push((void*)processing_result->user_pointer);
 	if(verbose) printf("pkt_buff->push()\n");
 }
@@ -118,7 +171,9 @@ void body_cb(dpi_http_message_informations_t* http_informations,
 		dpi_pkt_infos_t* pkt,
 		void** flow_specific_user_data, void* user_data,
 		u_int8_t last){
+  
 	if(*flow_specific_user_data==NULL){
+
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
 			*flow_specific_user_data=
 					new byte_scanner(*((trie*) user_data), match_found);
@@ -161,41 +216,51 @@ double delta_time (struct timeval * now,
 void print_stats() {
 	pfring_stat pfringStat;
 	struct timeval endTime;
-	double deltaMillisec;
+	double deltaMillisecInterval, deltaMillisecSinceStart;
 	static u_int64_t lastPkts = 0;
-	u_int64_t diff;
+	static u_int64_t lastBytes = 0;
+	u_int64_t diffPkts, diffBytes;
 	static struct timeval lastTime;
 
 	if(startTime.tv_sec == 0) return;
 
 	gettimeofday(&endTime, NULL);
-	deltaMillisec = delta_time(&endTime, &startTime);
 
-	if(pfring_stats(ring, &pfringStat) >= 0)
-		fprintf(stderr, "=========================\n"
-				"Absolute Stats: [%u pkts rcvd][%u pkts dropped]\n"
-				"Total Pkts=%u/Dropped=%.1f %%\n",
-				(unsigned int)pfringStat.recv, (unsigned int)pfringStat.drop,
-				(unsigned int)(pfringStat.recv-pfringStat.drop),
-				pfringStat.recv == 0 ? 0 : (double)(pfringStat.drop*100)/(double)pfringStat.recv);
-	fprintf(stderr, "%llu pkts [%.1f pkt/sec] - %llu bytes [%.2f Mbit/sec]\n",
-			numPkts, (double)(numPkts*1000)/deltaMillisec,
-			numBytes, (double)8*numBytes/(double)(deltaMillisec));
-
-	if(lastTime.tv_sec > 0) {
-		deltaMillisec = delta_time(&endTime, &lastTime);
-		diff = pfringStat.recv-lastPkts;
-		fprintf(stderr, "=========================\n"
-				"Actual Stats: %llu pkts [%.1f ms][%.1f pkt/sec]\n",
-				(long long unsigned int)diff, deltaMillisec,
-				((double)diff/(double)(deltaMillisec/1000)));
+	if(pfring_stats(ring, &pfringStat) >= 0){
+		fprintf(stderr, 
+				"Absolute Stats: [%lu pkts rcvd][%lu pkts dropped]\n"
+				"Total Pkts=%lu/Dropped=%.1f %%\n",
+				(unsigned long)pfringStat.recv, (unsigned long)pfringStat.drop,
+				(unsigned long)(pfringStat.recv),
+			pfringStat.recv == 0 ? 0 : (double)(pfringStat.drop*100)/(double)(pfringStat.recv+pfringStat.drop));
 	}
 
-	lastPkts = pfringStat.recv;
+	if(lastTime.tv_sec > 0) {
+	        deltaMillisecSinceStart = delta_time(&endTime, &startTime);
+		deltaMillisecInterval = delta_time(&endTime, &lastTime);
+		diffPkts = numPkts-lastPkts;
+		diffBytes = numBytes-lastBytes;
+
+                fprintf(stderr, "==================Average=====================\n"
+			"[%.1f pkt/sec][%.2f Gbit/sec]\n",
+			((double)(numPkts*1000)/(double)(deltaMillisecSinceStart)),
+			(double)8*numBytes/(double)(deltaMillisecSinceStart*1000000));
+
+		fprintf(stderr, "==================Current=====================\n"
+		                "[%.1f pkt/sec][%.2f Gbit/sec]\n",
+         			((double)(diffPkts*1000)/(double)(deltaMillisecInterval)),
+                         	(double)8*diffBytes/(double)(deltaMillisecInterval*1000000));
+	}
+
+	lastPkts = numPkts;
+	lastBytes = numBytes;
 
 	lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
 
-	fprintf(stderr, "=========================\n");
+	fprintf(stderr, "==============================================\n");
+	if(deltaMillisecSinceStart/1000 > TEST_DURATION_SECS){
+	  exit(-1);
+	}
 }
 
 /* ******************************** */
@@ -232,7 +297,7 @@ int main(int argc, char **argv){
 		string::size_type trie_depth=DEFAULT_TRIE_MAXIMUM_DEPTH;
 
 		char const *virus_signatures_file_name=argv[1];
-		char const *devide=argv[2];
+		char const *device=argv[2];
 		u_int16_t num_workers=atoi(argv[3]);
 
 
@@ -275,19 +340,18 @@ int main(int argc, char **argv){
 		/*             Start scanning the files.              */
 		/******************************************************/
 
-		dpi_mp_parallelism_details_t details;
-		bzero(&details, sizeof(dpi_mp_parallelism_details_t));
+		mc_dpi_parallelism_details_t details;
+		bzero(&details, sizeof(mc_dpi_parallelism_details_t));
 		details.available_processors=AVAILABLE_CORES;
 		details.mapping=mapping;
 
 		details.single_farm_num_workers=num_workers;
-		dpi_mp_library_state_t* state=mp_dpi_init_stateful(
+		mc_dpi_library_state_t* state=mc_dpi_init_stateful(
 				32767, 32767, 1000000, 1000000, details);
 
-		int num_pkt_buffers = 32768;
 
-
-		int snaplen = 1500, flags = PF_RING_PROMISC;
+		int snaplen = SNAPLEN;
+		int flags = PF_RING_PROMISC;
 
 		ring = pfring_open(device, snaplen, flags);
 
@@ -296,17 +360,18 @@ int main(int argc, char **argv){
 			return (2);
 		}
 
-
-		scanner_pool=new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE);
+		pfring_set_direction(ring, rx_only_direction);
+		scanner_pool=new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE, true);
 		scanner_pool->init();
 		for(uint i=0; i<SCANNER_POOL_SIZE; i++){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
-		mp_dpi_set_read_and_process_callbacks(
-				state, &reading_cb, &processing_cb, (void*) &x);
-		mp_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
+		//		mc_dpi_tcp_reordering_disable(state);
+		mc_dpi_set_read_and_process_callbacks(
+				state, &reading_cb, &processing_cb, (void*) NULL);
+		mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
 		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
-		mp_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
+				assert(mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t))==DPI_STATE_UPDATE_SUCCESS);
 
 
 		pkt_buff = new ff::SWSR_Ptr_Buffer(num_pkt_buffers);
@@ -326,7 +391,7 @@ int main(int argc, char **argv){
 			} else
 				pkt_buff->push(pkt_handle);
 #else
-			pkt_buff->push(malloc(1500));
+			pkt_buff->push(malloc(SNAPLEN));
 			if(verbose) printf("pkt_buff->push() empty buffer\n");
 #endif
 		}
@@ -339,11 +404,11 @@ int main(int argc, char **argv){
 
 		timer scan_timer;
 		scan_timer.start();
-		mp_dpi_run(state);
+		mc_dpi_run(state);
 
 
-		mp_dpi_wait_end(state);
-		mp_dpi_print_stats(state);
+		mc_dpi_wait_end(state);
+		mc_dpi_print_stats(state);
 		scan_timer.stop();
 
 		byte_scanner* bs;
@@ -352,7 +417,7 @@ int main(int argc, char **argv){
 			delete bs;
 		}
 		/* And close the session */
-		mp_dpi_terminate(state);
+		mc_dpi_terminate(state);
 		delete scanner_pool;
 
 		full_timer.stop();
