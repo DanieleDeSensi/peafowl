@@ -7,7 +7,7 @@ OBJECTS = buffer.o signatures.o timer.o trie.o
 .PHONY: all clean doxygen realclean
 
 clean:
-	rm *.o
+	rm -f *.o *~
 
 cleanall:
 	make clean

@@ -310,6 +310,15 @@ over different datasets, obtaining the following results:
 
 ![Multicore protocol identification: bandwidth](results/bandwidth_protocol_identification.pdf)
 
+HTTP pattern matching
+---------------------------------------------------------------------------------------------------------------------
+In this test, we computed the bandwidth (in millions of packets per second) of the HTTP pattern matching application
+varying the number of worker threads used by the framework. We executed this test both on data read from the network
+with PF_RING and on data read by preloading a .pcap file in main memory and the reading data from the memory, 
+obtaining very similar results.
+
+![HTTP pattern matching application: bandwidth](results/bandwidth_app.pdf)
+
 How it works
 ================================================================================================================
 To identify the application protocol, packets are classified in bidirectional sets of packets all sharing the 

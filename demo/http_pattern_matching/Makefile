@@ -22,7 +22,7 @@ clean:
 	make -C ./pattern_matching_lib clean
 cleanall:
 	make clean
-	make -C ./pattern_matching_lib realclean
+	make -C ./pattern_matching_lib cleanall
 	rm http_pm_seq http_pm_mc http_pm_mc_pfring
 
 
