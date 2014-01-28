@@ -51,5 +51,5 @@ seqlib:
 par: $(SEQTARGET) $(PARTARGET)
 parlib:
 	make seqlib
-	ar rs libmpdpi.a $(SEQTARGET) $(PARTARGET) inspectors/*.o
-	mv libmpdpi.a ../lib/libmpdpi.a
+	ar rs libmcdpi.a $(SEQTARGET) $(PARTARGET) inspectors/*.o
+	mv libmcdpi.a ../lib/libmcdpi.a

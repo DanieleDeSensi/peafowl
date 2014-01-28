@@ -980,7 +980,7 @@ u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state);
 
 
 /****************************************/
-/** Only to be used directly by mpdpi. **/
+/** Only to be used directly by mcdpi. **/
 /****************************************/
 dpi_library_state_t* dpi_init_stateful_num_partitions(
 		       u_int32_t size_v4, u_int32_t size_v6,

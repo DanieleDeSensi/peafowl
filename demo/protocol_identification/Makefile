@@ -6,10 +6,10 @@ OPTIMIZE_FLAGS       = -O3 -finline-functions
 CXXFLAGS             = -Wall -g
 CFLAGS               =
 LDFLAGS              = 
-INCS                 = -I ../src/
-LIBS                 = -lpcap -L../lib/ -ldpi -lpthread -lm
+INCS                 = -I ../../src/
+LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread -lm
 INCLUDES             =
-TARGET               = demo_identification demo_jpeg
+TARGET               = protocol_identification
 
 .PHONY: all clean cleanall install uninstall test
 .SUFFIXES: .cpp .o
@@ -22,7 +22,7 @@ all: $(TARGET)
 %: %.cpp 
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
 clean: 
-	-rm -fr *.o *~ demo_jpeg_dump/*.jpeg $(TARGET)
+	-rm -fr *.o *~ $(TARGET)
 cleanall:
 	make clean
 	-rm -fr $(TARGET)

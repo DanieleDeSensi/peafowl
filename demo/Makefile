@@ -1,29 +1,16 @@
-CC                   = gcc 
-CXX                  = g++ 
-LINK_OPT             = 
-VERSION              = 
-OPTIMIZE_FLAGS       = -O3 -finline-functions
-CXXFLAGS             = -Wall -g
-CFLAGS               =
-LDFLAGS              = 
-INCS                 = -I ../../src/
-LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread -lm
-INCLUDES             =
-TARGET               = dump_jpeg
+.PHONY: all clean cleanall
 
-.PHONY: all clean cleanall install uninstall test
-.SUFFIXES: .cpp .o
-
-all: $(TARGET)
+all:
+	make -C ./http_pattern_matching
+	make -C ./dump_jpeg
+	make -C ./protocol_identification
  
-
-%: %.c 
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
-%: %.cpp 
-	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
 clean: 
-	-rm -fr *.o *~ dumps/*.jpeg $(TARGET)
+	make -C ./http_pattern_matching clean
+	make -C ./dump_jpeg clean
+	make -C ./protocol_identification clean
 cleanall:
-	make clean
-	-rm -fr $(TARGET)
+	make -C ./http_pattern_matching cleanall
+	make -C ./dump_jpeg cleanall
+	make -C ./protocol_identification cleanall
 

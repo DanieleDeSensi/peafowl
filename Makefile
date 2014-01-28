@@ -11,29 +11,29 @@ LIBS                 =
 INCLUDES             =
 TARGET               =
 
-.PHONY: clean cleanall install uninstall test seq par
+.PHONY: clean cleanall install uninstall
 .SUFFIXES: .cpp .o
 
 all:
 	make seq 
+	make par
 seq:
+	make clean
 	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
 	make -C ./src seqlib
 par:
+	make clean
 	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1 par
 	make -C ./src parlib
 install:
 	cp ./lib/lib* /usr/lib/
 uninstall:
 	rm /usr/lib/libdpi.a
-	rm /usr/lib/libmpdpi.a	
+	rm /usr/lib/libmcdpi.a	
 clean: 
 	make -C ./src clean
-	make -C ./test clean
 	make -C ./demo clean
-	rm -rf ./lib/lib*
 cleanall:
 	make -C ./src cleanall
-	make -C ./test cleanall
 	make -C ./demo cleanall
 	rm -rf ./lib/lib*
