@@ -25,32 +25,14 @@
  ****************************************************************************
  */
 
-//#include <sys/uio.h>
 
-#if defined(_WIN32)
-#include <WinSock2.h>
-#endif
-
-#include <stdint.h>
 #include <cstdlib>
-#include <vector>
-#include <ff/platforms/platform.h>
-#if !defined(_WIN32)
- #include <sys/uio.h>
-#endif
-#include <ff/d/zmqTransport.hpp>
-#include <ff/d/zmqImpl.hpp>
-#include <ff/node.hpp>
-#include <ff/svector.hpp>
+#include <ff/dnode.hpp>
+
 
 
 namespace ff {
 
-// the header is msg_t::HEADER_LENGHT bytes
-static const char FF_DEOS[]="EOS";
-
-// callback definition 
-typedef void (*dnode_cbk_t) (void *,void*);
 
 /*!
  *  \ingroup zmq_low_level
@@ -73,8 +55,8 @@ typedef void (*dnode_cbk_t) (void *,void*);
  *  \p ff_dnodes (i.e. unicast, broadcast, scatter, ondemand, fromAll, fromAny).
  */
 
-template <typename CommImpl>
-class ff_dnode: public ff_node {
+template <typename CommImplIn, typename CommImplOut>
+class ff_dinout:public dnode<CommImplIn> {
 public:
     typedef typename CommImpl::TransportImpl::msg_t msg_t;
     
@@ -97,30 +79,32 @@ protected:
     }
     
     /// Default constructor
-    ff_dnode():ff_node(),skipdnode(true),neos(0) {}
+    ff_dnode():ff_node(),skipdnode(true) {}
     
     /// Destructor: closes all connections.
     virtual ~ff_dnode() {         
         com.close();
         delete com.getDescriptor();
     }
+    
+    /** Override \p ff_node's \p push method */
+    virtual inline bool push(void * ptr) { 
+        if (skipdnode || !P) return ff_node::push(ptr);
 
-    template<typename CI>
-    inline bool internal_push(void * ptr, CI& comm) { 
         // gets the peers involved in one single communication
-        const int peers=comm.getDescriptor()->getPeers();
+        const int peers=com.getDescriptor()->getPeers();
         if (ptr == (void*)FF_EOS) {
             //cerr << "DNODE prepare to send FF_DEOS to " << peers <<" peers\n";
             for(int i=0;i<peers;++i) {
                 msg_t msg; 
                 msg.init(FF_DEOS,msg_t::HEADER_LENGHT);
                 //cerr << "DNODE sends FF_DEOS to " << i <<"\n";
-                if (!comm.put(msg,i)) return false;
+                if (!com.put(msg,i)) return false;
             }
             return true;
         }
         
-        if (CI::MULTIPUT) {
+        if (CommImpl::MULTIPUT) {
             svector<iovec> v;
             for(int i=0;i<peers;++i) {
                 v.clear();
@@ -128,14 +112,14 @@ protected:
                 prepare(v, ptr, i);
                 
                 msg_t hdr(new uint32_t(v.size()), msg_t::HEADER_LENGHT, freeHdr);
-                comm.putmore(hdr,i);
+                com.putmore(hdr,i);
                 callbackArg.resize(v.size());  
                 for(size_t j=0;j<v.size()-1;++j) {
                     msg_t msg(v[j].iov_base, v[j].iov_len,freeMsg,callbackArg[j]); 
-                    comm.putmore(msg,i);
+                    com.putmore(msg,i);
                 }
                 msg_t msg(v[v.size()-1].iov_base, v[v.size()-1].iov_len,freeMsg,callbackArg[v.size()-1]);
-                if (!comm.put(msg,i)) return false;            
+                if (!com.put(msg,i)) return false;            
             }
         } else {
             svector<iovec> v;
@@ -143,23 +127,16 @@ protected:
             prepare(v, ptr);
                        
             msg_t hdr(new uint32_t(v.size()), msg_t::HEADER_LENGHT, freeHdr);
-            comm.putmore(hdr);
+            com.putmore(hdr);
             callbackArg.resize(v.size());
             for(size_t j=0;j<v.size()-1;++j) {
                 msg_t msg(v[j].iov_base, v[j].iov_len,freeMsg,callbackArg[j]); 
-                comm.putmore(msg);
+                com.putmore(msg);
             }
             msg_t msg(v[v.size()-1].iov_base, v[v.size()-1].iov_len,freeMsg,callbackArg[v.size()-1]);
-            if (!comm.put(msg)) return false;
+            if (!com.put(msg)) return false;
         }
         return true;
-    }
-
-    
-    /** Override \p ff_node's \p push method */
-    virtual inline bool push(void * ptr) { 
-        if (skipdnode || !P) return ff_node::push(ptr);
-        return internal_push(ptr, com);
     }
     
     /** Override \p ff_node 's \p pop method */
@@ -168,17 +145,13 @@ protected:
 
         // gets the peers involved in one single communication
         const int sendingPeers=com.getToWait();
-#ifdef _WIN32
-		svector<msg_t*> ** v = (svector<msg_t*> **) malloc(sendingPeers*sizeof(svector<msg_t*> *));
-#else // C99
+
         svector<msg_t*>* v[sendingPeers];
-#endif
         for(int i=0;i<sendingPeers;++i) {
             msg_t hdr;
             int sender=-1;
             if (!com.gethdr(hdr, sender)) {
                 error("dnode:pop: ERROR: receiving header from peer");
-				// free (v); // Win
                 return false;
             }
             if (isEos(static_cast<char *>(hdr.getData()))) {
@@ -187,7 +160,6 @@ protected:
                     com.done();
                     *ptr = (void*)FF_EOS;
                     neos=0;
-					// free (v) // Win
                     return true;
                 }
                 if (sendingPeers==1) i=-1; // reset for index
@@ -201,14 +173,12 @@ protected:
             for(size_t j=0;j<len;++j)
                 if (!com.get(*(v[ventry]->operator[](j)),sender)) {
                     error("dnode:pop: ERROR: receiving data from peer");
-					// free (v) // Win32
                     return false;
                 }
         }
         com.done();
         
         unmarshalling(v, sendingPeers, *ptr);
-		// free (v) // Win32
         return true;
     } 
     
@@ -227,21 +197,10 @@ public:
      *                 is no longer in use by the run-time
      *
      */
-    int init(const std::string& name, const std::string& address,
+    int initIn(const std::string& name, const std::string& address,
              const int peers, typename CommImpl::TransportImpl* const transp, 
-             const bool p, const int nodeId=-1, dnode_cbk_t cbk=0) {
-        if (!p && cbk) {
-            error("dnode:init: WARNING: callback does not make sense for consumer end-point, ignoring it...\n");
-            cbk=NULL;
-        }
-        skipdnode=false;
-        P=p; 
-        neos=0;
-        ff_dnode::cb=cbk;                               
-        if (P) ff_node::create_output_buffer(1,true);            
-        else ff_node::create_input_buffer(1);
-        com.setDescriptor(new typename CommImpl::descriptor(name,peers,transp,P));
-        return com.init(address,nodeId);
+             const int nodeId=-1) {
+        return In.init(name,address,peers,transp,false, nodeId);
     }
         
     // serialization/deserialization methods
@@ -329,67 +288,6 @@ protected:
 };
 template <typename CommImpl>
 dnode_cbk_t ff_dnode<CommImpl>::cb=0;
-
-
-/*!
- *  \class ff_dinout
- *
- *  \brief A \p ff_dnode with both input and output channels.
- *
- *  A \p ff_dinout is actually a \p ff_dnode with an extra communication channel 
- *  (<em>external channel</em>), so that the dinout node is connected with the 
- *  "external world" both with input and output channels.
- *
- *  It is implemented as a template class: the template type \p CommImplIn refers to 
- *  the input communication pattern, the type \p CommImplOut refers to the output 
- *  communication pattern.
- *
- */
-template <typename CommImplIn, typename CommImplOut>
-class ff_dinout: public ff_dnode<CommImplIn> {
-protected:    
-    typedef typename CommImplOut::TransportImpl::msg_t msg_t;
-
-    /// Destructor: closes all connections.
-    virtual ~ff_dinout() {         
-        comOut.close();
-        delete comOut.getDescriptor();
-    }
-    
-    /** Override \p ff_dnode's \p push method */
-    virtual inline bool push(void * ptr) { 
-        return ff_dnode<CommImplIn>::internal_push(ptr, comOut);
-    }
-    
-public:
-    int initIn(const std::string& name, const std::string& address,
-             const int peers, typename CommImplIn::TransportImpl* const transp, 
-             const int nodeId=-1) {       
-
-        ff_dnode<CommImplIn>::skipdnode=false;
-        ff_dnode<CommImplIn>::P=ff_dnode<CommImplIn>::RECEIVER;
-        ff_dnode<CommImplIn>::ff_node::create_input_buffer(1);
-        ff_dnode<CommImplIn>::com.setDescriptor(new typename CommImplIn::descriptor(name,peers,transp,
-                                                              ff_dnode<CommImplIn>::RECEIVER));
-        return ff_dnode<CommImplIn>::com.init(address,nodeId); 
-    }
-
-    int initOut(const std::string& name, const std::string& address,
-                const int peers, typename CommImplOut::TransportImpl* const transp, 
-                const int nodeId=-1, dnode_cbk_t cbk=0) {
-
-        ff_dnode<CommImplIn>::skipdnode=false;
-        ff_dnode<CommImplIn>::cb=cbk;  
-        comOut.setDescriptor(new typename CommImplOut::descriptor(name,peers,transp,ff_dnode<CommImplIn>::SENDER));
-        
-        return comOut.init(address,nodeId);
-    }
-
-protected:
-    CommImplOut comOut;
-};
-
-
 
 /*!
  *  @}

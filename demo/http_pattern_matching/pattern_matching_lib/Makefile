@@ -7,11 +7,11 @@ OBJECTS = buffer.o signatures.o timer.o trie.o
 .PHONY: all clean doxygen realclean
 
 clean:
-	rm -f *.o *~
+	-rm -f *.o *~
 
 cleanall:
 	make clean
-	rm libpatternmatching.a
+	-rm -fr libpatternmatching.a
 
 %o : %.cc
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $< -o $@
