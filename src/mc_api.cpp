@@ -35,7 +35,7 @@
 #include <ff/pipeline.hpp>
 #include <ff/buffer.hpp>
 
-#define DPI_DEBUG_MC_API 0
+#define DPI_DEBUG_MC_API 1
 #define debug_print(fmt, ...)          \
             do { if (DPI_DEBUG_MC_API) \
             fprintf(stdout, fmt, __VA_ARGS__); } while (0)
@@ -60,9 +60,9 @@ typedef struct mc_dpi_library_state{
 	mc_dpi_processing_result_callback* processing_callback;
 	void* read_process_callbacks_user_data;
 
-	u_int8_t is_frozen:1;
 	u_int8_t freeze_flag;
 	u_int8_t terminating;
+	u_int8_t is_running;
 
 	/**
 	 * This lock keeps the state locked between a freeze and
@@ -342,12 +342,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 		delete_mapping=1;
 	}
 
-	state->freeze_flag=0;
-	state->is_frozen=1;
 	state->terminating=0;
-	ff::init_unlocked(&(state->state_update_lock));
-	ff::spin_lock(&(state->state_update_lock),
-				  DPI_MULTICORE_STATUS_UPDATER_TID);
 
 	u_int8_t parallelism_form;
 	parallelism_form=parallelism_details.parallelism_form;
@@ -413,6 +408,27 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	if(delete_mapping)
 		delete[] parallelism_details.mapping;
 
+
+	state->freeze_flag=1;
+
+	debug_print("%s\n","[mc_dpi_api.cpp]: Preparing...");
+	if(state->parallel_module_type==
+			MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+		// Warm-up
+		assert(state->pipeline->run_then_freeze()>=0);
+		state->pipeline->wait_freezing();
+	}else{
+		// Warm-up
+		assert(state->single_farm->run_then_freeze()>=0);
+		state->single_farm->wait_freezing();
+	}	
+	debug_print("%s\n","[mc_dpi_api.cpp]: Freezed...");
+
+	ff::init_unlocked(&(state->state_update_lock));
+	ff::spin_lock(&(state->state_update_lock),
+				DPI_MULTICORE_STATUS_UPDATER_TID);
+	state->is_running=0;
+	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
 
@@ -538,32 +554,44 @@ void mc_dpi_set_read_and_process_callbacks(
 /*          Other API calls            */
 /***************************************/
 
-
 /**
- * This call freezes the library. Basically all the threads are
- * suspended until another mc_dpi_run(..) is called.
- * When this call returns all the threads are freezed.
+ * Starts the library.
  * @param state A pointer to the state of the library.
  */
-#ifndef DPI_DEBUG
-static inline
-#endif
+void mc_dpi_run(mc_dpi_library_state_t* state){
+	// Real start
+	debug_print("%s\n","[mc_dpi_api.cpp]: Run preparation...");
+	state->is_running=1;
+	mc_dpi_unfreeze(state);
+	debug_print("%s\n","[mc_dpi_api.cpp]: Running...");
+}
+
+/**
+ * Freezes the library.
+ * @param state A pointer to the state of the library.
+ */
 void mc_dpi_freeze(mc_dpi_library_state_t* state){
-#ifdef DPI_DEBUG
-	assert(!state->is_frozen);
-#endif
-	if(likely(!state->is_frozen)){
+	if(unlikely(!state->is_running || mc_dpi_is_frozen(state))){
+		return;
+	}else{
 		debug_print("%s\n","[mc_dpi_api.cpp]: Acquiring freeze lock.");
+		/**
+		 * All state modifications pass from mc_dpi_freeze().
+		 * To avoid that more state modifications start together,
+		 * we can simply protect the mc_dpi_freeze() function.
+		 * Accordingly, more state modifications can be started
+		 * concurrently by different threads. 
+		 * WARNING: State modifications are expensive, it would
+		 * be better if only one thread freezes the library, 
+		 * performs all the modifications and the unfreezes the 
+		 * library (not possible at the moment since each state
+		 * modification function calls freezes and then unfreezes
+		 * the library.
+		 **/
 		ff::spin_lock(&(state->state_update_lock),
 				DPI_MULTICORE_STATUS_UPDATER_TID);
 		debug_print("%s\n","[mc_dpi_api.cpp]: Freeze lock acquired, "
 				    "sending freeze message.");
-		if(state->parallel_module_type==
-				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
-			state->pipeline->freeze();
-		}else{
-			state->single_farm->freeze();
-		}
 
 		state->freeze_flag=1;
 
@@ -572,50 +600,47 @@ void mc_dpi_freeze(mc_dpi_library_state_t* state){
 		if(state->parallel_module_type==
 				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
 			state->pipeline->wait_freezing();
-			assert(state->pipeline->isfrozen());
 		}else{
 			state->single_farm->wait_freezing();
-			assert(state->single_farm->isfrozen());
 		}
+
+		assert(mc_dpi_is_frozen(state));
+
 		debug_print("%s\n","[mc_dpi_api.cpp]: Skeleton freezed.");
-		state->is_frozen=1;
 	}
 }
 
 /**
- * Starts the library.
+ * Check if the library is frozen.
+ * @param state A pointer to the state of the library.
+ * @return 1 if the library is frozen, 0 otherwise.
+ */
+u_int8_t mc_dpi_is_frozen(mc_dpi_library_state_t* state){
+	return (state->freeze_flag>0)?1:0;
+}
+
+/**
+ * Unfreezes the library.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_run(mc_dpi_library_state_t* state){
-#ifdef DPI_DEBUG
-	assert(state->is_frozen);
-#endif
-	if(state->is_frozen){
-		/**
-		 * If is frozen because it has been terminated, then we can't
-		 * run it, so return.
-		 **/
+void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
+	if(unlikely(!state->is_running || !mc_dpi_is_frozen(state))){
+		return;
+	}else{
 		if(unlikely(state->terminating)){
 			debug_print("%s\n","[mc_dpi_api.cpp]: ATTENTION! Attempt "
 					     "to run the library after that it terminated.");
 			return;
 		}
 		state->freeze_flag=0;
-
-		debug_print("%s\n","[mc_dpi_api.cpp]: Starting...");
-		if(state->parallel_module_type==
-				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+		if(state->parallel_module_type==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
 			assert(state->pipeline->run_then_freeze()>=0);
 		}else{
-			assert(state->single_farm->run_then_freeze()>=0);
+			assert(state->single_farm->run_then_freeze(
+				state->single_farm_active_workers)>=0);
 		}
-		debug_print("%s\n","[mc_dpi_api.cpp]: Skeleton started, "
-				    "unlocking state update lock.");
-		ff::spin_unlock(&(state->state_update_lock),
+		ff::spin_unlock(&(state->state_update_lock), 
 				DPI_MULTICORE_STATUS_UPDATER_TID);
-		debug_print("%s\n\n","[mc_dpi_api.cpp]: State update "
-				    "lock unlocked.");
-		state->is_frozen=0;
 	}
 }
 
@@ -629,7 +654,6 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 	}else{
 		assert(state->single_farm->wait()>=0);
 	}
-	state->is_frozen=1;
 }
 
 
@@ -637,6 +661,30 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 /*        Status change API calls       */
 /****************************************/
 
+/**
+ * Changes the number of workers in the L7 farm. This
+ * is possible only when the configuration with the single
+ * farm is used.
+ * It can be used while the farm is running.
+ * @param state       A pointer to the state of the library.
+ * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ *         been changed because a problem happened.
+ **/
+u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
+		                       u_int16_t num_workers){
+
+#if DPI_MULTICORE_DEFAULT_GRAIN_SIZE != 1 //TODO: Implement
+	return DPI_STATE_UPDATE_FAILURE;
+#endif
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	state->single_farm_active_workers=num_workers;
+	//TODO: Implement signaling to L3 worker that hash size has changed
+	//TODO: Implement table ripartitioning (ad esempio modificare la create_table per skippare alcune parti in caso di riconfigurazione.
+	mc_dpi_unfreeze(state);
+	return r;	
+}
 
 /**
  * Sets the maximum number of times that the library tries to guess the
@@ -653,15 +701,11 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
  */
 u_int8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
 		                       u_int16_t max_trials){
-	if(state->is_frozen){
-		return dpi_set_max_trials(state->sequential_state, max_trials);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_set_max_trials(state->sequential_state, max_trials);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_set_max_trials(state->sequential_state, max_trials);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 
@@ -678,17 +722,12 @@ u_int8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
 		                                  u_int16_t table_size){
-	if(state->is_frozen){
-		return dpi_ipv4_fragmentation_enable(state->sequential_state,
-				                             table_size);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv4_fragmentation_enable(state->sequential_state,
-				                        table_size);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv4_fragmentation_enable(state->sequential_state,
+		                        table_size);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -703,17 +742,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
 		                                  u_int16_t table_size){
-	if(state->is_frozen){
-		return dpi_ipv6_fragmentation_enable(state->sequential_state,
-				                             table_size);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv6_fragmentation_enable(state->sequential_state,
-				                        table_size);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv6_fragmentation_enable(state->sequential_state,
+		                        table_size);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -730,19 +764,13 @@ u_int8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
 u_int8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t per_host_memory_limit){
-	if(state->is_frozen){
-		return dpi_ipv4_fragmentation_set_per_host_memory_limit(
-				state->sequential_state,
-				per_host_memory_limit);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv4_fragmentation_set_per_host_memory_limit(
-				state->sequential_state,
-				per_host_memory_limit);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv4_fragmentation_set_per_host_memory_limit(
+			state->sequential_state,
+			per_host_memory_limit);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -759,19 +787,13 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
 u_int8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t per_host_memory_limit){
-	if(state->is_frozen){
-		return dpi_ipv6_fragmentation_set_per_host_memory_limit(
-				state->sequential_state,
-				per_host_memory_limit);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv6_fragmentation_set_per_host_memory_limit(
-				state->sequential_state,
-				per_host_memory_limit);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv6_fragmentation_set_per_host_memory_limit(
+			state->sequential_state,
+			per_host_memory_limit);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -791,17 +813,12 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
 u_int8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t total_memory_limit){
-	if(state->is_frozen){
-		return dpi_ipv4_fragmentation_set_total_memory_limit(
-				state->sequential_state, total_memory_limit);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv4_fragmentation_set_total_memory_limit(
-				state->sequential_state, total_memory_limit);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv4_fragmentation_set_total_memory_limit(
+			state->sequential_state, total_memory_limit);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -821,17 +838,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
 u_int8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t total_memory_limit){
-	if(state->is_frozen){
-		return dpi_ipv6_fragmentation_set_total_memory_limit(
-				state->sequential_state, total_memory_limit);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv6_fragmentation_set_total_memory_limit(
-				state->sequential_state, total_memory_limit);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv6_fragmentation_set_total_memory_limit(
+			state->sequential_state, total_memory_limit);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -849,17 +861,13 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
 u_int8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
 		mc_dpi_library_state_t *state,
 		u_int8_t timeout_seconds){
-	if(state->is_frozen){
-		return dpi_ipv4_fragmentation_set_reassembly_timeout(
-				state->sequential_state, timeout_seconds);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv4_fragmentation_set_reassembly_timeout(
-				state->sequential_state, timeout_seconds);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv4_fragmentation_set_reassembly_timeout(
+			state->sequential_state, timeout_seconds);
+	mc_dpi_unfreeze(state);
+	return r;
+
 }
 
 /**
@@ -877,17 +885,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
 u_int8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
 		mc_dpi_library_state_t *state,
 		u_int8_t timeout_seconds){
-	if(state->is_frozen){
-		return dpi_ipv6_fragmentation_set_reassembly_timeout(
-				state->sequential_state, timeout_seconds);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv6_fragmentation_set_reassembly_timeout(
-				state->sequential_state, timeout_seconds);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv6_fragmentation_set_reassembly_timeout(
+			state->sequential_state, timeout_seconds);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -899,15 +902,11 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
  *         state has not been changed because a problem happened.
  */
 u_int8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
-	if(state->is_frozen){
-		return dpi_ipv4_fragmentation_disable(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv4_fragmentation_disable(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv4_fragmentation_disable(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -919,15 +918,11 @@ u_int8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
-	if(state->is_frozen){
-		return dpi_ipv6_fragmentation_disable(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_ipv6_fragmentation_disable(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_ipv6_fragmentation_disable(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 
@@ -942,15 +937,11 @@ u_int8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
  *         has not been changed because a problem happened.
  */
 u_int8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
-	if(state->is_frozen){
-		return dpi_tcp_reordering_enable(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_tcp_reordering_enable(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_tcp_reordering_enable(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -967,15 +958,11 @@ u_int8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
-	if(state->is_frozen){
-		return dpi_tcp_reordering_disable(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_tcp_reordering_disable(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_tcp_reordering_disable(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -989,15 +976,11 @@ u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
  */
 u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
 		                     dpi_protocol_t protocol){
-	if(state->is_frozen){
-		return dpi_set_protocol(state->sequential_state, protocol);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_set_protocol(state->sequential_state, protocol);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_set_protocol(state->sequential_state, protocol);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -1011,15 +994,11 @@ u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
 		                        dpi_protocol_t protocol){
-	if(state->is_frozen){
-		return dpi_delete_protocol(state->sequential_state, protocol);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_delete_protocol(state->sequential_state, protocol);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_delete_protocol(state->sequential_state, protocol);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -1031,15 +1010,11 @@ u_int8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
-	if(state->is_frozen){
-		return dpi_inspect_all(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_inspect_all(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_inspect_all(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -1051,15 +1026,11 @@ u_int8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
-	if(state->is_frozen){
-		return dpi_inspect_nothing(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_inspect_nothing(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_inspect_nothing(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 
@@ -1077,17 +1048,12 @@ u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
 u_int8_t mc_dpi_set_flow_cleaner_callback(
 		mc_dpi_library_state_t* state,
 		dpi_flow_cleaner_callback* cleaner){
-	if(state->is_frozen){
-		return dpi_set_flow_cleaner_callback(
-				state->sequential_state, cleaner);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_set_flow_cleaner_callback(
-				state->sequential_state, cleaner);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_set_flow_cleaner_callback(
+			state->sequential_state, cleaner);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -1122,19 +1088,13 @@ u_int8_t mc_dpi_http_activate_callbacks(
 		mc_dpi_library_state_t* state,
 		dpi_http_callbacks_t* callbacks,
 		void* user_data){
-	if(state->is_frozen){
-		return dpi_http_activate_callbacks(state->sequential_state,
-				                           callbacks,
-				                           user_data);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_http_activate_callbacks(state->sequential_state,
-				                      callbacks,
-				                      user_data);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_http_activate_callbacks(state->sequential_state,
+		                      callbacks,
+		                      user_data);
+	mc_dpi_unfreeze(state);
+	return r;
 }
 
 /**
@@ -1147,15 +1107,10 @@ u_int8_t mc_dpi_http_activate_callbacks(
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state){
-	if(state->is_frozen){
-		return dpi_http_disable_callbacks(state->sequential_state);
-	}else{
-		u_int8_t r;
-		mc_dpi_freeze(state);
-		r=dpi_http_disable_callbacks(state->sequential_state);
-		mc_dpi_run(state);
-		return r;
-	}
+	u_int8_t r;
+	mc_dpi_freeze(state);
+	r=dpi_http_disable_callbacks(state->sequential_state);
+	mc_dpi_unfreeze(state);
+	return r;
 }
-
 

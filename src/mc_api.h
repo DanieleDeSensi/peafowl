@@ -173,6 +173,25 @@ void mc_dpi_set_read_and_process_callbacks(
 void mc_dpi_run(mc_dpi_library_state_t* state);
 
 /**
+ * Freezes the library.
+ * @param state A pointer to the state of the library.
+ */
+void mc_dpi_freeze(mc_dpi_library_state_t* state);
+
+/**
+ * Check if the library is frozen.
+ * @param state A pointer to the state of the library.
+ * @return 1 if the library is frozen, 0 otherwise.
+ */
+u_int8_t mc_dpi_is_frozen(mc_dpi_library_state_t* state);
+
+/**
+ * Unfreezes the library.
+ * @param state A pointer to the state of the library.
+ */
+void mc_dpi_unfreeze(mc_dpi_library_state_t* state);
+
+/**
  * Wait the end of the data processing.
  * @param state A pointer to the state of the library.
  */
@@ -194,6 +213,19 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state);
 /*************************************************/
 /*          Status change API calls              */
 /*************************************************/
+
+/**
+ * Changes the number of workers in the L7 farm. This
+ * is possible only when the configuration with the single
+ * farm is used.
+ * It can be used while the farm is running.
+ * @param state       A pointer to the state of the library.
+ * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ *         been changed because a problem happened.
+ **/
+u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
+		                       u_int16_t num_workers);
 
 /**
  * Sets the maximum number of times that the library tries to guess the

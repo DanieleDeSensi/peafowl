@@ -116,7 +116,7 @@ void* dpi_L3_L4_emitter::svc(void* task){
 	if(unlikely(*freeze_flag)){
 		worker_debug_print("%s\n", "[worker.cpp]: Freeze message received,"
 				           " terminating.");
-		return (void*) ff::FF_EOS;
+		return NULL;
 	}
 
 #if DPI_MULTICORE_USE_TASKS_POOL
@@ -245,9 +245,9 @@ void* dpi_L3_L4_worker::svc(void* task){
 					hash_result=dpi_compute_v6_hash_function(
 						(dpi_flow_DB_v6*) this->state->db6, &pkt_infos);
 					real_task->input_output_task_t.L3_L4_output_task_t[i].
-					destination_worker=real_task->input_output_task_t.
-					L3_L4_output_task_t[i].
-					hash_result/v6_worker_table_size;
+						destination_worker=real_task->input_output_task_t.
+						L3_L4_output_task_t[i].
+						hash_result/v6_worker_table_size;
 				}
 			}
 		}
@@ -557,7 +557,7 @@ int dpi_collapsed_emitter::svc_init(){
 }
 void* dpi_collapsed_emitter::svc(void* task){
 	void* r=L3_L4_emitter->svc(task);
-	if(unlikely(r==(void*) ff::FF_EOS)){
+	if(unlikely(r==(void*) ff::FF_EOS || r==NULL)){
 		return r;
 	}else{
 		return dpi_L7_emitter::svc(L3_L4_worker->svc(r));
