@@ -444,7 +444,7 @@ public:
     int wrap_around(bool multi_input=false) {
         if (!collector || collector_removed) {
             if (lb->set_masterworker()<0) return -1;
-            if (!has_input_channel) lb->skipfirstpop();
+            if (!multi_input && !has_input_channel) lb->skipfirstpop();
             return 0;
         }
 
@@ -662,13 +662,8 @@ public:
      * If the thread is frozen, then thaw it. 
      */
     inline void thaw(bool _freeze=false, int nw=-1) {
-        // TODO: 
-        if ((nw != -1) && ((size_t)nw < workers.size()) && collector) {
-            error("running less thread then total NOT YET SUPPORTED in case of collector present\n"); 
-            abort();
-        }
         lb->thaw(_freeze, nw);
-        if (collector) gt->thaw(_freeze);
+        if (collector) gt->thaw(_freeze, nw);
     }
 
     /**
@@ -678,7 +673,7 @@ public:
      *
      * \return The status of \p isfrozen().
      */
-    inline const bool isfrozen() { return lb->isfrozen(); }
+    inline bool isfrozen() const { return lb->isfrozen(); }
 
     /**
      * \breif Offloads teh task to farm
@@ -1381,7 +1376,7 @@ private:
          */
         void * svc(void * task) {
             if (C_f) task = C_f->svc(task);
-            ff_send_out(task);
+            if (ff_node::get_out_buffer()) ff_send_out(task);
             do nextone = (nextone+1) % nworkers;
             while(!gt->set_victim(nextone));
             return GO_ON;
@@ -1750,9 +1745,8 @@ public:
      * \brief Sends one task to a specific node id.
      *
      */
-    inline bool ff_send_out_to(void *task, int id, 
-                               unsigned int retry=(unsigned)-1, unsigned int ticks=0) {
-        return lb->ff_send_out_to(task,id,retry,ticks);
+    inline bool ff_send_out_to(void *task, int id) {
+        return lb->ff_send_out_to(task,id);
     }
     
     /**

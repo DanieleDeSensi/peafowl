@@ -467,8 +467,8 @@ protected:
                 return;
             }
         } while(!stp);
-
-        if (init_error && freezing) {
+        
+        if (freezing) {
             pthread_mutex_lock(&mutex);
             frozen=true;
             pthread_cond_signal(&cond_frozen);
@@ -676,7 +676,7 @@ public:
      *
      * \return A booleon value shoing the status of freezing.
      */
-    inline const bool isfrozen() { return freezing>0;} 
+    inline bool isfrozen() const { return freezing>0;} 
 
     /**
      *
@@ -991,7 +991,7 @@ protected:
      * \return If the thread does not exists then false is returned, otherwise
      * the status of \p isfrozen() is returned.
      */
-    virtual const bool isfrozen() { 
+    virtual bool isfrozen() const { 
         if (!thread) 
             return false;
         return thread->isfrozen();
@@ -1180,6 +1180,27 @@ public:
      */
     virtual inline bool  get(void **ptr) { return out->pop(ptr);}
 #endif
+    
+    /**
+     * \brief Loses some time before sending the message to output buffer
+     *
+     * It loses some time before the message is sent to the output buffer.
+     *
+     */
+    virtual inline void losetime_out(void) {
+        FFTRACE(lostpushticks+=ff_node::TICKS2WAIT; ++pushwait);
+        ticks_wait(ff_node::TICKS2WAIT);
+    }
+
+    /**
+     * \brief Loses time before retrying to get a message from the input buffer
+     *
+     * It loses time before retrying to get a message from the input buffer.
+     */
+    virtual inline void losetime_in(void) {
+        FFTRACE(lostpopticks+=ff_node::TICKS2WAIT; ++popwait);
+        ticks_wait(ff_node::TICKS2WAIT);
+    }
 
     /**
      * \brief Gets input buffer
@@ -1286,6 +1307,7 @@ public:
 
         for(unsigned int i=0;i<retry;++i) {
             if (push(task)) return true;
+            FFTRACE(lostpushticks+=ticks; ++pushwait);
             ticks_wait(ticks);
         }     
         return false;
@@ -1400,18 +1422,9 @@ private:
          * \return \p true is always returned.
          */
         inline bool push(void * task) {
-            //register int cnt = 0;
             /* NOTE: filter->push and not buffer->push because of the filter can be a dnode
              */
-            while (! filter->push(task)) { 
-                // if (ch->thxcore>1) {
-                // if (++cnt>PUSH_POP_CNT) { sched_yield(); cnt=0;}
-                //    else ticks_wait(TICKS2WAIT);
-                //} else 
-
-                FFTRACE(filter->lostpushticks+=ff_node::TICKS2WAIT; ++filter->pushwait);
-                ticks_wait(ff_node::TICKS2WAIT);
-            }
+            while (! filter->push(task)) filter->losetime_out();
             return true;
         }
         
@@ -1425,20 +1438,12 @@ private:
          * \return \p true is always returned.
          */
         inline bool pop(void ** task) {
-            //register int cnt = 0;
             /* 
              * NOTE: filter->pop and not buffer->pop because of the filter can be a dnode
              */
             while (! filter->pop(task)) {
                 if (!filter->in_active) { *task=NULL; return false;}
-
-                //if (ch->thxcore>1) {
-                //if (++cnt>PUSH_POP_CNT) { sched_yield(); cnt=0;}
-                //else ticks_wait(TICKS2WAIT);
-                //} else 
-
-                FFTRACE(filter->lostpopticks+=ff_node::TICKS2WAIT; ++filter->popwait);
-                ticks_wait(ff_node::TICKS2WAIT);
+                filter->losetime_in();
             } 
             return true;
         }
@@ -1604,7 +1609,7 @@ private:
          *
          * \return the status of the \p isfrozen() method.
          */
-        const bool isfrozen() { return ff_thread::isfrozen();}
+        bool isfrozen() const { return ff_thread::isfrozen();}
 
         /**
          * \brief Gets the ID of the thread
