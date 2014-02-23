@@ -166,11 +166,10 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		tmp=malloc(sizeof(dpi::dpi_L3_L4_worker));
 		assert(tmp);
 		w1=new (tmp) dpi::dpi_L3_L4_worker(state->sequential_state, i,
+		   &(state->single_farm_active_workers),
 		   mapping[last_mapped],
-		   ceil((float)size_v4/
-				  (float)state->double_farm_L7_active_workers),
-		   ceil((float)size_v6/
-				  (float)state->double_farm_L7_active_workers));
+		   size_v4,
+		   size_v6);
 		state->L3_L4_workers->push_back(w1);
 		last_mapped=(last_mapped+1)%available_procs;
 	}
@@ -265,10 +264,11 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 			&(state->read_process_callbacks_user_data),
 			&(state->freeze_flag), &(state->terminating),
 			state->tasks_pool, state->sequential_state,
-			ceil((float)size_v4/(float)state->single_farm_active_workers),
-			ceil((float)size_v6/(float)state->single_farm_active_workers),
+			&(state->single_farm_active_workers),
+			size_v4,
+			size_v6,
 			state->single_farm->getlb(),
-			state->single_farm_active_workers, mapping[last_mapped]);
+			mapping[last_mapped]);
 	assert(state->single_farm_emitter);
 	last_mapped=(last_mapped+1)%available_procs;
 	state->single_farm->add_emitter(state->single_farm_emitter);
@@ -441,6 +441,7 @@ void mc_dpi_print_stats(mc_dpi_library_state_t* state){
 		if(state->parallel_module_type==
 				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
 			state->pipeline->ffStats(std::cout);
+			//TODO Questo e' il tempo trascorso fra l'ultima freeze-unfreeze, non il tempo totale dalla run (?)
 			std::cout << "Completion time: " <<
 					std::max(ff::diffmsec(
 							state->L3_L4_farm->getwstoptime(),
@@ -680,7 +681,6 @@ u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
 	u_int8_t r;
 	mc_dpi_freeze(state);
 	state->single_farm_active_workers=num_workers;
-	//TODO: Implement signaling to L3 worker that hash size has changed
 	//TODO: Implement table ripartitioning (ad esempio modificare la create_table per skippare alcune parti in caso di riconfigurazione.
 	mc_dpi_unfreeze(state);
 	return r;	

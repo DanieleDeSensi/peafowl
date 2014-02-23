@@ -28,6 +28,7 @@
 #include "flow_table.h"
 #include <pthread.h>
 #include <stdlib.h>
+#include <math.h>
 #include <ff/mapping_utils.hpp>
 
 #if DPI_NUMA_AWARE
@@ -158,15 +159,17 @@ dpi_L3_L4_emitter::~dpi_L3_L4_emitter(){
 
 
 dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
-		                           uint worker_id,
-		                           u_int16_t proc_id,
-		                           u_int32_t v4_worker_table_size,
-		                           u_int32_t v6_worker_table_size)
-                                  :state(state),
-                                   v4_worker_table_size(v4_worker_table_size),
-                                   v6_worker_table_size(v6_worker_table_size),
-                                   worker_id(worker_id),
-                                   proc_id(proc_id){
+									u_int16_t worker_id,
+									u_int16_t *num_L7_workers,
+									u_int16_t proc_id,
+									u_int32_t v4_table_size,
+									u_int32_t v6_table_size)
+								:state(state),
+									v4_table_size(v4_table_size),
+									v6_table_size(v6_table_size),
+									num_L7_workers(num_L7_workers),
+									worker_id(worker_id),
+									proc_id(proc_id){
 	assert(posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE,
 		   sizeof(L3_L4_input_task_struct)*
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE)==0);
@@ -180,6 +183,13 @@ int dpi_L3_L4_worker::svc_init(){
 	worker_debug_print("[worker.cpp]: L3_L4 worker %d mapped "
 		               "on processor: %d\n", worker_id, proc_id);
 	ff_mapThreadToCpu(proc_id,-20);
+	v4_worker_table_size=ceil((float)v4_table_size/
+				  (float)(*num_L7_workers));
+	v6_worker_table_size=ceil((float)v6_table_size/
+				  (float)(*num_L7_workers));
+	worker_debug_print("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
+		               "v6_worker_table_size: %d\n", v4_worker_table_size, 
+						v6_worker_table_size);
 	return 0;
 }
 
@@ -526,20 +536,22 @@ dpi_collapsed_emitter::dpi_collapsed_emitter(
 		u_int8_t* terminating,
 		ff::SWSR_Ptr_Buffer* tasks_pool,
 		dpi_library_state_t* state,
-		u_int32_t v4_worker_table_size,
-		u_int32_t v6_worker_table_size,
+		u_int16_t *num_L7_workers,
+		u_int32_t v4_table_size,
+		u_int32_t v6_table_size,
 		dpi_L7_scheduler* lb,
-		u_int16_t num_workers, u_int16_t proc_id):
-				dpi_L7_emitter(lb, num_workers, proc_id),
+		u_int16_t proc_id):
+				dpi_L7_emitter(lb, *num_L7_workers, proc_id),
 				proc_id(proc_id){
 	L3_L4_emitter=new dpi::dpi_L3_L4_emitter(cb, user_data,
 			                                 freeze_flag,
 			                                 terminating,
 			                                 proc_id,
 			                                 tasks_pool);
-	L3_L4_worker=new dpi::dpi_L3_L4_worker(state, 0, proc_id,
-			                               v4_worker_table_size,
-			                               v6_worker_table_size);
+	L3_L4_worker=new dpi::dpi_L3_L4_worker(state, 0, num_L7_workers,
+			                               proc_id,
+			                               v4_table_size,
+			                               v6_table_size);
 }
 
 dpi_collapsed_emitter::~dpi_collapsed_emitter(){

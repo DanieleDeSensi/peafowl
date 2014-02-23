@@ -116,17 +116,21 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_library_state_t* const state;
 	L3_L4_input_task_struct* in;
-	const u_int32_t v4_worker_table_size;
-	const u_int32_t v6_worker_table_size;
-	const uint worker_id;
+	const u_int32_t v4_table_size;
+	const u_int32_t v6_table_size;
+	u_int32_t v4_worker_table_size;
+	u_int32_t v6_worker_table_size;
+	u_int16_t* num_L7_workers;
+	const u_int16_t worker_id;
 	const u_int16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L3_L4_worker(dpi_library_state_t* state,
-			         uint worker_id,
-			         u_int16_t proc_id,
-			         u_int32_t v4_worker_table_size,
-			         u_int32_t v6_worker_table_size);
+						u_int16_t worker_id,
+						u_int16_t *num_L7_workers,
+						u_int16_t proc_id,
+						u_int32_t v4_table_size,
+						u_int32_t v6_table_size);
 	~dpi_L3_L4_worker();
 
 	int svc_init();
@@ -240,10 +244,10 @@ public:
 			              u_int8_t* terminating,
 			              ff::SWSR_Ptr_Buffer* tasks_pool,
 			              dpi_library_state_t* state,
-			              u_int32_t v4_worker_table_size,
-			              u_int32_t v6_worker_table_size,
+			              u_int16_t *num_L7_workers,
+			              u_int32_t v4_table_size,
+			              u_int32_t v6_table_size,
 			              dpi_L7_scheduler* lb,
-			              u_int16_t num_workers,
 			              u_int16_t proc_id);
 	~dpi_collapsed_emitter();
 	int svc_init();
