@@ -302,15 +302,7 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 			table->table[i].next=&(table->table[i]);
 			table->table[i].prev=&(table->table[i]);
 		}
-
-		u_int32_t partition_size=ceil((float)size/(float)num_partitions);
-		u_int32_t partition_max_active_v4_flows=
-				     max_active_v4_flows/num_partitions;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-		u_int32_t partition_start_pool_size=start_pool_size/num_partitions;
-		table->individual_pool_size=
-				     partition_start_pool_size;
-#endif
+		table->total_size=size;
 
 #if DPI_NUMA_AWARE
 		table->partitions=numa_alloc_onnode(
@@ -322,14 +314,18 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 				(void**) &(table->partitions), DPI_CACHE_LINE_SIZE,
 				sizeof(dpi_flow_DB_v4_partition_t)*num_partitions)==0);
 #endif
-		table->num_partitions=num_partitions;
-		table->total_size=size;
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
 		srand((unsigned int) time(NULL));
 		table->seed=rand();
 #endif
 
+		/** Partitions management. **/
+		u_int32_t partition_size=ceil((float)size/(float)num_partitions);
+		u_int32_t partition_max_active_v4_flows=
+				     max_active_v4_flows/num_partitions;
+		table->num_partitions=num_partitions;
+		
 		u_int16_t j;
 		u_int32_t lowest_index=0;
 		u_int32_t highest_index=lowest_index+partition_size-1;
@@ -355,35 +351,36 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
 			ipv4_flow_t* flow_pool;
+			table->individual_pool_size=start_pool_size/num_partitions;
 #if DPI_NUMA_AWARE
 			flow_pool=numa_alloc_onnode(
-					sizeof(ipv4_flow_t)*partition_start_pool_size,
+					sizeof(ipv4_flow_t)*table->individual_pool_size,
 					DPI_NUMA_AWARE_FLOW_TABLE_NODE);
 			assert(flow_pool);
 			table->partitions[j].partition.pool=numa_alloc_onnode(
-					sizeof(u_int32_t)*partition_start_pool_size,
+					sizeof(u_int32_t)*table->individual_pool_size,
 					DPI_NUMA_AWARE_FLOW_TABLE_NODE);
 			assert(table->partitions[j].partition.pool);
 #else
 			assert(posix_memalign(
 				   (void**) &flow_pool, DPI_CACHE_LINE_SIZE,
-				   (sizeof(ipv4_flow_t)*partition_start_pool_size)+
+				   (sizeof(ipv4_flow_t)*table->individual_pool_size)+
 				   DPI_CACHE_LINE_SIZE)==0);
 			assert(posix_memalign(
 				   (void**) &(table->partitions[j].partition.pool),
 				   DPI_CACHE_LINE_SIZE,
-				   (sizeof(u_int32_t)*partition_start_pool_size)+
+				   (sizeof(u_int32_t)*table->individual_pool_size)+
 				   DPI_CACHE_LINE_SIZE)==0);
 #endif
-			for(i=0; i<partition_start_pool_size; i++){
+			for(i=0; i<table->individual_pool_size; i++){
 				table->partitions[j].partition.pool[i]=i;
 			}
 			table->partitions[j].partition.pool_size=
-					    partition_start_pool_size;
+					    table->individual_pool_size;
 			table->partitions[j].partition.memory_chunk_lower_bound=
 					    flow_pool;
 			table->partitions[j].partition.memory_chunk_upper_bound=
-					    flow_pool+partition_start_pool_size;
+					    flow_pool+table->individual_pool_size;
 #endif
 		}
 	}else
@@ -415,16 +412,8 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(u_int32_t size,
 			table->table[i].next=&(table->table[i]);
 			table->table[i].prev=&(table->table[i]);
 		}
-
-		u_int32_t partition_size=ceil((float)size/(float)num_partitions);
-		u_int32_t partition_max_active_v6_flows=
-				     max_active_v6_flows/num_partitions;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-		u_int32_t partition_start_pool_size=
-				     start_pool_size/num_partitions;
-		table->individual_pool_size=partition_start_pool_size;
-#endif
-
+		table->total_size=size;
+		
 #if DPI_NUMA_AWARE
 		table->partitions=numa_alloc_onnode(
 				sizeof(dpi_flow_DB_v6_partition_t)*num_partitions,
@@ -436,15 +425,18 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(u_int32_t size,
 				DPI_CACHE_LINE_SIZE,
 				sizeof(dpi_flow_DB_v6_partition_t)*num_partitions)==0);
 #endif
-
-		table->num_partitions=num_partitions;
-		table->total_size=size;
-
+		
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
 		srand((unsigned int) time(NULL));
 		table->seed=rand();
 #endif
 
+		/** Partitions management. **/
+		u_int32_t partition_size=ceil((float)size/(float)num_partitions);
+		u_int32_t partition_max_active_v6_flows=
+				     max_active_v6_flows/num_partitions;
+		table->num_partitions=num_partitions;
+		
 		u_int16_t j;
 		u_int32_t lowest_index=0;
 		u_int32_t highest_index=lowest_index+partition_size-1;
@@ -467,36 +459,37 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(u_int32_t size,
 
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
 			ipv6_flow_t* flow_pool;
+			table->individual_pool_size=start_pool_size/num_partitions;
 #if DPI_NUMA_AWARE
 			flow_pool=numa_alloc_onnode(
-					      sizeof(ipv6_flow_t)*partition_start_pool_size,
+					      sizeof(ipv6_flow_t)*table->individual_pool_size,
 					      DPI_NUMA_AWARE_FLOW_TABLE_NODE);
 			assert(flow_pool);
 			table->partitions[j].partition.pool=numa_alloc_onnode(
-					      sizeof(u_int32_t)*partition_start_pool_size,
+					      sizeof(u_int32_t)*table->individual_pool_size,
 					      DPI_NUMA_AWARE_FLOW_TABLE_NODE);
 			assert(table->partitions[j].partition.pool);
 #else
 			assert(posix_memalign(
 					     (void**) &flow_pool,
 					     DPI_CACHE_LINE_SIZE,
-					     (sizeof(ipv6_flow_t)*partition_start_pool_size)+
+					     (sizeof(ipv6_flow_t)*table->individual_pool_size)+
 					     DPI_CACHE_LINE_SIZE)==0);
 			assert(posix_memalign(
 					     (void**) &(table->partitions[j].partition.pool),
 					     DPI_CACHE_LINE_SIZE,
-					     (sizeof(u_int32_t)*partition_start_pool_size)+
+					     (sizeof(u_int32_t)*table->individual_pool_size)+
 					     DPI_CACHE_LINE_SIZE)==0);
 #endif
-			for(i=0; i<partition_start_pool_size; i++){
+			for(i=0; i<table->individual_pool_size; i++){
 				table->partitions[j].partition.pool[i]=i;
 			}
 			table->partitions[j].partition.pool_size=
-					partition_start_pool_size;
+					table->individual_pool_size;
 			table->partitions[j].partition.memory_chunk_lower_bound=
 					flow_pool;
 			table->partitions[j].partition.memory_chunk_upper_bound=
-					flow_pool+partition_start_pool_size;
+					flow_pool+table->individual_pool_size;
 #endif
 		}
 	}else
