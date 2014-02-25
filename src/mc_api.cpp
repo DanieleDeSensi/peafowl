@@ -26,6 +26,7 @@
 
 
 #include "mc_api.h"
+#include "flow_table.h"
 #include "worker.hpp"
 #include <stddef.h>
 #include <vector>
@@ -681,9 +682,9 @@ u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
 	u_int8_t r;
 	mc_dpi_freeze(state);
 	state->single_farm_active_workers=num_workers;
-	dpi_flow_table_setup_partitions_v4(state->sequential_state->db4, 
+	dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->sequential_state->db4, 
 						state->single_farm_active_workers);
-	dpi_flow_table_setup_partitions_v6(state->sequential_state->db6, 
+	dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->sequential_state->db6, 
 						state->single_farm_active_workers);
 	mc_dpi_unfreeze(state);
 	return r;	
