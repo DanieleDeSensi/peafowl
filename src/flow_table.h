@@ -161,6 +161,12 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
 		dpi_library_state_t* state, u_int16_t partition_id,
 		u_int32_t index, dpi_pkt_infos_t* pkt_infos);
 
+#ifndef DPI_FLOW_TABLE_USE_MEMORY_POOL
+void dpi_flow_table_setup_partitions_v4(u_int16_t num_partitions);
+void dpi_flow_table_setup_partitions_v6(u_int16_t num_partitions);
+#endif
+
+
 void mc_dpi_flow_table_delete_flow_v4(
 		dpi_flow_DB_v4_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback,
