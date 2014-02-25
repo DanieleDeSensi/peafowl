@@ -370,9 +370,6 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 	return table;
 }
 
-#ifdef DPI_FLOW_TABLE_USE_MEMORY_POOL
-static
-#endif
 void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table, u_int16_t num_partitions){
 	table->num_partitions=num_partitions;
 	/** Partitions management. **/
@@ -489,9 +486,6 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(u_int32_t size,
 	return table;
 }
 
-#ifdef DPI_FLOW_TABLE_USE_MEMORY_POOL
-static
-#endif
 void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table, u_int16_t num_partitions){
 	/** Partitions management. **/
 	u_int32_t partition_size=ceil((float)table->total_size/(float)table->num_partitions);
