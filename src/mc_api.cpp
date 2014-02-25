@@ -675,13 +675,16 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
 		                       u_int16_t num_workers){
 
-#if DPI_MULTICORE_DEFAULT_GRAIN_SIZE != 1 //TODO: Implement
+#if (defined DPI_FLOW_TABLE_USE_MEMORY_POOL) || (DPI_MULTICORE_DEFAULT_GRAIN_SIZE != 1) //TODO: Implement
 	return DPI_STATE_UPDATE_FAILURE;
 #endif
 	u_int8_t r;
 	mc_dpi_freeze(state);
 	state->single_farm_active_workers=num_workers;
-	//TODO: Implement table ripartitioning (ad esempio modificare la create_table per skippare alcune parti in caso di riconfigurazione.
+	dpi_flow_table_setup_partitions_v4(state->sequential_state->db4, 
+						state->single_farm_active_workers);
+	dpi_flow_table_setup_partitions_v6(state->sequential_state->db6, 
+						state->single_farm_active_workers);
 	mc_dpi_unfreeze(state);
 	return r;	
 }
