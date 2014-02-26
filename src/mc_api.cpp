@@ -36,7 +36,7 @@
 #include <ff/pipeline.hpp>
 #include <ff/buffer.hpp>
 
-#define DPI_DEBUG_MC_API 1
+#define DPI_DEBUG_MC_API 0
 #define debug_print(fmt, ...)          \
             do { if (DPI_DEBUG_MC_API) \
             fprintf(stdout, fmt, __VA_ARGS__); } while (0)
@@ -69,6 +69,7 @@ typedef struct mc_dpi_library_state{
 	 * This lock keeps the state locked between a freeze and
 	 * the successive run. **/
 	ff::CLHSpinLock state_update_lock;
+	u_int16_t available_processors;
 	/******************************************************/
 	/*                 Nodes for single farm.             */
 	/******************************************************/
@@ -100,11 +101,6 @@ typedef struct mc_dpi_library_state{
 	u_int16_t double_farm_L3_L4_active_workers;
 	u_int16_t double_farm_L7_active_workers;
 }mc_dpi_library_state_t;
-
-
-
-
-#define MC_DPI_NUM_SUPPORT_THREADS 2 /** emitter + collector. **/
 
 
 #ifndef DPI_DEBUG
@@ -329,9 +325,17 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 		   sizeof(mc_dpi_library_state_t)+DPI_CACHE_LINE_SIZE)==0);
 	bzero(state, sizeof(mc_dpi_library_state_t));
 
-	assert(parallelism_details.available_processors>=
-			MC_DPI_NUM_SUPPORT_THREADS+1);
+	u_int8_t parallelism_form=parallelism_details.parallelism_form;
+	if(parallelism_form==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+		assert(parallelism_details.available_processors>=
+			4+2);
 
+	}else{
+		assert(parallelism_details.available_processors>=
+			2+1);
+	}
+
+	state->available_processors=parallelism_details.available_processors;
 	u_int8_t delete_mapping=0;
 	if(parallelism_details.mapping==NULL){
 		parallelism_details.mapping=
@@ -345,32 +349,26 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 
 	state->terminating=0;
 
-	u_int8_t parallelism_form;
-	parallelism_form=parallelism_details.parallelism_form;
+	u_int16_t hash_table_partitions;
+
 	state->double_farm_L3_L4_active_workers=
 			parallelism_details.double_farm_num_L3_workers;
 	state->double_farm_L7_active_workers=
 			parallelism_details.double_farm_num_L7_workers;
 	state->single_farm_active_workers=
-			parallelism_details.single_farm_num_workers;
+			parallelism_details.available_processors-2;
 	if(parallelism_form==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
-		assert(state->double_farm_L3_L4_active_workers!=0 &&
-			   state->double_farm_L7_active_workers!=0);
-	}else{
-		assert(state->single_farm_active_workers!=0);
-	}
-
-	u_int16_t hash_table_partitions;
-	if(parallelism_form==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+		assert(state->double_farm_L3_L4_active_workers>0 &&
+			   state->double_farm_L7_active_workers>0);
 		debug_print("%s\n","[mc_dpi_api.cpp]: A pipeline of two "
-				    "farms will be activated.");
+				"farms will be activated.");
 		hash_table_partitions=state->double_farm_L7_active_workers;
 	}else{
+		assert(state->single_farm_active_workers>0);
 		debug_print("%s\n","[mc_dpi_api.cpp]: Only one farm will "
-				    "be activated.");
+				"be activated.");
 		hash_table_partitions=state->single_farm_active_workers;
 	}
-
 
 	state->sequential_state=dpi_init_stateful_num_partitions(
 			size_v4,
@@ -378,7 +376,6 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 			max_active_v4_flows,
 			max_active_v6_flows,
 			hash_table_partitions);
-
 
 	/******************************/
 	/*   Create the tasks pool.   */
@@ -627,6 +624,8 @@ u_int8_t mc_dpi_is_frozen(mc_dpi_library_state_t* state){
  */
 void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
 	if(unlikely(!state->is_running || !mc_dpi_is_frozen(state))){
+		debug_print("%s %d %s %d\n","[mc_dpi_api.cpp]: isRunning: ",
+			    state->is_running, "isFrozen: ", mc_dpi_is_frozen(state));
 		return;
 	}else{
 		if(unlikely(state->terminating)){
@@ -635,14 +634,17 @@ void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
 			return;
 		}
 		state->freeze_flag=0;
+		debug_print("%s\n","[mc_dpi_api.cpp]: Prepare to run.");
 		if(state->parallel_module_type==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
 			assert(state->pipeline->run_then_freeze()>=0);
 		}else{
 			assert(state->single_farm->run_then_freeze(
 				state->single_farm_active_workers)>=0);
 		}
+		debug_print("%s\n","[mc_dpi_api.cpp]: Running.");
 		ff::spin_unlock(&(state->state_update_lock), 
 				DPI_MULTICORE_STATUS_UPDATER_TID);
+		debug_print("%s\n","[mc_dpi_api.cpp]: Unlocked.");
 	}
 }
 
@@ -676,18 +678,24 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
 		                       u_int16_t num_workers){
 
-#if (defined DPI_FLOW_TABLE_USE_MEMORY_POOL) || (DPI_MULTICORE_DEFAULT_GRAIN_SIZE != 1) //TODO: Implement
+#if (DPI_FLOW_TABLE_USE_MEMORY_POOL == 1) || (DPI_MULTICORE_DEFAULT_GRAIN_SIZE != 1) //TODO: Implement
 	return DPI_STATE_UPDATE_FAILURE;
 #endif
-	u_int8_t r;
-	mc_dpi_freeze(state);
-	state->single_farm_active_workers=num_workers;
-	dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->sequential_state->db4, 
-						state->single_farm_active_workers);
-	dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->sequential_state->db6, 
-						state->single_farm_active_workers);
-	mc_dpi_unfreeze(state);
-	return r;	
+	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM && num_workers>=1 && num_workers<=state->available_processors - 2){
+		mc_dpi_freeze(state);
+		state->single_farm_active_workers=num_workers;
+		debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");
+		dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->sequential_state->db4, 
+							state->single_farm_active_workers);
+		debug_print("%s\n","[mc_dpi_api.cpp]: Changing v6 table partitions");
+		dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->sequential_state->db6, 
+							state->single_farm_active_workers);
+		mc_dpi_unfreeze(state);
+		return DPI_STATE_UPDATE_SUCCESS;
+	}else{
+		debug_print("%s %d\n","[mc_dpi_api.cpp]: Not enough workers: ", num_workers);
+		return DPI_STATE_UPDATE_FAILURE;
+	}
 }
 
 /**

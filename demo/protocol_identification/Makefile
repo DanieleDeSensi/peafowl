@@ -11,11 +11,10 @@ LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread -lm
 INCLUDES             =
 TARGET               = protocol_identification
 
-.PHONY: all clean cleanall install uninstall test
+.PHONY: all clean cleanall
 .SUFFIXES: .cpp .o
 
 all: $(TARGET)
- 
 
 %: %.c 
 	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)

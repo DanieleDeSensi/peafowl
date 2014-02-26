@@ -282,6 +282,7 @@ void dpi_flow_table_initialize_informations(
 static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db){
 	u_int32_t i;
 	u_int16_t j;
+	ipv4_flow_t* cur;
 	if(db!=NULL){
 		if(db->table!=NULL){
 			for(j=0; j<db->num_partitions; ++j){
@@ -290,7 +291,9 @@ static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db){
 						  lowest_index;
 					i<=db->partitions[j].partition.informations.
 					      highest_index; ++i){
-					while(db->table[i].next!=&(db->table[i])){
+				  	cur=db->table[i].next;
+					while(cur!=&(db->table[i])){
+				       		cur=cur->next;
 						++db->partitions[j].partition.informations.active_flows;
 					}
 				}
@@ -302,6 +305,7 @@ static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db){
 static void dpi_flow_table_update_flow_count_v6(dpi_flow_DB_v6_t* db){
 	u_int32_t i;
 	u_int16_t j;
+	ipv6_flow_t* cur;
 	if(db!=NULL){
 		if(db->table!=NULL){
 			for(j=0; j<db->num_partitions; ++j){
@@ -310,7 +314,9 @@ static void dpi_flow_table_update_flow_count_v6(dpi_flow_DB_v6_t* db){
 						  lowest_index;
 					i<=db->partitions[j].partition.informations.
 					      highest_index; ++i){
-					while(db->table[i].next!=&(db->table[i])){
+				  cur=db->table[i].next;
+				 	while(cur!=&(db->table[i])){
+				 		cur=cur->next;
 						++db->partitions[j].partition.informations.active_flows;
 					}
 				}
@@ -433,7 +439,9 @@ void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table, u_int16_t num_p
 				    flow_pool+table->individual_pool_size;
 #endif
 	}
+	debug_print("%s\n", "[flow_table.c]: Computing active v4 flows.");
 	dpi_flow_table_update_flow_count_v4(table); //TODO Ottimizzare e contare alla prima insert/check expiration
+	debug_print("%s\n", "[flow_table.c]: Active v4 flows computation finished.");
 }
 
 
@@ -547,7 +555,9 @@ void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table, u_int16_t num_p
 				flow_pool+table->individual_pool_size;
 #endif
 	}
+	debug_print("%s\n", "[flow_table.c]: Computing active v6 flows.");
 	dpi_flow_table_update_flow_count_v6(table); //TODO Ottimizzare e contare alla prima insert/check expiration
+	debug_print("%s\n", "[flow_table.c]: Active v6 flows computation finished.");
 }
 
 void mc_dpi_flow_table_delete_flow_v4(

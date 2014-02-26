@@ -67,11 +67,6 @@ typedef struct mc_dpi_packet_reading_result{
  *                                   it represents the number of workers
  *                                   to activate for the second farm. It
  *                                   must be different from 0.
- * @var single_farm_num_workers      If parallelism_form==
- *                                   MC_DPI_PARALLELISM_FORM_ONE_FARM, it
- *                                   represents the number of workers to
- *                                   activate. It must be different
- *                                   from 0.
  */
 typedef struct mc_dpi_parallelism_details{
 	/** Mapping informations. **/
@@ -81,7 +76,6 @@ typedef struct mc_dpi_parallelism_details{
 	u_int8_t parallelism_form;
 	u_int16_t double_farm_num_L3_workers;
 	u_int16_t double_farm_num_L7_workers;
-	u_int16_t single_farm_num_workers;
 }mc_dpi_parallelism_details_t;
 
 enum analysis_results{

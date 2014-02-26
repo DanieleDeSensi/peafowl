@@ -176,8 +176,8 @@ int main(int argc, char **argv){
 		details.available_processors=AVAILABLE_CORES;
 		details.mapping=mapping;
 
-		details.single_farm_num_workers=num_workers;
 		mc_dpi_library_state_t* state=mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
+		mc_dpi_set_num_workers(state, num_workers);
 
 		printf("Open offline.\n");
 		handle=pcap_open_offline(input_file_name, errbuf);
