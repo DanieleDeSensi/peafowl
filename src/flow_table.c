@@ -440,7 +440,7 @@ void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table, u_int16_t num_p
 #endif
 	}
 	debug_print("%s\n", "[flow_table.c]: Computing active v4 flows.");
-	dpi_flow_table_update_flow_count_v4(table); //TODO Ottimizzare e contare alla prima insert/check expiration
+	dpi_flow_table_update_flow_count_v4(table);
 	debug_print("%s\n", "[flow_table.c]: Active v4 flows computation finished.");
 }
 
@@ -556,7 +556,7 @@ void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table, u_int16_t num_p
 #endif
 	}
 	debug_print("%s\n", "[flow_table.c]: Computing active v6 flows.");
-	dpi_flow_table_update_flow_count_v6(table); //TODO Ottimizzare e contare alla prima insert/check expiration
+	dpi_flow_table_update_flow_count_v6(table);
 	debug_print("%s\n", "[flow_table.c]: Active v6 flows computation finished.");
 }
 

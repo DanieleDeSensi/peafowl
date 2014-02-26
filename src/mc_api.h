@@ -28,7 +28,7 @@
 #define MP_DPI_API_H_
 
 #include "api.h"
-
+#include "energy_utils.h"
 
 typedef struct mc_dpi_library_state mc_dpi_library_state_t;
 

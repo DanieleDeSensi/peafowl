@@ -100,6 +100,11 @@ typedef struct mc_dpi_library_state{
 	ff::ff_pipeline* pipeline;
 	u_int16_t double_farm_L3_L4_active_workers;
 	u_int16_t double_farm_L7_active_workers;
+	/******************************************************/
+	/*                 Statistics.                        */
+	/******************************************************/
+	struct timeval start_time;
+	struct timeval stop_time;
 }mc_dpi_library_state_t;
 
 
@@ -426,6 +431,8 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	ff::spin_lock(&(state->state_update_lock),
 				DPI_MULTICORE_STATUS_UPDATER_TID);
 	state->is_running=0;
+	state->stop_time.tv_sec=0;
+	state->stop_time.tv_usec=0;
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
@@ -439,21 +446,11 @@ void mc_dpi_print_stats(mc_dpi_library_state_t* state){
 		if(state->parallel_module_type==
 				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
 			state->pipeline->ffStats(std::cout);
-			//TODO Questo e' il tempo trascorso fra l'ultima freeze-unfreeze, non il tempo totale dalla run (?)
-			std::cout << "Completion time: " <<
-					std::max(ff::diffmsec(
-							state->L3_L4_farm->getwstoptime(),
-							state->L3_L4_farm->getwstartime()),
-							ff::diffmsec(
-									state->L7_farm->getwstoptime(),
-									state->L7_farm->getwstartime()))
-			<< std::endl;
 		}else{
 			state->single_farm->ffStats(std::cout);
-			std::cout << "Completion time: " <<
-					ff::diffmsec(state->single_farm->getwstoptime(),
-							state->single_farm->getwstartime())
-			<< std::endl;
+		}
+		if(state->stop_time.tv_sec != 0){
+			std::cout << "Completion time: " << ff::diffmsec(state->stop_time, state->start_time) << std::endl;
 		}
 	}
 }
@@ -562,6 +559,7 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 	debug_print("%s\n","[mc_dpi_api.cpp]: Run preparation...");
 	state->is_running=1;
 	mc_dpi_unfreeze(state);
+	gettimeofday(&state->start_time,NULL);
 	debug_print("%s\n","[mc_dpi_api.cpp]: Running...");
 }
 
@@ -658,6 +656,8 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 	}else{
 		assert(state->single_farm->wait()>=0);
 	}
+        gettimeofday(&state->stop_time,NULL);
+	state->is_running=0;
 }
 
 
