@@ -355,7 +355,7 @@ int main(int argc, char **argv){
 		ring = pfring_open(device, snaplen, flags);
 
 		if(ring==NULL){
-			fprintf(stderr, "Couldn't open device %s\n", argv[1]);
+			fprintf(stderr, "Couldn't open device %s\n", device);
 			return (2);
 		}
 

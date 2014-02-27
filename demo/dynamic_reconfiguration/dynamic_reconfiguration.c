@@ -79,6 +79,20 @@ void processing_cb(mc_dpi_processing_result_t* processing_result, void* user_dat
 	free(processing_result->user_pointer);
 }
 
+void print_watts(mc_dpi_joules_counters before, mc_dpi_joules_counters after, double interval){
+	uint i=0;
+	printf("\n");
+	printf("==============Energy Stats==============\n");
+	for(i=0; i<before.num_sockets; i++){
+		printf("===============Socket %d=================\n", i);
+		printf("Watts of entire socket: %f\n", (after.joules_socket[i]-before.joules_socket[i])/interval);
+		printf("Watts of cores: %f\n", (after.joules_cores[i]-before.joules_cores[i])/interval);
+		printf("Watts of offcores: %f\n", (after.joules_offcores[i]-before.joules_offcores[i])/interval);
+		printf("Watts of DRAM: %f\n", (after.joules_dram[i]-before.joules_dram[i])/interval);
+	}
+	printf("========================================\n");
+}
+
 int main(int argc, char** argv){
 	pcap_t *handle;
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -94,7 +108,6 @@ int main(int argc, char** argv){
 
 	mc_dpi_library_state_t* state=mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
 
-
 	printf("Open offline.\n");
 	handle=pcap_open_offline(argv[1], errbuf);
 
@@ -104,30 +117,48 @@ int main(int argc, char** argv){
 	}
 
 	mc_dpi_set_read_and_process_callbacks(state, &reading_cb, &processing_cb, (void*) handle);
+	
+	mc_dpi_joules_counters joules_before = mc_dpi_read_joule_counters(state);
+	double interval = 10;
+	printf("Computing watts before running farm (over a %f secs interval)\n", interval);
+	sleep(interval);
+	mc_dpi_joules_counters joules_after = mc_dpi_read_joule_counters(state);
+	print_watts(joules_before, joules_after, interval);
 
-	mc_dpi_run(state);
 
 	uint i=0;
 	uint num_workers=0;
+	
+	mc_dpi_run(state);
 
 	while(!terminate){
-		sleep(1);
+		joules_before = mc_dpi_read_joule_counters(state);
+		interval=1;
+		sleep(interval);
+		joules_after = mc_dpi_read_joule_counters(state);
+		print_watts(joules_before, joules_after, interval);
 		num_workers=(i%(details.available_processors-2))+1;
-		printf("Try to set %d workers.\n", num_workers);
+		struct timeval before;
+		gettimeofday(&before,NULL);
+		u_int64_t before_usec = 1000000 * before.tv_sec + before.tv_usec;
 		if(mc_dpi_set_num_workers(state, num_workers)==DPI_STATE_UPDATE_SUCCESS)
 			printf("%d workers activated.\n", num_workers);
 		else{
 			printf("Workers change failed.\n");
 			return 1;
 		}
-		mc_dpi_print_stats(state);
+                struct timeval after;
+                gettimeofday(&after,NULL);
+                u_int64_t after_usec = 1000000 * after.tv_sec + after.tv_usec;
+		printf("Reconfigured in %f msecs\n", ((double)(after_usec - before_usec))/(double)1000);
 		++i;
 	}
-
+	
 	mc_dpi_wait_end(state);
 	mc_dpi_print_stats(state);
 	/* And close the session */
 	pcap_close(handle);
+	handle=NULL;
 	mc_dpi_terminate(state);
 	return 0;
 }

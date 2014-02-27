@@ -1,10 +1,10 @@
 .PHONY: all clean cleanall
 
 all:
-	make -C ./http_pattern_matching
-	make -C ./dump_jpeg
-	make -C ./protocol_identification
-	make -C ./dynamic_reconfiguration 
+	make -i -C ./http_pattern_matching
+	make -i -C ./dump_jpeg
+	make -i -C ./protocol_identification
+	make -i -C ./dynamic_reconfiguration 
 clean: 
 	make -C ./http_pattern_matching clean
 	make -C ./dump_jpeg clean

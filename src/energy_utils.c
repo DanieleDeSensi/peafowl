@@ -73,20 +73,6 @@ static int open_msr(int core) {
 
   sprintf(msr_filename, "/dev/cpu/%d/msr", core);
   fd = open(msr_filename, O_RDONLY);
-  if ( fd < 0 ) {
-    if ( errno == ENXIO ) {
-      fprintf(stderr, "rdmsr: No CPU %d\n", core);
-      exit(2);
-    } else if ( errno == EIO ) {
-      fprintf(stderr, "rdmsr: CPU %d doesn't support MSRs\n", core);
-      exit(3);
-    } else {
-      perror("rdmsr:open");
-      fprintf(stderr,"Trying to open %s\n",msr_filename);
-      exit(127);
-    }
-  }
-
   return fd;
 }
 
@@ -178,7 +164,7 @@ energy_counters_init_res energy_counters_init(energy_counters_state* state){
   int n=0;
   char command[512];
   f = popen("cat /proc/cpuinfo | grep 'physical id' | sort -u | wc -l", "r");
-  if (fscanf(f, "%d", &n) == EOF) { pclose(f); return NUMBER_OF_SOCKETS_NOT_FOUND;}
+  if (!f || fscanf(f, "%d", &n) == EOF) { pclose(f); return NUMBER_OF_SOCKETS_NOT_FOUND;}
   pclose(f);
   state->num_sockets=n;
   state->sockets=(socket_state*)malloc(sizeof(socket_state)*state->num_sockets);
@@ -186,12 +172,17 @@ energy_counters_init_res energy_counters_init(energy_counters_state* state){
 
   unsigned int i;
   for(i=0; i<state->num_sockets;i++){
-    sprintf(command, "cat /proc/cpuinfo | egrep 'processor|physical id' | tr -d '\t' | tr -d ' ' | sed 'N;s/\n/ /' | grep 'physicalid:%d' | cut -d ' ' -f 1 | cut -d ':' -f 2 | head -1", i);
+    sprintf(command, "cat /proc/cpuinfo | egrep 'processor|physical id' | tr -d '\t' "
+                     "| tr -d ' ' | paste -d'|' - - | grep 'physicalid:%d' "
+                     "| cut -d '|' -f 1 | cut -d ':' -f 2 | head -1", i);
     f = popen(command,"r");
-    if (fscanf(f, "%d", &n) == EOF) { pclose(f); return PROCESSOR_PER_SOCKET_NOT_FOUND;}
+    if (!f || fscanf(f, "%d", &n) == EOF) { pclose(f); return PROCESSOR_PER_SOCKET_NOT_FOUND;}
     pclose(f);
     state->sockets[i].core=n;
     state->sockets[i].fd=open_msr(n);
+    if(state->sockets[i].fd<0){
+      return IMPOSSIBLE_TO_OPEN_MSR_FILE;
+    }
     /* Calculate the units used */
     result=read_msr(state->sockets[i].fd,MSR_RAPL_POWER_UNIT);
 
@@ -206,11 +197,13 @@ energy_counters_init_res energy_counters_init(energy_counters_state* state){
 }
 
 void energy_counters_terminate(energy_counters_state* state){
-  unsigned int i;
-  for(i=0; i<state->num_sockets;i++){
-    close(state->sockets[i].fd);
+  if(state){
+    unsigned int i;
+    for(i=0; i<state->num_sockets;i++){
+      close(state->sockets[i].fd);
+    }
+    free(state->sockets);
   }
-  free(state->sockets);
 }
 
 

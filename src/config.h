@@ -61,6 +61,8 @@
 /*******************************************************************/
 #define DPI_DEFAULT_MAX_TRIALS_PER_FLOW 0
 
+#define DPI_MAX_CPU_SOCKETS 8
+
 #define DPI_ENABLE_L3_TRUNCATION_PROTECTION
 #define DPI_ENABLE_L4_TRUNCATION_PROTECTION
 

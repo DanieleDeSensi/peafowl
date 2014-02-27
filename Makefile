@@ -15,21 +15,18 @@ TARGET               =
 .SUFFIXES: .cpp .o
 
 all:
-	make seq 
-	make par
-seq:
-	make clean
-	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
-	make -C ./src seqlib
-par:
-	make clean
-	make -C ./src CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1 par
-	make -C ./src parlib
+	make -C ./src all 
+	make -C ./demo all
 install:
-	cp ./lib/lib* /usr/lib/
+	cp ./lib/libdpi.a /usr/lib/libpeafowldpi.a
+	cp ./lib/libmcdpi.a /usr/lib/libpeafowldpimc.a
+	cp ./src/api.h /usr/include/peafowldpi.h
+	cp ./src/mc_api.h /usr/include/peafowldpimc.h
 uninstall:
-	rm /usr/lib/libdpi.a
-	rm /usr/lib/libmcdpi.a	
+	rm /usr/lib/libpeafowldpi.a
+	rm /usr/lib/libpeafowldpimc.a
+	rm /usr/include/peafowldpi.h
+	rm /usr/include/peafowldpimc.h
 clean: 
 	make -C ./src clean
 	make -C ./demo clean

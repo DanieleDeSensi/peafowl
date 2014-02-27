@@ -28,7 +28,6 @@
 #define MP_DPI_API_H_
 
 #include "api.h"
-#include "energy_utils.h"
 
 typedef struct mc_dpi_library_state mc_dpi_library_state_t;
 
@@ -159,12 +158,28 @@ void mc_dpi_set_read_and_process_callbacks(
 		mc_dpi_processing_result_callback* processing_callback,
 		void* user_data);
 
-
 /**
  * Starts the library.
  * @param state A pointer to the state of the library.
  */
 void mc_dpi_run(mc_dpi_library_state_t* state);
+
+typedef struct{
+  unsigned int num_sockets;
+  double joules_socket[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_cores[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_offcores[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_dram[DPI_MAX_CPU_SOCKETS]; //One value per socket
+}mc_dpi_joules_counters;
+
+/**
+ * Reads the joules counters.
+ * ATTENTION: The counters wrap approximately every 60 seconds.
+ * @param state A pointer to the state of the library.
+ * @return The values of the counters at the current time.
+ */
+mc_dpi_joules_counters mc_dpi_read_joule_counters(mc_dpi_library_state_t* state);
+
 
 /**
  * Freezes the library.

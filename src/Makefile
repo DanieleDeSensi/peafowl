@@ -16,6 +16,12 @@ PARTARGET            = worker.o mc_api.o energy_utils.o
 .PHONY: clean cleanall install uninstall test seqlib parlib
 .SUFFIXES: .cpp .o
 
+all:
+	make clean
+	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
+	make seqlib
+	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1 par
+	make parlib
 tcp_stream_management.o: tcp_stream_management.c
 	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c tcp_stream_management.c -o tcp_stream_management.o
 utils.o: utils.cpp

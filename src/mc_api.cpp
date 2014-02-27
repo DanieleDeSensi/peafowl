@@ -27,6 +27,7 @@
 
 #include "mc_api.h"
 #include "flow_table.h"
+#include "energy_utils.h"
 #include "worker.hpp"
 #include <stddef.h>
 #include <vector>
@@ -105,6 +106,7 @@ typedef struct mc_dpi_library_state{
 	/******************************************************/
 	struct timeval start_time;
 	struct timeval stop_time;
+	energy_counters_state* energy_counters;
 }mc_dpi_library_state_t;
 
 
@@ -433,6 +435,12 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	state->is_running=0;
 	state->stop_time.tv_sec=0;
 	state->stop_time.tv_usec=0;
+	state->energy_counters=(energy_counters_state*)malloc(sizeof(energy_counters_state));
+	if(energy_counters_init(state->energy_counters)!=0){
+		free(state->energy_counters);
+		state->energy_counters=NULL;
+	}
+	
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
@@ -517,6 +525,9 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state){
 		state->tasks_pool->~SWSR_Ptr_Buffer();
 		free(state->tasks_pool);
 #endif
+		if(state->energy_counters){
+			energy_counters_terminate(state->energy_counters);
+		}
 
 		free(state);
 	}
@@ -561,6 +572,33 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 	mc_dpi_unfreeze(state);
 	gettimeofday(&state->start_time,NULL);
 	debug_print("%s\n","[mc_dpi_api.cpp]: Running...");
+}
+
+/**
+ * Reads the joules counters.
+ * ATTENTION: The counters wrap approximately every 60 seconds.
+ * @param state A pointer to the state of the library.
+ * @return The values of the counters at the current time.
+ */
+mc_dpi_joules_counters mc_dpi_read_joule_counters(mc_dpi_library_state_t* state){
+	mc_dpi_joules_counters r;
+	memset(&r, 0, sizeof(mc_dpi_joules_counters));
+
+	if(state && state->energy_counters){
+		energy_counters_read(state->energy_counters);
+		
+		unsigned int i;
+		assert(state->energy_counters->num_sockets < DPI_MAX_CPU_SOCKETS);
+		r.num_sockets=state->energy_counters->num_sockets;
+		for(i=0; i<state->energy_counters->num_sockets; i++){
+			r.joules_socket[i]=state->energy_counters->sockets[i].energy_package;
+			r.joules_cores[i]=state->energy_counters->sockets[i].energy_cores;
+			r.joules_offcores[i]=state->energy_counters->sockets[i].energy_offcores;
+			r.joules_dram[i]=state->energy_counters->sockets[i].energy_dram;
+		}
+	}
+
+	return r;
 }
 
 /**
