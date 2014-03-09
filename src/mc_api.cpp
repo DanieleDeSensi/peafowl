@@ -31,7 +31,7 @@
 #include "worker.hpp"
 #include <stddef.h>
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 #include <ff/farm.hpp>
 #include <ff/pipeline.hpp>
@@ -576,30 +576,75 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 
 /**
  * Reads the joules counters.
- * ATTENTION: The counters wrap approximately every 60 seconds.
+ * ATTENTION: The counters may wrap. Use mc_dpi_joules_counters_wrapping_interval 
+ *            to get the maximum amount of second you can wait between two successive
+ *            readings.
  * @param state A pointer to the state of the library.
  * @return The values of the counters at the current time.
  */
-mc_dpi_joules_counters mc_dpi_read_joule_counters(mc_dpi_library_state_t* state){
+mc_dpi_joules_counters mc_dpi_read_joules_counters(mc_dpi_library_state_t* state){
 	mc_dpi_joules_counters r;
 	memset(&r, 0, sizeof(mc_dpi_joules_counters));
 
 	if(state && state->energy_counters){
 		energy_counters_read(state->energy_counters);
-		
 		unsigned int i;
 		assert(state->energy_counters->num_sockets < DPI_MAX_CPU_SOCKETS);
 		r.num_sockets=state->energy_counters->num_sockets;
 		for(i=0; i<state->energy_counters->num_sockets; i++){
-			r.joules_socket[i]=state->energy_counters->sockets[i].energy_package;
-			r.joules_cores[i]=state->energy_counters->sockets[i].energy_cores;
-			r.joules_offcores[i]=state->energy_counters->sockets[i].energy_offcores;
-			r.joules_dram[i]=state->energy_counters->sockets[i].energy_dram;
+			r.joules_socket[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_socket*
+			                       state->energy_counters->sockets[i].energy_per_unit);
+			r.joules_cores[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_cores*
+			                       state->energy_counters->sockets[i].energy_per_unit);
+			r.joules_offcores[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_offcores*
+			                       state->energy_counters->sockets[i].energy_per_unit);
+			r.joules_dram[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_dram*
+			                       state->energy_counters->sockets[i].energy_per_unit);
 		}
 	}
 
 	return r;
 }
+
+/**
+ * Returns the maximum number of seconds that the user can wait before
+ * performing a new counters read.
+ * @param state A pointer to the state of the library.
+ * @return The maximum number of seconds that the user can wait before
+ *         performing a new counters read.
+ */
+u_int32_t mc_dpi_joules_counters_wrapping_interval(mc_dpi_library_state_t* state){
+	return energy_counters_wrapping_time(state->energy_counters);
+}
+
+
+#define DELTA_WRAP32(new, old, diff)            \
+	if (new > old) {                        \
+		diff = new - old;               \
+	} else {                                \
+		diff = 0x100000000 - old + new; \
+	}
+
+/**
+ * Returns the joules consumed between two calls to mc_dpi_read_joule_counters.
+ * @param after A joules counter.
+ * @param before A joules counter.
+ * @return The difference after-before.
+ */
+mc_dpi_joules_counters mc_dpi_diff_joules_counters(mc_dpi_joules_counters after, mc_dpi_joules_counters before){
+	mc_dpi_joules_counters result;
+	memset(&result, 0, sizeof(result));
+	unsigned int i;
+	result.num_sockets=after.num_sockets;
+	for(i=0; i<after.num_sockets; i++){
+		DELTA_WRAP32(after.joules_socket[i], before.joules_socket[i], result.joules_socket[i]);
+		DELTA_WRAP32(after.joules_cores[i], before.joules_cores[i], result.joules_cores[i]);
+		DELTA_WRAP32(after.joules_offcores[i], before.joules_offcores[i], result.joules_offcores[i]);
+		DELTA_WRAP32(after.joules_dram[i], before.joules_dram[i], result.joules_dram[i]);
+	}
+	return result;
+}
+
 
 /**
  * Freezes the library.
@@ -659,16 +704,12 @@ u_int8_t mc_dpi_is_frozen(mc_dpi_library_state_t* state){
  * @param state A pointer to the state of the library.
  */
 void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
-	if(unlikely(!state->is_running || !mc_dpi_is_frozen(state))){
-		debug_print("%s %d %s %d\n","[mc_dpi_api.cpp]: isRunning: ",
-			    state->is_running, "isFrozen: ", mc_dpi_is_frozen(state));
+	if(unlikely(!state->is_running || !mc_dpi_is_frozen(state) || state->terminating)){
+		debug_print("%s %d %s %d %s %d\n","[mc_dpi_api.cpp]: isRunning: ",
+			    state->is_running, " isFrozen: ", mc_dpi_is_frozen(state),
+			    " terminating: ", state->terminating);
 		return;
 	}else{
-		if(unlikely(state->terminating)){
-			debug_print("%s\n","[mc_dpi_api.cpp]: ATTENTION! Attempt "
-					     "to run the library after that it terminated.");
-			return;
-		}
 		state->freeze_flag=0;
 		debug_print("%s\n","[mc_dpi_api.cpp]: Prepare to run.");
 		if(state->parallel_module_type==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){

@@ -58,7 +58,7 @@ using namespace antivirus;
 #define SCANNER_POOL_SIZE 4096
 
 #define AVAILABLE_CORES 16
-static u_int16_t mapping[AVAILABLE_CORES]={0,1,2,3,4,5,6,7,8,9,10,11, 12,13,14,15};
+static u_int16_t mapping[AVAILABLE_CORES]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
 
 static ff::uSWSR_Ptr_Buffer* scanner_pool;
 

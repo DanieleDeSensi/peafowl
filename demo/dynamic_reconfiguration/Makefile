@@ -1,27 +1,21 @@
-CC                   = gcc 
-CXX 		     = g++ 
-LINK_OPT             = 
-VERSION              = 
-OPTIMIZE_FLAGS       =  -O3 -finline-functions
-CXXFLAGS             = -Wall -g -Xlinker -zmuldefs
-CFLAGS               =
-LDFLAGS              = 
-INCS                 = -I ../../src/
-LIBS                 = -lpcap -L../../lib -lmcdpi -lpthread 
-INCLUDES             =
-TARGET               = dynamic_reconfiguration
+#GNU makefile
+CXX = g++
+CXXFLAGS = -O -g -Wall -W -ansi -Xlinker -zmuldefs
+INCLUDES = -I../../src/ -I../../src/fastflow/ -I../http_pattern_matching/pattern_matching_lib
+LIBS = -lpcap -L../../lib/ -L../http_pattern_matching/pattern_matching_lib/ -lpatternmatching 
+
 
 .PHONY: all clean cleanall
-.SUFFIXES: .cpp .o
 
-all: $(TARGET) 
-
-%: %.cpp 
-	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
-%: %.c 
-	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
-clean: 
+all: 
+	make -C ../http_pattern_matching/pattern_matching_lib lib
+	make dynamic_reconfiguration
+dynamic_reconfiguration: dynamic_reconfiguration.c
+	$(CXX) $(INCLUDES) $(CXXFLAGS) $? -o $@ $(LIBS) -lmcdpi -lpthread
+clean:
 	-rm -fr *.o *~ $(TARGET)
 cleanall:
 	make clean
-	-rm -fr $(TARGET)
+	-rm -fr dynamic_reconfiguration
+
+

@@ -166,19 +166,38 @@ void mc_dpi_run(mc_dpi_library_state_t* state);
 
 typedef struct{
   unsigned int num_sockets;
-  double joules_socket[DPI_MAX_CPU_SOCKETS]; //One value per socket
-  double joules_cores[DPI_MAX_CPU_SOCKETS]; //One value per socket
-  double joules_offcores[DPI_MAX_CPU_SOCKETS]; //One value per socket
-  double joules_dram[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  u_int32_t joules_socket[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  u_int32_t joules_cores[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  u_int32_t joules_offcores[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  u_int32_t joules_dram[DPI_MAX_CPU_SOCKETS]; //One value per socket
 }mc_dpi_joules_counters;
 
 /**
  * Reads the joules counters.
- * ATTENTION: The counters wrap approximately every 60 seconds.
+ * ATTENTION: The counters may wrap. Use mc_dpi_joules_counters_wrapping_interval
+ *            to get the maximum amount of second you can wait between two successive
+ *            readings.
  * @param state A pointer to the state of the library.
  * @return The values of the counters at the current time.
  */
-mc_dpi_joules_counters mc_dpi_read_joule_counters(mc_dpi_library_state_t* state);
+mc_dpi_joules_counters mc_dpi_read_joules_counters(mc_dpi_library_state_t* state);
+
+/**
+ * Returns the maximum number of seconds that the user can wait before 
+ * performing a new counters read.
+ * @param state A pointer to the state of the library.
+ * @return The maximum number of seconds that the user can wait before
+ *         performing a new counters read.
+ */
+u_int32_t mc_dpi_joules_counters_wrapping_interval(mc_dpi_library_state_t* state);
+
+/**
+ * Returns the joules consumed between two calls to mc_dpi_read_joule_counters.
+ * @param after A joules counter.
+ * @param before A joules counter.
+ * @return The difference after-before.
+ */
+mc_dpi_joules_counters mc_dpi_diff_joules_counters(mc_dpi_joules_counters after, mc_dpi_joules_counters before);
 
 
 /**

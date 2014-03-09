@@ -16,7 +16,6 @@ TARGET               =
 
 all:
 	make -C ./src all 
-	make -C ./demo all
 install:
 	cp ./lib/libdpi.a /usr/lib/libpeafowldpi.a
 	cp ./lib/libmcdpi.a /usr/lib/libpeafowldpimc.a
@@ -29,9 +28,7 @@ uninstall:
 	rm /usr/include/peafowldpimc.h
 clean: 
 	make -C ./src clean
-	make -C ./demo clean
 cleanall:
 	make -C ./src cleanall
-	make -C ./demo cleanall
 	rm -rf ./lib/lib*
 

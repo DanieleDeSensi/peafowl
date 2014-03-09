@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <unistd.h>
-#include <math.h>
+#include <cmath>
 #include <string.h>
 
 
@@ -185,15 +185,30 @@ energy_counters_init_res energy_counters_init(energy_counters_state* state){
     }
     /* Calculate the units used */
     result=read_msr(state->sockets[i].fd,MSR_RAPL_POWER_UNIT);
+    state->sockets[i].power_per_unit=pow(0.5,(double)(result&0xf));
+    state->sockets[i].energy_per_unit=pow(0.5,(double)((result>>8)&0x1f));
+    state->sockets[i].time_per_unit=pow(0.5,(double)((result>>16)&0xf));
 
-    state->sockets[i].power_units=pow(0.5,(double)(result&0xf));
-    state->sockets[i].energy_units=pow(0.5,(double)((result>>8)&0x1f));
-    state->sockets[i].time_units=pow(0.5,(double)((result>>16)&0xf));
+    result=read_msr(state->sockets[i].fd,MSR_PKG_POWER_INFO);
+    state->sockets[i].thermal_spec_power=state->sockets[i].power_per_unit*(double)(result&0x7fff);
   }
   return OK;
 #else
   return OS_NOT_SUPPORTED;
 #endif
+}
+
+u_int32_t energy_counters_wrapping_time(energy_counters_state* state){
+  u_int32_t r=4294967295;
+  unsigned int i;
+  double wrapping_time;
+  for(i=0; i<state->num_sockets; i++){
+    wrapping_time=0xFFFFFFFF * state->sockets[i].energy_per_unit / state->sockets[i].thermal_spec_power;
+    if(wrapping_time<r){
+      r=std::floor(wrapping_time);
+    }
+  }
+  return r;
 }
 
 void energy_counters_terminate(energy_counters_state* state){
@@ -212,20 +227,19 @@ int energy_counters_read(energy_counters_state* state) {
   unsigned int i;
   for(i=0; i<state->num_sockets; i++){
     result=read_msr(state->sockets[i].fd,MSR_PKG_ENERGY_STATUS);
-    state->sockets[i].energy_package=(double)result*state->sockets[i].energy_units;
+    state->sockets[i].energy_units_socket=result;
 
     result=read_msr(state->sockets[i].fd,MSR_PP0_ENERGY_STATUS);
-    state->sockets[i].energy_cores=(double)result*state->sockets[i].energy_units;
+    state->sockets[i].energy_units_cores=result;
 
     if ((state->cpu_model==CPU_SANDYBRIDGE) || (state->cpu_model==CPU_IVYBRIDGE) ||
         (state->cpu_model==CPU_HASWELL)) {
       result=read_msr(state->sockets[i].fd,MSR_PP1_ENERGY_STATUS);
-      state->sockets[i].energy_offcores=(double)result*state->sockets[i].energy_units;
+      state->sockets[i].energy_units_offcores=result;
     }else{
       result=read_msr(state->sockets[i].fd,MSR_DRAM_ENERGY_STATUS);
-      state->sockets[i].energy_dram=(double)result*state->sockets[i].energy_units;
+      state->sockets[i].energy_units_dram=result;
     }
   }
-  //TODO: Potrebbe wrappare in 60 secs
   return 0;
 }
