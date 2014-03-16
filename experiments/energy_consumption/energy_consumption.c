@@ -1,5 +1,5 @@
 /*
- * http_pm_mc.cpp
+ * energy_consumption.cpp
  *
  * This demo application loads in memory all the packets contained into a specified
  * .pcap file.
@@ -7,10 +7,9 @@
  * a well-formed stream), and searches for specific patterns (contained into a file
  * specified by a command line parameter) inside the HTTP body using a certain number
  * of cores (specified by the user).
- * In addition to that, it dynamically changes the parallelism degree while the
- * analyzer is running.
+ * In addition to that, it computes its energy consumption.
  *
- * Created on: 02/03/2014
+ * Created on: 16/03/2014
  *
  * =========================================================================
  *  Copyright (C) 2012-2014, Daniele De Sensi (d.desensi.software@gmail.com)
@@ -47,6 +46,7 @@
 #include "timer.h"
 #include "trie.h"
 #include "signatures.h"
+#include <cinttypes>
 
 #include "mc_api.h"
 #include <pcap.h>
@@ -64,7 +64,7 @@ using namespace antivirus;
  
  
 #define AVAILABLE_CORES 16
-static u_int16_t mapping[AVAILABLE_CORES]={0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,1};
+static u_int16_t mapping_fixed[AVAILABLE_CORES]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
  
 static ff::uSWSR_Ptr_Buffer* scanner_pool;
 
@@ -146,10 +146,10 @@ void flow_cleaner(void* flow_specific_user_data){
 }
  
 
-static double idle_watts_socket[DPI_MAX_CPU_SOCKETS];
-static double idle_watts_cores[DPI_MAX_CPU_SOCKETS];
-static double idle_watts_offcores[DPI_MAX_CPU_SOCKETS];
-static double idle_watts_dram[DPI_MAX_CPU_SOCKETS];
+static double idle_watts_socket=0;
+static double idle_watts_cores=0;
+static double idle_watts_offcores=0;
+static double idle_watts_dram=0;
 
 
 void print_watts(mc_dpi_joules_counters diff, double interval){
@@ -158,56 +158,47 @@ void print_watts(mc_dpi_joules_counters diff, double interval){
   printf("================Energy Stats===============\n");
   printf("Watts of entire socket:\t|");
   for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", (diff.joules_socket[i])/interval);
+    printf("%8.4f|", diff.joules_socket[i]/(double)interval);
   }
   printf("\n");
   printf("Watts of cores:\t\t|");
   for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", (diff.joules_cores[i])/interval);
+    printf("%8.4f|", diff.joules_cores[i]/(double)interval);
   }
   printf("\n");
   printf("Watts of offcores:\t|");
   for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", (diff.joules_offcores[i])/interval);
+    printf("%8.4f|", diff.joules_offcores[i]/(double)interval);
   }
   printf("\n");
   printf("Watts of DRAM:\t\t|");
   for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", (diff.joules_dram[i])/interval);
+    printf("%8.4f|", diff.joules_dram[i]/(double)interval);
   }
   printf("\n");
   printf("===========================================\n");
 }
  
 int main(int argc, char **argv){
-  memset(idle_watts_socket, 0, sizeof(idle_watts_socket));
-  memset(idle_watts_cores, 0, sizeof(idle_watts_cores));
-  memset(idle_watts_offcores, 0, sizeof(idle_watts_offcores));
-  memset(idle_watts_dram, 0, sizeof(idle_watts_dram));
-
   using namespace std;
-  ff_mapThreadToCpu(mapping[0], -20);
+  ff_mapThreadToCpu(mapping_fixed[0], -20);
   terminating=0;
-  unsigned int num_workers=0;
-  unsigned int dynamically_change=1;
 
   try {
-    if (argc<4){
+    if (argc<5){
             cerr << "Usage: " << argv[0] <<
                     " virus-signatures-file input-file "
-	             "num_iterations [num_workers]\n";
+	             "num_iterations num_workers\n";
             exit(EXIT_FAILURE);
     }
-    if(argc>4){
-      num_workers=atoi(argv[4]);
-      dynamically_change=0;
-    }
+
  
     string::size_type trie_depth=DEFAULT_TRIE_MAXIMUM_DEPTH;
      
     char const *virus_signatures_file_name=argv[1];
     char const *input_file_name=argv[2];
     u_int16_t num_iterations=atoi(argv[3]);
+    unsigned int num_workers=atoi(argv[4]);
      
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -253,7 +244,7 @@ int main(int argc, char **argv){
     mc_dpi_parallelism_details_t details;
     bzero(&details, sizeof(mc_dpi_parallelism_details_t));
     details.available_processors=AVAILABLE_CORES;
-    details.mapping=mapping;
+    details.mapping=mapping_fixed;
  
     mc_dpi_library_state_t* state=mc_dpi_init_stateful(
 						       32767, 32767, 1000000, 1000000, details);
@@ -345,35 +336,34 @@ int main(int argc, char **argv){
     double interval;
     unsigned int i=0;
 
-#if 0
-    joules_before = mc_dpi_read_joules_counters(state);
+    joules_before = mc_dpi_joules_counters_read(state);
     interval = 10;
     printf("Computing watts before running farm (over a %f secs interval)\n", interval);
     sleep(interval);
-    joules_after = mc_dpi_read_joules_counters(state);
-    joules_diff = mc_dpi_diff_joules_counters(joules_after, joules_before);
-    print_watts(joules_diff, interval);
+    joules_after = mc_dpi_joules_counters_read(state);
+    joules_diff = mc_dpi_joules_counters_diff(state, joules_after, joules_before);
+    //print_watts(joules_diff, interval);
 
     for(i=0; i<joules_before.num_sockets; i++){
-      idle_watts_socket[i]=joules_diff.joules_socket[i]/interval;
-      idle_watts_cores[i]=joules_diff.joules_cores[i]/interval;
-      idle_watts_offcores[i]=joules_diff.joules_offcores[i]/interval;
-      idle_watts_dram[i]=joules_diff.joules_dram[i]/interval;
+      idle_watts_socket+=joules_diff.joules_socket[i]/interval;
+      idle_watts_cores+=joules_diff.joules_cores[i]/interval;
+      idle_watts_offcores+=joules_diff.joules_offcores[i]/interval;
+      idle_watts_dram+=joules_diff.joules_dram[i]/interval;
     }
-#endif
+   
     printf("Wrapping interval: %d seconds\n", mc_dpi_joules_counters_wrapping_interval(state));
 
-    if(!dynamically_change){
-      printf("Fixed workers are required.\n");
-      mc_dpi_set_num_workers(state, num_workers);
-    }
+    mc_dpi_set_num_workers(state, num_workers);
 
     full_timer.start();
     mc_dpi_run(state);
 
     i=0;
 
+    joules_before = mc_dpi_joules_counters_read(state);
+
     while(!terminating){
+#if 0
       if(dynamically_change){
         num_workers=(i%(details.available_processors-2))+1;
         struct timeval before;
@@ -390,14 +380,17 @@ int main(int argc, char **argv){
         u_int64_t after_usec = 1000000 * after.tv_sec + after.tv_usec;
         printf("Reconfigured in %f msecs\n", ((double)(after_usec - before_usec))/(double)1000);
       }
-      joules_before = mc_dpi_read_joules_counters(state);
-      interval=10;
+#endif
+      interval=1;
       sleep(interval);
-      joules_after = mc_dpi_read_joules_counters(state);
-      joules_diff = mc_dpi_diff_joules_counters(joules_after, joules_before);
+      joules_after = mc_dpi_joules_counters_read(state);
+      joules_diff = mc_dpi_joules_counters_diff(state, joules_after, joules_before);
+   
       //print_watts(joules_diff, interval);
-      printf("\n");
-      int j;
+      //printf("\n");
+      
+      joules_before=joules_after;
+      unsigned int j;
       for(j=0; j<joules_before.num_sockets; j++){
 	total_joules_socket+=joules_diff.joules_socket[j];
 	total_joules_cores+=joules_diff.joules_cores[j];
@@ -409,7 +402,7 @@ int main(int argc, char **argv){
  
     mc_dpi_wait_end(state);
     full_timer.stop();
-    //    mc_dpi_print_stats(state);
+    //mc_dpi_print_stats(state);
  
     byte_scanner* bs;
     while(!scanner_pool->empty()){
@@ -420,14 +413,12 @@ int main(int argc, char **argv){
     mc_dpi_terminate(state);
     delete scanner_pool;
  
-    cout << "Completion time: ["
-         <<   setiosflags(ios_base::fixed) << setprecision(3)
-         << full_timer.real_time() << " seconds.]\n";
-
-    printf("Socket: [%fJ, %fW]\n", total_joules_socket, total_joules_socket/(double)full_timer.real_time());
-    printf("Cores: [%fJ, %fW]\n", total_joules_cores, total_joules_cores/(double)full_timer.real_time());
-    printf("Offcores: [%fJ, %fW]\n", total_joules_offcores, total_joules_offcores/(double)full_timer.real_time());
-    printf("DRAM: [%fJ, %fW]\n", total_joules_dram, total_joules_dram/(double)full_timer.real_time());
+    printf("++++Completion time (Secs): %f\n", full_timer.real_time());
+    printf("++++Bandwidth (Pkts/Sec): %f\n", ((double)(num_packets*num_iterations))/full_timer.real_time());
+    printf("++++Socket: %f\n", (total_joules_socket/(double)full_timer.real_time())-idle_watts_socket);
+    printf("++++Cores: %f\n", (total_joules_cores/(double)full_timer.real_time())-idle_watts_cores);
+    printf("++++Offcores: %f\n", (total_joules_offcores/(double)full_timer.real_time())-idle_watts_offcores);
+    printf("++++DRAM: %f\n", (total_joules_dram/(double)full_timer.real_time())-idle_watts_dram);
 
     for(i=0; i<num_packets; i++){
       free(packets[i]);

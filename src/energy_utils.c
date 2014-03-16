@@ -76,16 +76,16 @@ static int open_msr(int core) {
   return fd;
 }
 
-static long long read_msr(int fd, int which) {
+static u_int64_t read_msr(int fd, int which) {
 
-  uint64_t data;
+  u_int64_t data;
 
-  if ( pread(fd, &data, sizeof data, which) != sizeof data ) {
+  if ( pread(fd, &data, sizeof(data), which) != sizeof(data) ) {
     perror("rdmsr:pread");
     exit(127);
   }
 
-  return (long long)data;
+  return data;
 }
 
 #define CPU_SANDYBRIDGE 42
@@ -153,7 +153,7 @@ static int detect_cpu(void) {
 
 energy_counters_init_res energy_counters_init(energy_counters_state* state){
 #if defined(__linux__)
-  long long result;
+  u_int64_t result;
   memset(state, 0, sizeof(energy_counters_state));
   state->cpu_model=detect_cpu();
   if(state->cpu_model<0){
@@ -199,7 +199,7 @@ energy_counters_init_res energy_counters_init(energy_counters_state* state){
 }
 
 u_int32_t energy_counters_wrapping_time(energy_counters_state* state){
-  u_int32_t r=4294967295;
+  u_int32_t r=0xFFFFFFFF;
   unsigned int i;
   double wrapping_time;
   for(i=0; i<state->num_sockets; i++){
@@ -223,22 +223,22 @@ void energy_counters_terminate(energy_counters_state* state){
 
 
 int energy_counters_read(energy_counters_state* state) {
-  long long result;
+  u_int64_t result;
   unsigned int i;
   for(i=0; i<state->num_sockets; i++){
     result=read_msr(state->sockets[i].fd,MSR_PKG_ENERGY_STATUS);
-    state->sockets[i].energy_units_socket=result;
+    state->sockets[i].energy_units_socket=result&0xFFFFFFFF;
 
     result=read_msr(state->sockets[i].fd,MSR_PP0_ENERGY_STATUS);
-    state->sockets[i].energy_units_cores=result;
+    state->sockets[i].energy_units_cores=result&0xFFFFFFFF;
 
     if ((state->cpu_model==CPU_SANDYBRIDGE) || (state->cpu_model==CPU_IVYBRIDGE) ||
         (state->cpu_model==CPU_HASWELL)) {
       result=read_msr(state->sockets[i].fd,MSR_PP1_ENERGY_STATUS);
-      state->sockets[i].energy_units_offcores=result;
+      state->sockets[i].energy_units_offcores=result&0xFFFFFFFF;
     }else{
       result=read_msr(state->sockets[i].fd,MSR_DRAM_ENERGY_STATUS);
-      state->sockets[i].energy_units_dram=result;
+      state->sockets[i].energy_units_dram=result&0xFFFFFFFF;
     }
   }
   return 0;

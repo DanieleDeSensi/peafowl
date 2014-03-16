@@ -576,13 +576,17 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 
 /**
  * Reads the joules counters.
- * ATTENTION: The counters may wrap. Use mc_dpi_joules_counters_wrapping_interval 
+ * ATTENTION: The counters may wrap. Use mc_dpi_joules_counters_wrapping_interval
  *            to get the maximum amount of second you can wait between two successive
  *            readings.
  * @param state A pointer to the state of the library.
  * @return The values of the counters at the current time.
+ *         ATTENTION: The result is not meaningful for the user but only for the
+ *                    framework. It MUST only be used as a parameter for the 
+ *                    mc_dpi_joules_counters_diff. Only the values returned by 
+ *                    mc_dpi_joules_counters_diff call are meaningful for the user.
  */
-mc_dpi_joules_counters mc_dpi_read_joules_counters(mc_dpi_library_state_t* state){
+mc_dpi_joules_counters mc_dpi_joules_counters_read(mc_dpi_library_state_t* state){
 	mc_dpi_joules_counters r;
 	memset(&r, 0, sizeof(mc_dpi_joules_counters));
 
@@ -592,14 +596,10 @@ mc_dpi_joules_counters mc_dpi_read_joules_counters(mc_dpi_library_state_t* state
 		assert(state->energy_counters->num_sockets < DPI_MAX_CPU_SOCKETS);
 		r.num_sockets=state->energy_counters->num_sockets;
 		for(i=0; i<state->energy_counters->num_sockets; i++){
-			r.joules_socket[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_socket*
-			                       state->energy_counters->sockets[i].energy_per_unit);
-			r.joules_cores[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_cores*
-			                       state->energy_counters->sockets[i].energy_per_unit);
-			r.joules_offcores[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_offcores*
-			                       state->energy_counters->sockets[i].energy_per_unit);
-			r.joules_dram[i]=std::ceil((double)state->energy_counters->sockets[i].energy_units_dram*
-			                       state->energy_counters->sockets[i].energy_per_unit);
+			r.joules_socket[i]=state->energy_counters->sockets[i].energy_units_socket;
+			r.joules_cores[i]=state->energy_counters->sockets[i].energy_units_cores;
+			r.joules_offcores[i]=state->energy_counters->sockets[i].energy_units_offcores;
+			r.joules_dram[i]=state->energy_counters->sockets[i].energy_units_dram;
 		}
 	}
 
@@ -618,29 +618,39 @@ u_int32_t mc_dpi_joules_counters_wrapping_interval(mc_dpi_library_state_t* state
 }
 
 
-#define DELTA_WRAP32(new, old, diff)            \
-	if (new > old) {                        \
-		diff = new - old;               \
-	} else {                                \
-		diff = 0x100000000 - old + new; \
+#define DELTA_WRAP_JOULES(new, old, diff)			                                   \
+	if (new > old) {					                                   \
+		diff = (u_int32_t)new - (u_int32_t)old;		                                   \
+	} else {                                                                                   \
+		diff = (((u_int32_t)0xffffffff) - (u_int32_t)old) + (u_int32_t)1 + (u_int32_t)new; \
 	}
 
 /**
- * Returns the joules consumed between two calls to mc_dpi_read_joule_counters.
+ * Returns the joules consumed between two calls to mc_dpi_joules_counters_read.
+ * @param state A pointer to the state of the library.
  * @param after A joules counter.
  * @param before A joules counter.
- * @return The difference after-before.
+ * @return The difference after-before (in joules).
  */
-mc_dpi_joules_counters mc_dpi_diff_joules_counters(mc_dpi_joules_counters after, mc_dpi_joules_counters before){
+mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state,
+                                                   mc_dpi_joules_counters after,
+                                                   mc_dpi_joules_counters before){
 	mc_dpi_joules_counters result;
 	memset(&result, 0, sizeof(result));
 	unsigned int i;
 	result.num_sockets=after.num_sockets;
 	for(i=0; i<after.num_sockets; i++){
-		DELTA_WRAP32(after.joules_socket[i], before.joules_socket[i], result.joules_socket[i]);
-		DELTA_WRAP32(after.joules_cores[i], before.joules_cores[i], result.joules_cores[i]);
-		DELTA_WRAP32(after.joules_offcores[i], before.joules_offcores[i], result.joules_offcores[i]);
-		DELTA_WRAP32(after.joules_dram[i], before.joules_dram[i], result.joules_dram[i]);
+		DELTA_WRAP_JOULES(after.joules_socket[i], before.joules_socket[i], result.joules_socket[i]);
+		result.joules_socket[i]=result.joules_socket[i]*state->energy_counters->sockets[i].energy_per_unit;
+
+		DELTA_WRAP_JOULES(after.joules_cores[i], before.joules_cores[i], result.joules_cores[i]);
+		result.joules_cores[i]=result.joules_cores[i]*state->energy_counters->sockets[i].energy_per_unit;
+
+		DELTA_WRAP_JOULES(after.joules_offcores[i], before.joules_offcores[i], result.joules_offcores[i]);
+		result.joules_offcores[i]=result.joules_offcores[i]*state->energy_counters->sockets[i].energy_per_unit;
+
+		DELTA_WRAP_JOULES(after.joules_dram[i], before.joules_dram[i], result.joules_dram[i]);
+		result.joules_dram[i]=result.joules_dram[i]*state->energy_counters->sockets[i].energy_per_unit;
 	}
 	return result;
 }

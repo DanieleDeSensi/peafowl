@@ -164,12 +164,14 @@ void mc_dpi_set_read_and_process_callbacks(
  */
 void mc_dpi_run(mc_dpi_library_state_t* state);
 
+
+/** Is meaningful for the user only when returned from mc_dpi_joules_counters_diff. **/
 typedef struct{
   unsigned int num_sockets;
-  u_int32_t joules_socket[DPI_MAX_CPU_SOCKETS]; //One value per socket
-  u_int32_t joules_cores[DPI_MAX_CPU_SOCKETS]; //One value per socket
-  u_int32_t joules_offcores[DPI_MAX_CPU_SOCKETS]; //One value per socket
-  u_int32_t joules_dram[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_socket[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_cores[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_offcores[DPI_MAX_CPU_SOCKETS]; //One value per socket
+  double joules_dram[DPI_MAX_CPU_SOCKETS]; //One value per socket
 }mc_dpi_joules_counters;
 
 /**
@@ -179,8 +181,12 @@ typedef struct{
  *            readings.
  * @param state A pointer to the state of the library.
  * @return The values of the counters at the current time.
+ *         ATTENTION: The result is not meaningful for the user but only for the
+ *                    framework. It MUST only be used as a parameter for the
+ *                    mc_dpi_joules_counters_diff. Only the values returned by
+ *                    mc_dpi_joules_counters_diff call are meaningful for the user.
  */
-mc_dpi_joules_counters mc_dpi_read_joules_counters(mc_dpi_library_state_t* state);
+mc_dpi_joules_counters mc_dpi_joules_counters_read(mc_dpi_library_state_t* state);
 
 /**
  * Returns the maximum number of seconds that the user can wait before 
@@ -192,12 +198,15 @@ mc_dpi_joules_counters mc_dpi_read_joules_counters(mc_dpi_library_state_t* state
 u_int32_t mc_dpi_joules_counters_wrapping_interval(mc_dpi_library_state_t* state);
 
 /**
- * Returns the joules consumed between two calls to mc_dpi_read_joule_counters.
+ * Returns the joules consumed between two calls to mc_dpi_joules_counters_read.
+ * @param state A pointer to the state of the library.
  * @param after A joules counter.
  * @param before A joules counter.
- * @return The difference after-before.
+ * @return The difference after-before (in joules).
  */
-mc_dpi_joules_counters mc_dpi_diff_joules_counters(mc_dpi_joules_counters after, mc_dpi_joules_counters before);
+mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state, 
+                                                   mc_dpi_joules_counters after, 
+                                                   mc_dpi_joules_counters before);
 
 
 /**
