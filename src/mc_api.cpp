@@ -836,6 +836,11 @@ static void mc_dpi_apply_reconfiguration_policies(mc_dpi_library_state_t* state)
 		global_out_down = true;
 	}
 
+	if(single_worker_out_up || global_out_up){
+		mc_dpi_set_num_workers(state, state->single_farm_active_workers + 1);
+	}else if(single_worker_out_down || global_out_down){
+		mc_dpi_set_num_workers(state, state->single_farm_active_workers - 1);
+	}
 }
 
 static void mc_dpi_store_current_load_sample(mc_dpi_library_state_t* state){
