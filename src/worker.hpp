@@ -209,6 +209,7 @@ public:
 	~dpi_L7_worker();
 	int svc_init();
 	void* svc(void*);
+	void svc_end();
 };
 
 

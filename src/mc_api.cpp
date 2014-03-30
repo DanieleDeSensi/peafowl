@@ -45,7 +45,7 @@
 
 enum tids{
 	DPI_MULTICORE_STATUS_UPDATER_TID=1
-   ,DPI_MULTICORE_WORKER_RECONFIGURATOR_TID
+	,DPI_MULTICORE_WORKER_RECONFIGURATOR_TID
 };
 
 
@@ -107,6 +107,9 @@ typedef struct mc_dpi_library_state{
 	struct timeval start_time;
 	struct timeval stop_time;
 	energy_counters_state* energy_counters;
+	mc_dpi_reconfiguration_parameters reconf_params;
+	double** load_samples;
+	unsigned int current_load_sample;
 }mc_dpi_library_state_t;
 
 
@@ -245,7 +248,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 
 	state->pipeline->add_stage(state->L3_L4_farm);
 	state->pipeline->add_stage(state->L7_farm);
-	state->parallel_module_type=MC_DPI_PARELLELISM_FORM_DOUBLE_FARM;
+	state->parallel_module_type=MC_DPI_PARALLELISM_FORM_DOUBLE_FARM;
 }
 
 #ifndef DPI_DEBUG
@@ -333,7 +336,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	bzero(state, sizeof(mc_dpi_library_state_t));
 
 	u_int8_t parallelism_form=parallelism_details.parallelism_form;
-	if(parallelism_form==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		assert(parallelism_details.available_processors>=
 			4+2);
 
@@ -364,7 +367,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 			parallelism_details.double_farm_num_L7_workers;
 	state->single_farm_active_workers=
 			parallelism_details.available_processors-2;
-	if(parallelism_form==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		assert(state->double_farm_L3_L4_active_workers>0 &&
 			   state->double_farm_L7_active_workers>0);
 		debug_print("%s\n","[mc_dpi_api.cpp]: A pipeline of two "
@@ -396,7 +399,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	state->tasks_pool->init();
 #endif
 
-	if(parallelism_form==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		mc_dpi_create_double_farm(
 				state,
 				parallelism_details.available_processors,
@@ -418,7 +421,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparing...");
 	if(state->parallel_module_type==
-			MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+			MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		// Warm-up
 		assert(state->pipeline->run_then_freeze()>=0);
 		state->pipeline->wait_freezing();
@@ -440,7 +443,11 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 		free(state->energy_counters);
 		state->energy_counters=NULL;
 	}
-	
+	if(state->parallel_module_type==MC_DPI_PARALLELISM_FORM_ONE_FARM){
+		state->load_samples=(double**)malloc(sizeof(double*)*state->single_farm_active_workers);
+		memset(state->load_samples, 0, sizeof(double*)*state->single_farm_active_workers);
+	}
+	state->current_load_sample=0;
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
@@ -452,7 +459,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 void mc_dpi_print_stats(mc_dpi_library_state_t* state){
 	if(state){
 		if(state->parallel_module_type==
-				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+				MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 			state->pipeline->ffStats(std::cout);
 		}else{
 			state->single_farm->ffStats(std::cout);
@@ -471,7 +478,7 @@ void mc_dpi_print_stats(mc_dpi_library_state_t* state){
 void mc_dpi_terminate(mc_dpi_library_state_t *state){
 	if(likely(state)){
 		if(state->parallel_module_type==
-				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+				MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 			state->L3_L4_emitter->~dpi_L3_L4_emitter();
 			free(state->L3_L4_emitter);
 #if DPI_MULTICORE_L3_L4_FARM_TYPE ==\
@@ -529,6 +536,15 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state){
 			energy_counters_terminate(state->energy_counters);
 		}
 
+		if(state->load_samples){
+			u_int16_t i;
+			for(i=0; i<state->available_processors - 2; i++){
+				if(state->load_samples[i]){
+					free(state->load_samples[i]);
+				}
+			}
+			free(state->load_samples);
+		}
 		free(state);
 	}
 
@@ -655,6 +671,52 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
 	return result;
 }
 
+/**
+ * Computes the load of each worker of the farm. Works only if
+ * MC_DPI_PARALLELISM_FORM_ONE_FARM is used as parallelism form.
+ * @param state A pointer to the state of the library.
+ * @param loads An array that will be filled by the call with the
+ *              load of each worker (in the range [0, 100]).
+ * @return 0 if the loads have been successfully computed, 1 otherwise.
+ */
+u_int8_t mc_dpi_get_workers_load(mc_dpi_library_state_t* state, double* loads){
+	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
+		unsigned int i;
+		ff::FFBUFFER* buffer;
+	  	for(i=0; i<state->single_farm_active_workers; i++){
+			buffer=state->single_farm_workers->at(i)->get_in_buffer();
+			loads[i]=(double)buffer->length()/(double)buffer->buffersize();
+		}
+		return 0;
+	}else{
+		return 1;
+	}
+}
+
+/**
+ * Sets the parameters for the automatic reconfiguration of the farm.
+ * @param state A pointer to the state of the library.
+ * @param reconf_params The reconfiguration parameters.
+ * @return 0 if the parameters have been successfully set, 1 otherwise.
+ */
+u_int8_t mc_dpi_set_reconfiguration_parameters(mc_dpi_library_state_t* state,
+                                               mc_dpi_reconfiguration_parameters reconf_params){
+	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
+		state->reconf_params=reconf_params;
+		unsigned int i;
+		for(i=0; i<(uint)(state->available_processors - 2); i++){
+			if(state->load_samples[i]){
+				free(state->load_samples[i]);
+			}
+			state->load_samples[i]=(double*)malloc(sizeof(double)*reconf_params.num_samples);
+			memset(state->load_samples[i], 0, sizeof(double)*reconf_params.num_samples);
+		}
+		state->current_load_sample=0;
+		return 0;
+	}else{
+		return 1;
+	}
+}
 
 /**
  * Freezes the library.
@@ -688,7 +750,7 @@ void mc_dpi_freeze(mc_dpi_library_state_t* state){
 		debug_print("%s\n","[mc_dpi_api.cpp]: Freeze message sent, "
 				    "wait for freezing.");
 		if(state->parallel_module_type==
-				MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+				MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 			state->pipeline->wait_freezing();
 		}else{
 			state->single_farm->wait_freezing();
@@ -722,7 +784,7 @@ void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
 	}else{
 		state->freeze_flag=0;
 		debug_print("%s\n","[mc_dpi_api.cpp]: Prepare to run.");
-		if(state->parallel_module_type==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
+		if(state->parallel_module_type==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 			assert(state->pipeline->run_then_freeze()>=0);
 		}else{
 			assert(state->single_farm->run_then_freeze(
@@ -735,16 +797,76 @@ void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
 	}
 }
 
+static double mc_dpi_get_worker_average_load(mc_dpi_library_state_t* state, u_int16_t worker_id){
+	double avg = 0;
+	if(state->load_samples == NULL || state->load_samples[worker_id] == NULL){
+		return 0;
+	}
+	for(unsigned long i = 0; i<state->reconf_params.num_samples; i++){
+		avg += state->load_samples[worker_id][i];
+	}
+	return avg = avg / (double)state->reconf_params.num_samples;
+}
+
+
+static void mc_dpi_apply_reconfiguration_policies(mc_dpi_library_state_t* state){
+	double current_worker_load = 0;
+	double global_load = 0;
+	bool single_worker_out_up = false;
+	bool single_worker_out_down = false;
+	bool global_out_up = false;
+	bool global_out_down = false;
+
+	// Check thresholds                                                                                                                    
+	for(u_int16_t i = 0; i<state->single_farm_active_workers; i++){
+		current_worker_load = mc_dpi_get_worker_average_load(state, i);
+		if(current_worker_load > state->reconf_params.worker_load_up_threshold){
+			single_worker_out_up = true;
+		}else if(current_worker_load < state->reconf_params.worker_load_down_threshold){
+			single_worker_out_down = true;
+		}
+
+		global_load += current_worker_load;
+	}
+	global_load = global_load / state->single_farm_active_workers;
+
+	if(global_load > state->reconf_params.system_load_up_threshold){
+		global_out_up = true;
+	}else if(global_load < state->reconf_params.system_load_down_threshold){
+		global_out_down = true;
+	}
+
+}
+
+static void mc_dpi_store_current_load_sample(mc_dpi_library_state_t* state){
+	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
+		unsigned int i;
+		ff::FFBUFFER* buffer;
+		for(i=0; i<state->single_farm_active_workers; i++){
+			buffer=state->single_farm_workers->at(i)->get_in_buffer();
+			state->load_samples[i][state->current_load_sample]=(double)buffer->length()/(double)buffer->buffersize();
+		}
+		++state->current_load_sample;
+	}
+}
+
 /**
  * Wait the end of the data processing.
  * @param state A pointer to the state of the library.
  */
 void mc_dpi_wait_end(mc_dpi_library_state_t* state){
-	if(state->parallel_module_type==MC_DPI_PARELLELISM_FORM_DOUBLE_FARM){
-		assert(state->pipeline->wait()>=0);
-	}else{
-		assert(state->single_farm->wait()>=0);
+  	unsigned long waited_secs = 0;
+
+	while(!state->terminating){
+		sleep(1);
+		if(state->load_samples && 
+		   ++waited_secs == state->reconf_params.time_window/state->reconf_params.num_samples){
+			waited_secs = 0;
+			mc_dpi_store_current_load_sample(state);
+			mc_dpi_apply_reconfiguration_policies(state);
+		}
 	}
+
         gettimeofday(&state->stop_time,NULL);
 	state->is_running=0;
 }

@@ -391,7 +391,7 @@ dpi_L7_worker::~dpi_L7_worker(){
 
 int dpi_L7_worker::svc_init(){
 	worker_debug_print("[worker.cpp]: L7 worker %d mapped on"
-			           " processor: %d\n", worker_id, proc_id);
+			   " processor: %d. Tid: %d\n", worker_id, proc_id, pthread_self());
 	ff_mapThreadToCpu(proc_id,-20);
 	return 0;
 }
@@ -408,6 +408,7 @@ void* dpi_L7_worker::svc(void* task){
 	memcpy(temp, real_task->input_output_task_t.L3_L4_output_task_t,
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE*
 		   	   sizeof(L3_L4_output_task_struct));
+	worker_debug_print("[worker.cpp]: L7 worker %d received task\n", worker_id);
 
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		real_task->input_output_task_t.L7_output_task_t[i].user_pointer=
@@ -473,6 +474,11 @@ void* dpi_L7_worker::svc(void* task){
 		}
 	}
 	return real_task;
+}
+
+void dpi_L7_worker::svc_end(){
+	worker_debug_print("[worker.cpp]: L7 worker %d svc_end()\n",
+	                    worker_id);
 }
 
 

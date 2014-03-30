@@ -79,7 +79,7 @@ typedef struct mc_dpi_parallelism_details{
 
 enum analysis_results{
 	 MC_DPI_PARALLELISM_FORM_ONE_FARM=0
-	,MC_DPI_PARELLELISM_FORM_DOUBLE_FARM
+	,MC_DPI_PARALLELISM_FORM_DOUBLE_FARM
 	,MC_DPI_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
 };
 
@@ -208,6 +208,48 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
                                                    mc_dpi_joules_counters after, 
                                                    mc_dpi_joules_counters before);
 
+/**
+ * Computes the load of each worker of the farm. Works only if 
+ * MC_DPI_PARALLELISM_FORM_ONE_FARM is used as parallelism form.
+ * @param state A pointer to the state of the library.
+ * @param loads An array that will be filled by the call with the
+ *              load of each worker (in the range [0, 100]).
+ * @return 0 if the loads have been successfully computed, 1 otherwise.
+ */
+u_int8_t mc_dpi_get_workers_load(mc_dpi_library_state_t* state, double* loads);
+
+/**
+ * Parameters that will be used from the framework to decide 
+ * when and how to reconfigure itself.
+ * The reconfigurations are decided by considering the
+ * average system load over a time window (time_window).
+ * The average is computed over a certain number of
+ * samples (num_samples). Accordingly, the library
+ * takes a sample every time_window/num_samples seconds.
+ * When the system load goes above system_load_up_threshold,
+ * a worker is added. The same happens when a single worker
+ * load goes above worker_load_up_threshold. The system
+ * load is computed as the average of the workers loads.
+ * In a similar way, when the load goes below a
+ * *_load_down_threshold, a worker is removed.
+ */
+typedef struct{
+	unsigned int time_window;
+	unsigned int num_samples;
+	double system_load_up_threshold;
+	double worker_load_up_threshold;
+	double system_load_down_threshold;
+	double worker_load_down_threshold;
+}mc_dpi_reconfiguration_parameters;
+
+/**
+ * Sets the parameters for the automatic reconfiguration of the farm.
+ * @param state A pointer to the state of the library.
+ * @param reconf_params The reconfiguration parameters.
+ * @return 0 if the parameters have been successfully set, 1 otherwise.
+ */
+u_int8_t mc_dpi_set_reconfiguration_parameters(mc_dpi_library_state_t* state,
+                                               mc_dpi_reconfiguration_parameters reconf_params);
 
 /**
  * Freezes the library.

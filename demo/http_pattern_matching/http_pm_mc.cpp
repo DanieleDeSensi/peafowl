@@ -242,6 +242,7 @@ int main(int argc, char **argv){
 
 
 		mc_dpi_wait_end(state);
+		std::cout << "++++Ended" << std::endl;
 		mc_dpi_print_stats(state);
 		scan_timer.stop();
 
