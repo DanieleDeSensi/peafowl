@@ -1,0 +1,2 @@
+500000 100 //100 packets for 100 seconds
+100000 50 //100000 packets for 5 seconds

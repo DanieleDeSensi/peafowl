@@ -110,6 +110,10 @@ typedef struct mc_dpi_library_state{
 	mc_dpi_reconfiguration_parameters reconf_params;
 	double** load_samples;
 	unsigned int current_load_sample;
+	unsigned int current_num_samples;
+  	short reconf_to_skip;
+	u_int32_t collection_interval;
+	mc_dpi_stats_collection_callback* stats_callback;
 }mc_dpi_library_state_t;
 
 
@@ -444,10 +448,14 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 		state->energy_counters=NULL;
 	}
 	if(state->parallel_module_type==MC_DPI_PARALLELISM_FORM_ONE_FARM){
-		state->load_samples=(double**)malloc(sizeof(double*)*state->single_farm_active_workers);
-		memset(state->load_samples, 0, sizeof(double*)*state->single_farm_active_workers);
+		state->load_samples=(double**)malloc(sizeof(double*)*(state->available_processors - 2));
+		memset(state->load_samples, 0, sizeof(double*)*(state->available_processors - 2));
 	}
 	state->current_load_sample=0;
+	state->current_num_samples=0;
+	state->stats_callback=0;
+	state->collection_interval=0;
+	state->reconf_to_skip=0;
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
@@ -633,6 +641,27 @@ u_int32_t mc_dpi_joules_counters_wrapping_interval(mc_dpi_library_state_t* state
 	return energy_counters_wrapping_time(state->energy_counters);
 }
 
+/**
+ * Sets the statistics collection callback.
+ * @param state A pointer to the state of the library.
+ * @param collection_interval stats_callback will be called every
+ *                            collection_interval seconds.
+ * @param stats_callback The statistics collection callback.
+ * @return 0 if the callback have been successfully set, 1 otherwise.
+ */
+u_int8_t mc_dpi_set_stats_collection_callback(mc_dpi_library_state_t* state,
+                                              u_int32_t collection_interval,
+                                              mc_dpi_stats_collection_callback* stats_callback){
+	if(!state || collection_interval >= mc_dpi_joules_counters_wrapping_interval(state)){
+		return 1;
+	}else{
+		state->collection_interval = collection_interval;
+		state->stats_callback = stats_callback;
+		return 0;
+	}
+}
+
+
 
 #define DELTA_WRAP_JOULES(new, old, diff)			                                   \
 	if (new > old) {					                                   \
@@ -672,20 +701,20 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
 }
 
 /**
- * Computes the load of each worker of the farm. Works only if
+ * Computes the instantaneous load of each worker of the farm. Works only if
  * MC_DPI_PARALLELISM_FORM_ONE_FARM is used as parallelism form.
  * @param state A pointer to the state of the library.
  * @param loads An array that will be filled by the call with the
  *              load of each worker (in the range [0, 100]).
  * @return 0 if the loads have been successfully computed, 1 otherwise.
  */
-u_int8_t mc_dpi_get_workers_load(mc_dpi_library_state_t* state, double* loads){
+u_int8_t mc_dpi_reconfiguration_get_workers_instantaneous_load(mc_dpi_library_state_t* state, double* loads){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		unsigned int i;
 		ff::FFBUFFER* buffer;
 	  	for(i=0; i<state->single_farm_active_workers; i++){
 			buffer=state->single_farm_workers->at(i)->get_in_buffer();
-			loads[i]=(double)buffer->length()/(double)buffer->buffersize();
+			loads[i]=((double)buffer->length()/(double)buffer->buffersize())*100;
 		}
 		return 0;
 	}else{
@@ -699,7 +728,7 @@ u_int8_t mc_dpi_get_workers_load(mc_dpi_library_state_t* state, double* loads){
  * @param reconf_params The reconfiguration parameters.
  * @return 0 if the parameters have been successfully set, 1 otherwise.
  */
-u_int8_t mc_dpi_set_reconfiguration_parameters(mc_dpi_library_state_t* state,
+u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
                                                mc_dpi_reconfiguration_parameters reconf_params){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		state->reconf_params=reconf_params;
@@ -797,19 +826,34 @@ void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
 	}
 }
 
-static double mc_dpi_get_worker_average_load(mc_dpi_library_state_t* state, u_int16_t worker_id){
+/**
+ * Gets the average load (average over the samples) of a worker.
+ * @param state A pointer to the state of the library.
+ * @param worker_id The identifier of the worker.
+ * @return The average load of the worker in the interval [0, 100].
+ */
+static double mc_dpi_reconfiguration_get_worker_average_load(mc_dpi_library_state_t* state, u_int16_t worker_id){
 	double avg = 0;
 	if(state->load_samples == NULL || state->load_samples[worker_id] == NULL){
 		return 0;
 	}
-	for(unsigned long i = 0; i<state->reconf_params.num_samples; i++){
+	for(unsigned long i = 0; i<state->current_num_samples; i++){
 		avg += state->load_samples[worker_id][i];
 	}
-	return avg = avg / (double)state->reconf_params.num_samples;
+	return (avg / (double)state->current_num_samples)*100;
 }
 
 
-static void mc_dpi_apply_reconfiguration_policies(mc_dpi_library_state_t* state){
+static void mc_dpi_reconfiguration_post_actions(mc_dpi_library_state_t* state){
+	state->reconf_to_skip = state->reconf_params.num_skips_after_reconf;
+	for(u_int16_t i = 0; i<state->available_processors - 2; i++){
+		memset(state->load_samples[i], 0, sizeof(double)*state->reconf_params.num_samples);
+	}
+	state->current_load_sample=0;
+	state->current_num_samples=0;
+}
+
+static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state){
 	double current_worker_load = 0;
 	double global_load = 0;
 	bool single_worker_out_up = false;
@@ -819,13 +863,12 @@ static void mc_dpi_apply_reconfiguration_policies(mc_dpi_library_state_t* state)
 
 	// Check thresholds                                                                                                                    
 	for(u_int16_t i = 0; i<state->single_farm_active_workers; i++){
-		current_worker_load = mc_dpi_get_worker_average_load(state, i);
+		current_worker_load = mc_dpi_reconfiguration_get_worker_average_load(state, i);
 		if(current_worker_load > state->reconf_params.worker_load_up_threshold){
 			single_worker_out_up = true;
 		}else if(current_worker_load < state->reconf_params.worker_load_down_threshold){
 			single_worker_out_down = true;
 		}
-
 		global_load += current_worker_load;
 	}
 	global_load = global_load / state->single_farm_active_workers;
@@ -838,20 +881,26 @@ static void mc_dpi_apply_reconfiguration_policies(mc_dpi_library_state_t* state)
 
 	if(single_worker_out_up || global_out_up){
 		mc_dpi_set_num_workers(state, state->single_farm_active_workers + 1);
+		mc_dpi_reconfiguration_post_actions(state);
 	}else if(single_worker_out_down || global_out_down){
 		mc_dpi_set_num_workers(state, state->single_farm_active_workers - 1);
+		mc_dpi_reconfiguration_post_actions(state);
 	}
 }
 
-static void mc_dpi_store_current_load_sample(mc_dpi_library_state_t* state){
+static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* state){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		unsigned int i;
 		ff::FFBUFFER* buffer;
 		for(i=0; i<state->single_farm_active_workers; i++){
 			buffer=state->single_farm_workers->at(i)->get_in_buffer();
-			state->load_samples[i][state->current_load_sample]=(double)buffer->length()/(double)buffer->buffersize();
+			state->load_samples[i][state->current_load_sample] =
+			                   (double)buffer->length()/(double)buffer->buffersize();
 		}
-		++state->current_load_sample;
+		state->current_load_sample = (state->current_load_sample + 1) % state->reconf_params.num_samples;
+		if(state->current_num_samples < state->reconf_params.num_samples){
+			++state->current_num_samples;
+		}
 	}
 }
 
@@ -860,15 +909,35 @@ static void mc_dpi_store_current_load_sample(mc_dpi_library_state_t* state){
  * @param state A pointer to the state of the library.
  */
 void mc_dpi_wait_end(mc_dpi_library_state_t* state){
-  	unsigned long waited_secs = 0;
+  	u_int64_t waited_secs = 0;
+	mc_dpi_joules_counters now_joules, last_joules_counters;
+	memset(&now_joules, 0, sizeof(mc_dpi_joules_counters));
+	memset(&last_joules_counters, 0, sizeof(mc_dpi_joules_counters));
+
+	last_joules_counters = mc_dpi_joules_counters_read(state);
 
 	while(!state->terminating){
 		sleep(1);
+		++waited_secs;
 		if(state->load_samples && 
-		   ++waited_secs == state->reconf_params.time_window/state->reconf_params.num_samples){
-			waited_secs = 0;
-			mc_dpi_store_current_load_sample(state);
-			mc_dpi_apply_reconfiguration_policies(state);
+		   (waited_secs % state->reconf_params.sampling_interval) == 0){
+			mc_dpi_reconfiguration_store_current_sample(state);
+			if(state->reconf_to_skip){
+				--state->reconf_to_skip;
+			}else{
+				mc_dpi_reconfiguration_apply_policies(state);
+			}
+		}
+
+		if(state->stats_callback && 
+		   (waited_secs % state->collection_interval) == 0){
+			now_joules = mc_dpi_joules_counters_read(state);
+			state->stats_callback(state->single_farm_active_workers,
+			                       NULL, //TODO: aggiungere reconf frequenze
+			                       mc_dpi_joules_counters_diff(state, 
+			                                                   last_joules_counters,
+			                                                   now_joules));
+			last_joules_counters = now_joules;
 		}
 	}
 

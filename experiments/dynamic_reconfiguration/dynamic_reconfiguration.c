@@ -1,15 +1,7 @@
 /*
- * energy_consumption.c
+ * dynamic_reconfiguration.c
  *
- * This demo application loads in memory all the packets contained into a specified
- * .pcap file.
- * After that, it analyzes all the HTTP traffic (reordering the TCP packets to have
- * a well-formed stream), and searches for specific patterns (contained into a file
- * specified by a command line parameter) inside the HTTP body using a certain number
- * of cores (specified by the user).
- * In addition to that, it computes its energy consumption.
- *
- * Created on: 16/03/2014
+ * Created on: 20/05/2014  
  *
  * =========================================================================
  *  Copyright (C) 2012-2014, Daniele De Sensi (d.desensi.software@gmail.com)
@@ -70,29 +62,45 @@ static ff::uSWSR_Ptr_Buffer* scanner_pool;
 
 static int terminating;
 
+static unsigned int intervals;
+static double* rates;
+static double* durations;
+static unsigned int polling_interval;
+static u_int32_t current_interval=0;
+static u_int32_t last_sec=0;
+static double current_real_rate=0;
+
 typedef struct pcap_packets_memory{
   unsigned char** packets;
   u_int32_t* sizes;
   u_int32_t num_packets;
   u_int32_t next_packet_to_sent;
-  u_int32_t performed_iterations;
-  u_int32_t iterations_to_perform;
 }pcap_packets_memory_t;
+
+inline ticks ticks_wait(ticks nticks) {
+  ticks delta;
+  ticks t0 = getticks();
+  do { delta = (getticks()) - t0; } while (delta < nticks);
+  return delta-nticks;
+}
  
+#define BURST_SIZE 1
+
 mc_dpi_packet_reading_result_t reading_cb(void* user_data){
   static unsigned long last_ts=getticks();
-  static u_int32_t last_sec=0;
+  static u_int32_t current_interval_start=0;
+  static u_int64_t current_interval_packets=0;
+  static u_int32_t current_burst_size = 0;
  
   mc_dpi_packet_reading_result_t r;
  
   pcap_packets_memory_t* packets=(pcap_packets_memory_t*) user_data;
  
   if(packets->next_packet_to_sent==packets->num_packets){
-    ++packets->performed_iterations;
     packets->next_packet_to_sent=0;
   }
  
-  if(packets->performed_iterations<packets->iterations_to_perform){
+  if(current_interval < intervals){
     r.pkt=packets->packets[packets->next_packet_to_sent];
   }else{
     r.pkt=NULL;
@@ -100,14 +108,46 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
     printf("Sending EOS!\n");
     fflush(stdout);
   }
+
+  if(current_burst_size == BURST_SIZE){
+    /** Sleep to get the rate. **/
+    //TODO: Non clock_freq ma prendere la freq corrente.
+    double wait_interval_secs = 1.0 / rates[current_interval];
+    current_burst_size = 0;
+    ticks_wait(CLOCK_FREQ * wait_interval_secs * BURST_SIZE);
+  }
+
+
+  ++current_burst_size;
+
   if(getticks()-last_ts>CLOCK_FREQ){
     last_ts=getticks();
     ++last_sec;
+    if(current_interval_start == 0){
+      current_interval_start = last_sec;
+    }
+  }
+
+  ++current_interval_packets;
+
+  if(current_interval_start == last_sec){
+    current_real_rate = 0;
+  }else{
+    current_real_rate = (double)current_interval_packets/(last_sec - current_interval_start);
+  }
+
+  /** Go to the next rate **/
+  if(last_sec - current_interval_start > durations[current_interval]){
+    current_interval_start = last_sec;
+    current_interval++;
+    current_interval_packets=0;
+    current_real_rate=0;
   }
  
   r.current_time=last_sec;
   r.length=packets->sizes[packets->next_packet_to_sent];
   ++packets->next_packet_to_sent;
+
   return r;
 }
  
@@ -122,6 +162,36 @@ static void match_found(string::size_type position,
   cout << "Matched '" << match.second << "' at " << position << endl;
 }
  
+
+static void load_rates(char* fileName){
+  FILE* f = NULL;
+  char line[512];
+  f = fopen(fileName, "r");
+  float rate = 0;
+  float duration = 0;
+  unsigned int size = 0;
+  rates = (double*) malloc(sizeof(double)*10);
+  durations = (double*) malloc(sizeof(double)*10);
+  size = 10;
+  intervals = 0;
+  if(f){
+    while(fgets(line, 512, f) != NULL){
+      sscanf(line, "%f %f", &rate, &duration);
+
+      rates[intervals] = rate;
+      durations[intervals] = duration;
+      ++intervals;
+
+      if(intervals == size){
+        size += 10;
+        rates = (double*) realloc(rates, sizeof(double)*size);
+        durations = (double*) realloc(durations, sizeof(double)*size);
+      }
+    }
+    fclose(f);
+  }
+}
+
 void body_cb(dpi_http_message_informations_t* http_informations,
              const u_char* app_data, u_int32_t data_length,
              dpi_pkt_infos_t* pkt,
@@ -151,33 +221,23 @@ static double idle_watts_cores=0;
 static double idle_watts_offcores=0;
 static double idle_watts_dram=0;
 
+FILE* outstats = NULL;
 
-void print_watts(mc_dpi_joules_counters diff, double interval){
-  uint i=0;
-
-  printf("================Energy Stats===============\n");
-  printf("Watts of entire socket:\t|");
-  for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", diff.joules_socket[i]/(double)interval);
-  }
-  printf("\n");
-  printf("Watts of cores:\t\t|");
-  for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", diff.joules_cores[i]/(double)interval);
-  }
-  printf("\n");
-  printf("Watts of offcores:\t|");
-  for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", diff.joules_offcores[i]/(double)interval);
-  }
-  printf("\n");
-  printf("Watts of DRAM:\t\t|");
-  for(i=0; i<diff.num_sockets; i++){
-    printf("%8.4f|", diff.joules_dram[i]/(double)interval);
-  }
-  printf("\n");
-  printf("===========================================\n");
+void print_stats_callback(u_int16_t num_workers, double* cores_frequencies, mc_dpi_joules_counters joules){
+  fprintf(outstats, "%d %d %f %f %f %f %f %f %f %f %f %f\n", last_sec,
+                                   num_workers,
+                                   rates[current_interval],
+                                   current_real_rate,
+                                   (joules.joules_socket[0]/(double)polling_interval)-idle_watts_socket,
+                                   (joules.joules_cores[0]/(double)polling_interval)-idle_watts_cores,
+                                   (joules.joules_offcores[0]/(double)polling_interval)-idle_watts_offcores,
+                                   (joules.joules_dram[0]/(double)polling_interval)-idle_watts_dram,
+                                   (joules.joules_socket[1]/(double)polling_interval)-idle_watts_socket,
+                                   (joules.joules_cores[1]/(double)polling_interval)-idle_watts_cores,
+                                   (joules.joules_offcores[1]/(double)polling_interval)-idle_watts_offcores,
+                                   (joules.joules_dram[1]/(double)polling_interval)-idle_watts_dram);
 }
+
  
 int main(int argc, char **argv){
   using namespace std;
@@ -185,10 +245,9 @@ int main(int argc, char **argv){
   terminating=0;
 
   try {
-    if (argc<5){
+    if (argc<4){
             cerr << "Usage: " << argv[0] <<
-                    " virus-signatures-file input-file "
-	             "num_iterations num_workers\n";
+	            " virus-signatures-file input-file polling-interval\n";
             exit(EXIT_FAILURE);
     }
 
@@ -197,8 +256,9 @@ int main(int argc, char **argv){
      
     char const *virus_signatures_file_name=argv[1];
     char const *input_file_name=argv[2];
-    u_int16_t num_iterations=atoi(argv[3]);
-    unsigned int num_workers=atoi(argv[4]);
+    polling_interval=atoi(argv[3]);
+    outstats = fopen("stats.txt", "w");
+    fprintf(outstats, "#CurrentTime NumWorkers ExpectedRate CurrentRate WattsSocket WattsCores WattsOffCores WattsDRAM\n");
      
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -245,7 +305,7 @@ int main(int argc, char **argv){
     bzero(&details, sizeof(mc_dpi_parallelism_details_t));
     details.available_processors=AVAILABLE_CORES;
     details.mapping=mapping_fixed;
- 
+    load_rates("rates.txt"); 
     mc_dpi_library_state_t* state=mc_dpi_init_stateful(
 						       32767, 32767, 1000000, 1000000, details);
  
@@ -310,9 +370,7 @@ int main(int argc, char **argv){
     pcap_packets_memory_t x;
     x.packets=packets;
     x.sizes=sizes;
-    x.performed_iterations=0;
     x.next_packet_to_sent=0;
-    x.iterations_to_perform=num_iterations;
     x.num_packets=num_packets;
  
  
@@ -327,11 +385,6 @@ int main(int argc, char **argv){
     dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
     mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
     
-    double total_joules_socket=0;
-    double total_joules_cores=0;
-    double total_joules_offcores=0;
-    double total_joules_dram=0;
-
     mc_dpi_joules_counters joules_before, joules_after, joules_diff;
     double interval;
     unsigned int i=0;
@@ -342,7 +395,6 @@ int main(int argc, char **argv){
     sleep(interval);
     joules_after = mc_dpi_joules_counters_read(state);
     joules_diff = mc_dpi_joules_counters_diff(state, joules_after, joules_before);
-    //print_watts(joules_diff, interval);
 
     for(i=0; i<joules_before.num_sockets; i++){
       idle_watts_socket+=joules_diff.joules_socket[i]/interval;
@@ -353,35 +405,28 @@ int main(int argc, char **argv){
    
     printf("Wrapping interval: %d seconds\n", mc_dpi_joules_counters_wrapping_interval(state));
 
-    mc_dpi_set_num_workers(state, num_workers);
+    mc_dpi_set_num_workers(state, details.available_processors);
+
+    mc_dpi_reconfiguration_parameters reconf_params;
+    reconf_params.sampling_interval = polling_interval;
+    reconf_params.num_samples = 10;
+    reconf_params.system_load_up_threshold = 80;
+    reconf_params.worker_load_up_threshold = 70;
+    reconf_params.system_load_down_threshold = 20;
+    reconf_params.worker_load_down_threshold = 5; 
+    reconf_params.num_skips_after_reconf = 2;
+  
+    mc_dpi_reconfiguration_set_parameters(state, reconf_params);
 
     full_timer.start();
     mc_dpi_run(state);
-
-    i=0;
-
-    joules_before = mc_dpi_joules_counters_read(state);
-
-    while(!terminating){
-      interval=1;
-      sleep(interval);
-      joules_after = mc_dpi_joules_counters_read(state);
-      joules_diff = mc_dpi_joules_counters_diff(state, joules_after, joules_before);
-         
-      joules_before=joules_after;
-      unsigned int j;
-      for(j=0; j<joules_before.num_sockets; j++){
-	total_joules_socket+=joules_diff.joules_socket[j];
-	total_joules_cores+=joules_diff.joules_cores[j];
-	total_joules_offcores+=joules_diff.joules_offcores[j];
-	total_joules_dram+=joules_diff.joules_dram[j];
-      }
-      ++i;
-    }
+    mc_dpi_set_stats_collection_callback(state,
+					 polling_interval,
+					 print_stats_callback);
  
     mc_dpi_wait_end(state);
+    mc_dpi_print_stats(state);
     full_timer.stop();
-    //mc_dpi_print_stats(state);
  
     byte_scanner* bs;
     while(!scanner_pool->empty()){
@@ -392,18 +437,14 @@ int main(int argc, char **argv){
     mc_dpi_terminate(state);
     delete scanner_pool;
  
-    printf("++++Completion time (Secs): %f\n", full_timer.real_time());
-    printf("++++Bandwidth (Pkts/Sec): %f\n", ((double)(num_packets*num_iterations))/full_timer.real_time());
-    printf("++++Socket: %f\n", (total_joules_socket/(double)full_timer.real_time())-idle_watts_socket);
-    printf("++++Cores: %f\n", (total_joules_cores/(double)full_timer.real_time())-idle_watts_cores);
-    printf("++++Offcores: %f\n", (total_joules_offcores/(double)full_timer.real_time())-idle_watts_offcores);
-    printf("++++DRAM: %f\n", (total_joules_dram/(double)full_timer.real_time())-idle_watts_dram);
-
     for(i=0; i<num_packets; i++){
       free(packets[i]);
     }
     free(packets);
     free(sizes);
+    free(rates);
+    free(durations);
+    fclose(outstats);
     exit(EXIT_SUCCESS);
   }catch(exception const &ex){
     cout.flush();

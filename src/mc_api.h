@@ -174,6 +174,7 @@ typedef struct{
   double joules_dram[DPI_MAX_CPU_SOCKETS]; //One value per socket
 }mc_dpi_joules_counters;
 
+
 /**
  * Reads the joules counters.
  * ATTENTION: The counters may wrap. Use mc_dpi_joules_counters_wrapping_interval
@@ -184,7 +185,8 @@ typedef struct{
  *         ATTENTION: The result is not meaningful for the user but only for the
  *                    framework. It MUST only be used as a parameter for the
  *                    mc_dpi_joules_counters_diff. Only the values returned by
- *                    mc_dpi_joules_counters_diff call are meaningful for the user.
+ *                    mc_dpi_joules_counters_diff call or by mc_dpi_stats_collection_callback 
+ *                    are meaningful for the user.
  */
 mc_dpi_joules_counters mc_dpi_joules_counters_read(mc_dpi_library_state_t* state);
 
@@ -209,23 +211,33 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
                                                    mc_dpi_joules_counters before);
 
 /**
- * Computes the load of each worker of the farm. Works only if 
- * MC_DPI_PARALLELISM_FORM_ONE_FARM is used as parallelism form.
- * @param state A pointer to the state of the library.
- * @param loads An array that will be filled by the call with the
- *              load of each worker (in the range [0, 100]).
- * @return 0 if the loads have been successfully computed, 1 otherwise.
+ * This function will be periodically called by the library to provide
+ * the application with statistics about the current configuration.
+ * @param num_workers         The current number of workers.
+ * @param cores_frequencies   The current frequencies of the cores.
+ * @param joules              The joules over the stats collection interval.
  */
-u_int8_t mc_dpi_get_workers_load(mc_dpi_library_state_t* state, double* loads);
+typedef void(mc_dpi_stats_collection_callback)(u_int16_t num_workers, 
+                                               double* cores_frequencies,
+                                               mc_dpi_joules_counters joules);
+/**
+ * Sets the statistics collection callback.
+ * @param state A pointer to the state of the library.
+ * @param collection_interval stats_callback will be called every
+ *                            collection_interval seconds.
+ * @param stats_callback The statistics collection callback.
+ * @return 0 if the callback have been successfully set, 1 otherwise. 
+ */
+u_int8_t mc_dpi_set_stats_collection_callback(mc_dpi_library_state_t* state,
+                                              u_int32_t collection_interval,
+                                              mc_dpi_stats_collection_callback* stats_callback);
 
 /**
  * Parameters that will be used from the framework to decide 
  * when and how to reconfigure itself.
  * The reconfigurations are decided by considering the
- * average system load over a time window (time_window).
- * The average is computed over a certain number of
- * samples (num_samples). Accordingly, the library
- * takes a sample every time_window/num_samples seconds.
+ * average system load over a time window (num_samples*sampling_interval).
+ * Accordingly, the library takes a sample every sampling_interval seconds.
  * When the system load goes above system_load_up_threshold,
  * a worker is added. The same happens when a single worker
  * load goes above worker_load_up_threshold. The system
@@ -234,12 +246,13 @@ u_int8_t mc_dpi_get_workers_load(mc_dpi_library_state_t* state, double* loads);
  * *_load_down_threshold, a worker is removed.
  */
 typedef struct{
-	unsigned int time_window;
 	unsigned int num_samples;
+	unsigned int sampling_interval;
 	double system_load_up_threshold;
 	double worker_load_up_threshold;
 	double system_load_down_threshold;
 	double worker_load_down_threshold;
+	short num_skips_after_reconf;
 }mc_dpi_reconfiguration_parameters;
 
 /**
@@ -248,8 +261,18 @@ typedef struct{
  * @param reconf_params The reconfiguration parameters.
  * @return 0 if the parameters have been successfully set, 1 otherwise.
  */
-u_int8_t mc_dpi_set_reconfiguration_parameters(mc_dpi_library_state_t* state,
+u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
                                                mc_dpi_reconfiguration_parameters reconf_params);
+
+/**
+ * Computes the instantaneous load of each worker of the farm. Works only if
+ * MC_DPI_PARALLELISM_FORM_ONE_FARM is used as parallelism form.
+ * @param state A pointer to the state of the library.
+ * @param loads An array that will be filled by the call with the
+ *              load of each worker (in the range [0, 100]).
+ * @return 0 if the loads have been successfully computed, 1 otherwise.
+ */
+u_int8_t mc_dpi_reconfiguration_get_workers_instantaneous_load(mc_dpi_library_state_t* state, double* loads);
 
 /**
  * Freezes the library.
