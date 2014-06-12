@@ -71,6 +71,7 @@ typedef struct mc_dpi_library_state{
 	 * the successive run. **/
 	ff::CLHSpinLock state_update_lock;
 	u_int16_t available_processors;
+	unsigned int* mapping;
 	/******************************************************/
 	/*                 Nodes for single farm.             */
 	/******************************************************/
@@ -114,6 +115,9 @@ typedef struct mc_dpi_library_state{
   	short reconf_to_skip;
 	u_int32_t collection_interval;
 	mc_dpi_stats_collection_callback* stats_callback;
+	unsigned long* available_frequencies;
+	unsigned int num_available_frequencies;
+	unsigned int current_frequency_id;
 }mc_dpi_library_state_t;
 
 
@@ -121,8 +125,6 @@ typedef struct mc_dpi_library_state{
 static inline
 #endif
 void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
-		                       u_int16_t available_procs,
-		                       u_int16_t* mapping,
 		                       u_int32_t size_v4,
 		                       u_int32_t size_v6){
 	u_int16_t last_mapped=0;
@@ -138,15 +140,15 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 			false,
 			DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
 			DPI_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
-			false, available_procs, true);
+			false, state->available_processors, true);
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_emitter));
 	assert(tmp);
 	state->L3_L4_emitter=new (tmp) dpi::dpi_L3_L4_emitter(
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
 			&(state->freeze_flag), &(state->terminating),
-			mapping[last_mapped], state->tasks_pool);
-	last_mapped=(last_mapped+1)%available_procs;
+			state->mapping[last_mapped], state->tasks_pool);
+	last_mapped=(last_mapped+1)%state->available_processors;
 	state->L3_L4_farm->setEmitterF(state->L3_L4_emitter);
 #else
 	tmp=malloc(sizeof(ff::ff_farm<>));
@@ -155,15 +157,15 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 			false,
 			DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
 			DPI_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
-			false, available_procs, true);
+			false, state->available_processors, true);
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_emitter));
 	assert(tmp);
 	state->L3_L4_emitter=new (tmp) dpi::dpi_L3_L4_emitter(
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
 			&(state->freeze_flag), &(state->terminating),
-			mapping[last_mapped], state->tasks_pool);
-	last_mapped=(last_mapped+1)%available_procs;
+			state->mapping[last_mapped], state->tasks_pool);
+	last_mapped=(last_mapped+1)%state->available_processors;
 	state->L3_L4_farm->add_emitter(state->L3_L4_emitter);
 #if DPI_MULTICORE_L3_L4_FARM_TYPE == \
 	DPI_MULTICORE_L3_L4_ON_DEMAND
@@ -178,20 +180,20 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		assert(tmp);
 		w1=new (tmp) dpi::dpi_L3_L4_worker(state->sequential_state, i,
 		   &(state->single_farm_active_workers),
-		   mapping[last_mapped],
+		   state->mapping[last_mapped],
 		   size_v4,
 		   size_v6);
 		state->L3_L4_workers->push_back(w1);
-		last_mapped=(last_mapped+1)%available_procs;
+		last_mapped=(last_mapped+1)%state->available_processors;
 	}
 	assert(state->L3_L4_farm->add_workers(*(state->L3_L4_workers))==0);
 
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_collector));
 	assert(tmp);
 	state->L3_L4_collector=new (tmp)
-			               dpi::dpi_L3_L4_collector(mapping[last_mapped]);
+			               dpi::dpi_L3_L4_collector(state->mapping[last_mapped]);
 	assert(state->L3_L4_collector);
-	last_mapped=(last_mapped+1)%available_procs;
+	last_mapped=(last_mapped+1)%state->available_processors;
 #if DPI_MULTICORE_L3_L4_FARM_TYPE == \
 	DPI_MULTICORE_L3_L4_ORDERED_FARM
 	state->L3_L4_farm->setCollectorF(state->L3_L4_collector);
@@ -207,15 +209,15 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	state->L7_farm=new (tmp) ff::ff_farm<dpi::dpi_L7_scheduler>(
 			false, DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
 			DPI_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE, false,
-			available_procs, true);
+			state->available_processors, true);
 
 	tmp=malloc(sizeof(dpi::dpi_L7_emitter));
 	assert(tmp);
 	state->L7_emitter=new (tmp) dpi::dpi_L7_emitter(
 			state->L7_farm->getlb(),
 			state->double_farm_L7_active_workers,
-			mapping[last_mapped]);
-	last_mapped=(last_mapped+1)%available_procs;
+			state->mapping[last_mapped]);
+	last_mapped=(last_mapped+1)%state->available_processors;
 	state->L7_farm->add_emitter(state->L7_emitter);
 
 	state->L7_workers=new std::vector<ff::ff_node*>;
@@ -224,9 +226,9 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		tmp=malloc(sizeof(dpi::dpi_L7_worker));
 		assert(tmp);
 		w2=new (tmp) dpi::dpi_L7_worker(state->sequential_state, i,
-				                        mapping[last_mapped]);
+				                        state->mapping[last_mapped]);
 		state->L7_workers->push_back(w2);
-		last_mapped=(last_mapped+1)%available_procs;
+		last_mapped=(last_mapped+1)%state->available_processors;
 	}
 	assert(state->L7_farm->add_workers(*(state->L7_workers))==0);
 
@@ -235,8 +237,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	state->L7_collector=new (tmp) dpi::dpi_L7_collector(
 			&(state->processing_callback),
 			&(state->read_process_callbacks_user_data),
-			mapping[last_mapped], state->tasks_pool);
-	last_mapped=(last_mapped+1)%available_procs;
+			state->mapping[last_mapped], state->tasks_pool);
+	last_mapped=(last_mapped+1)%state->available_processors;
 	assert(state->L7_farm->add_collector(state->L7_collector)>=0);
 
 	/********************************/
@@ -259,15 +261,13 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 static inline
 #endif
 void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
-		                       u_int16_t available_procs,
-		                       u_int16_t* mapping,
 		                       u_int32_t size_v4, u_int32_t size_v6){
 	u_int16_t last_mapped=0;
 	state->single_farm=new ff::ff_farm<dpi::dpi_L7_scheduler>(
 			false,
 			DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
 			DPI_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE,
-			false, available_procs, true);
+			false, state->available_processors, true);
 	assert(state->single_farm);
 
 	state->single_farm_emitter=new dpi::dpi_collapsed_emitter(
@@ -279,19 +279,19 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 			size_v4,
 			size_v6,
 			state->single_farm->getlb(),
-			mapping[last_mapped]);
+			state->mapping[last_mapped]);
 	assert(state->single_farm_emitter);
-	last_mapped=(last_mapped+1)%available_procs;
+	last_mapped=(last_mapped+1)%state->available_processors;
 	state->single_farm->add_emitter(state->single_farm_emitter);
 
 	state->single_farm_workers=new std::vector<ff::ff_node*>;
 	dpi::dpi_L7_worker* w;
 	for(u_int16_t i=0; i<state->single_farm_active_workers; i++){
 		w=new dpi::dpi_L7_worker(state->sequential_state, i,
-				                 mapping[last_mapped]);
+				                 state->mapping[last_mapped]);
 		assert(w);
 		state->single_farm_workers->push_back(w);
-		last_mapped=(last_mapped+1)%available_procs;
+		last_mapped=(last_mapped+1)%state->available_processors;
 	}
 
 	assert(state->single_farm->add_workers(
@@ -299,9 +299,9 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 	state->single_farm_collector=new dpi::dpi_L7_collector(
 			&(state->processing_callback),
 			&(state->read_process_callbacks_user_data),
-			mapping[last_mapped], state->tasks_pool);
+			state->mapping[last_mapped], state->tasks_pool);
 	assert(state->single_farm_collector);
-	last_mapped=(last_mapped+1)%available_procs;
+	last_mapped=(last_mapped+1)%state->available_processors;
 	assert(state->single_farm->add_collector(
 			state->single_farm_collector)>=0);
 	state->parallel_module_type=MC_DPI_PARALLELISM_FORM_ONE_FARM;
@@ -340,25 +340,30 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	bzero(state, sizeof(mc_dpi_library_state_t));
 
 	u_int8_t parallelism_form=parallelism_details.parallelism_form;
+	if(parallelism_details.available_processors){
+		state->available_processors=parallelism_details.available_processors;
+	}else{
+		energy_counters_get_num_real_cores((unsigned int*) &(state->available_processors));
+	}
+
 	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
-		assert(parallelism_details.available_processors>=
+		assert(state->available_processors>=
 			4+2);
 
 	}else{
-		assert(parallelism_details.available_processors>=
+		assert(state->available_processors>=
 			2+1);
 	}
+	
+	state->mapping = new unsigned int[state->available_processors];
 
-	state->available_processors=parallelism_details.available_processors;
-	u_int8_t delete_mapping=0;
 	if(parallelism_details.mapping==NULL){
-		parallelism_details.mapping=
-				new u_int16_t[parallelism_details.available_processors];
+		energy_counters_get_real_cores_identifiers(state->mapping, state->available_processors);
+	}else{
 		uint k;
-		for(k=0; k<parallelism_details.available_processors; k++)
-			parallelism_details.mapping[k]=k;
-
-		delete_mapping=1;
+		for(k=0; k<state->available_processors; k++){
+	  		state->mapping[k]=parallelism_details.mapping[k];
+		}
 	}
 
 	state->terminating=0;
@@ -370,7 +375,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	state->double_farm_L7_active_workers=
 			parallelism_details.double_farm_num_L7_workers;
 	state->single_farm_active_workers=
-			parallelism_details.available_processors-2;
+			state->available_processors-2;
 	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		assert(state->double_farm_L3_L4_active_workers>0 &&
 			   state->double_farm_L7_active_workers>0);
@@ -406,19 +411,12 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		mc_dpi_create_double_farm(
 				state,
-				parallelism_details.available_processors,
-				parallelism_details.mapping,
 				size_v4, size_v6);
 	}else{
 		mc_dpi_create_single_farm(
 				state,
-				parallelism_details.available_processors,
-				parallelism_details.mapping,
 				size_v4, size_v6);
 	}
-
-	if(delete_mapping)
-		delete[] parallelism_details.mapping;
 
 
 	state->freeze_flag=1;
@@ -447,15 +445,16 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 		free(state->energy_counters);
 		state->energy_counters=NULL;
 	}
-	if(state->parallel_module_type==MC_DPI_PARALLELISM_FORM_ONE_FARM){
-		state->load_samples=(double**)malloc(sizeof(double*)*(state->available_processors - 2));
-		memset(state->load_samples, 0, sizeof(double*)*(state->available_processors - 2));
-	}
+
+	state->load_samples=NULL;
 	state->current_load_sample=0;
 	state->current_num_samples=0;
 	state->stats_callback=0;
 	state->collection_interval=0;
 	state->reconf_to_skip=0;
+	energy_counters_get_available_frequencies(&(state->available_frequencies), &(state->num_available_frequencies));
+	state->current_frequency_id=0;
+
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
@@ -553,6 +552,7 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state){
 			}
 			free(state->load_samples);
 		}
+		delete[] state->mapping;
 		free(state);
 	}
 
@@ -732,8 +732,13 @@ u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
                                                mc_dpi_reconfiguration_parameters reconf_params){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		state->reconf_params=reconf_params;
-		unsigned int i;
-		for(i=0; i<(uint)(state->available_processors - 2); i++){
+		u_int16_t i;
+		if(!state->load_samples){
+			state->load_samples=(double**)malloc(sizeof(double*)*(state->available_processors - 2));
+			memset(state->load_samples, 0, sizeof(double*)*(state->available_processors - 2));
+		}
+
+		for(i=0; i<state->available_processors - 2; i++){
 			if(state->load_samples[i]){
 				free(state->load_samples[i]);
 			}
@@ -741,6 +746,24 @@ u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
 			memset(state->load_samples[i], 0, sizeof(double)*reconf_params.num_samples);
 		}
 		state->current_load_sample=0;
+
+		for(i=0; i<state->available_processors; i++){
+			energy_counters_set_userspace_governor(state->mapping[i],1);
+			energy_counters_set_bounds(state->available_frequencies[0], 
+			                           state->available_frequencies[state->num_available_frequencies - 1], 
+			                           state->mapping[i],
+			                           1);
+			energy_counters_set_frequency(state->available_frequencies[0], state->mapping[i],1);
+		}
+		
+		/** Emitter and collector always run to the highest frequency. **/
+		energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
+		                              state->mapping[0],
+		                              1);
+		energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
+		                              state->mapping[state->single_farm_active_workers + 1],
+		                              1);
+
 		return 0;
 	}else{
 		return 1;

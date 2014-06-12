@@ -221,7 +221,6 @@ void energy_counters_terminate(energy_counters_state* state){
   }
 }
 
-
 int energy_counters_read(energy_counters_state* state) {
   u_int64_t result;
   unsigned int i;
@@ -243,3 +242,243 @@ int energy_counters_read(energy_counters_state* state) {
   }
   return 0;
 }
+
+int energy_counters_get_available_frequencies(unsigned long** frequencies, unsigned int* num_frequencies){
+#if defined(__linux__)
+  unsigned long* r = NULL;
+  FILE *f;
+  unsigned int numfreqs = 0;
+  int i = 0;
+  unsigned long tmp = 0;
+  f = popen("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies | wc -w", "r");
+  if (!f || fscanf(f, "%u", &numfreqs) == EOF) { 
+     pclose(f); 
+     *frequencies = NULL;
+     *num_frequencies = 0;
+     return -1;
+  }
+  pclose(f);
+  r = (unsigned long*) malloc(numfreqs*sizeof(unsigned long));
+  f = popen("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies | tr ' ' '\n' |  sort -n |  grep -v '^$'", "r");
+
+  if (!f) {
+    pclose(f);
+    *frequencies = NULL;
+    *num_frequencies = 0;
+    return -1;
+  }
+
+  for(i = 0; i<numfreqs; i++){
+    if(fscanf(f, "%lu\n", &tmp) == EOF){
+      pclose(f);
+      free(r);
+      *frequencies = NULL;
+      *num_frequencies = 0;
+      return -1;
+    }
+    r[i]=tmp;
+  }
+  pclose(f);
+  *frequencies = r;
+  *num_frequencies = numfreqs;
+  return 0;
+#else
+  return -1;
+#endif
+}
+
+static int energy_counters_set_governor(unsigned int core_id, char* governor, int set_ht_siblings){
+#if defined(__linux__)
+  FILE *f;
+  char dummy[512];
+  char command[512];
+  char siblings[512];
+  memset(command, 0, sizeof(command));
+  snprintf(command, 512, "cat /sys/devices/system/cpu/cpu%u/cpufreq/scaling_available_governors | grep %s", core_id, governor);
+  f = popen(command, "r");
+  if (!f || fscanf(f, "%s", dummy) == EOF) {
+    pclose(f);
+    return -1;
+  }
+  pclose(f);
+
+  memset(siblings, 0, sizeof(siblings));
+  if(set_ht_siblings){
+    if(energy_counters_get_ht_core_siblings(core_id, siblings)){
+      return -1;
+    }
+  }else{
+    sprintf(siblings, "%u", core_id);
+  }
+
+  memset(command, 0, sizeof(command));
+  snprintf(command, 512,  "cpufreq-set -g %s -c %s", governor, siblings);
+  f = popen(command, "r");
+  pclose(f);
+  return 0;
+#else
+  return -1;
+#endif
+}
+
+int energy_counters_set_userspace_governor(unsigned int core_id, int set_ht_siblings){
+  return energy_counters_set_governor(core_id, "userspace", set_ht_siblings);
+}
+
+int energy_counters_set_ondemand_governor(unsigned int core_id, int set_ht_siblings){
+  return energy_counters_set_governor(core_id, "ondemand", set_ht_siblings);
+}
+
+int energy_counters_set_performance_governor(unsigned int core_id, int set_ht_siblings){
+  return energy_counters_set_governor(core_id, "performance", set_ht_siblings);
+}
+
+int energy_counters_set_frequency(unsigned long frequency, unsigned int core_id, int set_ht_siblings){
+#if defined(__linux__)
+  FILE *f;
+  char command[512];
+  char siblings[512];
+  memset(siblings, 0, sizeof(siblings));
+  if(set_ht_siblings){
+  	if(energy_counters_get_ht_core_siblings(core_id, siblings)){
+		return -1;	
+  	}
+  }else{
+  	sprintf(siblings, "%u", core_id);
+  }
+  memset(command, 0, sizeof(command));
+  snprintf(command, 512, "cpufreq-set -f %lu -c %s", frequency, siblings);
+  printf("%s\n", command);
+  f = popen(command, "r");
+  pclose(f);
+  return 0;
+#else
+  return -1;
+#endif
+}
+
+int energy_counters_set_bounds(unsigned long lb, unsigned long ub, unsigned int core_id, int set_ht_siblings){
+#if defined(__linux__)
+  FILE *f;
+  char command[512];
+  char siblings[512];
+  memset(siblings, 0, sizeof(siblings));
+  if(set_ht_siblings){
+    if(energy_counters_get_ht_core_siblings(core_id, siblings)){
+      return -1;
+    }
+  }else{
+    sprintf(siblings, "%u", core_id);
+  }
+
+  memset(command, 0, sizeof(command));
+  snprintf(command, 512, "cpufreq-set -d %lu -c %s", lb, siblings);
+  f = popen(command, "r");
+  pclose(f);
+
+
+  memset(command, 0, sizeof(command));
+  snprintf(command, 512, "cpufreq-set -u %lu -c %s", ub, siblings);
+  f = popen(command, "r");
+  pclose(f);
+
+  return 0;
+#else
+  return -1;
+#endif
+}
+
+
+/** 
+ * Each line contains id of the virtual cores of a same physical core (separated by :).
+ **/
+#define GET_HT_MAPPING "egrep \"(( id|processo).*:|^ *$)\" /proc/cpuinfo | tr -d '\\t' | " \ 
+                       "sed -e 's/^$/=/g' | tr '\\n' ' ' | tr '=' '\\n' | tr -d ' ' | " \
+                       "sed -e 's/processor//g;s/physicalid//g;s/coreid//g' | cut -c 2- | " \
+                       "awk -F \":\" '{ print $2 \":\" $3 \":\" $1}' | sort -n -t : -k 1,1 -k2,2 -k3,3 | " \
+                       " awk -F ':' '{idx=$1\":\"$2}{a[idx]=(idx in a)?a[idx]\":\"$NF:$NF}END{for(i in a) print i\":\"a[i]}' | " \
+                       "cut -d ':' -f 3,4 | sort -t : -n -k1,1"
+
+#define GET_REAL_CORES_IDS GET_HT_MAPPING " | cut -d ':' -f 1"
+
+#define GET_NUM_CPUS "grep \"physical id\" /proc/cpuinfo | sort -u | wc -l"
+
+#define GET_NUM_REAL_CORES_PER_CPU "grep \"cpu cores\" /proc/cpuinfo | sort -u | cut -d\":\" -f2 | tr -d ' '"
+
+#define GET_NUM_TOTAL_CORES "grep -c \"processor\" /proc/cpuinfo"
+
+int energy_counters_get_ht_core_siblings(unsigned int core_id, char* siblings){
+#if defined(__linux__)
+	FILE *f;
+	char command[512];
+	memset(command, 0, sizeof(command));
+	snprintf(command, 512, "cat /sys/devices/system/cpu/cpu%u/topology/thread_siblings_list", core_id);
+	f = popen(command, "r");
+	if (!f || fscanf(f, "%s", siblings) == EOF) {
+	  pclose(f);
+	  /** Fallback TODO **/
+	  return -1;
+	}
+	pclose(f);
+	return 0;
+#else
+	return -1;
+#endif
+}
+
+
+int energy_counters_get_num_real_cores(unsigned int* num_cores){
+#if defined(__linux__)
+	FILE *f;
+	unsigned int num_cpus = 0;
+	unsigned int num_real_cores_per_cpu = 0;
+	f = popen(GET_NUM_CPUS, "r");
+	if (!f || fscanf(f, "%u", &num_cpus) == EOF) {
+	  pclose(f);
+	  *num_cores = 0;
+	  return -1;
+	}
+	pclose(f);
+        
+	f = popen(GET_NUM_REAL_CORES_PER_CPU, "r");
+        if (!f || fscanf(f, "%u", &num_real_cores_per_cpu) == EOF) {
+          pclose(f);
+          *num_cores = 0;
+          return -1;
+        }
+	pclose(f);
+	*num_cores = num_cpus * num_real_cores_per_cpu;
+	return 0;
+#else
+	return -1;
+#endif
+}
+
+int energy_counters_get_real_cores_identifiers(unsigned int* identifiers, unsigned int num_identifiers){
+#if defined(__linux__)
+  FILE *f;
+  int i = 0;
+
+  f = popen(GET_REAL_CORES_IDS, "r");
+
+  if (!f) {
+    pclose(f);
+    return -1;
+  }
+
+  for(i = 0; i<num_identifiers; i++){
+    if(fscanf(f, "%u\n", &(identifiers[i])) == EOF){
+      pclose(f);
+      return -1;
+    }
+    fflush(stdout);
+  }
+  pclose(f);
+  return 0;
+#else
+  return -1;
+#endif
+}
+
+
+
