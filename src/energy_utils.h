@@ -38,18 +38,24 @@ int energy_counters_read(energy_counters_state* state);
 
 int energy_counters_get_available_frequencies(unsigned long** frequencies, unsigned int* num_frequencies);
 
-int energy_counters_set_userspace_governor(unsigned int core_id, int set_ht_siblings);
+int energy_counters_set_userspace_governor(unsigned int core_id);
 
-int energy_counters_set_ondemand_governor(unsigned int core_id, int set_ht_siblings);
+int energy_counters_set_ondemand_governor(unsigned int core_id);
 
-int energy_counters_set_performance_governor(unsigned int core_id, int set_ht_siblings);
+int energy_counters_set_performance_governor(unsigned int core_id);
 
-int energy_counters_set_frequency(unsigned long frequency, unsigned int core_id, int set_ht_siblings);
+int energy_counters_set_conservative_governor(unsigned int core_id);
 
-int energy_counters_set_bounds(unsigned long lb, unsigned long ub, unsigned int core_id, int set_ht_siblings);
+int energy_counters_set_frequency(unsigned long frequency, unsigned int core_id);
+
+int energy_counters_set_frequency(unsigned long frequency, unsigned int* cores_ids, unsigned int num_cores, short related);
+
+int energy_counters_set_bounds(unsigned long lb, unsigned long ub, unsigned int core_id);
 
 int energy_counters_get_ht_core_siblings(unsigned int core_id, char* siblings);
 
 int energy_counters_get_num_real_cores(unsigned int* num_cores);
 
 int energy_counters_get_real_cores_identifiers(unsigned int* identifiers, unsigned int num_identifiers);
+
+int energy_counters_get_core_identifier_per_socket(unsigned int* identifiers_in, unsigned int num_identifiers_in, unsigned int** identifiers_out, unsigned int* num_identifiers_out);

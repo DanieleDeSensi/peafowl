@@ -178,6 +178,7 @@ void print_watts(mc_dpi_joules_counters diff, double interval){
   printf("\n");
   printf("===========================================\n");
 }
+
  
 int main(int argc, char **argv){
   using namespace std;
@@ -243,7 +244,7 @@ int main(int argc, char **argv){
  
     mc_dpi_parallelism_details_t details;
     bzero(&details, sizeof(mc_dpi_parallelism_details_t));
-    details.available_processors=AVAILABLE_CORES;
+    details.available_processors=num_workers+2;
     details.mapping=mapping_fixed;
  
     mc_dpi_library_state_t* state=mc_dpi_init_stateful(
@@ -381,23 +382,25 @@ int main(int argc, char **argv){
  
     mc_dpi_wait_end(state);
     full_timer.stop();
-    //mc_dpi_print_stats(state);
+    mc_dpi_print_stats(state);
  
     byte_scanner* bs;
     while(!scanner_pool->empty()){
       scanner_pool->pop((void**) &bs);
       delete bs;
     }
-    /* And close the session */
-    mc_dpi_terminate(state);
-    delete scanner_pool;
- 
+
     printf("++++Completion time (Secs): %f\n", full_timer.real_time());
     printf("++++Bandwidth (Pkts/Sec): %f\n", ((double)(num_packets*num_iterations))/full_timer.real_time());
     printf("++++Socket: %f\n", (total_joules_socket/(double)full_timer.real_time())-idle_watts_socket);
     printf("++++Cores: %f\n", (total_joules_cores/(double)full_timer.real_time())-idle_watts_cores);
     printf("++++Offcores: %f\n", (total_joules_offcores/(double)full_timer.real_time())-idle_watts_offcores);
     printf("++++DRAM: %f\n", (total_joules_dram/(double)full_timer.real_time())-idle_watts_dram);
+    fflush(stdout);
+
+    /* And close the session */
+    mc_dpi_terminate(state);
+    delete scanner_pool;
 
     for(i=0; i<num_packets; i++){
       free(packets[i]);

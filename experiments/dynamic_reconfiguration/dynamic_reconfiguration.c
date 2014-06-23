@@ -52,9 +52,11 @@
 using namespace antivirus;
 #define CAPACITY_CHUNK 1000
 #define SCANNER_POOL_SIZE 4096
+
 #define CLOCK_FREQ 2000000000L
 
- 
+
+static unsigned long real_freq = CLOCK_FREQ; 
 static ff::uSWSR_Ptr_Buffer* scanner_pool;
 
 static int terminating;
@@ -110,26 +112,25 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 
   if(current_burst_size == BURST_SIZE){
     /** Sleep to get the rate. **/
-    //TODO: Non clock_freq ma prendere la freq corrente.
     double wait_interval_secs = 1.0 / rates[current_interval];
     current_burst_size = 0;
 
 
     if(rates[current_interval] > current_real_rate){
       def += 50;
-      if(def > CLOCK_FREQ * wait_interval_secs) def = CLOCK_FREQ * wait_interval_secs;
+      if(def > real_freq * wait_interval_secs) def = real_freq * wait_interval_secs;
     }else{
       def -=50;
       if(def < 0) def = 0;
     }
 
-    ticks_wait((CLOCK_FREQ * wait_interval_secs - def) * BURST_SIZE);
+    ticks_wait((real_freq * wait_interval_secs - def) * BURST_SIZE);
   }
 
 
   ++current_burst_size;
 
-  if(getticks()-last_ts>CLOCK_FREQ){
+  if(getticks()-last_ts>real_freq){
     last_ts=getticks();
     ++last_sec;
     if(current_interval_start == 0){
@@ -233,9 +234,11 @@ static double idle_watts_dram=0;
 
 FILE* outstats = NULL;
 
-void print_stats_callback(u_int16_t num_workers, double* cores_frequencies, mc_dpi_joules_counters joules){
-  fprintf(outstats, "%d %d %f %f %f %f %f %f %f %f %f %f\n", last_sec,
+void print_stats_callback(u_int16_t num_workers, unsigned long workers_frequency, mc_dpi_joules_counters joules){
+  fprintf(outstats, "%d %d %lu %f %f %f %f %f %f %f %f %f %f\n", 
+                                   last_sec,
                                    num_workers,
+                                   workers_frequency,
                                    rates[current_interval],
                                    current_real_rate,
                                    (joules.joules_socket[0]/(double)polling_interval)-idle_watts_socket,
@@ -246,6 +249,7 @@ void print_stats_callback(u_int16_t num_workers, double* cores_frequencies, mc_d
                                    (joules.joules_cores[1]/(double)polling_interval)-idle_watts_cores,
                                    (joules.joules_offcores[1]/(double)polling_interval)-idle_watts_offcores,
                                    (joules.joules_dram[1]/(double)polling_interval)-idle_watts_dram);
+  real_freq = workers_frequency * 1000;
   fflush(outstats);
 }
 
@@ -425,7 +429,8 @@ int main(int argc, char **argv){
     reconf_params.worker_load_up_threshold = 70;
     reconf_params.system_load_down_threshold = 20;
     reconf_params.worker_load_down_threshold = 5; 
-    reconf_params.num_skips_after_reconf = 4;
+    reconf_params.num_skips_after_reconf = 0; //4;
+    reconf_params.freq_type = MC_DPI_RECONF_FREQ_GLOBAL;
   
     mc_dpi_reconfiguration_set_parameters(state, reconf_params);
 

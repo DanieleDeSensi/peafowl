@@ -186,6 +186,7 @@ struct dpi_flow_DB_v4{
 	u_int32_t max_active_flows;
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
 	u_int32_t individual_pool_size;
+	u_int32_t start_pool_size;
 #endif
 };
 
@@ -206,6 +207,7 @@ struct dpi_flow_DB_v6{
 	u_int32_t max_active_flows;
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
 	u_int32_t individual_pool_size;
+	u_int32_t start_pool_size;
 #endif
 };
 
@@ -346,6 +348,9 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 		table->total_size=size;
 		table->num_partitions=num_partitions;
 		table->max_active_flows=max_active_v4_flows;
+#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+		table->start_pool_size=start_pool_size;
+#endif
 
 		for(i=0; i<table->total_size; i++){
 			/** Creation of sentinel node. **/
@@ -407,7 +412,8 @@ void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table, u_int16_t num_p
 
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
 		ipv4_flow_t* flow_pool;
-		table->individual_pool_size=start_pool_size/table->num_partitions;
+		u_int32_t i;
+		table->individual_pool_size=table->start_pool_size/table->num_partitions;
 #if DPI_NUMA_AWARE
 		flow_pool=numa_alloc_onnode(
 				sizeof(ipv4_flow_t)*table->individual_pool_size,
@@ -465,6 +471,9 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(u_int32_t size,
 		table->total_size=size;
 		table->num_partitions=num_partitions;
 		table->max_active_flows=max_active_v6_flows;
+#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+		table->start_pool_size=start_pool_size;
+#endif
 		
 		for(i=0; i<table->total_size; i++){
 			/** Creation of sentinel node. **/
@@ -522,7 +531,8 @@ void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table, u_int16_t num_p
 
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
 		ipv6_flow_t* flow_pool;
-		table->individual_pool_size=start_pool_size/table->num_partitions;
+		u_int32_t i=0;
+		table->individual_pool_size=table->start_pool_size/table->num_partitions;
 #if DPI_NUMA_AWARE
 		flow_pool=numa_alloc_onnode(
 				      sizeof(ipv6_flow_t)*table->individual_pool_size,

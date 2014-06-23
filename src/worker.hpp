@@ -218,13 +218,13 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	mc_dpi_processing_result_callback** const cb;
 	void** user_data;
-	const u_int16_t proc_id;
+	u_int16_t* proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
 	u_int8_t initialized;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_collector(mc_dpi_processing_result_callback** cb,
-			         void** user_data, u_int16_t proc_id,
+			         void** user_data, u_int16_t* proc_id,
 			         ff::SWSR_Ptr_Buffer* tasks_pool);
 	int svc_init();
 	void* svc(void*);

@@ -147,8 +147,10 @@ void* dpi_L3_L4_emitter::svc(void* task){
 				packet.length;
 		r->input_output_task_t.L3_L4_input_task_t[i].pkt=
 				packet.pkt;
+#if DPI_MULTICORE_PREFETCH
         __builtin_prefetch(
         		&(r->input_output_task_t.L3_L4_input_task_t[i+5]), 1, 0);
+#endif
 	}
 	return (void*) r;
 }
@@ -208,8 +210,10 @@ void* dpi_L3_L4_worker::svc(void* task){
 
 	dpi_pkt_infos_t pkt_infos;
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
+#if DPI_MULTICORE_PREFETCH
         __builtin_prefetch(&(in[i+2]), 0, 0);
         __builtin_prefetch((in[i+2]).pkt, 0, 0);
+#endif
 
 		real_task->input_output_task_t.L3_L4_output_task_t[i].status=
 				mc_dpi_extract_packet_infos(this->state, in[i].pkt,
@@ -273,7 +277,7 @@ dpi_L3_L4_collector::dpi_L3_L4_collector(u_int16_t proc_id):
 
 int dpi_L3_L4_collector::svc_init(){
 	worker_debug_print("[worker.cpp]: L3_L4 collector mapped "
-			           "on processor: %d\n", proc_id);
+			           "on processor: %u\n", proc_id);
 	ff_mapThreadToCpu(proc_id,-20);
 	return 0;
 }
@@ -333,16 +337,20 @@ void* dpi_L7_emitter::svc(void* task){
 	uint pfs;
 
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
+#if DPI_MULTICORE_PREFETCH
         __builtin_prefetch(&(real_task->input_output_task_t.
         		L3_L4_output_task_t[i+4]), 0, 0);
+#endif
 		destination_worker=real_task->input_output_task_t.
 				L3_L4_output_task_t[i].destination_worker;
 		worker_debug_print("[worker.cpp]: L7 emitter: Inserted"
 				           " a task into the queue of worker: "
 				           "%d\n", destination_worker);
 		pfs=partially_filled_sizes[destination_worker];
+#if DPI_MULTICORE_PREFETCH
         __builtin_prefetch(&(partially_filled[destination_worker].
         		input_output_task_t.L3_L4_output_task_t[pfs]), 1, 0);
+#endif
 
 		if(pfs+1==DPI_MULTICORE_DEFAULT_GRAIN_SIZE){
 			assert(waiting_tasks_size!=0);
@@ -423,8 +431,10 @@ void* dpi_L7_worker::svc(void* task){
 			continue;
 		}
 		infos=temp[i].pkt_infos;
+#if DPI_MULTICORE_PREFETCH
         __builtin_prefetch(temp[i+1].pkt_infos.pkt+temp[i+1].
         		pkt_infos.l7offset, 0, 0);
+#endif
 
 		if(infos.ip_version==DPI_IP_VERSION_4){
 			ipv4_flow=mc_dpi_flow_table_find_or_create_flow_v4(
@@ -484,7 +494,7 @@ void dpi_L7_worker::svc_end(){
 
 dpi_L7_collector::dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 		                           void** user_data,
-		                           u_int16_t proc_id,
+		                           u_int16_t* proc_id,
 		                           ff::SWSR_Ptr_Buffer* tasks_pool)
                                    :cb(cb), user_data(user_data),
                                     proc_id(proc_id),
@@ -495,8 +505,8 @@ dpi_L7_collector::dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 
 int dpi_L7_collector::svc_init(){
 	worker_debug_print("[worker.cpp]: L7 collector"
-			          " mapped on processor: %d\n", proc_id);
-	ff_mapThreadToCpu(proc_id,-20);
+			          " mapped on processor: %u\n", *proc_id);
+	ff_mapThreadToCpu(*proc_id,-20);
 	if(!initialized){
 		initialized=1;
 	}
@@ -520,7 +530,7 @@ void* dpi_L7_collector::svc(void* task){
 		dpi_free_task(real_task);
 	}
 #else
-	dpi_free_task(real_task, allocator);
+	dpi_free_task(real_task);
 #endif
 	return (void*) ff::FF_GO_ON;
 }

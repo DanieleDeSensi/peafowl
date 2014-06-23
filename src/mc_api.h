@@ -214,11 +214,11 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
  * This function will be periodically called by the library to provide
  * the application with statistics about the current configuration.
  * @param num_workers         The current number of workers.
- * @param cores_frequencies   The current frequencies of the cores.
+ * @param workers_frequency   The current frequency of the workers (in kHz).
  * @param joules              The joules over the stats collection interval.
  */
 typedef void(mc_dpi_stats_collection_callback)(u_int16_t num_workers, 
-                                               double* cores_frequencies,
+                                               unsigned long workers_frequency,
                                                mc_dpi_joules_counters joules);
 /**
  * Sets the statistics collection callback.
@@ -231,6 +231,20 @@ typedef void(mc_dpi_stats_collection_callback)(u_int16_t num_workers,
 u_int8_t mc_dpi_set_stats_collection_callback(mc_dpi_library_state_t* state,
                                               u_int32_t collection_interval,
                                               mc_dpi_stats_collection_callback* stats_callback);
+
+
+typedef enum{
+	MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE = 0,
+	MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE,
+	MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND,
+	MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE 
+}mc_dpi_reconfiguration_freq_strategy;
+
+typedef enum{
+	MC_DPI_RECONF_FREQ_NO = 0,
+	MC_DPI_RECONF_FREQ_SINGLE,
+	MC_DPI_RECONF_FREQ_GLOBAL
+}mc_dpi_reconfiguration_freq_type;
 
 /**
  * Parameters that will be used from the framework to decide 
@@ -253,6 +267,9 @@ typedef struct{
 	double system_load_down_threshold;
 	double worker_load_down_threshold;
 	short num_skips_after_reconf;
+	short migrate_collector;
+	mc_dpi_reconfiguration_freq_type freq_type;
+	mc_dpi_reconfiguration_freq_strategy freq_strategy;
 }mc_dpi_reconfiguration_parameters;
 
 /**
