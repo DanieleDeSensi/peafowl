@@ -50,6 +50,12 @@ enum tids{
 
 
 
+typedef enum{
+	MC_DPI_RECONFIGURATION_DIRECTION_UNDEF = 0,
+	MC_DPI_RECONFIGURATION_DIRECTION_DOWN,
+	MC_DPI_RECONFIGURATION_DIRECTION_UP
+}mc_dpi_reconfiguration_direction;
+
 typedef struct mc_dpi_library_state{
 	dpi_library_state_t* sequential_state;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
@@ -113,7 +119,6 @@ typedef struct mc_dpi_library_state{
 	double** load_samples;
 	unsigned int current_load_sample;
 	unsigned int current_num_samples;
-  	short reconf_to_skip;
 	u_int32_t collection_interval;
 	mc_dpi_stats_collection_callback* stats_callback;
 	unsigned long* available_frequencies;
@@ -121,6 +126,8 @@ typedef struct mc_dpi_library_state{
 	unsigned int current_frequency_id;
 	unsigned int* one_core_per_socket;
 	unsigned int num_sockets;
+	mc_dpi_reconfiguration_direction last_direction;
+	unsigned int locked_samples;
 }mc_dpi_library_state_t;
 
 
@@ -457,10 +464,11 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	state->current_num_samples=0;
 	state->stats_callback=0;
 	state->collection_interval=0;
-	state->reconf_to_skip=0;
 	energy_counters_get_available_frequencies(&(state->available_frequencies), &(state->num_available_frequencies));
 	state->current_frequency_id=0;
 	state->one_core_per_socket=NULL;
+	state->last_direction=MC_DPI_RECONFIGURATION_DIRECTION_UNDEF;
+	state->locked_samples=0;
 
 	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
@@ -757,6 +765,16 @@ u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
 		}
 		state->current_load_sample=0;
 
+		unsigned long starting_frequency;
+
+		if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE){
+			starting_frequency = state->available_frequencies[state->num_available_frequencies - 1];
+			state->current_frequency_id = state->num_available_frequencies - 1;
+		}else if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE){
+			starting_frequency = state->available_frequencies[0];
+			state->current_frequency_id = 0;
+		}
+
 		if(state->reconf_params.freq_type != MC_DPI_RECONF_FREQ_NO){
 			for(i=0; i<state->available_processors; i++){
 				if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND){
@@ -769,30 +787,33 @@ u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
 				energy_counters_set_bounds(state->available_frequencies[0], 
 				                           state->available_frequencies[state->num_available_frequencies - 1], 
 				                           state->mapping[i]);
-				if(state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND && 
-				   state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE){
-				  energy_counters_set_frequency(state->available_frequencies[0], state->mapping[i]);
+			}
+
+			if(state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND &&
+			   state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE){
+				if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_SINGLE){
+					energy_counters_set_frequency(starting_frequency,
+					                              state->mapping,
+					                              state->available_processors,
+					                              0);
+
+					/** Emitter and collector always run to the highest frequency. **/
+					energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
+					                              state->mapping[0]);
+					energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
+					                              state->mapping[state->single_farm_active_workers + 1]);
+				}else if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_GLOBAL){
+					energy_counters_get_core_identifier_per_socket(state->mapping,
+					                                               state->available_processors,
+					                                               &(state->one_core_per_socket),
+					                                               &state->num_sockets);
+					energy_counters_set_frequency(state->available_frequencies[state->current_frequency_id],
+					                              state->one_core_per_socket,
+					                              state->num_sockets,
+					                              1);
 				}
 			}
-
-			if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_SINGLE &&
-			   state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND &&
-			   state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE){
-				/** Emitter and collector always run to the highest frequency. **/
-				energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
-				                              state->mapping[0]);
-				energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
-				                              state->mapping[state->single_farm_active_workers + 1]);
-			}
-			
-			if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_GLOBAL){
-				energy_counters_get_core_identifier_per_socket(state->mapping, 
-				                                               state->available_processors, 
-				                                               &(state->one_core_per_socket), 
-				                                               &state->num_sockets);
-			}
 		}
-
 		return 0;
 	}else{
 		return 1;
@@ -897,7 +918,6 @@ static double mc_dpi_reconfiguration_get_worker_average_load(mc_dpi_library_stat
 
 
 static void mc_dpi_reconfiguration_post_actions(mc_dpi_library_state_t* state){
-	state->reconf_to_skip = state->reconf_params.num_skips_after_reconf;
 	for(u_int16_t i = 0; i<state->available_processors - 2; i++){
 		memset(state->load_samples[i], 0, sizeof(double)*state->reconf_params.num_samples);
 	}
@@ -1032,6 +1052,7 @@ static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state)
 		}
 		global_load += current_worker_load;
 	}
+
 	global_load = global_load / state->single_farm_active_workers;
 
 	if(global_load > state->reconf_params.system_load_up_threshold){
@@ -1040,15 +1061,21 @@ static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state)
 		global_out_down = true;
 	}
 
-	printf("globload: %f\n", global_load);
 	if(single_worker_out_up || global_out_up){
-	  printf("Up -> %f\n", (global_load/50) * state->single_farm_active_workers);
 		mc_dpi_reconfiguration_increase_bandwidth(state);
 		mc_dpi_reconfiguration_post_actions(state);
+		state->last_direction = MC_DPI_RECONFIGURATION_DIRECTION_UP;
+		state->locked_samples = 0;
 	}else if(single_worker_out_down || global_out_down){
-	  printf("Dwn -> %f\n", (global_load/50) * state->single_farm_active_workers);
-		mc_dpi_reconfiguration_decrease_bandwidth(state);
-		mc_dpi_reconfiguration_post_actions(state);
+		if(state->last_direction != MC_DPI_RECONFIGURATION_DIRECTION_UP || 
+		   state->locked_samples == state->reconf_params.lock_samples){
+			mc_dpi_reconfiguration_decrease_bandwidth(state);
+			mc_dpi_reconfiguration_post_actions(state);
+			state->last_direction = MC_DPI_RECONFIGURATION_DIRECTION_DOWN;
+			state->locked_samples = 0;
+		}else{
+			state->locked_samples++;
+		}
 	}
 }
 
@@ -1083,14 +1110,11 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 	while(!state->terminating){
 		sleep(1);
 		++waited_secs;
+
 		if(state->load_samples && 
 		   (waited_secs % state->reconf_params.sampling_interval) == 0){
 			mc_dpi_reconfiguration_store_current_sample(state);
-			if(state->reconf_to_skip){
-				--state->reconf_to_skip;
-			}else{
-				mc_dpi_reconfiguration_apply_policies(state);
-			}
+			mc_dpi_reconfiguration_apply_policies(state); 
 		}
 
 		if(state->stats_callback && 
@@ -1099,8 +1123,8 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 			state->stats_callback(state->single_farm_active_workers,
 					      state->available_frequencies[state->current_frequency_id],
 			                       mc_dpi_joules_counters_diff(state, 
-			                                                   last_joules_counters,
-			                                                   now_joules));
+			                                                   now_joules,
+			                                                   last_joules_counters));
 			last_joules_counters = now_joules;
 		}
 	}

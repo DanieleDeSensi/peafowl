@@ -158,6 +158,7 @@ class dpi_L7_scheduler: public ff::ff_loadbalancer{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	int victim;
+	unsigned long long pushlost;
 	char padding2[DPI_CACHE_LINE_SIZE];
 protected:
 	inline int selectworker(){
@@ -165,26 +166,41 @@ protected:
 				           victim);
 		return victim;
 	}
+/**	
+	inline unsigned int ntentative(){return 1;}
+
+	inline void losetime_out(){
+		ff::ff_loadbalancer::losetime_out();
+		++pushlost;
+	}
+**/
+
 public:
 	dpi_L7_scheduler(int max_num_workers):
-			ff_loadbalancer(max_num_workers), victim(0){}
+		ff_loadbalancer(max_num_workers), victim(0), pushlost(0){}
+
 	void set_victim(int v){
 		victim=v;
 		worker_debug_print("[worker.hpp]: set_victim: %u\n",
 				           victim);
+	}
+
+	unsigned long long getpushlost(){
+		return pushlost;
 	}
 };
 
 class dpi_L7_emitter: public ff::ff_node{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
-	dpi_L7_scheduler* const lb;
 	mc_dpi_task_t* partially_filled;
 	uint* partially_filled_sizes;
 	mc_dpi_task_t** waiting_tasks;
 	u_int16_t waiting_tasks_size;
 	const u_int16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
+protected:
+	dpi_L7_scheduler* const lb;
 public:
 	dpi_L7_emitter(dpi_L7_scheduler* lb,
 			       u_int16_t num_L7_workers,
@@ -192,6 +208,7 @@ public:
 	~dpi_L7_emitter();
 	int svc_init();
 	void* svc(void* task);
+	unsigned long long getpushlost();
 };
 
 class dpi_L7_worker: public ff::ff_node{
@@ -251,6 +268,7 @@ public:
 			              dpi_L7_scheduler* lb,
 			              u_int16_t proc_id);
 	~dpi_collapsed_emitter();
+	unsigned long long getpushlost();
 	int svc_init();
 	void* svc(void*);
 	void svc_end();

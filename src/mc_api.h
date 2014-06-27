@@ -266,7 +266,7 @@ typedef struct{
 	double worker_load_up_threshold;
 	double system_load_down_threshold;
 	double worker_load_down_threshold;
-	short num_skips_after_reconf;
+	unsigned int lock_samples;
 	short migrate_collector;
 	mc_dpi_reconfiguration_freq_type freq_type;
 	mc_dpi_reconfiguration_freq_strategy freq_strategy;

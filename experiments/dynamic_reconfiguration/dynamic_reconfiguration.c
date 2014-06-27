@@ -235,20 +235,16 @@ static double idle_watts_dram=0;
 FILE* outstats = NULL;
 
 void print_stats_callback(u_int16_t num_workers, unsigned long workers_frequency, mc_dpi_joules_counters joules){
-  fprintf(outstats, "%d %d %lu %f %f %f %f %f %f %f %f %f %f\n", 
+  fprintf(outstats, "%d\t%d\t%lu\t%f\t%f\t%f\t%f\t%f\t%f\n", 
                                    last_sec,
                                    num_workers,
                                    workers_frequency,
                                    rates[current_interval],
                                    current_real_rate,
-                                   (joules.joules_socket[0]/(double)polling_interval)-idle_watts_socket,
-                                   (joules.joules_cores[0]/(double)polling_interval)-idle_watts_cores,
-                                   (joules.joules_offcores[0]/(double)polling_interval)-idle_watts_offcores,
-                                   (joules.joules_dram[0]/(double)polling_interval)-idle_watts_dram,
-                                   (joules.joules_socket[1]/(double)polling_interval)-idle_watts_socket,
-                                   (joules.joules_cores[1]/(double)polling_interval)-idle_watts_cores,
-                                   (joules.joules_offcores[1]/(double)polling_interval)-idle_watts_offcores,
-                                   (joules.joules_dram[1]/(double)polling_interval)-idle_watts_dram);
+	                           ((joules.joules_socket[0]+joules.joules_socket[1])/(double)polling_interval)-idle_watts_socket,
+                                   ((joules.joules_cores[0]+joules.joules_cores[1])/(double)polling_interval)-idle_watts_cores,
+                  	           ((joules.joules_offcores[0]+joules.joules_offcores[1])/(double)polling_interval)-idle_watts_offcores,
+	                           ((joules.joules_dram[0]+joules.joules_dram[1])/(double)polling_interval)-idle_watts_dram);
   real_freq = workers_frequency * 1000;
   fflush(outstats);
 }
@@ -273,7 +269,7 @@ int main(int argc, char **argv){
     char const *input_file_name=argv[2];
     polling_interval=atoi(argv[3]);
     outstats = fopen("stats.txt", "w");
-    fprintf(outstats, "#CurrentTime NumWorkers ExpectedRate CurrentRate WattsSocket WattsCores WattsOffCores WattsDRAM\n");
+    fprintf(outstats, "#CurrentTime\tNumWorkers\tFrequency\tExpectedRate\tCurrentRate\tWattsSocket\tWattsCores\tWattsOffCores\tWattsDRAM\n");
      
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -425,12 +421,12 @@ int main(int argc, char **argv){
     mc_dpi_reconfiguration_parameters reconf_params;
     reconf_params.sampling_interval = polling_interval;
     reconf_params.num_samples = 10;
-    reconf_params.system_load_up_threshold = 80;
-    reconf_params.worker_load_up_threshold = 70;
-    reconf_params.system_load_down_threshold = 20;
+    reconf_params.system_load_up_threshold = 90;
+    reconf_params.worker_load_up_threshold = 90;
+    reconf_params.system_load_down_threshold = 5; //20;
     reconf_params.worker_load_down_threshold = 5; 
-    reconf_params.num_skips_after_reconf = 0; //4;
     reconf_params.freq_type = MC_DPI_RECONF_FREQ_GLOBAL;
+    reconf_params.lock_samples = 4;
   
     mc_dpi_reconfiguration_set_parameters(state, reconf_params);
 

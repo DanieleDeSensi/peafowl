@@ -179,7 +179,7 @@ void print_watts(mc_dpi_joules_counters diff, double interval){
   printf("===========================================\n");
 }
 
- 
+extern void dummy(mc_dpi_library_state_t* state); 
 int main(int argc, char **argv){
   using namespace std;
   ff_mapThreadToCpu(mapping_fixed[0], -20);
@@ -357,6 +357,21 @@ int main(int argc, char **argv){
     mc_dpi_set_num_workers(state, num_workers);
 
     full_timer.start();
+
+
+    //DELETE
+    mc_dpi_reconfiguration_parameters reconf_params;
+    reconf_params.sampling_interval = 5;
+    reconf_params.num_samples = 10;
+    reconf_params.system_load_up_threshold = 90;
+    reconf_params.worker_load_up_threshold = 90;
+    reconf_params.system_load_down_threshold = 5; //20;
+    reconf_params.worker_load_down_threshold = 5;
+    reconf_params.freq_type = MC_DPI_RECONF_FREQ_GLOBAL;
+    mc_dpi_reconfiguration_set_parameters(state, reconf_params);
+    //DELETE
+
+
     mc_dpi_run(state);
 
     i=0;
@@ -378,6 +393,7 @@ int main(int argc, char **argv){
 	total_joules_dram+=joules_diff.joules_dram[j];
       }
       ++i;
+      dummy(state);
     }
  
     mc_dpi_wait_end(state);

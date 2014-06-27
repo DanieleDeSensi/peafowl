@@ -330,6 +330,10 @@ int dpi_L7_emitter::svc_init(){
 	return 0;
 }
 
+unsigned long long dpi_L7_emitter::getpushlost(){
+	return lb->getpushlost();
+}
+
 void* dpi_L7_emitter::svc(void* task){
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
 	u_int16_t destination_worker;
@@ -583,6 +587,11 @@ int dpi_collapsed_emitter::svc_init(){
 			           "on processor: %d\n", proc_id);
 	return 0;
 }
+
+unsigned long long dpi_collapsed_emitter::getpushlost(){
+	return lb->getpushlost();
+}
+
 void* dpi_collapsed_emitter::svc(void* task){
 	void* r=L3_L4_emitter->svc(task);
 	if(unlikely(r==(void*) ff::FF_EOS || r==NULL)){
