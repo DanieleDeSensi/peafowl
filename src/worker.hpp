@@ -158,7 +158,6 @@ class dpi_L7_scheduler: public ff::ff_loadbalancer{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	int victim;
-	unsigned long long pushlost;
 	char padding2[DPI_CACHE_LINE_SIZE];
 protected:
 	inline int selectworker(){
@@ -166,18 +165,9 @@ protected:
 				           victim);
 		return victim;
 	}
-/**	
-	inline unsigned int ntentative(){return 1;}
-
-	inline void losetime_out(){
-		ff::ff_loadbalancer::losetime_out();
-		++pushlost;
-	}
-**/
-
 public:
 	dpi_L7_scheduler(int max_num_workers):
-		ff_loadbalancer(max_num_workers), victim(0), pushlost(0){}
+		ff_loadbalancer(max_num_workers), victim(0){}
 
 	void set_victim(int v){
 		victim=v;
@@ -185,9 +175,6 @@ public:
 				           victim);
 	}
 
-	unsigned long long getpushlost(){
-		return pushlost;
-	}
 };
 
 class dpi_L7_emitter: public ff::ff_node{
@@ -208,7 +195,6 @@ public:
 	~dpi_L7_emitter();
 	int svc_init();
 	void* svc(void* task);
-	unsigned long long getpushlost();
 };
 
 class dpi_L7_worker: public ff::ff_node{
@@ -218,12 +204,33 @@ private:
 	L3_L4_output_task_struct* temp;
 	const u_int16_t worker_id;
 	const u_int16_t proc_id;
+	ticks startticks;
+	ticks sleptticks;
+	int reset;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_worker(dpi_library_state_t* state,
 			      u_int16_t worker_id,
 			      u_int16_t proc_id);
 	~dpi_L7_worker();
+	
+	float get_sleep_percentage();
+	void reset_sleep_percentage();
+
+
+	inline void reset_sleep_percentage_real(bool force = false){
+		if(reset || force){
+			reset = 0;
+			sleptticks = 0;
+			startticks = getticks();
+		}
+	}
+	
+	inline void losetime_in(void) {
+		reset_sleep_percentage_real();
+		sleptticks += (ticks_wait(ff_node::TICKS2WAIT) + ff_node::TICKS2WAIT);
+	}
+
 	int svc_init();
 	void* svc(void*);
 	void svc_end();
@@ -268,7 +275,6 @@ public:
 			              dpi_L7_scheduler* lb,
 			              u_int16_t proc_id);
 	~dpi_collapsed_emitter();
-	unsigned long long getpushlost();
 	int svc_init();
 	void* svc(void*);
 	void svc_end();

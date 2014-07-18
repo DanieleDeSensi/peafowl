@@ -156,7 +156,7 @@ void mc_dpi_set_read_and_process_callbacks(
 		mc_dpi_library_state_t* state,
 		mc_dpi_packet_reading_callback* reading_callback,
 		mc_dpi_processing_result_callback* processing_callback,
-		void* user_data);
+                void* user_data);
 
 /**
  * Starts the library.
@@ -237,7 +237,8 @@ typedef enum{
 	MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE = 0,
 	MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE,
 	MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND,
-	MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE 
+	MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE,
+	MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE
 }mc_dpi_reconfiguration_freq_strategy;
 
 typedef enum{
@@ -266,8 +267,8 @@ typedef struct{
 	double worker_load_up_threshold;
 	double system_load_down_threshold;
 	double worker_load_down_threshold;
-	unsigned int lock_samples;
 	short migrate_collector;
+	unsigned int min_num_samples;
 	mc_dpi_reconfiguration_freq_type freq_type;
 	mc_dpi_reconfiguration_freq_strategy freq_strategy;
 }mc_dpi_reconfiguration_parameters;

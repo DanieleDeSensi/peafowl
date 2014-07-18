@@ -358,20 +358,6 @@ int main(int argc, char **argv){
 
     full_timer.start();
 
-
-    //DELETE
-    mc_dpi_reconfiguration_parameters reconf_params;
-    reconf_params.sampling_interval = 5;
-    reconf_params.num_samples = 10;
-    reconf_params.system_load_up_threshold = 90;
-    reconf_params.worker_load_up_threshold = 90;
-    reconf_params.system_load_down_threshold = 5; //20;
-    reconf_params.worker_load_down_threshold = 5;
-    reconf_params.freq_type = MC_DPI_RECONF_FREQ_GLOBAL;
-    mc_dpi_reconfiguration_set_parameters(state, reconf_params);
-    //DELETE
-
-
     mc_dpi_run(state);
 
     i=0;
