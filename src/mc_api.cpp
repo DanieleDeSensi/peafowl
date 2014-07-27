@@ -29,6 +29,7 @@
 #include "flow_table.h"
 #include "energy_utils.h"
 #include "worker.hpp"
+#include <float.h>
 #include <stddef.h>
 #include <vector>
 #include <cmath>
@@ -117,6 +118,8 @@ typedef struct mc_dpi_library_state{
 	unsigned int current_frequency_id;
 	unsigned int* one_core_per_socket;
 	unsigned int num_sockets;
+	double current_system_load;
+	double current_error_percentage;
 }mc_dpi_library_state_t;
 
 
@@ -717,12 +720,11 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
 u_int8_t mc_dpi_reconfiguration_get_workers_instantaneous_load(mc_dpi_library_state_t* state, double* loads){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		unsigned int i;
-		ff::FFBUFFER* buffer;
 	  	for(i=0; i<state->single_farm_active_workers; i++){
 			dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
 			state->load_samples[i][state->current_load_sample] =
-			                                            100.0 - current_worker->get_sleep_percentage();
-			current_worker->reset_sleep_percentage();
+			                    current_worker->get_worktime_percentage();
+			current_worker->reset_worktime_percentage();
 		}
 		return 0;
 	}else{
@@ -902,13 +904,14 @@ void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
  */
 static double mc_dpi_reconfiguration_get_worker_average_load(mc_dpi_library_state_t* state, u_int16_t worker_id){
 	double avg = 0;
+	unsigned int num_samples = std::min(state->current_num_samples, state->reconf_params.num_samples);
 	if(state->load_samples == NULL || state->load_samples[worker_id] == NULL){
 		return 0;
 	}
-	for(unsigned long i = 0; i<state->current_num_samples; i++){
+	for(unsigned long i = 0; i<num_samples; i++){
 		avg += state->load_samples[worker_id][i];
 	}
-	return (avg / (double)state->current_num_samples);
+	return (avg / (double)num_samples);
 }
 
 static void mc_dpi_reconfiguration_post_actions(mc_dpi_library_state_t* state){
@@ -943,16 +946,14 @@ static void mc_dpi_reconfiguration_update_system_frequencies(mc_dpi_library_stat
 	}
 }
 
-static unsigned long mc_dpi_reconfiguration_model_bandwidth(unsigned long frequency, u_int16_t workers){
-	return frequency*workers;
+static unsigned long mc_dpi_reconfiguration_model_power(mc_dpi_library_state_t* state, unsigned long frequency, u_int16_t workers){
+	return (frequency*frequency*(workers+2)) / state->available_frequencies[0];
 }
 
-static unsigned long mc_dpi_reconfiguration_model_power(unsigned long frequency, u_int16_t workers){
-	return frequency*frequency*(workers+2);
-}
-
-static double mc_dpi_reconfiguration_predict_load(mc_dpi_library_state_t* state, double current_load,  u_int16_t future_workers, unsigned long future_frequency){
-	double predicted_load = 0;
+static double mc_dpi_reconfiguration_predict_load(mc_dpi_library_state_t* state, u_int16_t future_workers, unsigned int future_frequency_id){
+	double prediction_modifier = ((double)future_workers * (double)state->available_frequencies[future_frequency_id]) / 
+	                             ((double) state->single_farm_active_workers * (double)state->available_frequencies[state->current_frequency_id]);
+	
 	/**
 	 *  Legend: 
 	 *  
@@ -970,172 +971,114 @@ static double mc_dpi_reconfiguration_predict_load(mc_dpi_library_state_t* state,
 	 *  NextRho = [(CurrentWorkers * CurrentFrequency) / (NextWorkers * NextFrequency)] * CurrentRho
 	 **/
 
-	predicted_load = (((double) state->single_farm_active_workers * (double)state->available_frequencies[state->current_frequency_id]) / ((double)future_workers * (double)future_frequency)) * current_load;
-	printf("Global load at <%d, %lu> %f. Predicted global load at <%d, %lu>: %f\n", state->single_farm_active_workers, state->available_frequencies[state->current_frequency_id], current_load, future_workers, future_frequency, predicted_load);
+ 	return ( (1.0 / prediction_modifier) * state->current_system_load );
 }
 
-static void mc_dpi_reconfiguration_increase_bandwidth(mc_dpi_library_state_t* state, double current_load){
-	unsigned int next_frequency_id = state->current_frequency_id;
-	unsigned int next_workers = state->single_farm_active_workers;
+#define ERROR_PERC 3.0 //state->current_error_percentage
 
-	if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_NO){
-		next_workers = state->single_farm_active_workers + 1;
-	}else{
+static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library_state_t* state, unsigned int* next_workers, unsigned int* next_frequency_id){
+	unsigned int i = 0, j = 0;
+	double predicted_load = 0;
 
-		switch(state->reconf_params.freq_strategy){
-			case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
-			case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
-			case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
-				next_workers = state->single_farm_active_workers + 1;
-			}
-			break;
-			case MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE:{
-				if(state->current_frequency_id + 1 < state->num_available_frequencies){
-					/** We can still increase the frequency before increasing the workers. **/
-					next_frequency_id = state->current_frequency_id + 1;
-				}else{
-					/**
-					*  Bandwidth has a toothsaw behaviour with respect to <Workers, Frequency>.
-					*  Accordingly, if we just increase the workers and set the lowest frequency,
-					*  we could decrease the bandwidth. For this reason, when we increase the number of
-			 		*  workers, we need to find a frequency such that the bandwidth of the new <Workers, Frequency>
-					*  configuration is higher than the previous configuration. To do this, we estimate the bandwidth
-					*  as proportional to Workers*Frequency. So we need to find a frequency FrequencyNew such that
-			 		*  (Workers + 1) * FrequencyNew > Worker * CurrentFrequency.
-					*  In this case, CurrentFrequency is the highest frequency.
-					**/
-					next_frequency_id = 0;
-					while(next_frequency_id + 1 < state->num_available_frequencies &&
-					      (mc_dpi_reconfiguration_model_bandwidth(state->available_frequencies[next_frequency_id], 
-					                                              state->single_farm_active_workers + 1) <=
-					       mc_dpi_reconfiguration_model_bandwidth(state->available_frequencies[state->num_available_frequencies - 1], 
-					                                              state->single_farm_active_workers))
-					){
-						++next_frequency_id;
+	double best_metric = DBL_MAX;
+	double current_metric = 0;
+	bool num_solutions_found = 0;
+
+	double best_suboptimal_load = 0;
+	unsigned int next_suboptimal_workers = 0;
+	unsigned int next_suboptimal_frequency_id = 0;
+
+	double best_rho_value = state->reconf_params.system_load_down_threshold + ((state->reconf_params.system_load_up_threshold - state->reconf_params.system_load_down_threshold) / 2.0);
+
+	printf("Errorperc: %f Now in: (%u, %lu). Feasible solutions: [ ", state->current_error_percentage, state->single_farm_active_workers, state->available_frequencies[state->current_frequency_id]);
+
+	*next_workers = state->single_farm_active_workers;
+	*next_frequency_id = state->current_frequency_id;
+
+	for(i = 1; i <= state->available_processors - 2; i++){
+		for(j = 0; j < state->num_available_frequencies; j++){
+
+			switch(state->reconf_params.freq_strategy){
+				case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
+				case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
+				case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
+					if(j != state->current_frequency_id){
+						continue;
 					}
-					next_workers = state->single_farm_active_workers + 1;
-				}
+				}break;
+				default:{
+					;
+				}break;
 			}
-			break;
-			case MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE:{
-				unsigned long increase_frequency_power = 0;
-				unsigned long increase_frequency_bandwidth = 0;
-				unsigned long increase_workers_power = 0;
-				unsigned long increase_workers_bandwidth = 0;
-				unsigned long current_bandwidth = 0;
 
-				double increase_frequency_efficiency = 0;
-				double increase_workers_efficiency = 0;
-				current_bandwidth = mc_dpi_reconfiguration_model_bandwidth(
-				                                            state->available_frequencies[state->current_frequency_id],
-				                                            state->single_farm_active_workers);
-	
-				if(state->current_frequency_id + 1 < state->num_available_frequencies){
-					increase_frequency_power = mc_dpi_reconfiguration_model_power(
-					                                    state->available_frequencies[state->current_frequency_id + 1],
-					                                    state->single_farm_active_workers);
-					increase_frequency_bandwidth =  mc_dpi_reconfiguration_model_bandwidth(
-					                                    state->available_frequencies[state->current_frequency_id + 1],
-					                                    state->single_farm_active_workers);
+			predicted_load = mc_dpi_reconfiguration_predict_load(state, i, j);
+			if(predicted_load < state->reconf_params.system_load_down_threshold + ERROR_PERC){
+				if(predicted_load > best_suboptimal_load){
+					best_suboptimal_load = predicted_load;
+					next_suboptimal_workers = i;
+					next_suboptimal_frequency_id = j;
 				}
+			}else if(predicted_load >= state->reconf_params.system_load_down_threshold + ERROR_PERC && 
+			         predicted_load <= state->reconf_params.system_load_up_threshold - ERROR_PERC){
+				//Feasible solution
+				printf("[(%u, %lu) -> %f], ", i, state->available_frequencies[j], predicted_load);
+				switch(state->reconf_params.freq_strategy){
+					case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
+					case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
+					case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
+						*next_workers = i;
+					}break;
+					case MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE:{
+						if(num_solutions_found && i != *next_workers){
+							printf("]\n");
+							return;
+						}else{
+							current_metric = std::abs(best_rho_value - predicted_load);
+							if(current_metric < best_metric){
+								best_metric = current_metric;
+								*next_workers = i;
+								*next_frequency_id = j;
+							}
+						}
+					}break;
 
-	                        if(state->single_farm_active_workers + 2 < state->available_processors){
-					increase_workers_power = mc_dpi_reconfiguration_model_power(
-					                                    state->available_frequencies[0],
-					                                    state->single_farm_active_workers + 1);
-					increase_workers_bandwidth =  mc_dpi_reconfiguration_model_bandwidth(
-					                                    state->available_frequencies[0],
-					                                    state->single_farm_active_workers + 1);
-	                        }
+					case MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE:{
+						current_metric = mc_dpi_reconfiguration_model_power(state, state->available_frequencies[j], i);
+						if(current_metric < best_metric){
+							best_metric = current_metric;
+							*next_workers = i;
+							*next_frequency_id = j;
+						}	       
+					}break;
 
-				increase_frequency_efficiency = ((double)increase_frequency_bandwidth) / ((double) increase_frequency_power);
-				increase_workers_efficiency = ((double)increase_workers_bandwidth) / ((double) increase_workers_power);
-				if((increase_workers_bandwidth > current_bandwidth && increase_workers_efficiency >= increase_frequency_efficiency) || 
-				   (state->current_frequency_id == state->num_available_frequencies - 1)){
-					next_frequency_id = 0;
-					next_workers = state->single_farm_active_workers + 1;
-				}else{
-					next_frequency_id = state->current_frequency_id + 1;
+					default:{
+						;					
+       					}break;
+
 				}
+				++num_solutions_found;
 			}
-			break;	
-			default:{
-				;
-			}
-			break;
 		}
 	}
+	printf("]\n");
 
-	mc_dpi_reconfiguration_predict_load(state, current_load, next_workers, state->available_frequencies[next_frequency_id]);
+	if(num_solutions_found == 0){
+		*next_workers = next_suboptimal_workers;
+		*next_frequency_id = next_suboptimal_frequency_id;
+		printf("Using suboptimal solution: <%lu, %lu>\n", *next_workers, state->available_frequencies[*next_frequency_id]);
+	}
 
-	mc_dpi_set_num_workers(state, next_workers);
-	mc_dpi_reconfiguration_update_system_frequencies(state, next_frequency_id);
+	if(state->current_system_load == 100.0 - ERROR_PERC){
+		*next_workers = state->available_processors - 2;
+		*next_frequency_id = state->num_available_frequencies - 1;
+	}
 }
 
-static void mc_dpi_reconfiguration_decrease_bandwidth(mc_dpi_library_state_t* state, double current_load){
-	unsigned int next_frequency_id = state->current_frequency_id;
-	unsigned int next_workers = state->single_farm_active_workers;
-	
-	if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_NO){
-		next_workers = state->single_farm_active_workers - 1;
-		return;
-	}else{
-		switch(state->reconf_params.freq_strategy){
-			case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
-			case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
-			case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
-				next_workers = state->single_farm_active_workers - 1;
-			}
-			break;
-			case MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE:{
-				if(state->current_frequency_id == 0 || /** I am at the lowest frequency possible. **/
-					mc_dpi_reconfiguration_model_bandwidth(state->available_frequencies[state->current_frequency_id - 1],
-					                                       state->single_farm_active_workers) <=
-					mc_dpi_reconfiguration_model_bandwidth(state->available_frequencies[state->num_available_frequencies - 1],
-					                                       state->single_farm_active_workers - 1) 
-				){
-					/**
-					 *  Bandwidth has a toothsaw behaviour with respect to <Workers, Frequency>.
-					 *  When we need to decrease the bandwidth we have 2 possible choices: decrease the frequency or
-					 *  decrease the number of workers and use the highest frequency. 
-					 *  In this strategy we are trying to use the lowest number of cores possible, so the second
-					 *  choice is always better if we could be able to manage an higher bandwidth with respect to 
-					 *  the solution where we simply decrease the bandwidth.
-					 *  To check if this is possible, we estimate the bandwidth as proportional to Workers*Frequency. 
-					 *  So we need to check if (Workers - 1) * HighestFrequency > Workers * (Frequency -- )
-					 **/
-					next_workers = state->single_farm_active_workers - 1;
-					next_frequency_id = state->num_available_frequencies - 1;
-				}else{
-					next_frequency_id = state->current_frequency_id - 1;
-				}
-			}
-			break;
-			case MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE:{
-				if(state->current_frequency_id > 0){
-					next_frequency_id = state->current_frequency_id - 1;
-				}else{
-					long i;
-					unsigned long current_bandwidth = mc_dpi_reconfiguration_model_bandwidth(state->available_frequencies[0], state->single_farm_active_workers);
-					for(i = state->num_available_frequencies - 1; i>=0; i--){
-						if((mc_dpi_reconfiguration_model_bandwidth(state->available_frequencies[i], state->single_farm_active_workers-1)) < 
-						    current_bandwidth){
-							next_workers = state->single_farm_active_workers - 1;
-							next_frequency_id = i;
-							break;
-						}
-					}	
-				}	
-			}
-			break;
-			default:{
-				;
-			}
-			break;
-		}
-	}
+static void mc_dpi_reconfiguration_perform(mc_dpi_library_state_t* state){
+	unsigned int next_frequency_id;
+	unsigned int next_workers;
 
-	mc_dpi_reconfiguration_predict_load(state, current_load, next_workers, state->available_frequencies[next_frequency_id]);
+	mc_dpi_reconfiguration_compute_best_feasible_solution(state, &next_workers, &next_frequency_id);
 
 	mc_dpi_set_num_workers(state, next_workers);
 	mc_dpi_reconfiguration_update_system_frequencies(state, next_frequency_id);
@@ -1143,48 +1086,41 @@ static void mc_dpi_reconfiguration_decrease_bandwidth(mc_dpi_library_state_t* st
 
 static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state){
 	double current_worker_load = 0;
-	double global_load = 0;
 	bool single_worker_out_up = false;
 	bool single_worker_out_down = false;
 	bool global_out_up = false;
 	bool global_out_down = false;
-
-        printf("[");
+	state->current_system_load = 0;
 
         for(u_int16_t i = 0; i<state->single_farm_active_workers; i++){
-	  dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
-	  current_worker_load = mc_dpi_reconfiguration_get_worker_average_load(state, i);
-	  if(state->reconf_params.worker_load_up_threshold && current_worker_load > state->reconf_params.worker_load_up_threshold){
-	    single_worker_out_up = true;
-	  }else if(current_worker_load < state->reconf_params.worker_load_down_threshold){
-	    single_worker_out_down = true;
-	  }
-	  printf("%f ", current_worker_load);
-	  global_load += current_worker_load;
+		dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
+		current_worker_load = mc_dpi_reconfiguration_get_worker_average_load(state, i);
+		if(state->reconf_params.worker_load_up_threshold && current_worker_load > state->reconf_params.worker_load_up_threshold){
+			single_worker_out_up = true;
+		}else if(current_worker_load < state->reconf_params.worker_load_down_threshold){
+			single_worker_out_down = true;
+		}
+	 	
+		state->current_system_load += current_worker_load;
         }
-        printf("]\n");
-        printf("Global load: %f\n", global_load / state->single_farm_active_workers);
+	state->current_system_load = state->current_system_load / state->single_farm_active_workers;
 
+	printf("Global load: %f\n", state->current_system_load);
 
-	if(state->current_num_samples < state->reconf_params.min_num_samples){
+	if(state->current_num_samples < state->reconf_params.lock_period){
 		return;
 	}
 
 	// Check thresholds 
-	global_load = global_load / state->single_farm_active_workers;
 
-	if(state->reconf_params.system_load_up_threshold && global_load > state->reconf_params.system_load_up_threshold){
+	if(state->reconf_params.system_load_up_threshold && state->current_system_load > state->reconf_params.system_load_up_threshold){
 		global_out_up = true;
-	}else if(global_load < state->reconf_params.system_load_down_threshold){
+	}else if(state->current_system_load < state->reconf_params.system_load_down_threshold){
 		global_out_down = true;
 	}
 
-
-	if(single_worker_out_up || global_out_up){
-		mc_dpi_reconfiguration_increase_bandwidth(state, global_load);
-		mc_dpi_reconfiguration_post_actions(state);
-	}else if(single_worker_out_down || global_out_down){
-		mc_dpi_reconfiguration_decrease_bandwidth(state, global_load);
+	if(single_worker_out_up || global_out_up || single_worker_out_down || global_out_down){
+		mc_dpi_reconfiguration_perform(state);
 		mc_dpi_reconfiguration_post_actions(state);
 	}
 }
@@ -1192,18 +1128,17 @@ static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state)
 static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* state){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		unsigned int i;
-		ff::FFBUFFER* buffer;
+		state->current_error_percentage = 0;
 		for(i=0; i<state->single_farm_active_workers; i++){
 			dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
 			state->load_samples[i][state->current_load_sample] = 
-			                   100.0 - current_worker->get_sleep_percentage();
-			current_worker->reset_sleep_percentage();
+			                    current_worker->get_worktime_percentage();
+			state->current_error_percentage += current_worker->get_error_percentage();
+			current_worker->reset_worktime_percentage();
 		}
-
+		state->current_error_percentage /= state->single_farm_active_workers;
 		state->current_load_sample = (state->current_load_sample + 1) % state->reconf_params.num_samples;
-		if(state->current_num_samples < state->reconf_params.num_samples){
-			++state->current_num_samples;
-		}
+		++state->current_num_samples;
 	}
 }
 
@@ -1213,6 +1148,7 @@ static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* 
  */
 void mc_dpi_wait_end(mc_dpi_library_state_t* state){
   	u_int64_t waited_secs = 0;
+	unsigned int i = 0;
 	mc_dpi_joules_counters now_joules, last_joules_counters;
 	memset(&now_joules, 0, sizeof(mc_dpi_joules_counters));
 	memset(&last_joules_counters, 0, sizeof(mc_dpi_joules_counters));
@@ -1234,9 +1170,10 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 			now_joules = mc_dpi_joules_counters_read(state);
 			state->stats_callback(state->single_farm_active_workers,
 					      state->available_frequencies[state->current_frequency_id],
-			                       mc_dpi_joules_counters_diff(state, 
-			                                                   now_joules,
-			                                                   last_joules_counters));
+			                      mc_dpi_joules_counters_diff(state, 
+			                                                  now_joules,
+			                                                  last_joules_counters),
+			                      state->current_system_load);
 			last_joules_counters = now_joules;
 		}
 	}

@@ -397,20 +397,11 @@ dpi_L7_worker::~dpi_L7_worker(){
 }
 
 int dpi_L7_worker::svc_init(){
-	reset_sleep_percentage_real(true);
+	reset_worktime_percentage_real(true);
 	worker_debug_print("[worker.cpp]: L7 worker %d mapped on"
 			   " processor: %d. Tid: %d\n", worker_id, proc_id, pthread_self());
 	ff_mapThreadToCpu(proc_id,-20);
 	return 0;
-}
-
-float dpi_L7_worker::get_sleep_percentage(){
-	ticks totalticks = getticks() - startticks;
-	return (double)sleptticks/(double)totalticks*100.0;
-}
-
-void dpi_L7_worker::reset_sleep_percentage(){
-	reset = 1;
 }
 
 void* dpi_L7_worker::svc(void* task){
@@ -421,11 +412,13 @@ void* dpi_L7_worker::svc(void* task){
 	ipv4_flow_t* ipv4_flow;
 	ipv6_flow_t* ipv6_flow;
 
+	ticks svcstart = getticks();
+
 	memcpy(temp, real_task->input_output_task_t.L3_L4_output_task_t,
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE*
 		   	   sizeof(L3_L4_output_task_struct));
 	worker_debug_print("[worker.cpp]: L7 worker %d received task\n", worker_id);
-	reset_sleep_percentage_real();
+	reset_worktime_percentage_real();
 
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		real_task->input_output_task_t.L7_output_task_t[i].user_pointer=
@@ -492,6 +485,7 @@ void* dpi_L7_worker::svc(void* task){
 			free((unsigned char*) infos.pkt);
 		}
 	}
+	workticks += (getticks() - svcstart);
 	return real_task;
 }
 
@@ -525,6 +519,7 @@ int dpi_L7_collector::svc_init(){
 void* dpi_L7_collector::svc(void* task){
 	mc_dpi_processing_result_t r;
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
+
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		r.result=real_task->input_output_task_t.L7_output_task_t[i].
 				result;

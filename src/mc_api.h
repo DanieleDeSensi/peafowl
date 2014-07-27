@@ -216,10 +216,12 @@ mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state
  * @param num_workers         The current number of workers.
  * @param workers_frequency   The current frequency of the workers (in kHz).
  * @param joules              The joules over the stats collection interval.
+ * @param current_system_load The load of the system in the range [1, 100].
  */
 typedef void(mc_dpi_stats_collection_callback)(u_int16_t num_workers, 
                                                unsigned long workers_frequency,
-                                               mc_dpi_joules_counters joules);
+                                               mc_dpi_joules_counters joules,
+                                               double current_system_load);
 /**
  * Sets the statistics collection callback.
  * @param state A pointer to the state of the library.
@@ -268,7 +270,7 @@ typedef struct{
 	double system_load_down_threshold;
 	double worker_load_down_threshold;
 	short migrate_collector;
-	unsigned int min_num_samples;
+	unsigned int lock_period;
 	mc_dpi_reconfiguration_freq_type freq_type;
 	mc_dpi_reconfiguration_freq_strategy freq_strategy;
 }mc_dpi_reconfiguration_parameters;

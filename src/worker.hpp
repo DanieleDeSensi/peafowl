@@ -205,7 +205,9 @@ private:
 	const u_int16_t worker_id;
 	const u_int16_t proc_id;
 	ticks startticks;
-	ticks sleptticks;
+	ticks insleptticks;
+	ticks workticks;
+	ticks outsleptticks;
 	int reset;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
@@ -214,21 +216,48 @@ public:
 			      u_int16_t proc_id);
 	~dpi_L7_worker();
 	
-	float get_sleep_percentage();
-	void reset_sleep_percentage();
+	inline double get_worktime_percentage(){
+		ticks totalticks = getticks() - startticks;
+		return (double) workticks / (double) totalticks * 100.0;
+	}
 
+	inline double get_insleep_percentage(){
+		ticks totalticks = getticks() - startticks;
+		return (double) insleptticks / (double) totalticks * 100.0;
+	}
 
-	inline void reset_sleep_percentage_real(bool force = false){
+	inline double get_error_percentage(){
+		ticks totalticks = getticks() - startticks;
+		return ((double)totalticks - (double)insleptticks - (double)workticks) / (double) totalticks * 100.0;
+	}
+
+  /*	inline float get_outsleep_percentage(){
+		ticks totalticks = getticks() - startticks;
+		return (double)outsleptticks / (double) totalticks * 100.0;
+		}*/
+
+	inline void reset_worktime_percentage(){
+		reset = 1;
+	}
+
+	inline void reset_worktime_percentage_real(bool force = false){
 		if(reset || force){
+			workticks = 0;
 			reset = 0;
-			sleptticks = 0;
+			insleptticks = 0;
+			outsleptticks = 0;
 			startticks = getticks();
 		}
 	}
 	
 	inline void losetime_in(void) {
-		reset_sleep_percentage_real();
-		sleptticks += (ticks_wait(ff_node::TICKS2WAIT) + ff_node::TICKS2WAIT);
+		reset_worktime_percentage_real();
+		insleptticks += (ticks_wait(ff_node::TICKS2WAIT) + ff_node::TICKS2WAIT);
+	}
+
+	inline void losetime_out(void) {
+		reset_worktime_percentage_real();
+		outsleptticks += (ticks_wait(ff_node::TICKS2WAIT) + ff_node::TICKS2WAIT);
 	}
 
 	int svc_init();
@@ -245,11 +274,13 @@ private:
 	u_int16_t* proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
 	u_int8_t initialized;
+	ticks workticks;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 			         void** user_data, u_int16_t* proc_id,
 			         ff::SWSR_Ptr_Buffer* tasks_pool);
+
 	int svc_init();
 	void* svc(void*);
 	void svc_end();
