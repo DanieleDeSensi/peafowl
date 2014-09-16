@@ -270,7 +270,7 @@ typedef struct{
 	double system_load_down_threshold;
 	double worker_load_down_threshold;
 	short migrate_collector;
-	unsigned int lock_period;
+	unsigned int stabilization_period;
 	mc_dpi_reconfiguration_freq_type freq_type;
 	mc_dpi_reconfiguration_freq_strategy freq_strategy;
 }mc_dpi_reconfiguration_parameters;

@@ -177,6 +177,7 @@ public:
 
 };
 
+
 class dpi_L7_emitter: public ff::ff_node{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
@@ -197,6 +198,18 @@ public:
 	void* svc(void* task);
 };
 
+static inline void sleepns(unsigned long ns) {
+	struct timespec req = {0, static_cast<long>(ns)};
+	nanosleep(&req, NULL);
+}
+
+static inline unsigned long getns() {
+	struct timeval tv;
+	gettimeofday(&tv,NULL);
+	return (unsigned long)(tv.tv_sec*1e6+tv.tv_usec)*1000;
+}
+
+
 class dpi_L7_worker: public ff::ff_node{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
@@ -204,10 +217,15 @@ private:
 	L3_L4_output_task_struct* temp;
 	const u_int16_t worker_id;
 	const u_int16_t proc_id;
+
+#if MC_DPI_TICKS_WAIT == 1
 	ticks startticks;
-	ticks insleptticks;
 	ticks workticks;
-	ticks outsleptticks;
+#else
+	unsigned long startns;
+	unsigned long workns;
+#endif
+
 	int reset;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
@@ -217,24 +235,14 @@ public:
 	~dpi_L7_worker();
 	
 	inline double get_worktime_percentage(){
+#if MC_DPI_TICKS_WAIT == 1
 		ticks totalticks = getticks() - startticks;
 		return (double) workticks / (double) totalticks * 100.0;
+#else
+		unsigned long totalns = getns() - startns;
+		return (double) workns / (double) totalns * 100.0;
+#endif
 	}
-
-	inline double get_insleep_percentage(){
-		ticks totalticks = getticks() - startticks;
-		return (double) insleptticks / (double) totalticks * 100.0;
-	}
-
-	inline double get_error_percentage(){
-		ticks totalticks = getticks() - startticks;
-		return ((double)totalticks - (double)insleptticks - (double)workticks) / (double) totalticks * 100.0;
-	}
-
-  /*	inline float get_outsleep_percentage(){
-		ticks totalticks = getticks() - startticks;
-		return (double)outsleptticks / (double) totalticks * 100.0;
-		}*/
 
 	inline void reset_worktime_percentage(){
 		reset = 1;
@@ -242,22 +250,27 @@ public:
 
 	inline void reset_worktime_percentage_real(bool force = false){
 		if(reset || force){
+#if MC_DPI_TICKS_WAIT == 1
 			workticks = 0;
-			reset = 0;
-			insleptticks = 0;
-			outsleptticks = 0;
 			startticks = getticks();
+#else
+			workns = 0;
+			startns = getns();
+#endif
+			reset = 0;
 		}
 	}
 	
+
+#define NS2WAIT 1000
+
 	inline void losetime_in(void) {
 		reset_worktime_percentage_real();
-		insleptticks += (ticks_wait(ff_node::TICKS2WAIT) + ff_node::TICKS2WAIT);
-	}
-
-	inline void losetime_out(void) {
-		reset_worktime_percentage_real();
-		outsleptticks += (ticks_wait(ff_node::TICKS2WAIT) + ff_node::TICKS2WAIT);
+#if MC_DPI_TICKS_WAIT == 1
+		ticks_wait(ff_node::TICKS2WAIT);
+#else
+		sleepns(NS2WAIT);
+#endif
 	}
 
 	int svc_init();

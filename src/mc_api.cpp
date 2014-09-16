@@ -1,5 +1,5 @@
 /*
- * mc_dpi_api.cpp
+ * mc_api.cpp
  *
  * Created on: 12/11/2012
  * =========================================================================
@@ -119,7 +119,8 @@ typedef struct mc_dpi_library_state{
 	unsigned int* one_core_per_socket;
 	unsigned int num_sockets;
 	double current_system_load;
-	double current_error_percentage;
+	double current_instantaneous_system_load;
+	double last_prediction;
 }mc_dpi_library_state_t;
 
 
@@ -914,14 +915,6 @@ static double mc_dpi_reconfiguration_get_worker_average_load(mc_dpi_library_stat
 	return (avg / (double)num_samples);
 }
 
-static void mc_dpi_reconfiguration_post_actions(mc_dpi_library_state_t* state){
-	for(u_int16_t i = 0; i<state->available_processors - 2; i++){
-		memset(state->load_samples[i], 0, sizeof(double)*state->reconf_params.num_samples);
-	}
-	state->current_load_sample=0;
-	state->current_num_samples=0;
-}
-
 static void mc_dpi_reconfiguration_update_system_frequencies(mc_dpi_library_state_t* state, unsigned int frequency_id){
 	if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_NO || frequency_id == state->current_frequency_id){
 		return;
@@ -947,7 +940,11 @@ static void mc_dpi_reconfiguration_update_system_frequencies(mc_dpi_library_stat
 }
 
 static unsigned long mc_dpi_reconfiguration_model_power(mc_dpi_library_state_t* state, unsigned long frequency, u_int16_t workers){
-	return (frequency*frequency*(workers+2)) / state->available_frequencies[0];
+#if MC_DPI_POWER_USE_MODEL == 1
+	return (std::pow(frequency,1.3)*(workers+2));
+#else
+	return frequency;
+#endif
 }
 
 static double mc_dpi_reconfiguration_predict_load(mc_dpi_library_state_t* state, u_int16_t future_workers, unsigned int future_frequency_id){
@@ -974,7 +971,7 @@ static double mc_dpi_reconfiguration_predict_load(mc_dpi_library_state_t* state,
  	return ( (1.0 / prediction_modifier) * state->current_system_load );
 }
 
-#define ERROR_PERC 3.0 //state->current_error_percentage
+#define ERROR_PERC 3.0
 
 static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library_state_t* state, unsigned int* next_workers, unsigned int* next_frequency_id){
 	unsigned int i = 0, j = 0;
@@ -990,7 +987,12 @@ static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library
 
 	double best_rho_value = state->reconf_params.system_load_down_threshold + ((state->reconf_params.system_load_up_threshold - state->reconf_params.system_load_down_threshold) / 2.0);
 
-	printf("Errorperc: %f Now in: (%u, %lu). Feasible solutions: [ ", state->current_error_percentage, state->single_farm_active_workers, state->available_frequencies[state->current_frequency_id]);
+
+        if(state->current_system_load >= 100.0 - ERROR_PERC){
+		*next_workers = state->available_processors - 2;
+		*next_frequency_id = state->num_available_frequencies - 1;
+		return;
+        }
 
 	*next_workers = state->single_farm_active_workers;
 	*next_frequency_id = state->current_frequency_id;
@@ -1021,24 +1023,20 @@ static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library
 			}else if(predicted_load >= state->reconf_params.system_load_down_threshold + ERROR_PERC && 
 			         predicted_load <= state->reconf_params.system_load_up_threshold - ERROR_PERC){
 				//Feasible solution
-				printf("[(%u, %lu) -> %f], ", i, state->available_frequencies[j], predicted_load);
 				switch(state->reconf_params.freq_strategy){
 					case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
 					case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
 					case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
 						*next_workers = i;
+						state->last_prediction = predicted_load;
 					}break;
 					case MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE:{
-						if(num_solutions_found && i != *next_workers){
-							printf("]\n");
+						if(num_solutions_found){
 							return;
 						}else{
-							current_metric = std::abs(best_rho_value - predicted_load);
-							if(current_metric < best_metric){
-								best_metric = current_metric;
-								*next_workers = i;
-								*next_frequency_id = j;
-							}
+							*next_workers = i;
+							*next_frequency_id = j;
+							state->last_prediction = predicted_load;
 						}
 					}break;
 
@@ -1048,6 +1046,7 @@ static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library
 							best_metric = current_metric;
 							*next_workers = i;
 							*next_frequency_id = j;
+							state->last_prediction = predicted_load;
 						}	       
 					}break;
 
@@ -1060,17 +1059,11 @@ static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library
 			}
 		}
 	}
-	printf("]\n");
 
 	if(num_solutions_found == 0){
 		*next_workers = next_suboptimal_workers;
 		*next_frequency_id = next_suboptimal_frequency_id;
-		printf("Using suboptimal solution: <%lu, %lu>\n", *next_workers, state->available_frequencies[*next_frequency_id]);
-	}
-
-	if(state->current_system_load == 100.0 - ERROR_PERC){
-		*next_workers = state->available_processors - 2;
-		*next_frequency_id = state->num_available_frequencies - 1;
+		state->last_prediction = predicted_load;
 	}
 }
 
@@ -1082,6 +1075,12 @@ static void mc_dpi_reconfiguration_perform(mc_dpi_library_state_t* state){
 
 	mc_dpi_set_num_workers(state, next_workers);
 	mc_dpi_reconfiguration_update_system_frequencies(state, next_frequency_id);
+
+	for(u_int16_t i = 0; i<state->available_processors - 2; i++){
+		memset(state->load_samples[i], 0, sizeof(double)*state->reconf_params.num_samples);
+	}
+	state->current_load_sample=0;
+	state->current_num_samples=0;
 }
 
 static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state){
@@ -1105,9 +1104,7 @@ static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state)
         }
 	state->current_system_load = state->current_system_load / state->single_farm_active_workers;
 
-	printf("Global load: %f\n", state->current_system_load);
-
-	if(state->current_num_samples < state->reconf_params.lock_period){
+	if(state->current_num_samples < state->reconf_params.stabilization_period + state->reconf_params.num_samples){
 		return;
 	}
 
@@ -1121,23 +1118,22 @@ static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state)
 
 	if(single_worker_out_up || global_out_up || single_worker_out_down || global_out_down){
 		mc_dpi_reconfiguration_perform(state);
-		mc_dpi_reconfiguration_post_actions(state);
 	}
 }
 
 static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* state){
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
 		unsigned int i;
-		state->current_error_percentage = 0;
+		double instantaneous_system_load = 0;
 		for(i=0; i<state->single_farm_active_workers; i++){
 			dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
 			state->load_samples[i][state->current_load_sample] = 
 			                    current_worker->get_worktime_percentage();
-			state->current_error_percentage += current_worker->get_error_percentage();
+			instantaneous_system_load += state->load_samples[i][state->current_load_sample];
 			current_worker->reset_worktime_percentage();
 		}
-		state->current_error_percentage /= state->single_farm_active_workers;
 		state->current_load_sample = (state->current_load_sample + 1) % state->reconf_params.num_samples;
+		state->current_instantaneous_system_load = instantaneous_system_load / state->single_farm_active_workers;
 		++state->current_num_samples;
 	}
 }
@@ -1148,8 +1144,8 @@ static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* 
  */
 void mc_dpi_wait_end(mc_dpi_library_state_t* state){
   	u_int64_t waited_secs = 0;
-	unsigned int i = 0;
 	mc_dpi_joules_counters now_joules, last_joules_counters;
+	double load = 0;
 	memset(&now_joules, 0, sizeof(mc_dpi_joules_counters));
 	memset(&last_joules_counters, 0, sizeof(mc_dpi_joules_counters));
 
@@ -1167,13 +1163,18 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 
 		if(state->stats_callback && 
 		   (waited_secs % state->collection_interval) == 0){
+#if MC_DPI_AVG_RHO
+			load = state->current_system_load;
+#else
+			load = state->current_instantaneous_system_load;
+#endif
 			now_joules = mc_dpi_joules_counters_read(state);
 			state->stats_callback(state->single_farm_active_workers,
 					      state->available_frequencies[state->current_frequency_id],
 			                      mc_dpi_joules_counters_diff(state, 
 			                                                  now_joules,
 			                                                  last_joules_counters),
-			                      state->current_system_load);
+			                                                  load);
 			last_joules_counters = now_joules;
 		}
 	}
@@ -1208,6 +1209,7 @@ u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
 	}
 
 	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM && num_workers>=1 && num_workers<=state->available_processors - 2){
+		ticks s = getticks();
 		mc_dpi_freeze(state);
 		state->single_farm_active_workers=num_workers;
 		debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");

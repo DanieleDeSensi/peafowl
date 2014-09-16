@@ -197,7 +197,6 @@ int dpi_L3_L4_worker::svc_init(){
 
 void* dpi_L3_L4_worker::svc(void* task){
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
-
 	/**
 	 * Here we need a copy. Indeed, the task is a union and, if
 	 * we do not make the copy, we overwrite the input tasks with
@@ -412,8 +411,11 @@ void* dpi_L7_worker::svc(void* task){
 	ipv4_flow_t* ipv4_flow;
 	ipv6_flow_t* ipv6_flow;
 
+#if MC_DPI_TICKS_WAIT == 1
 	ticks svcstart = getticks();
-
+#else
+	unsigned long svcstartns = getns();
+#endif
 	memcpy(temp, real_task->input_output_task_t.L3_L4_output_task_t,
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE*
 		   	   sizeof(L3_L4_output_task_struct));
@@ -485,7 +487,11 @@ void* dpi_L7_worker::svc(void* task){
 			free((unsigned char*) infos.pkt);
 		}
 	}
+#if MC_DPI_TICKS_WAIT == 1
 	workticks += (getticks() - svcstart);
+#else
+	workns += (getns() - svcstartns);
+#endif
 	return real_task;
 }
 
