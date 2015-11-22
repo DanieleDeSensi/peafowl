@@ -1155,6 +1155,7 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 		sleep(1);
 		++waited_secs;
 
+		if(state->current_num_samples >= state->reconf_params.stabilization_period){ // >=0){ //TODO
 		if(state->load_samples && 
 		   (waited_secs % state->reconf_params.sampling_interval) == 0){
 		  	mc_dpi_reconfiguration_store_current_sample(state);
@@ -1176,6 +1177,9 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 			                                                  last_joules_counters),
 			                                                  load);
 			last_joules_counters = now_joules;
+		}
+		}else{
+		  ++state->current_num_samples;
 		}
 	}
 
