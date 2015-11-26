@@ -139,7 +139,7 @@ enum hashes{
 #endif
 
 #ifndef DPI_MULTICORE_DEFAULT_BUFFER_SIZE 
-#define DPI_MULTICORE_DEFAULT_BUFFER_SIZE 8192
+#define DPI_MULTICORE_DEFAULT_BUFFER_SIZE 32768
 #endif
 
 #ifndef DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE
@@ -177,6 +177,10 @@ enum hashes{
 
 #ifndef MC_DPI_POWER_USE_MODEL
 #define MC_DPI_POWER_USE_MODEL 1
+#endif
+
+#ifndef SPINTICKS
+#define SPINTICKS 500
 #endif
 
 

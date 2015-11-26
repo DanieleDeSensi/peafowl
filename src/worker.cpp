@@ -363,7 +363,7 @@ void* dpi_L7_emitter::svc(void* task){
 						real_task->input_output_task_t.
 							L3_L4_output_task_t[i];
 			lb->set_victim(destination_worker);
-			while(ff_send_out((void*) out)==false);
+			while(ff_send_out((void*) out, -1, SPINTICKS)==false);
 			partially_filled_sizes[destination_worker]=0;
 		}else{
 			partially_filled[destination_worker].input_output_task_t.
