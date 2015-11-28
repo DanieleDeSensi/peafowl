@@ -939,9 +939,13 @@ static void mc_dpi_reconfiguration_update_system_frequencies(mc_dpi_library_stat
 	}
 }
 
-static unsigned long mc_dpi_reconfiguration_model_power(mc_dpi_library_state_t* state, unsigned long frequency, u_int16_t workers){
+static double voltages[9] = {0.815552, 0.825562, 0.836572, 0.847583, 0.855591, 0.867603, 0.872607, 0.880615, 0.890625};
+
+  static unsigned long mc_dpi_reconfiguration_model_power(mc_dpi_library_state_t* state, unsigned long frequency, u_int16_t workers, u_int16_t freqid){
 #if MC_DPI_POWER_USE_MODEL == 1
-	return (std::pow(frequency,1.3)*(workers+2));
+    double voltage = voltages[freqid] * (((workers + 2)/ 8) + 1);
+    return (workers+2)*frequency*voltage*voltage;
+  //	return (std::pow(frequency,1.3)*(workers+2));
 #else
 	return frequency;
 #endif
@@ -1041,7 +1045,7 @@ static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library
 					}break;
 
 					case MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE:{
-						current_metric = mc_dpi_reconfiguration_model_power(state, state->available_frequencies[j], i);
+					  current_metric = mc_dpi_reconfiguration_model_power(state, state->available_frequencies[j], i, j);
 						if(current_metric < best_metric){
 							best_metric = current_metric;
 							*next_workers = i;

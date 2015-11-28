@@ -180,7 +180,7 @@ enum hashes{
 #endif
 
 #ifndef SPINTICKS
-#define SPINTICKS 500
+#define SPINTICKS 1000
 #endif
 
 
