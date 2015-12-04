@@ -80,12 +80,10 @@ void dpi_free_task(mc_dpi_task_t* task){
 /*****************************************************/
 dpi_L3_L4_emitter::dpi_L3_L4_emitter(mc_dpi_packet_reading_callback** cb,
 		                             void** user_data,
-		                             u_int8_t* freeze_flag,
 		                             u_int8_t* terminating,
 		                             u_int16_t proc_id,
 		                             ff::SWSR_Ptr_Buffer* tasks_pool)
                                      :cb(cb), user_data(user_data),
-                                      freeze_flag(freeze_flag),
                                       terminating(terminating),
                                       proc_id(proc_id),
                                       tasks_pool(tasks_pool),
@@ -112,12 +110,6 @@ int dpi_L3_L4_emitter::svc_init(){
 void* dpi_L3_L4_emitter::svc(void* task){
 	mc_dpi_packet_reading_result_t packet;
 	mc_dpi_task_t* r=NULL;
-
-	if(unlikely(*freeze_flag)){
-		worker_debug_print("%s\n", "[worker.cpp]: Freeze message received,"
-				           " terminating.");
-		return NULL;
-	}
 
 #if DPI_MULTICORE_USE_TASKS_POOL
 	if(!tasks_pool->empty()){
@@ -161,36 +153,51 @@ dpi_L3_L4_emitter::~dpi_L3_L4_emitter(){
 
 dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
 									u_int16_t worker_id,
-									u_int16_t *num_L7_workers,
+			                        u_int16_t* num_L7_workers,
 									u_int16_t proc_id,
 									u_int32_t v4_table_size,
-									u_int32_t v6_table_size)
-								:state(state),
-									v4_table_size(v4_table_size),
-									v6_table_size(v6_table_size),
-									num_L7_workers(num_L7_workers),
-									worker_id(worker_id),
-									proc_id(proc_id){
+									u_int32_t v6_table_size):
+							    state(state),
+							    num_L7_workers(num_L7_workers),
+								v4_table_size(v4_table_size),
+								v6_table_size(v6_table_size),
+								worker_id(worker_id),
+								proc_id(proc_id){
 	assert(posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE,
 		   sizeof(L3_L4_input_task_struct)*
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE)==0);
+#ifdef ENABLE_RECONFIGURATION
+	notifyWorkersChange(0, *num_L7_workers);
+#endif
 }
 
 dpi_L3_L4_worker::~dpi_L3_L4_worker(){
 	free(in);
 }
 
+#ifdef ENABLE_RECONFIGURATION
+void dpi_L3_L4_worker::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
+    v4_worker_table_size=ceil((float)v4_table_size/(float)(newNumWorkers));
+    v6_worker_table_size=ceil((float)v6_table_size/(float)(newNumWorkers));
+    worker_debug_print("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
+                       "v6_worker_table_size: %d\n", v4_worker_table_size,
+                        v6_worker_table_size);
+
+
+    *num_L7_workers = newNumWorkers;
+    worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");
+    dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->db4,
+                                       newNumWorkers);
+    worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v6 table partitions");
+    dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->db6,
+                                       newNumWorkers);
+}
+#endif
+
 int dpi_L3_L4_worker::svc_init(){
 	worker_debug_print("[worker.cpp]: L3_L4 worker %d mapped "
 		               "on processor: %d\n", worker_id, proc_id);
 	ff_mapThreadToCpu(proc_id,-20);
-	v4_worker_table_size=ceil((float)v4_table_size/
-				  (float)(*num_L7_workers));
-	v6_worker_table_size=ceil((float)v6_table_size/
-				  (float)(*num_L7_workers));
-	worker_debug_print("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
-		               "v6_worker_table_size: %d\n", v4_worker_table_size, 
-						v6_worker_table_size);
 	return 0;
 }
 
@@ -292,7 +299,7 @@ void* dpi_L3_L4_collector::svc(void* task){
 dpi_L7_emitter::dpi_L7_emitter(dpi_L7_scheduler* lb,
 		                       u_int16_t num_L7_workers,
 		                       u_int16_t proc_id)
-                              :lb(lb), proc_id(proc_id){
+                              :proc_id(proc_id), lb(lb){
 	assert(posix_memalign((void**) &partially_filled_sizes,
 		  DPI_CACHE_LINE_SIZE, (sizeof(uint)*num_L7_workers)+
 		  DPI_CACHE_LINE_SIZE)==0);
@@ -388,7 +395,7 @@ dpi_L7_worker::dpi_L7_worker(dpi_library_state_t* state,
 	assert(posix_memalign((void**) &this->temp, DPI_CACHE_LINE_SIZE,
 				          (sizeof(L3_L4_output_task_struct)*
 				        		  DPI_MULTICORE_DEFAULT_GRAIN_SIZE)+
-				          DPI_CACHE_LINE_SIZE)==0);
+				        		  DPI_CACHE_LINE_SIZE)==0);
 }
 
 dpi_L7_worker::~dpi_L7_worker(){
@@ -396,7 +403,6 @@ dpi_L7_worker::~dpi_L7_worker(){
 }
 
 int dpi_L7_worker::svc_init(){
-	reset_worktime_percentage_real(true);
 	worker_debug_print("[worker.cpp]: L7 worker %d mapped on"
 			   " processor: %d. Tid: %d\n", worker_id, proc_id, pthread_self());
 	ff_mapThreadToCpu(proc_id,-20);
@@ -420,7 +426,6 @@ void* dpi_L7_worker::svc(void* task){
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE*
 		   	   sizeof(L3_L4_output_task_struct));
 	worker_debug_print("[worker.cpp]: L7 worker %d received task\n", worker_id);
-	reset_worktime_percentage_real();
 
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		real_task->input_output_task_t.L7_output_task_t[i].user_pointer=
@@ -487,11 +492,6 @@ void* dpi_L7_worker::svc(void* task){
 			free((unsigned char*) infos.pkt);
 		}
 	}
-#if MC_DPI_TICKS_WAIT == 1
-	workticks += (getticks() - svcstart);
-#else
-	workns += (getns() - svcstartns);
-#endif
 	return real_task;
 }
 
@@ -507,8 +507,7 @@ dpi_L7_collector::dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 		                           ff::SWSR_Ptr_Buffer* tasks_pool)
                                    :cb(cb), user_data(user_data),
                                     proc_id(proc_id),
-                                    tasks_pool(tasks_pool),
-                                    initialized(0){
+                                    tasks_pool(tasks_pool){
 	;
 }
 
@@ -516,9 +515,6 @@ int dpi_L7_collector::svc_init(){
 	worker_debug_print("[worker.cpp]: L7 collector"
 			          " mapped on processor: %u\n", *proc_id);
 	ff_mapThreadToCpu(*proc_id,-20);
-	if(!initialized){
-		initialized=1;
-	}
 	return 0;
 }
 
@@ -558,11 +554,11 @@ void dpi_L7_collector::svc_end(){
 
 dpi_collapsed_emitter::dpi_collapsed_emitter(
 		mc_dpi_packet_reading_callback** cb,
-		void** user_data, u_int8_t* freeze_flag,
+		void** user_data,
 		u_int8_t* terminating,
 		ff::SWSR_Ptr_Buffer* tasks_pool,
 		dpi_library_state_t* state,
-		u_int16_t *num_L7_workers,
+		u_int16_t* num_L7_workers,
 		u_int32_t v4_table_size,
 		u_int32_t v6_table_size,
 		dpi_L7_scheduler* lb,
@@ -570,11 +566,11 @@ dpi_collapsed_emitter::dpi_collapsed_emitter(
 				dpi_L7_emitter(lb, *num_L7_workers, proc_id),
 				proc_id(proc_id){
 	L3_L4_emitter=new dpi::dpi_L3_L4_emitter(cb, user_data,
-			                                 freeze_flag,
 			                                 terminating,
 			                                 proc_id,
 			                                 tasks_pool);
-	L3_L4_worker=new dpi::dpi_L3_L4_worker(state, 0, num_L7_workers,
+	L3_L4_worker=new dpi::dpi_L3_L4_worker(state, 0,
+	                                       num_L7_workers,
 			                               proc_id,
 			                               v4_table_size,
 			                               v6_table_size);
@@ -584,6 +580,12 @@ dpi_collapsed_emitter::~dpi_collapsed_emitter(){
 	delete L3_L4_emitter;
 	delete L3_L4_worker;
 }
+
+#ifdef ENABLE_RECONFIGURATION
+void dpi_collapsed_emitter::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
+    L3_L4_worker->notifyWorkersChange(oldNumWorkers, newNumWorkers);
+}
+#endif
 
 int dpi_collapsed_emitter::svc_init(){
 	L3_L4_emitter->svc_init();

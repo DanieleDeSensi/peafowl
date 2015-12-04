@@ -1,16 +1,27 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*!
- * \link
  * \file dynqueue.hpp
- * \ingroup streaming_network_simple_shared_memory
+ * \ingroup aux_classes
  *
- * \brief This file defines the dynamic queue.
+ * \brief Implementation of a dynamic queue. Not currently used.
  *
+ * Dynamic (list-based) Single-Writer Single-Reader
+ * (or Single-Producer Single-Consumer) unbounded queue.
+ *
+ * No lock is needed around pop and push methods.
+ * See also ubuffer.hpp for a more efficient SPSC unbounded queue.
+ *
+ * M. Aldinucci, M. Danelutto, P. Kilpatrick, M. Meneghin, and M. Torquati,
+ * "An Efficient Unbounded Lock-Free Queue for Multi-core Systems,"
+ * in Proc. of 18th Intl. Euro-Par 2012 Parallel Processing, Rhodes Island,
+ * Greece, 2012, pp. 662-673. doi:10.1007/978-3-642-32820-6_65
+ *
+ * \note Not currently used in the FastFlow implementation.
  */
 
-#ifndef __FF_DYNQUEUE_HPP_ 
-#define __FF_DYNQUEUE_HPP_ 
+#ifndef FF_DYNQUEUE_HPP
+#define FF_DYNQUEUE_HPP
 
 /* ***************************************************************************
  *
@@ -30,14 +41,6 @@
  ****************************************************************************
  */
 
-/* Dynamic (list-based) Single-Writer Single-Reader 
- * (or Single-Producer Single-Consumer) unbounded queue.
- *
- * No lock is needed around pop and push methods.
- * See also ubuffer.hpp for a more efficient SPSC unbounded queue.
- * 
- *
- */
 
 #include <stdlib.h>
 #include <ff/buffer.hpp>
@@ -46,22 +49,8 @@
 
 namespace ff {
 
-/*!
- * \ingroup streaming_network_simple_shared_memory
- *
- * @{
- */
-
 #if !defined(_FF_DYNQUEUE_OPTIMIZATION)
 
-/*!
- * \class dynqueue
- * \ingroup streaming_network_simple_shared_memory
- *
- * \brief TODO
- *
- * This class is defined in \ref dynqueue.hpp
- */
 class dynqueue {
 private:
     struct Node {
@@ -69,10 +58,16 @@ private:
         struct Node * next;
     };
 
-    Node * volatile   head;
-    long padding1[longxCacheLine-(sizeof(Node *)/sizeof(long))];
-    Node * volatile   tail;
-    long padding2[longxCacheLine-(sizeof(Node*)/sizeof(long))];
+    union {
+        Node * volatile   head;
+        char padding1[CACHE_LINE_SIZE];
+        //long padding1[longxCacheLine-(sizeof(Node *)/sizeof(long))];
+    };
+    union {
+        Node * volatile   tail;
+        char padding2[CACHE_LINE_SIZE];
+        //long padding2[longxCacheLine-(sizeof(Node*)/sizeof(long))];
+    };
 
     /* ----- two-lock used only in the mp_push and mp_pop methods ------- */
     /*                                                                    */    
@@ -81,10 +76,24 @@ private:
     /*  Michael and Scott 2-locks MPMC queue.                             */    
     /*                                                                    */
     /*                                                                    */    
-    lock_t P_lock;
-    long padding3[longxCacheLine-sizeof(lock_t)];
-    lock_t C_lock;
-    long padding4[longxCacheLine-sizeof(lock_t)];
+	/*
+	union {
+        lock_t P_lock;
+        char padding3[CACHE_LINE_SIZE];
+    };
+    union {
+        lock_t C_lock;
+        char padding4[CACHE_LINE_SIZE];
+    };
+    */
+	ALIGN_TO_PRE(CACHE_LINE_SIZE)
+	lock_t P_lock;
+	ALIGN_TO_POST(CACHE_LINE_SIZE)
+
+	ALIGN_TO_PRE(CACHE_LINE_SIZE)
+		lock_t C_lock;
+	ALIGN_TO_POST(CACHE_LINE_SIZE)
+
     /* -------------------------------------------------------------- */
 
     // internal cache
@@ -96,9 +105,6 @@ private:
 #endif
 
 private:
-    /**
-     * TODO
-     */
     inline Node * allocnode() {
         union { Node * n; void * n2; } p;
 #if !defined(NO_CACHE)
@@ -108,9 +114,6 @@ private:
         return p.n;
     }
 
-    /**
-     * TODO
-     */
     inline Node * mp_allocnode() {
         union { Node * n; void * n2; } p;
 #if !defined(NO_CACHE)
@@ -126,14 +129,8 @@ private:
     }
 
 public:
-    /**
-     * TODO
-     */
     enum {DEFAULT_CACHE_SIZE=1024};
 
-    /**
-     * TODO
-     */
     dynqueue(int cachesize=DEFAULT_CACHE_SIZE, bool fillcache=false):cache(cachesize) {
         Node * n = (Node *)::malloc(sizeof(Node));
         n->data = NULL; n->next = NULL;
@@ -148,17 +145,11 @@ public:
         init_unlocked(P_lock); 
         init_unlocked(C_lock);
         // Avoid unused private field warning on padding vars
-        (void) padding1; (void) padding2 ; (void) padding3; (void) padding4;
+        //(void) padding1; (void) padding2 ; (void) padding3; (void) padding4;
     }
 
-    /**
-     * TODO
-     */
     bool init() { return true;}
 
-    /**
-     * TODO
-     */
     ~dynqueue() {
         union { Node * n; void * n2; } p;
         if (cache.buffersize()>0) while(cache.pop(&p.n2)) free(p.n);
@@ -170,11 +161,8 @@ public:
         if (head) free((void*)head);
     }
     
-    /**
-     * TODO
-     */
     inline bool push(void * const data) {
-        if (!data) return false;
+        assert(data != NULL);
         Node * n = allocnode();
         n->data = data; n->next = NULL;
         WMB();
@@ -184,11 +172,8 @@ public:
         return true;
     }
 
-    /**
-     * TODO
-     */
     inline bool  pop(void ** data) {        
-        if (!data) return false;
+        assert(data != NULL);
 #if defined(STRONG_WAIT_FREE)
         if (head == tail) return false;
 #else
@@ -208,30 +193,28 @@ public:
         return false;
     }    
 
-    /**
-     * TODO
-     */
+
     inline unsigned long length() const { return 0;}
 
-    /**
+    /*
      * MS 2-lock MPMC algorithm PUSH method 
      */
     inline bool mp_push(void * const data) {
-        if (!data) return false;
+        assert(data != NULL);
         Node* n = mp_allocnode();
         n->data = data; n->next = NULL;
-        spin_lock(P_lock);
+        ff::spin_lock(P_lock);
         tail->next = n;
         tail       = n;
         spin_unlock(P_lock);
         return true;
     }
 
-    /**
+    /*
      * MS 2-lock MPMC algorithm POP method 
      */
     inline bool  mp_pop(void ** data) {        
-        if (!data) return false;
+        assert(data != NULL);
         spin_lock(C_lock);
         if (head->next) {
             Node * n = (Node *)head;
@@ -250,15 +233,6 @@ public:
 #else // _FF_DYNQUEUE_OPTIMIZATION
 /* 
  * Experimental code
- */
-
-/*!
- * \class dynqueue
- * \ingroup streaming_network_simple_shared_memory
- *
- * \brief TODO
- *
- * This class is defined in \ref dynqueue.hpp
  */
 
 class dynqueue {
@@ -280,9 +254,6 @@ private:
 
 private:
 
-    /**
-     * TODO
-     */
     inline bool cachepush(void * const data) {
         
         if (!cache[pwrite]) {
@@ -301,9 +272,6 @@ private:
         return false;
     }
 
-    /**
-     * TODO
-     */
     inline bool  cachepop(void ** data) {
         if (!cache[pread]) return false;
         
@@ -314,21 +282,18 @@ private:
     }    
     
 public:
-    /**
-     * TODO
-     */
     enum {DEFAULT_CACHE_SIZE=1024};
 
-    /**
-     * TODO
-     */
     dynqueue(int cachesize=DEFAULT_CACHE_SIZE, bool fillcache=false):cachesize(cachesize) {
         Node * n = (Node *)::malloc(sizeof(Node));
         n->data = NULL; n->next = NULL;
         head=tail=n;
 
         cache=(void**)getAlignedMemory(longxCacheLine*sizeof(long),cachesize*sizeof(void*));
-        if (!cache) abort();
+        if (!cache) {
+            error("FATAL ERROR: dynqueue no memory available!\n");
+            abort();
+        }
 
         if (fillcache) {
             for(int i=0;i<cachesize;++i) {
@@ -338,9 +303,6 @@ public:
         }
     }
 
-    /**
-     * TODO
-     */
     ~dynqueue() {
         union { Node * n; void * n2; } p;
         while(cachepop(&p.n2)) free(p.n);
@@ -353,11 +315,8 @@ public:
         if (cache) freeAlignedMemory(cache);
     }
 
-    /**
-     * TODO
-     */
     inline bool push(void * const data) {
-        if (!data) return false;
+        assert(data != NULL);
 
         union { Node * n; void * n2; } p;
         if (!cachepop(&p.n2))
@@ -371,11 +330,8 @@ public:
         return true;
     }
 
-    /**
-     * TODO
-     */
     inline bool  pop(void ** data) {
-        if (!data) return false;
+        assert(data != NULL);
         if (head->next) {
             Node * n = (Node *)head;
             *data    = (head->next)->data;
@@ -390,11 +346,7 @@ public:
 
 #endif // _FF_DYNQUEUE_OPTIMIZATION
 
-/*!
- * @}
- * \endlink
- */
 
 } // namespace
 
-#endif /* __FF_DYNQUEUE_HPP_ */
+#endif /* FF_DYNQUEUE_HPP */

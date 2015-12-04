@@ -78,8 +78,8 @@
 
 /***************************************************************************/
 
-#ifndef __CYCLE_H
-#define __CYCLE_H
+#ifndef FF_CYCLE_H
+#define FF_CYCLE_H
 
 // Mauro Mulatero: ARM
 #if defined(__linux__) && defined(__arm__)
@@ -452,9 +452,9 @@ static __inline__ ticks getticks(void)
 #  include <machine/inline.h>
 static inline unsigned long getticks(void)
 {
-     register ticks ret;
-     _MFCTL(16, ret);
-     return ret;
+    ticks ret;
+    _MFCTL(16, ret);
+    return ret;
 }
 #  endif
 
@@ -611,4 +611,4 @@ INLINE_ELAPSED(inline)
 #endif /* HAVE_MIPS_ZBUS_TIMER */
 
 
-#endif // __CYCLE_H
+#endif /* FF_CYCLE_H */

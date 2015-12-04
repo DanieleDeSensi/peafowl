@@ -11,12 +11,21 @@ INCS                 = -I ./ -I ./fastflow/
 LIBS                 = 
 INCLUDES             =
 SEQTARGET            = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
-PARTARGET            = worker.o mc_api.o energy_utils.o
+PARTARGET            = worker.o mc_api.o
+MAMMUT			     = /home/daniele/Code/Mammut
+ADPFF				 = /home/daniele/Code/adaptivefastflow
 
-.PHONY: clean cleanall install uninstall test seqlib parlib
+.PHONY: all allreconf clean cleanall install uninstall test seqlib parlib
 .SUFFIXES: .cpp .o
 
-all:
+
+allreconf:
+	make clean
+	make CONFIGURATIONFLAGS+=-DDPI_THREAD_SAFETY_ENABLED=0 seq
+	make seqlib
+	make CXXFLAGS+=--std=c++11 INCS+=-I$(MAMMUT) INCS+=-I$(ADPFF) CONFIGURATIONFLAGS+=-DDPI_THREAD_SAFETY_ENABLED=1 par
+	make parlib
+all:	
 	make clean
 	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
 	make seqlib

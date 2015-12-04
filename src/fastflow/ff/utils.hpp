@@ -1,15 +1,11 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*!
- * \link
  * \file utils.hpp
- * \ingroup shared_memory_fastflow
+ * \ingroup aux_classes
+ * \brief Utility functions
  *
- * \brief TODO
  */
-
-#ifndef _FF_UTILS_HPP_
-#define _FF_UTILS_HPP_
 
 /* ***************************************************************************
  *
@@ -30,12 +26,15 @@
  ****************************************************************************
  */
 
+#ifndef FF_UTILS_HPP
+#define FF_UTILS_HPP
+
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
 //#include <unistd.h> // Not availbe on windows - to be managed
-#include <iostream>
+#include <iosfwd>
 //#if (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && defined(_WIN32)
 #include <ff/platforms/platform.h>
 //#else
@@ -50,11 +49,6 @@
 
 namespace ff {
 
-/*!
- * \ingroup shared_memory_fastflow
- *
- * @{
- */
 
 enum { START_TIME=0, STOP_TIME=1, GET_TIME=2 };
 
@@ -70,7 +64,7 @@ static inline void waitCall(double milisec, double sec){
     req.tv_nsec = milisec * 1000000L;
     nanosleep(&req, (struct timespec *)NULL);
   }
-};
+}
 
 static inline void waitSleep(ticks TICKS2WAIT){
     /*!!!----Mehdi--required to change busy wait with nanosleep ----!!*/ 
@@ -84,7 +78,7 @@ static inline void waitSleep(ticks TICKS2WAIT){
      */ 
     struct timespec req = {0, static_cast<long>(TICKS2WAIT)};
     nanosleep(&req, NULL);
-};
+}
 #endif /* __linux__ */
 
 /* NOTE:  nticks should be something less than 1000000 otherwise 
@@ -113,14 +107,14 @@ static inline void ff_relax(unsigned long us) {
     PAUSE();
 }
 
-/**
- * TODO
- */
 static inline void error(const char * str, ...) {
     const char err[]="ERROR: ";
     va_list argp;
     char * p=(char *)malloc(strlen(str)+strlen(err)+10);
-    if (!p) abort();
+    if (!p) {
+        printf("FATAL ERROR: no enough memory!\n");
+        abort();
+    }
     strcpy(p,err);
     strcpy(p+strlen(err), str);
     va_start(argp, str);
@@ -129,18 +123,17 @@ static inline void error(const char * str, ...) {
     free(p);
 }
 
-/**
- * It returns the current time in usec 
- */
+
 static inline unsigned long getusec() {
     struct timeval tv;
     gettimeofday(&tv,NULL);
     return (unsigned long)(tv.tv_sec*1e6+tv.tv_usec);
 }
 
-/**
- * Compute a-b and return the difference in msec
- */
+static inline unsigned long getusec(const struct timeval &tv) {
+    return  (unsigned long)(tv.tv_sec*1e6+tv.tv_usec);
+}
+
 static inline double diffmsec(const struct timeval & a, 
                               const struct timeval & b) {
     long sec  = (a.tv_sec  - b.tv_sec);
@@ -153,47 +146,35 @@ static inline double diffmsec(const struct timeval & a,
     return ((double)(sec*1000)+ ((double)usec)/1000.0);
 }
 
-/**
- * TODO
- */
+
 static inline bool time_compare(struct timeval & a, struct timeval & b) {
     double t1= a.tv_sec*1000 + (double)(a.tv_usec)/1000.0;
     double t2= b.tv_sec*1000 + (double)(b.tv_usec)/1000.0;        
     return (t1<t2);
 }
 
-/**
- * TODO
- */
 static inline bool time_iszero(const struct timeval & a) {
     if ((a.tv_sec==0) && (a.tv_usec==0)) return true;
     return false;
 }
 
-/**
- * TODO
- */
+
 static inline void time_setzero(struct timeval & a) {
     a.tv_sec=0;  
     a.tv_usec=0;
 }
 
-/**
- * TODO
- */
-static inline bool isPowerOf2(unsigned int x) {
-    return (x==1 || (x & (x-1)) == 0);
+static inline bool isPowerOf2(unsigned x) {
+	return (x != 0 && (x & (x-1)) == 0);
 }
 
-/**
- * TODO
- */
-static inline unsigned int nextPowerOf2(unsigned int x) {
+static inline unsigned long nextPowerOf2(unsigned long x) {
     assert(isPowerOf2(x)==false); // x is not a power of two!
-    unsigned int p=1;
+    unsigned long p=1;
     while (x>p) p <<= 1;
     return p;
 }
+
 
 static inline unsigned int nextMultipleOfIf(unsigned int x, unsigned int m) {
     unsigned r = x % m;
@@ -201,17 +182,16 @@ static inline unsigned int nextMultipleOfIf(unsigned int x, unsigned int m) {
 }
 
 
-/**
- * TODO
- *
- * \return TODO
- */
 static inline double ffTime(int tag, bool lock=false) {
     static struct timeval tv_start = {0,0};
     static struct timeval tv_stop  = {0,0};
     // needed to protect gettimeofday
     // if multiple threads call ffTime
+#if (__cplusplus >= 201103L) || (defined __GXX_EXPERIMENTAL_CXX0X__) || (defined(HAS_CXX11_VARIADIC_TEMPLATES))
+    static lock_t L;
+#else
     static lock_t L = {0};
+#endif
 
     double res=0.0;
     switch(tag) {
@@ -235,11 +215,6 @@ static inline double ffTime(int tag, bool lock=false) {
     return res;
 }
 
-/*!
- * @}
- * \endlink
- */
-
 } // namespace ff
 
-#endif /* _FF_UTILS_HPP_ */
+#endif /* FF_UTILS_HPP */

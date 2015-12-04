@@ -14,6 +14,8 @@ TARGET               =
 .PHONY: clean cleanall install uninstall
 .SUFFIXES: .cpp .o
 
+allreconf:
+	make -C ./src allreconf
 all:
 	make -C ./src all 
 install:

@@ -245,55 +245,7 @@ void flow_cleaner(void* flow_specific_user_data){
   }
 }
  
-
-static double idle_watts_socket=0;
-static double idle_watts_cores=0;
-static double idle_watts_offcores=0;
-static double idle_watts_dram=0;
-
 FILE* outstats = NULL;
-
-void print_stats_callback(u_int16_t num_workers, unsigned long workers_frequency, mc_dpi_joules_counters joules, double current_system_load){
-  static u_int64_t last_pkts = 0;
-  double interval = 0;
-
-  u_int64_t proc_pkts = processed_packets;
-  double watts_sockets, watts_cores, watts_offcores, watts_dram;
-
-  static ticks lastticks = getticks();
-  ticks currentticks;
-  float pktloss=0;
-
-  currentticks = getticks();
-  interval = (double) (currentticks - lastticks) / (double) CLOCK_FREQ;
-
-  current_real_rate = ((double)(proc_pkts - last_pkts))/interval;
-
-  last_pkts = proc_pkts;
-
-  watts_sockets = ((joules.joules_socket[0]+joules.joules_socket[1])/(double)interval)-idle_watts_socket;
-  watts_cores = ((joules.joules_cores[0]+joules.joules_cores[1])/(double)interval)-idle_watts_cores;
-  watts_offcores = ((joules.joules_offcores[0]+joules.joules_offcores[1])/(double)interval)-idle_watts_offcores;
-  if(watts_offcores == 0){
-  	watts_offcores = watts_sockets - watts_cores;
-  }
-  watts_dram = ((joules.joules_dram[0]+joules.joules_dram[1])/(double)stats_collection_interval)-idle_watts_dram;
- 
-  fprintf(outstats, "%d\t%d,%lu\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",
-	  last_sec-start_time,
-	  num_workers,
-	  workers_frequency,
-	  rates[current_interval],
-	  current_real_rate,
-	  watts_sockets,
-	  watts_cores,
-	  watts_offcores,
-	  watts_dram,
-          current_real_rate / watts_cores,
-          current_system_load);
-  lastticks = currentticks;
-
-}
  
 int main(int argc, char **argv){
   pthread_t clock;
@@ -301,12 +253,11 @@ int main(int argc, char **argv){
   using namespace std;
   ff_mapThreadToCpu(0, -20);
   terminating=0;
-  mc_dpi_reconfiguration_freq_strategy strategy = MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE;
 
   try {
     if (argc<4){
             cerr << "Usage: " << argv[0] <<
-	            " virus-signatures-file input-file polling-interval [strategy]\n";
+	            " virus-signatures-file input-file polling-interval\n";
             exit(EXIT_FAILURE);
     }
 
@@ -316,13 +267,7 @@ int main(int argc, char **argv){
     char const *virus_signatures_file_name=argv[1];
     char const *input_file_name=argv[2];
     polling_interval=atoi(argv[3]);
-    if(argc>=5){
-       strategy=(mc_dpi_reconfiguration_freq_strategy)atoi(argv[4]);
-    }
 
-    outstats = fopen("stats.txt", "w");
-    fprintf(outstats, "Secs\tNumW,Freq\tExpectedRate\tCurrRate\tWattsSocket\tWattsCores\tWattsOffCores\tWattsDRAM\tEfficiency\tUtilization\n");
-     
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
     if(!signatures){
@@ -376,29 +321,6 @@ int main(int argc, char **argv){
     mc_dpi_library_state_t* state=mc_dpi_init_stateful(
 						       32767, 32767, 1000000, 1000000, details);
 
-    mc_dpi_joules_counters joules_before, joules_after, joules_diff;
-    double interval;
-    unsigned int i=0;
-
-#if 1
-    joules_before = mc_dpi_joules_counters_read(state);
-    interval = 10;
-    printf("Computing watts before running farm (over a %f secs interval)\n", interval);
-    sleep(interval);
-    joules_after = mc_dpi_joules_counters_read(state);
-    joules_diff = mc_dpi_joules_counters_diff(state, joules_after, joules_before);
-
-    for(i=0; i<joules_before.num_sockets; i++){
-      idle_watts_socket+=joules_diff.joules_socket[i]/interval;
-      idle_watts_cores+=joules_diff.joules_cores[i]/interval;
-      idle_watts_offcores+=joules_diff.joules_offcores[i]/interval;
-      idle_watts_dram+=joules_diff.joules_dram[i]/interval;
-      printf("Idle watts %d: Socket: %f Cores: %f Offcores: %f DRAM: %f\n", i, joules_diff.joules_socket[i]/interval, joules_diff.joules_cores[i]/interval,joules_diff.joules_offcores[i]/interval, joules_diff.joules_dram[i]/interval);
-    }
-
-    printf("Wrapping interval: %d seconds\n", mc_dpi_joules_counters_wrapping_interval(state));
-#endif
- 
     printf("Open offline.\n");
     handle=pcap_open_offline(input_file_name, errbuf);
  
@@ -475,22 +397,16 @@ int main(int argc, char **argv){
     dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
     mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
     
-    mc_dpi_set_num_workers(state, details.available_processors);
-
+#if 0
     mc_dpi_reconfiguration_parameters reconf_params;
     reconf_params.sampling_interval = polling_interval;
     reconf_params.num_samples = 6; //4;
     reconf_params.system_load_up_threshold = 90;
-    //reconf_params.worker_load_up_threshold = 90;
     reconf_params.system_load_down_threshold = 80;
-    //reconf_params.worker_load_down_threshold = 80;
     reconf_params.freq_type = MC_DPI_RECONF_FREQ_GLOBAL;
     reconf_params.freq_strategy = strategy;
     reconf_params.stabilization_period = 4;
-    //    reconf_params.migrate_collector = 1;
-  
-    mc_dpi_reconfiguration_set_parameters(state, reconf_params);
-
+#endif
     full_timer.start();
 
     start_time = time(NULL);
@@ -498,9 +414,6 @@ int main(int argc, char **argv){
 
     //    mc_dpi_run(state);
     stats_collection_interval = polling_interval;
-    mc_dpi_set_stats_collection_callback(state,
-					 stats_collection_interval,
-					 print_stats_callback);
 
     mc_dpi_run(state); 
     mc_dpi_wait_end(state);
@@ -516,7 +429,7 @@ int main(int argc, char **argv){
     mc_dpi_terminate(state);
     delete scanner_pool;
  
-    for(i=0; i<num_packets; i++){
+    for(size_t i=0; i<num_packets; i++){
       free(packets[i]);
     }
     free(packets);

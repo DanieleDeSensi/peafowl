@@ -1,16 +1,18 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*!
- * \link
  * \file dynlinkedlist.hpp
- * \ingroup shared_memory_fastflow
+ * \ingroup aux_classes
  *
- * \brief Dynamic linked list Single-Writer Single-Reader unbounded queue.
- * No lock is needed around pop and push methods.
+ * \brief Dynamic linked list Single-Writer Single-Reader unbounded queue. Not currently used.
  *
+ *  No lock is needed around pop and push methods.
+ *
+ * \note Not used in current FastFlow implementation
  */
-#ifndef __FF_DYNLINKEDLIST_HPP_ 
-#define __FF_DYNLINKEDLIST_HPP_ 
+
+#ifndef FF_DYNLINKEDLIST_HPP
+#define FF_DYNLINKEDLIST_HPP
 
 /* ***************************************************************************
  *
@@ -37,45 +39,22 @@
 
 namespace ff {
 
-/*!
- * \ingroup shared_memory_fastflow
- *
- * @{
- */
-
-/*!
- * \class dynlinkedlist
- * \ingroup shared_memory_fastflow
- *
- * \brief TODO
- *
- * This class is defined in \ref dynlinkedlist.hpp
- *
- */
 class dynlinkedlist {
 
 #define CAST_TO_UL(X) ((unsigned long)X)
 
 private:
-    /*!
-     * \class Node
-     * \ingroup shared_memory_fastflow
-     *
-     * \brief TODO
-     *
-     * This class is defined in \ref dynlinkedlist.hpp
-     */
     struct Node {
         void        * data;
         struct Node * next;
         void        * next_data;
-        long padding[longxCacheLine-sizeof(void*)*3];
+        long padding[longxCacheLine-((sizeof(void*)*3)/sizeof(long))]; 
     };
 
     volatile Node *    head;
-    long padding1[longxCacheLxine-sizeof(Node *)];
+    long padding1[longxCacheLxine-(sizeof(Node *)/sizeof(long))];
     volatile Node *    tail;
-    long padding2[longxCacheLine-sizeof(Node*)];
+    long padding2[longxCacheLine-(sizeof(Node*)/sizeof(long))];
     //SWSR_Ptr_Buffer    cache;
     /*
       This is a vector of Node elemens.  
@@ -85,9 +64,7 @@ private:
     int min_cache_size;
     void * cache_mem;
 private:
-    /**
-     * TODO
-     */
+
     bool isincahce(Node * n){
         if(((unsigned long) n ) - ((unsigned long)min_cache) < 0){
             return false;
@@ -98,14 +75,10 @@ private:
         }
     }
 public:
-    /**
-     * TODO
-     */
+
     enum {DEFAULT_CACHE_SIZE=1024};
 
-    /**
-     * TODO
-     */
+
     dynlinkedlist(int cachesize=DEFAULT_CACHE_SIZE, bool fillcache=false){
         //Node * n = (Node *)::malloc(sizeof(Node));
         assert(sizeof(Node) == longxCacheLine);
@@ -134,9 +107,7 @@ public:
         tail = &min_cache[0];
     }
     
-    /**
-     * TODO
-     */
+
     ~dynlinkedlist() {
         Node * start_free = min_cache[0].next;
         min_cache[0].next=NULL;
@@ -152,9 +123,7 @@ public:
         free(cache_mem);
     }
     
-    /**
-     * TODO
-     */
+
     inline bool push(void * const data) {
         assert(data!=NULL);
         if(likely(tail->next_data == NULL)){
@@ -173,9 +142,7 @@ public:
         return true;
     }
 
-    /**
-     * TODO
-     */
+
     inline bool  pop(void ** data) {
         if (likely(head->data)) {
             *data = head->data;
@@ -187,11 +154,7 @@ public:
     }
 };
 
-/*!
- * @}
- * \endlink
- */
 
 } // namespace ff
 
-#endif /* __FF_DYNQUEUE_HPP_ */
+#endif /* FF_DYNLINKEDLIST_HPP */

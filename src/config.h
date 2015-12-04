@@ -183,5 +183,4 @@ enum hashes{
 #define SPINTICKS 1000
 #endif
 
-
 #endif /* CONFIG_H_ */

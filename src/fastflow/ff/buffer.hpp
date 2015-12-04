@@ -1,30 +1,31 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
-#ifndef __SWSR_PTR_BUFFER_HPP_
-#define __SWSR_PTR_BUFFER_HPP_
-
 /*!
- *  \link
  *  \file buffer.hpp
- *  \ingroup streaming_network_simple_shared_memory
+ *  \ingroup building_blocks
  *
- *  \brief This file contains the definition of the bounded \p SWSR circular
+ *  \brief This file contains the definition of the bounded \p SPSC channel
  *  buffer used in FastFlow
  *
  *  Single-Writer Single-Reader circular buffer.
  *  No lock is needed around pop and push methods.
+ *  Wait-free and fence-free (in the TSO model). 
  * 
  *  A single NULL value is used to indicate buffer full and 
  *  buffer empty conditions.
  * 
  *  More details about the SWSR_Ptr_Buffer implementation 
- *  can be found in the following report:
+ *  can be found in:
  *
  *  Massimo Torquati, "Single-Producer/Single-Consumer Queue on Shared Cache 
  *  Multi-Core Systems", TR-10-20, Computer Science Department, University
  *  of Pisa Italy,2010
  *  ( http://compass2.di.unipi.it/TR/Files/TR-10-20.pdf.gz )
- *
+ * 
+ *  M. Aldinucci, M. Danelutto, P. Kilpatrick, M. Meneghin, and M. Torquati, 
+ *  "An Efficient Unbounded Lock-Free Queue for Multi-core Systems," 
+ *  in Proc. of 18th Intl. Euro-Par 2012 Parallel Processing, Rhodes Island, 
+ *  Greece, 2012, pp. 662-673. doi:10.1007/978-3-642-32820-6_65
  */
 
 /* ***************************************************************************
@@ -44,9 +45,17 @@
  *
  ****************************************************************************
  */
+/* Author: Massimo Torquati
+ *
+ */
 
-#include <stdlib.h>
-#include <string.h>
+#ifndef FF_SWSR_PTR_BUFFER_HPP
+#define FF_SWSR_PTR_BUFFER_HPP
+
+#include <cstdlib>
+#include <cstring>
+//#include <atomic>
+//#include <ff/atomic/abstraction_dcas.h>
 
 #include <ff/sysdep.h>
 #include <ff/config.hpp>
@@ -55,22 +64,19 @@
 #include <AvailabilityMacros.h>
 #endif
 
+#include <ff/platforms/platform.h>
+
 namespace ff {
 
 // 64 bytes is the common size of a cache line
 static const int longxCacheLine = (CACHE_LINE_SIZE/sizeof(long));
     
-/*!
- *  \ingroup streaming_network_simple_shared_memory
- *
- *  @{
- */
  
  /*! 
   * \class SWSR_Ptr_Buffer
-  *  \ingroup streaming_network_simple_shared_memory
+  *  \ingroup building_blocks
   * 
-  * \brief Single-Writer/Single-Reader circular buffer.
+  * \brief SPSC bound channel (Single-Writer/Single-Reader)
   *
   * This class describes the SWSR circular buffer, used in FastFlow to
   * implement a lock-free (wait-free) bounded FIFO queue. No lock is needed
@@ -99,10 +105,13 @@ private:
     unsigned long    pwrite;
     long padding2[longxCacheLine-1];
 #else
-    volatile unsigned long    pread;
-    long padding1[longxCacheLine-1];
-    volatile unsigned long    pwrite;
-    long padding2[longxCacheLine-1];
+    ALIGN_TO_PRE(CACHE_LINE_SIZE)
+    volatile unsigned long pread;
+    ALIGN_TO_POST(CACHE_LINE_SIZE)
+
+    ALIGN_TO_PRE(CACHE_LINE_SIZE)
+    volatile unsigned long pwrite;
+    ALIGN_TO_POST(CACHE_LINE_SIZE)
 #endif
     const    unsigned long size;
     void                   ** buf;
@@ -126,8 +135,8 @@ public:
     SWSR_Ptr_Buffer(unsigned long n, const bool=true):
         pread(0),pwrite(0),size(n),buf(0) {
         // Avoid unused private field warning on padding1, padding2
-        (void)padding1;
-        (void)padding2;
+        //(void)padding1;
+        //(void)padding2;
     }
     
     /** 
@@ -156,6 +165,7 @@ public:
         if (!buf) return false;
 
         reset(startatlineend);
+
         return true;
     }
 
@@ -201,7 +211,7 @@ public:
      *  \return TODO
      */
     inline bool push(void * const data) {     /* modify only pwrite pointer */
-        if (!data) return false;
+        assert(data != NULL);
 
         if (available()) {
             /**
@@ -213,6 +223,7 @@ public:
              * (e.g. Powerpc). This is a no-op on Intel x86/x86-64 CPUs.
              */
             WMB(); 
+            //std::atomic_thread_fence(std::memory_order_release);
             buf[pwrite] = data;
             pwrite += (pwrite+1 >=  size) ? (1-size): 1; // circular buffer
             return true;
@@ -227,9 +238,9 @@ public:
      */
     inline bool multipush(void * const data[], int len) {
         if ((unsigned)len>=size) return false;
-        register unsigned long last = pwrite + ((pwrite+ --len >= size) ? (len-size): len);
-        register unsigned long r    = len-(last+1), l=last;
-        register unsigned long i;
+        unsigned long last = pwrite + ((pwrite+ --len >= size) ? (len-size): len);
+        unsigned long r    = len-(last+1), l=last;
+        unsigned long i;
 
         if (buf[last]==NULL) {
             
@@ -240,7 +251,7 @@ public:
                     buf[i] = data[r];
                 
             } else 
-                for(register int i=len;i>=0;--i) 
+                for(int i=len;i>=0;--i) 
                     buf[pwrite+i] = data[i];
             
             WMB();
@@ -266,7 +277,7 @@ public:
      * \param data Element to be pushed in the buffer
      */
     inline bool mpush(void * const data) {
-        if (!data) return false;
+        assert(data);
         
         if (mcnt==MULTIPUSH_BUFFER_SIZE)
             return multipush(multipush_buf,MULTIPUSH_BUFFER_SIZE);
@@ -285,19 +296,7 @@ public:
     }
 #endif /* SWSR_MULTIPUSH */
     
-    /** 
-     *  Pop method: get the next value from the FIFO buffer.
-     *
-     *  \param data Pointer to the location where to store the 
-     *  data popped from the buffer.
-     */
-    inline bool  pop(void ** data) {  /* modify only pread pointer */
-        if (!data || empty()) return false;
 
-        *data = buf[pread];
-        return inc();
-    } 
-    
     /**
      * It is like pop but doesn't copy any data.
      *
@@ -308,7 +307,20 @@ public:
         pread += (pread+1 >= size) ? (1-size): 1; // circular buffer       
         return true;
     }           
-    
+
+    /** 
+     *  Pop method: get the next value from the FIFO buffer.
+     *
+     *  \param data Pointer to the location where to store the 
+     *  data popped from the buffer.
+     */
+    inline bool  pop(void ** data) {  /* modify only pread pointer */
+        if (empty()) return false;        
+        *data = buf[pread];
+        //std::atomic_thread_fence(std::memory_order_acquire);
+        return inc();
+    } 
+        
     /** 
      *  It returns the "head" of the buffer, i.e. the element pointed by the read
      *  pointer (it is a FIFO queue, so \p push on the tail and \p pop from the
@@ -336,8 +348,9 @@ public:
         }
 #if defined(SWSR_MULTIPUSH)        
         mcnt   = 0;
-#endif        
-        memset(buf,0,size*sizeof(void*));
+#endif  
+        if (size<=512) for(unsigned long i=0;i<size;++i) buf[i]=0;
+        else memset(buf,0,size*sizeof(void*));
     }
 
     /** 
@@ -353,16 +366,16 @@ public:
         return size;  
     }
 
+    inline bool isFixedSize() const { return true; }
 };
 
 /*!
- * \class Lamport_Buffer
- *  \ingroup streaming_network_simple_shared_memory
+ * \class Lamport_Buffer.
+ * \ingroup aux_classes
  *
  * \brief Implementation of the well-known Lamport's wait-free circular
- * buffer.
+ * buffer. Not currently used.
  *
- * \This class is defined in \ref buffer.hpp
  *
  */
 class Lamport_Buffer {
@@ -402,7 +415,7 @@ public:
      * returned.
      */
     bool init() {
-        if (buf) return false;
+        assert(buf);
         buf=(void**)getAlignedMemory(longxCacheLine*sizeof(long),size*sizeof(void*));
         if (!buf) return false;
         reset();
@@ -431,7 +444,7 @@ public:
      * TODO
      */
     inline bool push(void * const data) {
-        if (!data) return false;
+        assert(data);
 
         const unsigned long next = pwrite + ((pwrite+1>=size)?(1-size):1);
         if (next != pread) {
@@ -451,7 +464,7 @@ public:
      * TODO
      */
     inline bool  pop(void ** data) {
-        if (!data) return false;       
+        assert(data);
 
         if (empty()) return false;
         *data = buf[pread];
@@ -464,7 +477,8 @@ public:
      */
     inline void reset() { 
         pread=pwrite=0; 
-        memset(buf,0,size*sizeof(void*));
+        if (size<=512) for(unsigned long i=0;i<size;++i) buf[i]=0;
+        else memset(buf,0,size*sizeof(void*));
     }
 
     /**
@@ -490,4 +504,4 @@ public:
 
 } // namespace ff
 
-#endif /* __SWSR_PTR_BUFFER_HPP_ */
+#endif /* FF_SWSR_PTR_BUFFER_HPP */

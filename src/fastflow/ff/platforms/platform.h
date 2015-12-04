@@ -1,6 +1,4 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
-#ifndef _FF_PLATFORM_HPP_
-#define _FF_PLATFORM_HPP_
 /* ***************************************************************************
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License version 3 as 
@@ -18,6 +16,11 @@
  *
  ****************************************************************************
  */
+
+#ifndef FF_PLATFORM_HPP
+#define FF_PLATFORM_HPP
+
+#include <ff/platforms/liblfds.h>
 
 // APPLE specific backward compatibility 
 
@@ -40,18 +43,27 @@ inline static int posix_memalign(void **memptr, size_t alignment, size_t size)
 
 
 
-#if (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && defined(_WIN32)
+#if defined(_WIN32)
 #pragma unmanaged
 
-#include "ff/platforms/pthread_minport_windows.h"
+#define NOMINMAX
+
+#include <ff/platforms/pthread_minport_windows.h>
 #define INLINE __forceinline
 #define NOINLINE __declspec(noinline)
 //#define CACHE_LINE_SIZE 64
 #define __WIN_ALIGNED_16__ __declspec(align(16))
 
+// Thread specific storage
+#define __thread __declspec(thread)
+
+
 // Only x86 and x86_64 are currently supported for Windows OS
 INLINE void WMB() {} 
 INLINE void PAUSE() {}
+
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 
 INLINE static int posix_memalign(void **memptr,size_t alignment, size_t sz)
 {
@@ -71,6 +83,8 @@ INLINE static void posix_memalign_free(void* mem)
 typedef unsigned long useconds_t;
 //#define strtoll std::stoll
 #define strtoll _strtoi64
+
+#define sleep(SECS) Sleep(SECS)
 
 INLINE static int usleep(unsigned long microsecs) {
   if (microsecs > 100000)
@@ -109,6 +123,7 @@ expected_counter_difference;
     }
 	return(0);
 }
+
 
 //#define __TICKS2WAIT 1000
 #define random rand
@@ -223,6 +238,6 @@ inline static void posix_memalign_free(void* mem)
 #   error "unknown platform"
 #endif
 
-#endif //_FF_PLATFORM_HPP_
+#endif /* FF_PLATFORM_HPP */
 
 

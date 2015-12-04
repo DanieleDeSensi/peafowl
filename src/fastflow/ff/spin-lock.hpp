@@ -3,13 +3,15 @@
 /*!
  *  \link
  *  \file spin-lock.hpp
- *  \ingroup streaming_network_arbitrary
+ *  \ingroup building_blocks
  *
- *  \brief This file contains the spin lock(s) used in FastFlow
+ *  \brief This file contains several alternative spin lock(s)
+ *  implementations that can be used as FastFlow spin-lock
+ *
+ * CLH spin-lock, ticket lock, XCHG-based spin-lock,
+ * AtomicFlagWrapper-based spin-lock, and counting ...
  */
- 
-#ifndef _FF_SPINLOCK_HPP_
-#define _FF_SPINLOCK_HPP_
+
 /* ***************************************************************************
  *  
  *  This program is free software; you can redistribute it and/or modify it
@@ -27,79 +29,72 @@
  *
  ****************************************************************************
  */
+/* 
+ *   Author: 
+ *      Massimo Torquati <torquati@di.unipi.it> or <massimotor@gmail.com>    
+ * 
+ *    - April 2013 added CLHSpinLock 
+ *    - February 2014 added AtomicFlagWrapper-based spin-lock
+ *
+ */
  
-// REW -- documentation
-//#include <iostream>
+#ifndef FF_SPINLOCK_HPP
+#define FF_SPINLOCK_HPP
+
+// This code requires a c++11 compiler 
 #include <ff/sysdep.h>
 #include <ff/platforms/platform.h>
 #include <ff/config.hpp>
-#include <ff/atomic/abstraction_dcas.h>
 
-#ifdef __cplusplus
+
+#if (__cplusplus >= 201103L) || (defined __GXX_EXPERIMENTAL_CXX0X__) || (defined(HAS_CXX11_VARIADIC_TEMPLATES))
+#include <atomic>
 namespace ff {
 #define _INLINE static inline
+
+ALIGN_TO_PRE(CACHE_LINE_SIZE) struct AtomicFlagWrapper {
+/* MA: MSVS 2013 does not allow initialisation of lock-free atomic_flag in the constructor. 
+	Before removing the conditional compilation we should double-check that initialisation with .clear() really works in 
+    all platforms.  
+*/
+#ifndef _MSC_VER
+    AtomicFlagWrapper():F(ATOMIC_FLAG_INIT) {}
 #else
-#define _INLINE __forceinline
+	AtomicFlagWrapper() {
+		F.clear();
+		}
+#endif
+    // std::atomic_flag isn't copy-constructible, nor copy-assignable
+    
+    bool test_and_set(std::memory_order mo) {
+        return F.test_and_set(mo);
+    }
+    void clear(std::memory_order mo) {
+        F.clear(mo);
+    }	
+
+	std::atomic_flag F;
+}ALIGN_TO_POST(CACHE_LINE_SIZE);
+
+typedef AtomicFlagWrapper lock_t[1];
+
+_INLINE void init_unlocked(lock_t l) { }
+_INLINE void init_locked(lock_t l)   { abort(); }
+_INLINE void spin_lock(lock_t l) { 
+    while(l->test_and_set(std::memory_order_acquire)) ;
+}
+_INLINE void spin_unlock(lock_t l) { l->clear(std::memory_order_release);}
+}
+#else
+#pragma message ("FastFlow requires a c++11 compiler")
 #endif
 
-// to be moved in platforms-specific, redefine some gcc intrinsics
+
 #if !defined(__GNUC__) && defined(_MSC_VER)
 // An acquire-barrier exchange, despite the name
 
 #define __sync_lock_test_and_set(_PTR,_VAL)  InterlockedExchangePointer( ( _PTR ), ( _VAL ))
 #endif
-
-#if defined(USE_TICKETLOCK)
-
-// NOTE: ticket lock implementation is experimental and for Linux only!
-
-#if !defined(__linux__)
-#error "Ticket-lock implementation only for Linux!"
-#endif
-
-#if !defined(LOCK_PREFIX)
-#define LOCK_PREFIX "lock ; "
-#endif
-
-typedef  struct {unsigned int slock;}  lock_t[1];
-enum { UNLOCKED=0 };
-
-static inline void init_unlocked(lock_t l) { l[0].slock=UNLOCKED;}
-static inline void init_locked(lock_t l)   { abort(); }
-
-/* Ticket-Lock from Linux kernel 2.6.37 */
-static __always_inline void spin_lock(lock_t lock)
-{
-    int inc = 0x00010000;
-    int tmp;
-
-    asm volatile(LOCK_PREFIX "xaddl %0, %1\n"
-         "movzwl %w0, %2\n\t"
-         "shrl $16, %0\n\t"
-         "1:\t"
-         "cmpl %0, %2\n\t"
-         "je 2f\n\t"
-         "rep ; nop\n\t"
-         "movzwl %1, %2\n\t"
-         /* don't need lfence here, because loads are in-order */
-         "jmp 1b\n"
-         "2:"
-         : "+r" (inc), "+m" (lock->slock), "=&r" (tmp)
-         :
-         : "memory", "cc");
-}
-
-static __always_inline void spin_unlock(lock_t lock)
-{
-    asm volatile(LOCK_PREFIX "incw %0"
-         : "+m" (lock->slock)
-         :
-         : "memory", "cc");
-}
-
-
-#else /* TICKET_LOCK  */
-
 
 
 #if defined(__GNUC__) || defined(_MSC_VER) || defined(__APPLE__)
@@ -173,7 +168,139 @@ _INLINE void spin_lock(clh_lock_t l, const int pid) { l->spin_lock(pid); }
 _INLINE void spin_unlock(clh_lock_t l, const int pid) { l->spin_unlock(pid); }
 
 #endif 
+/*
+#if !defined(__GNUC__) && defined(_MSC_VER)
+// An acquire-barrier exchange, despite the name
 
+#define __sync_lock_test_and_set(_PTR,_VAL)  InterlockedExchangePointer( ( _PTR ), ( _VAL ))
+#endif
+*/
+#if 0
+
+// -------------------------------------
+// OLD IMPLEMENTATION -- TO BE DELETED
+// -------------------------------------
+
+// REW -- documentation
+//#include <ff/sysdep.h>
+//#include <ff/platforms/platform.h>
+//#include <ff/config.hpp>
+#include <ff/mpmc/asm/abstraction_dcas.h>
+
+// NOTE: A better check would be needed !
+// both GNU g++ and Intel icpc define __GXX_EXPERIMENTAL_CXX0X__ if -std=c++0x or -std=c++11 is used 
+// (icpc -E -dM -std=c++11 -x c++ /dev/null | grep GXX_EX)
+#if (__cplusplus >= 201103L) || (defined __GXX_EXPERIMENTAL_CXX0X__) || (defined(HAS_CXX11_VARIADIC_TEMPLATES))
+#include <atomic>
+#endif
+
+#ifdef __cplusplus
+namespace ff {
+#define _INLINE static inline
+#else
+#define _INLINE __forceinline
+#endif
+
+// to be moved in platforms-specific, redefine some gcc intrinsics
+#if !defined(__GNUC__) && defined(_MSC_VER)
+// An acquire-barrier exchange, despite the name
+
+#define __sync_lock_test_and_set(_PTR,_VAL)  InterlockedExchangePointer( ( _PTR ), ( _VAL ))
+#endif
+
+#if defined(USE_TICKETLOCK)
+
+// NOTE: ticket lock implementation is experimental and for Linux only!
+
+#if !defined(__linux__)
+#error "Ticket-lock implementation only for Linux!"
+#endif
+
+#if !defined(LOCK_PREFIX)
+#define LOCK_PREFIX "lock ; "
+#endif
+
+typedef  struct {unsigned int slock;}  lock_t[1];
+enum { UNLOCKED=0 };
+
+static inline void init_unlocked(lock_t l) { l[0].slock=UNLOCKED;}
+static inline void init_locked(lock_t l)   { abort(); }
+
+/* Ticket-Lock from Linux kernel 2.6.37 */
+static __always_inline void spin_lock(lock_t lock)
+{
+    int inc = 0x00010000;
+    int tmp;
+
+    asm volatile(LOCK_PREFIX "xaddl %0, %1\n"
+         "movzwl %w0, %2\n\t"
+         "shrl $16, %0\n\t"
+         "1:\t"
+         "cmpl %0, %2\n\t"
+         "je 2f\n\t"
+         "rep ; nop\n\t"
+         "movzwl %1, %2\n\t"
+         /* don't need lfence here, because loads are in-order */
+         "jmp 1b\n"
+         "2:"
+         : "+r" (inc), "+m" (lock->slock), "=&r" (tmp)
+         :
+         : "memory", "cc");
+}
+
+static __always_inline void spin_unlock(lock_t lock)
+{
+    asm volatile(LOCK_PREFIX "incw %0"
+         : "+m" (lock->slock)
+         :
+         : "memory", "cc");
+}
+
+
+#else /* TICKET_LOCK  */
+
+
+
+
+
+// NOTE: A better check would be needed !
+// both GNU g++ and Intel icpc define __GXX_EXPERIMENTAL_CXX0X__ if -std=c++0x or -std=c++11 is used 
+// (icpc -E -dM -std=c++11 -x c++ /dev/null | grep GXX_EX)
+#if (__cplusplus >= 201103L) || (defined __GXX_EXPERIMENTAL_CXX0X__) || (defined(HAS_CXX11_VARIADIC_TEMPLATES))
+
+ALIGN_TO_PRE(CACHE_LINE_SIZE) struct AtomicFlagWrapper {
+/* MA: MSVS 2013 does not allow initialisation of lock-free atomic_flag in the constructor. 
+	Before removing the conditional compilation we should double-check that initialisation with .clear() really works in all platforms. 
+*/
+#ifndef _MSC_VER
+    AtomicFlagWrapper():F(ATOMIC_FLAG_INIT) {}
+#else
+	AtomicFlagWrapper() {
+		F.clear();
+		}
+#endif
+    // std::atomic_flag isn't copy-constructible, nor copy-assignable
+    
+    bool test_and_set(std::memory_order mo) {
+        return F.test_and_set(mo);
+    }
+    void clear(std::memory_order mo) {
+        F.clear(mo);
+    }	
+
+	std::atomic_flag F;
+}ALIGN_TO_POST(CACHE_LINE_SIZE);
+
+typedef AtomicFlagWrapper lock_t[1];
+
+_INLINE void init_unlocked(lock_t l) { }
+_INLINE void init_locked(lock_t l)   { abort(); }
+_INLINE void spin_lock(lock_t l) { 
+    while(l->test_and_set(std::memory_order_acquire)) ;
+}
+_INLINE void spin_unlock(lock_t l) { l->clear(std::memory_order_release);}
+
+#else  // non C++11
 
 /* -------- XCHG-based spin-lock --------- */
     
@@ -225,7 +352,7 @@ _INLINE void spin_unlock(lock_t l) {
     l[0]=UNLOCKED;
 }
 #endif // windows platform spin_lock
-
+#endif // C++11 check
 #endif // TICKET_LOCK
 
 
@@ -233,10 +360,6 @@ _INLINE void spin_unlock(lock_t l) {
 } // namespace ff
 #endif
 
-/*!
- *
- * @}
- * \endlink
- */
+#endif // 0
 
-#endif /* _FF_SPINLOCK_HPP_ */
+#endif /* FF_SPINLOCK_HPP */

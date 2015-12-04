@@ -660,6 +660,7 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
 	dpi_identification_result_t r;
 	r.status=DPI_STATUS_OK;
 	dpi_pkt_infos_t infos;
+	memset(&infos, 0, sizeof(infos));
 	u_int8_t l3_status;
 
 	r.status=dpi_parse_L3_L4_headers(state, pkt, length, &infos,

@@ -34,6 +34,12 @@
 #include "mc_api.h"
 #include "config.h"
 
+#ifdef ENABLE_RECONFIGURATION
+typedef adpff::AdaptiveNode ffnode;
+#else
+typedef ff::ff_node ffnode;
+#endif
+
 #define DPI_DEBUG_MP_WORKER 0
 #define worker_debug_print(fmt, ...)      \
             do { if (DPI_DEBUG_MP_WORKER) \
@@ -85,12 +91,11 @@ typedef struct mc_dpi_task{
 /*                      L3_L4 nodes.                 */
 /*****************************************************/
 
-class dpi_L3_L4_emitter: public ff::ff_node{
+class dpi_L3_L4_emitter: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	mc_dpi_packet_reading_callback** const cb;
 	void** user_data;
-	u_int8_t* freeze_flag;
 	u_int8_t* terminating;
 	const u_int16_t proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
@@ -99,7 +104,6 @@ private:
 public:
 	dpi_L3_L4_emitter(mc_dpi_packet_reading_callback** cb,
 			          void** user_data,
-			          u_int8_t* freeze_flag,
 			          u_int8_t* terminating,
 			          u_int16_t proc_id,
 			          ff::SWSR_Ptr_Buffer* tasks_pool);
@@ -111,16 +115,16 @@ public:
 
 
 
-class dpi_L3_L4_worker: public ff::ff_node{
+class dpi_L3_L4_worker: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_library_state_t* const state;
 	L3_L4_input_task_struct* in;
+	u_int16_t* num_L7_workers;
 	const u_int32_t v4_table_size;
 	const u_int32_t v6_table_size;
 	u_int32_t v4_worker_table_size;
 	u_int32_t v6_worker_table_size;
-	u_int16_t* num_L7_workers;
 	const u_int16_t worker_id;
 	const u_int16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
@@ -135,9 +139,12 @@ public:
 
 	int svc_init();
 	void* svc(void*);
+#ifdef ENABLE_RECONFIGURATION
+    void notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers);
+#endif
 };
 
-class dpi_L3_L4_collector: public ff::ff_node{
+class dpi_L3_L4_collector: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	const u_int16_t proc_id;
@@ -160,7 +167,7 @@ private:
 	int victim;
 	char padding2[DPI_CACHE_LINE_SIZE];
 protected:
-	inline int selectworker(){
+	inline size_t selectworker(){
 		worker_debug_print("[worker.hpp]: select_worker: %u\n",
 				           victim);
 		return victim;
@@ -174,11 +181,10 @@ public:
 		worker_debug_print("[worker.hpp]: set_victim: %u\n",
 				           victim);
 	}
-
 };
 
 
-class dpi_L7_emitter: public ff::ff_node{
+class dpi_L7_emitter: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	mc_dpi_task_t* partially_filled;
@@ -210,7 +216,7 @@ static inline unsigned long getns() {
 }
 
 
-class dpi_L7_worker: public ff::ff_node{
+class dpi_L7_worker: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_library_state_t* const state;
@@ -218,60 +224,12 @@ private:
 	const u_int16_t worker_id;
 	const u_int16_t proc_id;
 
-#if MC_DPI_TICKS_WAIT == 1
-	ticks startticks;
-	ticks workticks;
-#else
-	unsigned long startns;
-	unsigned long workns;
-#endif
-
-	int reset;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_worker(dpi_library_state_t* state,
 			      u_int16_t worker_id,
 			      u_int16_t proc_id);
 	~dpi_L7_worker();
-	
-	inline double get_worktime_percentage(){
-#if MC_DPI_TICKS_WAIT == 1
-		ticks totalticks = getticks() - startticks;
-		return (double) workticks / (double) totalticks * 100.0;
-#else
-		unsigned long totalns = getns() - startns;
-		return (double) workns / (double) totalns * 100.0;
-#endif
-	}
-
-	inline void reset_worktime_percentage(){
-		reset = 1;
-	}
-
-	inline void reset_worktime_percentage_real(bool force = false){
-		if(reset || force){
-#if MC_DPI_TICKS_WAIT == 1
-			workticks = 0;
-			startticks = getticks();
-#else
-			workns = 0;
-			startns = getns();
-#endif
-			reset = 0;
-		}
-	}
-	
-
-#define NS2WAIT 1000
-
-	inline void losetime_in(void) {
-		reset_worktime_percentage_real();
-#if MC_DPI_TICKS_WAIT == 1
-		ticks_wait(ff_node::TICKS2WAIT);
-#else
-		sleepns(NS2WAIT);
-#endif
-	}
 
 	int svc_init();
 	void* svc(void*);
@@ -279,15 +237,13 @@ public:
 };
 
 
-class dpi_L7_collector: public ff::ff_node{
+class dpi_L7_collector: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	mc_dpi_processing_result_callback** const cb;
 	void** user_data;
 	u_int16_t* proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
-	u_int8_t initialized;
-	ticks workticks;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_collector(mc_dpi_processing_result_callback** cb,
@@ -309,11 +265,11 @@ private:
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_collapsed_emitter(mc_dpi_packet_reading_callback** cb,
-			              void** user_data, u_int8_t* freeze_flag,
+			              void** user_data,
 			              u_int8_t* terminating,
 			              ff::SWSR_Ptr_Buffer* tasks_pool,
 			              dpi_library_state_t* state,
-			              u_int16_t *num_L7_workers,
+			              u_int16_t* num_L7_workers,
 			              u_int32_t v4_table_size,
 			              u_int32_t v6_table_size,
 			              dpi_L7_scheduler* lb,
@@ -322,6 +278,9 @@ public:
 	int svc_init();
 	void* svc(void*);
 	void svc_end();
+#ifdef ENABLE_RECONFIGURATION
+    void notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers);
+#endif
 };
 
 }

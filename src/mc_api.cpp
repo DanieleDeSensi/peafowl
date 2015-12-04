@@ -27,14 +27,15 @@
 
 #include "mc_api.h"
 #include "flow_table.h"
-#include "energy_utils.h"
 #include "worker.hpp"
 #include <float.h>
+#include <iostream>
 #include <stddef.h>
 #include <vector>
 #include <cmath>
 
 #include <ff/farm.hpp>
+#include <ff/mapping_utils.hpp>
 #include <ff/pipeline.hpp>
 #include <ff/buffer.hpp>
 
@@ -43,10 +44,7 @@
             do { if (DPI_DEBUG_MC_API) \
             fprintf(stdout, fmt, __VA_ARGS__); } while (0)
 
-
-
 #define DPI_MULTICORE_STATUS_UPDATER_TID 1
-
 
 typedef struct mc_dpi_library_state{
 	dpi_library_state_t* sequential_state;
@@ -60,14 +58,9 @@ typedef struct mc_dpi_library_state{
 	mc_dpi_processing_result_callback* processing_callback;
 	void* read_process_callbacks_user_data;
 
-	u_int8_t freeze_flag;
 	u_int8_t terminating;
 	u_int8_t is_running;
 
-	/**
-	 * This lock keeps the state locked between a freeze and
-	 * the successive run. **/
-	ff::CLHSpinLock state_update_lock;
 	u_int16_t available_processors;
 	unsigned int* mapping;
 	/******************************************************/
@@ -80,6 +73,10 @@ typedef struct mc_dpi_library_state{
   	u_int16_t collector_proc_id;
 
 	u_int16_t single_farm_active_workers;
+#ifdef ENABLE_RECONFIGURATION
+	adpff::ManagerFarm* mf;
+	adpff::Parameters adp_params;
+#endif
 
 	/******************************************************/
 	/*                 Nodes for double farm.             */
@@ -106,21 +103,6 @@ typedef struct mc_dpi_library_state{
 	/******************************************************/
 	struct timeval start_time;
 	struct timeval stop_time;
-	energy_counters_state* energy_counters;
-	mc_dpi_reconfiguration_parameters reconf_params;
-	double** load_samples;
-	unsigned int current_load_sample;
-	unsigned int current_num_samples;
-	u_int32_t collection_interval;
-	mc_dpi_stats_collection_callback* stats_callback;
-	unsigned long* available_frequencies;
-	unsigned int num_available_frequencies;
-	unsigned int current_frequency_id;
-	unsigned int* one_core_per_socket;
-	unsigned int num_sockets;
-	double current_system_load;
-	double current_instantaneous_system_load;
-	double last_prediction;
 }mc_dpi_library_state_t;
 
 
@@ -149,7 +131,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	state->L3_L4_emitter=new (tmp) dpi::dpi_L3_L4_emitter(
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
-			&(state->freeze_flag), &(state->terminating),
+			&(state->terminating),
 			state->mapping[last_mapped], state->tasks_pool);
 	last_mapped=(last_mapped+1)%state->available_processors;
 	state->L3_L4_farm->setEmitterF(state->L3_L4_emitter);
@@ -278,7 +260,7 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 	state->single_farm_emitter=new dpi::dpi_collapsed_emitter(
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
-			&(state->freeze_flag), &(state->terminating),
+			&(state->terminating),
 			state->tasks_pool, state->sequential_state,
 			&(state->single_farm_active_workers),
 			size_v4,
@@ -314,6 +296,31 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 }
 
 
+static inline ssize_t get_num_cores() {
+    ssize_t  n=-1;
+#if defined(_WIN32)
+    n = 2; // Not yet implemented
+#else
+#if defined(__linux__)
+    char inspect[]="cat /proc/cpuinfo|egrep 'core id|physical id'|tr -d '\n'|sed 's/physical/\\nphysical/g'|grep -v ^$|sort|uniq|wc -l";
+#elif defined (__APPLE__)
+    char inspect[]="sysctl hw.physicalcpu | awk '{print $2}'";
+#else
+    char inspect[]="";
+    n=1;
+#pragma message ("ff_realNumCores not supported on this platform")
+#endif
+    FILE       *f;
+    f = popen(inspect, "r");
+    if (f) {
+        if (fscanf(f, "%ld", &n) == EOF) {
+            perror("fscanf");
+        }
+        pclose(f);
+    } else perror("popen");
+#endif // _WIN32
+    return n;
+}
 
 /**
  * Initializes the library and sets the parallelism degree according to
@@ -346,31 +353,30 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	bzero(state, sizeof(mc_dpi_library_state_t));
 
 	u_int8_t parallelism_form=parallelism_details.parallelism_form;
+
 	if(parallelism_details.available_processors){
 		state->available_processors=parallelism_details.available_processors;
 	}else{
-		energy_counters_get_num_real_cores((unsigned int*) &(state->available_processors));
+	    state->available_processors = get_num_cores();
 	}
 
 	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
-		assert(state->available_processors>=
-			4+2);
-
+		assert(state->available_processors >= 4+2);
 	}else{
-		assert(state->available_processors>=
-			2+1);
+		assert(state->available_processors >= 2+1);
 	}
 	
 	state->mapping = new unsigned int[state->available_processors];
 
-	if(parallelism_details.mapping==NULL){
-		energy_counters_get_real_cores_identifiers(state->mapping, state->available_processors);
-	}else{
-		uint k;
-		for(k=0; k<state->available_processors; k++){
-	  		state->mapping[k]=parallelism_details.mapping[k];
-		}
-	}
+
+    uint k;
+    for(k=0; k<state->available_processors; k++){
+        if(parallelism_details.mapping==NULL){
+            state->mapping[k]=k;
+        }else{
+            state->mapping[k]=parallelism_details.mapping[k];
+        }
+    }
 
 	state->terminating=0;
 
@@ -415,53 +421,14 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 #endif
 
 	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
-		mc_dpi_create_double_farm(
-				state,
-				size_v4, size_v6);
+		mc_dpi_create_double_farm(state, size_v4, size_v6);
 	}else{
-		mc_dpi_create_single_farm(
-				state,
-				size_v4, size_v6);
+		mc_dpi_create_single_farm(state, size_v4, size_v6);
 	}
 
-
-	state->freeze_flag=1;
-
-	debug_print("%s\n","[mc_dpi_api.cpp]: Preparing...");
-	if(state->parallel_module_type==
-			MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
-		// Warm-up
-		assert(state->pipeline->run_then_freeze()>=0);
-		state->pipeline->wait_freezing();
-	}else{
-		// Warm-up
-		assert(state->single_farm->run_then_freeze()>=0);
-		state->single_farm->wait_freezing();
-	}	
-	debug_print("%s\n","[mc_dpi_api.cpp]: Freezed...");
-
-	ff::init_unlocked(&(state->state_update_lock));
-	ff::spin_lock(&(state->state_update_lock),
-				DPI_MULTICORE_STATUS_UPDATER_TID);
 	state->is_running=0;
 	state->stop_time.tv_sec=0;
 	state->stop_time.tv_usec=0;
-	state->energy_counters=(energy_counters_state*)malloc(sizeof(energy_counters_state));
-	if(energy_counters_init(state->energy_counters)!=0){
-		free(state->energy_counters);
-		state->energy_counters=NULL;
-	}
-
-	state->load_samples=NULL;
-	state->current_load_sample=0;
-	state->current_num_samples=0;
-	state->stats_callback=0;
-	state->collection_interval=0;
-	energy_counters_get_available_frequencies(&(state->available_frequencies), &(state->num_available_frequencies));
-	state->current_frequency_id=0;
-	state->one_core_per_socket=NULL;
-
-	debug_print("%s\n","[mc_dpi_api.cpp]: Preparation finished.");
 	return state;
 }
 
@@ -545,23 +512,6 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state){
 		state->tasks_pool->~SWSR_Ptr_Buffer();
 		free(state->tasks_pool);
 #endif
-		if(state->energy_counters){
-			energy_counters_terminate(state->energy_counters);
-		}
-
-		if(state->load_samples){
-			u_int16_t i;
-			for(i=0; i<state->available_processors - 2; i++){
-				if(state->load_samples[i]){
-					free(state->load_samples[i]);
-				}
-			}
-			free(state->load_samples);
-		}
-		if(state->one_core_per_socket){
-			free(state->one_core_per_socket);
-		}
-
 		delete[] state->mapping;
 		free(state);
 	}
@@ -603,543 +553,20 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 	// Real start
 	debug_print("%s\n","[mc_dpi_api.cpp]: Run preparation...");
 	state->is_running=1;
-	mc_dpi_unfreeze(state);
+    if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
+        // Warm-up
+        assert(state->pipeline->run_then_freeze()>=0);
+    }else{
+        // Warm-up
+#ifdef ENABLE_RECONFIGURATION
+        state->mf = new adpff::ManagerFarm(state->single_farm, state->adp_params);
+        state->mf->start();
+#else
+        assert(state->single_farm->run_then_freeze()>=0);
+#endif
+    }
 	gettimeofday(&state->start_time,NULL);
 	debug_print("%s\n","[mc_dpi_api.cpp]: Running...");
-}
-
-/**
- * Reads the joules counters.
- * ATTENTION: The counters may wrap. Use mc_dpi_joules_counters_wrapping_interval
- *            to get the maximum amount of second you can wait between two successive
- *            readings.
- * @param state A pointer to the state of the library.
- * @return The values of the counters at the current time.
- *         ATTENTION: The result is not meaningful for the user but only for the
- *                    framework. It MUST only be used as a parameter for the 
- *                    mc_dpi_joules_counters_diff. Only the values returned by 
- *                    mc_dpi_joules_counters_diff call are meaningful for the user.
- */
-mc_dpi_joules_counters mc_dpi_joules_counters_read(mc_dpi_library_state_t* state){
-	mc_dpi_joules_counters r;
-	memset(&r, 0, sizeof(mc_dpi_joules_counters));
-
-	if(state && state->energy_counters){
-		energy_counters_read(state->energy_counters);
-		unsigned int i;
-		assert(state->energy_counters->num_sockets < DPI_MAX_CPU_SOCKETS);
-		r.num_sockets=state->energy_counters->num_sockets;
-		for(i=0; i<state->energy_counters->num_sockets; i++){
-			r.joules_socket[i]=state->energy_counters->sockets[i].energy_units_socket;
-			r.joules_cores[i]=state->energy_counters->sockets[i].energy_units_cores;
-			r.joules_offcores[i]=state->energy_counters->sockets[i].energy_units_offcores;
-			r.joules_dram[i]=state->energy_counters->sockets[i].energy_units_dram;
-		}
-	}
-
-	return r;
-}
-
-/**
- * Returns the maximum number of seconds that the user can wait before
- * performing a new counters read.
- * @param state A pointer to the state of the library.
- * @return The maximum number of seconds that the user can wait before
- *         performing a new counters read.
- */
-u_int32_t mc_dpi_joules_counters_wrapping_interval(mc_dpi_library_state_t* state){
-	return energy_counters_wrapping_time(state->energy_counters);
-}
-
-/**
- * Sets the statistics collection callback.
- * @param state A pointer to the state of the library.
- * @param collection_interval stats_callback will be called every
- *                            collection_interval seconds.
- * @param stats_callback The statistics collection callback.
- * @return 0 if the callback have been successfully set, 1 otherwise.
- */
-u_int8_t mc_dpi_set_stats_collection_callback(mc_dpi_library_state_t* state,
-                                              u_int32_t collection_interval,
-                                              mc_dpi_stats_collection_callback* stats_callback){
-	if(!state || collection_interval >= mc_dpi_joules_counters_wrapping_interval(state)){
-		return 1;
-	}else{
-		state->collection_interval = collection_interval;
-		state->stats_callback = stats_callback;
-		return 0;
-	}
-}
-
-
-
-#define DELTA_WRAP_JOULES(new, old, diff)			                                   \
-	if (new > old) {					                                   \
-		diff = (u_int32_t)new - (u_int32_t)old;		                                   \
-	} else {                                                                                   \
-		diff = (((u_int32_t)0xffffffff) - (u_int32_t)old) + (u_int32_t)1 + (u_int32_t)new; \
-	}
-
-/**
- * Returns the joules consumed between two calls to mc_dpi_joules_counters_read.
- * @param state A pointer to the state of the library.
- * @param after A joules counter.
- * @param before A joules counter.
- * @return The difference after-before (in joules).
- */
-mc_dpi_joules_counters mc_dpi_joules_counters_diff(mc_dpi_library_state_t* state,
-                                                   mc_dpi_joules_counters after,
-                                                   mc_dpi_joules_counters before){
-	mc_dpi_joules_counters result;
-	memset(&result, 0, sizeof(result));
-	unsigned int i;
-	result.num_sockets=after.num_sockets;
-	for(i=0; i<after.num_sockets; i++){
-		DELTA_WRAP_JOULES(after.joules_socket[i], before.joules_socket[i], result.joules_socket[i]);
-		result.joules_socket[i]=result.joules_socket[i]*state->energy_counters->sockets[i].energy_per_unit;
-
-		DELTA_WRAP_JOULES(after.joules_cores[i], before.joules_cores[i], result.joules_cores[i]);
-		result.joules_cores[i]=result.joules_cores[i]*state->energy_counters->sockets[i].energy_per_unit;
-
-		DELTA_WRAP_JOULES(after.joules_offcores[i], before.joules_offcores[i], result.joules_offcores[i]);
-		result.joules_offcores[i]=result.joules_offcores[i]*state->energy_counters->sockets[i].energy_per_unit;
-
-		DELTA_WRAP_JOULES(after.joules_dram[i], before.joules_dram[i], result.joules_dram[i]);
-		result.joules_dram[i]=result.joules_dram[i]*state->energy_counters->sockets[i].energy_per_unit;
-	}
-	return result;
-}
-
-/**
- * Computes the instantaneous load of each worker of the farm. Works only if
- * MC_DPI_PARALLELISM_FORM_ONE_FARM is used as parallelism form.
- * @param state A pointer to the state of the library.
- * @param loads An array that will be filled by the call with the
- *              load of each worker (in the range [0, 100]).
- * @return 0 if the loads have been successfully computed, 1 otherwise.
- */
-u_int8_t mc_dpi_reconfiguration_get_workers_instantaneous_load(mc_dpi_library_state_t* state, double* loads){
-	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
-		unsigned int i;
-	  	for(i=0; i<state->single_farm_active_workers; i++){
-			dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
-			state->load_samples[i][state->current_load_sample] =
-			                    current_worker->get_worktime_percentage();
-			current_worker->reset_worktime_percentage();
-		}
-		return 0;
-	}else{
-		return 1;
-	}
-}
-
-/**
- * Sets the parameters for the automatic reconfiguration of the farm.
- * @param state A pointer to the state of the library.
- * @param reconf_params The reconfiguration parameters.
- * @return 0 if the parameters have been successfully set, 1 otherwise.
- */
-u_int8_t mc_dpi_reconfiguration_set_parameters(mc_dpi_library_state_t* state,
-                                               mc_dpi_reconfiguration_parameters reconf_params){
-	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
-		state->reconf_params=reconf_params;
-		u_int16_t i;
-		if(!state->load_samples){
-			state->load_samples=(double**)malloc(sizeof(double*)*(state->available_processors - 2));
-			memset(state->load_samples, 0, sizeof(double*)*(state->available_processors - 2));
-		}
-
-		for(i=0; i<state->available_processors - 2; i++){
-			if(state->load_samples[i]){
-				free(state->load_samples[i]);
-			}
-			state->load_samples[i]=(double*)malloc(sizeof(double)*reconf_params.num_samples);
-			memset(state->load_samples[i], 0, sizeof(double)*reconf_params.num_samples);
-		}
-		state->current_load_sample=0;
-
-		unsigned long starting_frequency;
-
-		if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE){
-			starting_frequency = state->available_frequencies[state->num_available_frequencies - 1];
-			state->current_frequency_id = state->num_available_frequencies - 1;
-		}else if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE){
-			starting_frequency = state->available_frequencies[0];
-			state->current_frequency_id = 0;
-		}
-
-		if(state->reconf_params.freq_type != MC_DPI_RECONF_FREQ_NO){
-			for(i=0; i<state->available_processors; i++){
-				if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND){
-					energy_counters_set_ondemand_governor(state->mapping[i]);
-				}else if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE){
-					energy_counters_set_conservative_governor(state->mapping[i]);
-					state->current_frequency_id = 0;
-				}else if(state->reconf_params.freq_strategy == MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE){
-					energy_counters_set_performance_governor(state->mapping[i]);
-					state->current_frequency_id = state->num_available_frequencies - 1;
-				}else{
-					energy_counters_set_userspace_governor(state->mapping[i]);
-				}
-				energy_counters_set_bounds(state->available_frequencies[0], 
-				                           state->available_frequencies[state->num_available_frequencies - 1], 
-				                           state->mapping[i]);
-			}
-
-			if(state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND &&
-			   state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE &&
-			   state->reconf_params.freq_strategy != MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE){
-				if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_SINGLE){
-					energy_counters_set_frequency(starting_frequency,
-					                              state->mapping,
-					                              state->available_processors,
-					                              0);
-
-					/** Emitter and collector always run to the highest frequency. **/
-					energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
-					                              state->mapping[0]);
-					energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1], 
-					                              state->mapping[state->single_farm_active_workers + 1]);
-				}else if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_GLOBAL){
-					energy_counters_get_core_identifier_per_socket(state->mapping,
-					                                               state->available_processors,
-					                                               &(state->one_core_per_socket),
-					                                               &state->num_sockets);
-					energy_counters_set_frequency(state->available_frequencies[state->current_frequency_id],
-					                              state->one_core_per_socket,
-					                              state->num_sockets,
-					                              1);
-				}
-			}
-		}
-		return 0;
-	}else{
-		return 1;
-	}
-}
-
-/**
- * Freezes the library.
- * @param state A pointer to the state of the library.
- */
-void mc_dpi_freeze(mc_dpi_library_state_t* state){
-	if(unlikely(!state->is_running || mc_dpi_is_frozen(state))){
-		return;
-	}else{
-		debug_print("%s\n","[mc_dpi_api.cpp]: Acquiring freeze lock.");
-		/**
-		 * All state modifications pass from mc_dpi_freeze().
-		 * To avoid that more state modifications start together,
-		 * we can simply protect the mc_dpi_freeze() function.
-		 * Accordingly, more state modifications can be started
-		 * concurrently by different threads. 
-		 * WARNING: State modifications are expensive, it would
-		 * be better if only one thread freezes the library, 
-		 * performs all the modifications and the unfreezes the 
-		 * library (not possible at the moment since each state
-		 * modification function calls freezes and then unfreezes
-		 * the library.
-		 **/
-		ff::spin_lock(&(state->state_update_lock),
-				DPI_MULTICORE_STATUS_UPDATER_TID);
-		debug_print("%s\n","[mc_dpi_api.cpp]: Freeze lock acquired, "
-				    "sending freeze message.");
-
-		state->freeze_flag=1;
-
-		debug_print("%s\n","[mc_dpi_api.cpp]: Freeze message sent, "
-				    "wait for freezing.");
-		if(state->parallel_module_type==
-				MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
-			state->pipeline->wait_freezing();
-		}else{
-			state->single_farm->wait_freezing();
-		}
-
-		assert(mc_dpi_is_frozen(state));
-
-		debug_print("%s\n","[mc_dpi_api.cpp]: Skeleton freezed.");
-	}
-}
-
-/**
- * Check if the library is frozen.
- * @param state A pointer to the state of the library.
- * @return 1 if the library is frozen, 0 otherwise.
- */
-u_int8_t mc_dpi_is_frozen(mc_dpi_library_state_t* state){
-	return (state->freeze_flag>0)?1:0;
-}
-
-/**
- * Unfreezes the library.
- * @param state A pointer to the state of the library.
- */
-void mc_dpi_unfreeze(mc_dpi_library_state_t* state){
-	if(unlikely(!state->is_running || !mc_dpi_is_frozen(state) || state->terminating)){
-		debug_print("%s %d %s %d %s %d\n","[mc_dpi_api.cpp]: isRunning: ",
-			    state->is_running, " isFrozen: ", mc_dpi_is_frozen(state),
-			    " terminating: ", state->terminating);
-		return;
-	}else{
-		state->freeze_flag=0;
-		debug_print("%s\n","[mc_dpi_api.cpp]: Prepare to run.");
-		if(state->parallel_module_type==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
-			assert(state->pipeline->run_then_freeze()>=0);
-		}else{
-			assert(state->single_farm->run_then_freeze(
-				state->single_farm_active_workers)>=0);
-		}
-		debug_print("%s\n","[mc_dpi_api.cpp]: Running.");
-		ff::spin_unlock(&(state->state_update_lock), 
-				DPI_MULTICORE_STATUS_UPDATER_TID);
-		debug_print("%s\n","[mc_dpi_api.cpp]: Unlocked.");
-	}
-}
-
-/**
- * Gets the average load (average over the samples) of a worker.
- * @param state A pointer to the state of the library.
- * @param worker_id The identifier of the worker.
- * @return The average load of the worker in the interval [0, 100].
- */
-static double mc_dpi_reconfiguration_get_worker_average_load(mc_dpi_library_state_t* state, u_int16_t worker_id){
-	double avg = 0;
-	unsigned int num_samples = std::min(state->current_num_samples, state->reconf_params.num_samples);
-	if(state->load_samples == NULL || state->load_samples[worker_id] == NULL){
-		return 0;
-	}
-	for(unsigned long i = 0; i<num_samples; i++){
-		avg += state->load_samples[worker_id][i];
-	}
-	return (avg / (double)num_samples);
-}
-
-static void mc_dpi_reconfiguration_update_system_frequencies(mc_dpi_library_state_t* state, unsigned int frequency_id){
-	if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_NO || frequency_id == state->current_frequency_id){
-		return;
-	}
-	
-	state->current_frequency_id = frequency_id;
-	
-	if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_SINGLE){
-		energy_counters_set_frequency(state->available_frequencies[state->current_frequency_id],
-		                              &(state->mapping[1]),
-		                              state->single_farm_active_workers,
-		                              0);
-		if(state->reconf_params.migrate_collector){
-			energy_counters_set_frequency(state->available_frequencies[state->num_available_frequencies - 1],
-			                              state->mapping[state->single_farm_active_workers + 1]);
-		}
-	}else if(state->reconf_params.freq_type == MC_DPI_RECONF_FREQ_GLOBAL){
-		energy_counters_set_frequency(state->available_frequencies[state->current_frequency_id],
-		                              state->one_core_per_socket,
-					      state->num_sockets,
-		                              1);
-	}
-}
-
-static double voltages[9] = {0.815552, 0.825562, 0.836572, 0.847583, 0.855591, 0.867603, 0.872607, 0.880615, 0.890625};
-
-  static unsigned long mc_dpi_reconfiguration_model_power(mc_dpi_library_state_t* state, unsigned long frequency, u_int16_t workers, u_int16_t freqid){
-#if MC_DPI_POWER_USE_MODEL == 1
-    double voltage = voltages[freqid] * (((workers + 2)/ 8) + 1);
-    return (workers+2)*frequency*voltage*voltage;
-  //	return (std::pow(frequency,1.3)*(workers+2));
-#else
-	return frequency;
-#endif
-}
-
-static double mc_dpi_reconfiguration_predict_load(mc_dpi_library_state_t* state, u_int16_t future_workers, unsigned int future_frequency_id){
-	double prediction_modifier = ((double)future_workers * (double)state->available_frequencies[future_frequency_id]) / 
-	                             ((double) state->single_farm_active_workers * (double)state->available_frequencies[state->current_frequency_id]);
-	
-	/**
-	 *  Legend: 
-	 *  
-	 *  Rho    = Utilization Factor
-	 *  Ts     = Service Time
-	 *  Ta     = Interarrival Time
-	 *  Psleep = % of time spent sleeping because the input queue of the worker was empty
-	 *  Pwork  = % of time spent working on tasks ( = 100 - Psleep)
-	 *
-	 *  Rho = Ts / Ta or Rho = Pwork 
-	 *  Rho is proportional to the inverse of the 'Power' of the configuration. More 'Power' we have (Workers * Frequency),
-	 *  less utilized the system will be.
-	 *  
-	 *  CurrentRho : 1 / (CurrentWorkers * CurrentFrequency) = NextRho : 1 / (NextWorkers * NextFrequency)
-	 *  NextRho = [(CurrentWorkers * CurrentFrequency) / (NextWorkers * NextFrequency)] * CurrentRho
-	 **/
-
- 	return ( (1.0 / prediction_modifier) * state->current_system_load );
-}
-
-#define ERROR_PERC 3.0
-
-static void mc_dpi_reconfiguration_compute_best_feasible_solution(mc_dpi_library_state_t* state, unsigned int* next_workers, unsigned int* next_frequency_id){
-	unsigned int i = 0, j = 0;
-	double predicted_load = 0;
-
-	double best_metric = DBL_MAX;
-	double current_metric = 0;
-	bool num_solutions_found = 0;
-
-	double best_suboptimal_load = 0;
-	unsigned int next_suboptimal_workers = 0;
-	unsigned int next_suboptimal_frequency_id = 0;
-
-	double best_rho_value = state->reconf_params.system_load_down_threshold + ((state->reconf_params.system_load_up_threshold - state->reconf_params.system_load_down_threshold) / 2.0);
-
-
-        if(state->current_system_load >= 100.0 - ERROR_PERC){
-		*next_workers = state->available_processors - 2;
-		*next_frequency_id = state->num_available_frequencies - 1;
-		return;
-        }
-
-	*next_workers = state->single_farm_active_workers;
-	*next_frequency_id = state->current_frequency_id;
-
-	for(i = 1; i <= state->available_processors - 2; i++){
-		for(j = 0; j < state->num_available_frequencies; j++){
-
-			switch(state->reconf_params.freq_strategy){
-				case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
-				case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
-				case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
-					if(j != state->current_frequency_id){
-						continue;
-					}
-				}break;
-				default:{
-					;
-				}break;
-			}
-
-			predicted_load = mc_dpi_reconfiguration_predict_load(state, i, j);
-			if(predicted_load < state->reconf_params.system_load_down_threshold + ERROR_PERC){
-				if(predicted_load > best_suboptimal_load){
-					best_suboptimal_load = predicted_load;
-					next_suboptimal_workers = i;
-					next_suboptimal_frequency_id = j;
-				}
-			}else if(predicted_load >= state->reconf_params.system_load_down_threshold + ERROR_PERC && 
-			         predicted_load <= state->reconf_params.system_load_up_threshold - ERROR_PERC){
-				//Feasible solution
-				switch(state->reconf_params.freq_strategy){
-					case MC_DPI_RECONF_STRAT_GOVERNOR_CONSERVATIVE:
-					case MC_DPI_RECONF_STRAT_GOVERNOR_ON_DEMAND:
-					case MC_DPI_RECONF_STRAT_GOVERNOR_PERFORMANCE:{
-						*next_workers = i;
-						state->last_prediction = predicted_load;
-					}break;
-					case MC_DPI_RECONF_STRAT_CORES_CONSERVATIVE:{
-						if(num_solutions_found){
-							return;
-						}else{
-							*next_workers = i;
-							*next_frequency_id = j;
-							state->last_prediction = predicted_load;
-						}
-					}break;
-
-					case MC_DPI_RECONF_STRAT_POWER_CONSERVATIVE:{
-					  current_metric = mc_dpi_reconfiguration_model_power(state, state->available_frequencies[j], i, j);
-						if(current_metric < best_metric){
-							best_metric = current_metric;
-							*next_workers = i;
-							*next_frequency_id = j;
-							state->last_prediction = predicted_load;
-						}	       
-					}break;
-
-					default:{
-						;					
-       					}break;
-
-				}
-				++num_solutions_found;
-			}
-		}
-	}
-
-	if(num_solutions_found == 0){
-		*next_workers = next_suboptimal_workers;
-		*next_frequency_id = next_suboptimal_frequency_id;
-		state->last_prediction = predicted_load;
-	}
-}
-
-static void mc_dpi_reconfiguration_perform(mc_dpi_library_state_t* state){
-	unsigned int next_frequency_id;
-	unsigned int next_workers;
-
-	mc_dpi_reconfiguration_compute_best_feasible_solution(state, &next_workers, &next_frequency_id);
-
-	mc_dpi_set_num_workers(state, next_workers);
-	mc_dpi_reconfiguration_update_system_frequencies(state, next_frequency_id);
-
-	for(u_int16_t i = 0; i<state->available_processors - 2; i++){
-		memset(state->load_samples[i], 0, sizeof(double)*state->reconf_params.num_samples);
-	}
-	state->current_load_sample=0;
-	state->current_num_samples=0;
-}
-
-static void mc_dpi_reconfiguration_apply_policies(mc_dpi_library_state_t* state){
-	double current_worker_load = 0;
-	bool single_worker_out_up = false;
-	bool single_worker_out_down = false;
-	bool global_out_up = false;
-	bool global_out_down = false;
-	state->current_system_load = 0;
-
-        for(u_int16_t i = 0; i<state->single_farm_active_workers; i++){
-		dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
-		current_worker_load = mc_dpi_reconfiguration_get_worker_average_load(state, i);
-		if(state->reconf_params.worker_load_up_threshold && current_worker_load > state->reconf_params.worker_load_up_threshold){
-			single_worker_out_up = true;
-		}else if(current_worker_load < state->reconf_params.worker_load_down_threshold){
-			single_worker_out_down = true;
-		}
-	 	
-		state->current_system_load += current_worker_load;
-        }
-	state->current_system_load = state->current_system_load / state->single_farm_active_workers;
-
-	if(state->current_num_samples < state->reconf_params.stabilization_period + state->reconf_params.num_samples){
-		return;
-	}
-
-	// Check thresholds 
-
-	if(state->reconf_params.system_load_up_threshold && state->current_system_load > state->reconf_params.system_load_up_threshold){
-		global_out_up = true;
-	}else if(state->current_system_load < state->reconf_params.system_load_down_threshold){
-		global_out_down = true;
-	}
-
-	if(single_worker_out_up || global_out_up || single_worker_out_down || global_out_down){
-		mc_dpi_reconfiguration_perform(state);
-	}
-}
-
-static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* state){
-	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM){
-		unsigned int i;
-		double instantaneous_system_load = 0;
-		for(i=0; i<state->single_farm_active_workers; i++){
-			dpi::dpi_L7_worker* current_worker = (dpi::dpi_L7_worker*)state->single_farm_workers->at(i);
-			state->load_samples[i][state->current_load_sample] = 
-			                    current_worker->get_worktime_percentage();
-			instantaneous_system_load += state->load_samples[i][state->current_load_sample];
-			current_worker->reset_worktime_percentage();
-		}
-		state->current_load_sample = (state->current_load_sample + 1) % state->reconf_params.num_samples;
-		state->current_instantaneous_system_load = instantaneous_system_load / state->single_farm_active_workers;
-		++state->current_num_samples;
-	}
 }
 
 /**
@@ -1147,47 +574,15 @@ static void mc_dpi_reconfiguration_store_current_sample(mc_dpi_library_state_t* 
  * @param state A pointer to the state of the library.
  */
 void mc_dpi_wait_end(mc_dpi_library_state_t* state){
-  	u_int64_t waited_secs = 0;
-	mc_dpi_joules_counters now_joules, last_joules_counters;
-	double load = 0;
-	memset(&now_joules, 0, sizeof(mc_dpi_joules_counters));
-	memset(&last_joules_counters, 0, sizeof(mc_dpi_joules_counters));
-
-	last_joules_counters = mc_dpi_joules_counters_read(state);
-
+#ifdef ENABLE_RECONFIGURATION
+        state->mf->join();
+#else
 	while(!state->terminating){
 		sleep(1);
-		++waited_secs;
-
-		if(state->current_num_samples >= state->reconf_params.stabilization_period){ // >=0){ //TODO
-		if(state->load_samples && 
-		   (waited_secs % state->reconf_params.sampling_interval) == 0){
-		  	mc_dpi_reconfiguration_store_current_sample(state);
-			mc_dpi_reconfiguration_apply_policies(state); 
-		}
-
-		if(state->stats_callback && 
-		   (waited_secs % state->collection_interval) == 0){
-#if MC_DPI_AVG_RHO
-			load = state->current_system_load;
-#else
-			load = state->current_instantaneous_system_load;
-#endif
-			now_joules = mc_dpi_joules_counters_read(state);
-			state->stats_callback(state->single_farm_active_workers,
-					      state->available_frequencies[state->current_frequency_id],
-			                      mc_dpi_joules_counters_diff(state, 
-			                                                  now_joules,
-			                                                  last_joules_counters),
-			                                                  load);
-			last_joules_counters = now_joules;
-		}
-		}else{
-		  ++state->current_num_samples;
-		}
 	}
+#endif
 
-        gettimeofday(&state->stop_time,NULL);
+    gettimeofday(&state->stop_time,NULL);
 	state->is_running=0;
 }
 
@@ -1195,46 +590,6 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
 /****************************************/
 /*        Status change API calls       */
 /****************************************/
-
-/**
- * Changes the number of workers in the L7 farm. This
- * is possible only when the configuration with the single
- * farm is used.
- * It can be used while the farm is running.
- * @param state       A pointer to the state of the library.
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
- *         been changed because a problem happened.
- **/
-u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
-		                       u_int16_t num_workers){
-
-#if (DPI_FLOW_TABLE_USE_MEMORY_POOL == 1) || (DPI_MULTICORE_DEFAULT_GRAIN_SIZE != 1) //TODO: Implement
-	return DPI_STATE_UPDATE_FAILURE;
-#endif
-	if(num_workers == state->single_farm_active_workers){
-		return DPI_STATE_UPDATE_SUCCESS;
-	}
-
-	if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_ONE_FARM && num_workers>=1 && num_workers<=state->available_processors - 2){
-		ticks s = getticks();
-		mc_dpi_freeze(state);
-		state->single_farm_active_workers=num_workers;
-		debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");
-		dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->sequential_state->db4, 
-							state->single_farm_active_workers);
-		debug_print("%s\n","[mc_dpi_api.cpp]: Changing v6 table partitions");
-		dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->sequential_state->db6, 
-							state->single_farm_active_workers);
-		if(state->reconf_params.migrate_collector){
-			state->collector_proc_id = state->mapping[num_workers + 1];
-		}
-		mc_dpi_unfreeze(state);
-		return DPI_STATE_UPDATE_SUCCESS;
-	}else{
-		return DPI_STATE_UPDATE_FAILURE;
-	}
-}
 
 /**
  * Sets the maximum number of times that the library tries to guess the
@@ -1251,10 +606,11 @@ u_int8_t mc_dpi_set_num_workers(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
 		                       u_int16_t max_trials){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_set_max_trials(state->sequential_state, max_trials);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1272,11 +628,12 @@ u_int8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
 		                                  u_int16_t table_size){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv4_fragmentation_enable(state->sequential_state,
 		                        table_size);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1292,11 +649,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
 		                                  u_int16_t table_size){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv6_fragmentation_enable(state->sequential_state,
 		                        table_size);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1314,12 +672,13 @@ u_int8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
 u_int8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t per_host_memory_limit){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv4_fragmentation_set_per_host_memory_limit(
 			state->sequential_state,
 			per_host_memory_limit);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1337,12 +696,13 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
 u_int8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t per_host_memory_limit){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv6_fragmentation_set_per_host_memory_limit(
 			state->sequential_state,
 			per_host_memory_limit);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1363,11 +723,12 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
 u_int8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t total_memory_limit){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv4_fragmentation_set_total_memory_limit(
 			state->sequential_state, total_memory_limit);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1388,11 +749,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
 u_int8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
 		mc_dpi_library_state_t *state,
 		u_int32_t total_memory_limit){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv6_fragmentation_set_total_memory_limit(
 			state->sequential_state, total_memory_limit);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1411,11 +773,12 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
 u_int8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
 		mc_dpi_library_state_t *state,
 		u_int8_t timeout_seconds){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv4_fragmentation_set_reassembly_timeout(
 			state->sequential_state, timeout_seconds);
-	mc_dpi_unfreeze(state);
 	return r;
 
 }
@@ -1435,11 +798,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
 u_int8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
 		mc_dpi_library_state_t *state,
 		u_int8_t timeout_seconds){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv6_fragmentation_set_reassembly_timeout(
 			state->sequential_state, timeout_seconds);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1452,10 +816,11 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
  *         state has not been changed because a problem happened.
  */
 u_int8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv4_fragmentation_disable(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1468,10 +833,11 @@ u_int8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_ipv6_fragmentation_disable(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1487,10 +853,11 @@ u_int8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
  *         has not been changed because a problem happened.
  */
 u_int8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_tcp_reordering_enable(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1508,10 +875,11 @@ u_int8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_tcp_reordering_disable(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1526,10 +894,11 @@ u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
  */
 u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
 		                     dpi_protocol_t protocol){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_set_protocol(state->sequential_state, protocol);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1544,10 +913,11 @@ u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
  */
 u_int8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
 		                        dpi_protocol_t protocol){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_delete_protocol(state->sequential_state, protocol);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1560,10 +930,11 @@ u_int8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_inspect_all(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1576,10 +947,11 @@ u_int8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_inspect_nothing(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1598,11 +970,11 @@ u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
 u_int8_t mc_dpi_set_flow_cleaner_callback(
 		mc_dpi_library_state_t* state,
 		dpi_flow_cleaner_callback* cleaner){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
-	r=dpi_set_flow_cleaner_callback(
-			state->sequential_state, cleaner);
-	mc_dpi_unfreeze(state);
+	r=dpi_set_flow_cleaner_callback(state->sequential_state, cleaner);
 	return r;
 }
 
@@ -1638,12 +1010,13 @@ u_int8_t mc_dpi_http_activate_callbacks(
 		mc_dpi_library_state_t* state,
 		dpi_http_callbacks_t* callbacks,
 		void* user_data){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_http_activate_callbacks(state->sequential_state,
 		                      callbacks,
 		                      user_data);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
@@ -1657,10 +1030,11 @@ u_int8_t mc_dpi_http_activate_callbacks(
  *         been changed because a problem happened.
  */
 u_int8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 	u_int8_t r;
-	mc_dpi_freeze(state);
 	r=dpi_http_disable_callbacks(state->sequential_state);
-	mc_dpi_unfreeze(state);
 	return r;
 }
 
