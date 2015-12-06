@@ -1,5 +1,5 @@
 /*
- * dynamic_reconfiguration.c
+ * dynamic_reconfiguration.cpp
  *
  * Created on: 20/05/2014  
  *
@@ -62,11 +62,9 @@ static int terminating;
 static unsigned int intervals;
 static double* rates;
 static double* durations;
-static unsigned int stats_collection_interval;
 static u_int32_t current_interval=0;
 static time_t last_sec=0;
 static time_t start_time=0;
-static double current_real_rate=0;
 static u_int64_t processed_packets=0;
 
 typedef struct pcap_packets_memory{
@@ -249,24 +247,22 @@ FILE* outstats = NULL;
  
 int main(int argc, char **argv){
   pthread_t clock;
-  unsigned int polling_interval;
   using namespace std;
+  char* reconf_params;
   ff_mapThreadToCpu(0, -20);
   terminating=0;
 
   try {
-    if (argc<4){
-            cerr << "Usage: " << argv[0] <<
-	            " virus-signatures-file input-file polling-interval\n";
-            exit(EXIT_FAILURE);
+    if (argc<3){
+        cerr << "Usage: " << argv[0] << " virus-signatures-file input-file [reconf_params]\n";
+        exit(EXIT_FAILURE);
     }
-
 
     string::size_type trie_depth=DEFAULT_TRIE_MAXIMUM_DEPTH;
     
     char const *virus_signatures_file_name=argv[1];
     char const *input_file_name=argv[2];
-    polling_interval=atoi(argv[3]);
+    reconf_params=atoi(argv[3]);
 
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -312,21 +308,13 @@ int main(int argc, char **argv){
     mc_dpi_parallelism_details_t details;
     bzero(&details, sizeof(mc_dpi_parallelism_details_t));
     load_rates("rates.txt"); 
-    if(argc>=6){
-      details.available_processors = atoi(argv[5]);
-    }else{
-      details.available_processors = 16;
-    }
-
-    mc_dpi_library_state_t* state=mc_dpi_init_stateful(
-						       32767, 32767, 1000000, 1000000, details);
+    mc_dpi_library_state_t* state=mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
 
     printf("Open offline.\n");
     handle=pcap_open_offline(input_file_name, errbuf);
  
     if(handle==NULL){
-      fprintf(stderr, "Couldn't open device %s: %s\n",
-	      input_file_name, errbuf);
+      fprintf(stderr, "Couldn't open device %s: %s\n", input_file_name, errbuf);
       exit(EXIT_FAILURE);
     }
     const u_char* packet;
@@ -335,49 +323,39 @@ int main(int argc, char **argv){
     u_int32_t* sizes;
     u_int32_t num_packets=0;
     u_int32_t current_capacity=0;
-    packets=(unsigned char**)
-      malloc(sizeof(unsigned char*)*CAPACITY_CHUNK);
-    sizes=(u_int32_t*)
-      malloc((sizeof(u_int32_t))*CAPACITY_CHUNK);
+    packets = (unsigned char**) malloc(sizeof(unsigned char*)*CAPACITY_CHUNK);
+    sizes = (u_int32_t*) malloc((sizeof(u_int32_t))*CAPACITY_CHUNK);
     assert(packets);
     assert(sizes);
-    current_capacity+=CAPACITY_CHUNK;
+    current_capacity += CAPACITY_CHUNK;
     while((packet=pcap_next(handle, &header))!=NULL){
-      if((((struct ether_header*) packet)->ether_type)!=
-	 htons(ETHERTYPE_IP) &&
-	 (((struct ether_header*) packet)->ether_type!=
-	  htons(ETHERTYPE_IPV6))){
-	continue;
-      }
+        if((((struct ether_header*) packet)->ether_type) != htons(ETHERTYPE_IP) &&
+           (((struct ether_header*) packet)->ether_type != htons(ETHERTYPE_IPV6))){
+            continue;
+        }
  
-      if(num_packets==current_capacity){
-	packets=(unsigned char**)
-	  realloc(packets, sizeof(unsigned char*)*
-		  (current_capacity+CAPACITY_CHUNK));
-	sizes=(u_int32_t*)
-	  realloc(sizes, sizeof(u_int32_t)*
-		  (current_capacity+CAPACITY_CHUNK));
-	current_capacity+=CAPACITY_CHUNK;
-	assert(packets);
-	assert(sizes);
-      }
+        if(num_packets==current_capacity){
+            packets=(unsigned char**)
+	        realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
+            sizes=(u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+            current_capacity+=CAPACITY_CHUNK;
+            assert(packets);
+            assert(sizes);
+        }
  
-      assert(header.len>sizeof(struct ether_header));
+        assert(header.len>sizeof(struct ether_header));
  
-      posix_memalign((void**) &(packets[num_packets]),
-		     DPI_CACHE_LINE_SIZE,
-		     sizeof(unsigned char)*
-		     (header.len-sizeof(struct ether_header)));
-      assert(packets[num_packets]);
-      memcpy(packets[num_packets],
-	     packet+sizeof(struct ether_header),
-	     (header.len-sizeof(struct ether_header)));
-            sizes[num_packets]=
-	      (header.len-sizeof(struct ether_header));
-            ++num_packets;
+        posix_memalign((void**) &(packets[num_packets]),
+                       DPI_CACHE_LINE_SIZE,
+                       sizeof(unsigned char)*
+                       (header.len-sizeof(struct ether_header)));
+        assert(packets[num_packets]);
+        memcpy(packets[num_packets], packet+sizeof(struct ether_header),
+               (header.len-sizeof(struct ether_header)));
+        sizes[num_packets] = (header.len-sizeof(struct ether_header));
+        ++num_packets;
     }
-    std::cout << "Read " << num_packets << " packets." <<
-      std::endl;
+    std::cout << "Read " << num_packets << " packets." << std::endl;
     pcap_close(handle);
     pcap_packets_memory_t x;
     x.packets=packets;
@@ -389,22 +367,14 @@ int main(int argc, char **argv){
     scanner_pool=new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE);
     scanner_pool->init();
     for(uint i=0; i<SCANNER_POOL_SIZE; i++){
-      scanner_pool->push(new byte_scanner(t, match_found));
+        scanner_pool->push(new byte_scanner(t, match_found));
     }
-    mc_dpi_set_read_and_process_callbacks(
-					  state, &reading_cb, &processing_cb, (void*) &x);
+    mc_dpi_set_read_and_process_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
     mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
     dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
     mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
     
 #if 0
-    mc_dpi_reconfiguration_parameters reconf_params;
-    reconf_params.sampling_interval = polling_interval;
-    reconf_params.num_samples = 6; //4;
-    reconf_params.system_load_up_threshold = 90;
-    reconf_params.system_load_down_threshold = 80;
-    reconf_params.freq_type = MC_DPI_RECONF_FREQ_GLOBAL;
-    reconf_params.freq_strategy = strategy;
     reconf_params.stabilization_period = 4;
 #endif
     full_timer.start();
@@ -412,9 +382,10 @@ int main(int argc, char **argv){
     start_time = time(NULL);
     pthread_create(&clock, NULL, clock_thread, NULL);
 
-    //    mc_dpi_run(state);
-    stats_collection_interval = polling_interval;
-
+#ifdef ENABLE_RECONFIGURATION
+    adpff::Params params(reconf_params);
+    mc_dpi_set_reconf_parameters(state, params);
+#endif
     mc_dpi_run(state); 
     mc_dpi_wait_end(state);
     mc_dpi_print_stats(state);
@@ -422,15 +393,15 @@ int main(int argc, char **argv){
  
     byte_scanner* bs;
     while(!scanner_pool->empty()){
-      scanner_pool->pop((void**) &bs);
-      delete bs;
+        scanner_pool->pop((void**) &bs);
+        delete bs;
     }
     /* And close the session */
     mc_dpi_terminate(state);
     delete scanner_pool;
  
     for(size_t i=0; i<num_packets; i++){
-      free(packets[i]);
+        free(packets[i]);
     }
     free(packets);
     free(sizes);

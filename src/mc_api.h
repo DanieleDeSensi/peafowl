@@ -162,6 +162,15 @@ void mc_dpi_set_read_and_process_callbacks(
 		mc_dpi_processing_result_callback* processing_callback,
                 void* user_data);
 
+#ifdef ENABLE_RECONFIGURATION
+/**
+ * Sets the reconfiguration parameters.
+ * @param state A pointer to the state of the library.
+ * @param p The reconfiguration parameters.
+ */
+void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, adpff::Parameters& p);
+#endif
+
 /**
  * Starts the library.
  * @param state A pointer to the state of the library.

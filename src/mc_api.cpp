@@ -382,12 +382,9 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 
 	u_int16_t hash_table_partitions;
 
-	state->double_farm_L3_L4_active_workers=
-			parallelism_details.double_farm_num_L3_workers;
-	state->double_farm_L7_active_workers=
-			parallelism_details.double_farm_num_L7_workers;
-	state->single_farm_active_workers=
-			state->available_processors-2;
+	state->double_farm_L3_L4_active_workers = parallelism_details.double_farm_num_L3_workers;
+	state->double_farm_L7_active_workers = parallelism_details.double_farm_num_L7_workers;
+	state->single_farm_active_workers = state->available_processors-2;
 	if(parallelism_form==MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
 		assert(state->double_farm_L3_L4_active_workers>0 &&
 			   state->double_farm_L7_active_workers>0);
@@ -544,6 +541,12 @@ void mc_dpi_set_read_and_process_callbacks(
 /***************************************/
 /*          Other API calls            */
 /***************************************/
+
+#ifdef ENABLE_RECONFIGURATION
+void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, adpff::Parameters& p){
+    state->adp_params = p;
+}
+#endif
 
 /**
  * Starts the library.

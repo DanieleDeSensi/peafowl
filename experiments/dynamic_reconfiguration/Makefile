@@ -10,7 +10,7 @@ LIBS = -L /home/desensi/libs/libpcap-1.3.0/ -lpcap -L../../lib/ -L../../demo/htt
 all:
 	make -C ../../demo/http_pattern_matching/pattern_matching_lib lib
 	make dynamic_reconfiguration
-dynamic_reconfiguration: dynamic_reconfiguration.c
+dynamic_reconfiguration: dynamic_reconfiguration.cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) $? -o $@ $(LIBS) -lmcdpi -lpthread
 clean:
 	-rm -fr *.o *~ $(TARGET)
