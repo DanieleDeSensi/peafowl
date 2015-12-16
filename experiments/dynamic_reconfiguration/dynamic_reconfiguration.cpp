@@ -262,7 +262,7 @@ int main(int argc, char **argv){
     
     char const *virus_signatures_file_name=argv[1];
     char const *input_file_name=argv[2];
-    reconf_params=atoi(argv[3]);
+    reconf_params=argv[3];
 
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -363,7 +363,6 @@ int main(int argc, char **argv){
     x.next_packet_to_sent=0;
     x.num_packets=num_packets;
  
- 
     scanner_pool=new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE);
     scanner_pool->init();
     for(uint i=0; i<SCANNER_POOL_SIZE; i++){
@@ -383,9 +382,16 @@ int main(int argc, char **argv){
     pthread_create(&clock, NULL, clock_thread, NULL);
 
 #ifdef ENABLE_RECONFIGURATION
-    adpff::Params params(reconf_params);
-    mc_dpi_set_reconf_parameters(state, params);
+    std::cout << "Setting parameters. File: " << std::string(reconf_params) << std::endl;
+    std::string rp(reconf_params);
+    std::string ad("archdata.xml");
+    adpff::Parameters params(rp, ad);
+    adpff::Observer obs;
+    params.observer = &obs;
+    std::cout << "Parameters created." << std::endl;
+    mc_dpi_set_reconf_parameters(state, &params);
 #endif
+    std::cout << "Running farm." << std::endl;
     mc_dpi_run(state); 
     mc_dpi_wait_end(state);
     mc_dpi_print_stats(state);

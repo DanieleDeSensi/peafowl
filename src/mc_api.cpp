@@ -74,8 +74,8 @@ typedef struct mc_dpi_library_state{
 
 	u_int16_t single_farm_active_workers;
 #ifdef ENABLE_RECONFIGURATION
-	adpff::ManagerFarm* mf;
-	adpff::Parameters adp_params;
+        adpff::ManagerFarm<dpi::dpi_L7_scheduler>* mf;
+	adpff::Parameters* adp_params;
 #endif
 
 	/******************************************************/
@@ -543,7 +543,7 @@ void mc_dpi_set_read_and_process_callbacks(
 /***************************************/
 
 #ifdef ENABLE_RECONFIGURATION
-void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, adpff::Parameters& p){
+void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, adpff::Parameters* p){
     state->adp_params = p;
 }
 #endif
@@ -562,7 +562,7 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
     }else{
         // Warm-up
 #ifdef ENABLE_RECONFIGURATION
-        state->mf = new adpff::ManagerFarm(state->single_farm, state->adp_params);
+        state->mf = new adpff::ManagerFarm<dpi::dpi_L7_scheduler>(state->single_farm, *(state->adp_params));
         state->mf->start();
 #else
         assert(state->single_farm->run_then_freeze()>=0);

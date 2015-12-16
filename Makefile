@@ -1,23 +1,27 @@
-CC                   = gcc
-CXX                  = g++ 
-LINK_OPT             = 
-VERSION              = 
-OPTIMIZE_FLAGS       = -O3 -finline-functions
-CXXFLAGS             = -Wall -g 
-CFLAGS               =
-LDFLAGS              = 
-INCS                 = -I ./ 
-LIBS                 = 
-INCLUDES             =
-TARGET               =
+export CC                   = gcc
+export CXX                  = g++ 
+export OPTIMIZE_FLAGS       = -O3 -finline-functions
+export CXXFLAGS             = --std=c++11 -Wall -g -DFF_BOUNDED_BUFFER -DTRACE_FASTFLOW -DNO_DEFAULT_MAPPING #-DBLOCKING_MODE
+export INCS                 = -I $(realpath .) -I $(realpath ./src/external/fastflow)
+MAMMUT               = $(realpath ./src/external/adaptivefastflow/src/external/Mammut)
+ADPFF                = $(realpath ./src/external/adaptivefastflow)
+LIBXML               = /usr/include/libxml2/
 
-.PHONY: clean cleanall install uninstall
+.PHONY: all reconf noreconf clean cleanall install uninstall
 .SUFFIXES: .cpp .o
 
-allreconf:
-	make -C ./src allreconf
-all:
-	make -C ./src all 
+all: noreconf
+
+reconf: export INCS += -I$(MAMMUT) -I$(ADPFF) -I$(LIBXML)
+reconf: export CXXFLAGS += -DENABLE_RECONFIGURATION
+reconf: 
+#	git submodule update --init --recursive
+#	git submodule foreach git pull -q origin master
+	make -C ./src/external/adaptivefastflow
+	make -C ./src all
+	mv ./lib/libmcdpi.a ./lib/libmcdpireconf.a
+noreconf:
+	make -C ./src all
 install:
 	cp ./lib/libdpi.a /usr/lib/libpeafowldpi.a
 	cp ./lib/libmcdpi.a /usr/lib/libpeafowldpimc.a

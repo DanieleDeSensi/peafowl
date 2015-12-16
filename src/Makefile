@@ -1,32 +1,10 @@
-CC                   = gcc
-CXX                  = g++ 
-LINK_OPT             = 
-VERSION              = 
-OPTIMIZE_FLAGS       = -O3 -finline-functions 
-CXXFLAGS             = -Wall -g -DFF_BOUNDED_BUFFER -DTRACE_FASTFLOW -DNO_DEFAULT_MAPPING #-DBLOCKING_MODE
-CFLAGS               =
-CONFIGURATIONFLAGS   = 
-LDFLAGS              = 
-INCS                 = -I ./ -I ./fastflow/
-LIBS                 = 
-INCLUDES             =
 SEQTARGET            = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
 PARTARGET            = worker.o mc_api.o
-MAMMUT               = /home/daniele/Code/Mammut
-ADPFF                = /home/daniele/Code/AdaptiveFastFlow 
-LIBXML				 = /usr/include/libxml2/
 
-.PHONY: all allreconf clean cleanall install uninstall test seqlib parlib
+.PHONY: all clean cleanall install uninstall test seqlib parlib
 .SUFFIXES: .cpp .o
 
-
-allreconf:
-	make clean
-	make CONFIGURATIONFLAGS+=-DDPI_THREAD_SAFETY_ENABLED=0 seq
-	make seqlib
-	make CXXFLAGS+=--std=c++11 INCS+=-I$(MAMMUT) INCS+=-I$(ADPFF) INCS+=-I$(LIBXML) CONFIGURATIONFLAGS+=-DDPI_THREAD_SAFETY_ENABLED=1 CONFIGURATIONFLAGS+=-DENABLE_RECONFIGURATION par
-	make parlib
-all:	
+all: 
 	make clean
 	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
 	make seqlib

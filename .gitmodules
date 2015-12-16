@@ -1,0 +1,3 @@
+[submodule "src/external/adaptivefastflow"]
+	path = src/external/adaptivefastflow
+	url = https://DanieleDeSensi@bitbucket.org/DanieleDeSensi/adaptivefastflow.git

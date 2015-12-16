@@ -166,6 +166,8 @@ dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
 	assert(posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE,
 		   sizeof(L3_L4_input_task_struct)*
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE)==0);
+        v4_worker_table_size=ceil((float)v4_table_size/(float)(*num_L7_workers));
+        v6_worker_table_size=ceil((float)v6_table_size/(float)(*num_L7_workers));
 #ifdef ENABLE_RECONFIGURATION
 	notifyWorkersChange(0, *num_L7_workers);
 #endif
