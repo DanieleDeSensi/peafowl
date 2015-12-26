@@ -15,8 +15,8 @@ all: noreconf
 reconf: export INCS += -I$(MAMMUT) -I$(ADPFF) -I$(LIBXML)
 reconf: export CXXFLAGS += -DENABLE_RECONFIGURATION
 reconf: 
-#	git submodule update --init --recursive
-#	git submodule foreach git pull -q origin master
+	git submodule update --init --recursive
+	git submodule foreach git pull -q origin master
 	make -C ./src/external/adaptivefastflow
 	make -C ./src all
 	mv ./lib/libmcdpi.a ./lib/libmcdpireconf.a
