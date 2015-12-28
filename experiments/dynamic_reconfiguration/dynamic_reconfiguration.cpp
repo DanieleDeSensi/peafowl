@@ -238,8 +238,10 @@ void body_cb(dpi_http_message_informations_t* http_informations,
 }
  
 void flow_cleaner(void* flow_specific_user_data){
-  if(scanner_pool->mp_push(flow_specific_user_data)==false){
-    delete (byte_scanner*) flow_specific_user_data;
+  if(flow_specific_user_data){
+    if(scanner_pool->mp_push(flow_specific_user_data)==false){
+      delete (byte_scanner*) flow_specific_user_data;
+    }
   }
 }
  
@@ -393,6 +395,7 @@ int main(int argc, char **argv){
 #endif
     std::cout << "Running farm." << std::endl;
     mc_dpi_run(state); 
+    std::cout << "Waiting end." << std::endl;
     mc_dpi_wait_end(state);
     mc_dpi_print_stats(state);
     full_timer.stop();

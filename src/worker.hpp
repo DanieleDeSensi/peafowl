@@ -94,6 +94,7 @@ typedef struct mc_dpi_task{
 class dpi_L3_L4_emitter: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
+        dpi_library_state_t* const state;
 	mc_dpi_packet_reading_callback** const cb;
 	void** user_data;
 	u_int8_t* terminating;
@@ -102,13 +103,16 @@ private:
 	u_int8_t initialized;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
-	dpi_L3_L4_emitter(mc_dpi_packet_reading_callback** cb,
+        dpi_L3_L4_emitter(dpi_library_state_t* state,
+                          mc_dpi_packet_reading_callback** cb,
 			          void** user_data,
 			          u_int8_t* terminating,
 			          u_int16_t proc_id,
 			          ff::SWSR_Ptr_Buffer* tasks_pool);
 	~dpi_L3_L4_emitter();
-
+#ifdef ENABLE_RECONFIGURATION
+        void notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers);
+#endif
 	int svc_init();
 	void* svc(void*);
 };
@@ -120,7 +124,6 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_library_state_t* const state;
 	L3_L4_input_task_struct* in;
-	u_int16_t* num_L7_workers;
 	const u_int32_t v4_table_size;
 	const u_int32_t v6_table_size;
 	u_int32_t v4_worker_table_size;
@@ -131,7 +134,7 @@ private:
 public:
 	dpi_L3_L4_worker(dpi_library_state_t* state,
 						u_int16_t worker_id,
-						u_int16_t *num_L7_workers,
+						u_int16_t num_L7_workers,
 						u_int16_t proc_id,
 						u_int32_t v4_table_size,
 						u_int32_t v6_table_size);
@@ -269,7 +272,7 @@ public:
 			              u_int8_t* terminating,
 			              ff::SWSR_Ptr_Buffer* tasks_pool,
 			              dpi_library_state_t* state,
-			              u_int16_t* num_L7_workers,
+			              u_int16_t num_L7_workers,
 			              u_int32_t v4_table_size,
 			              u_int32_t v6_table_size,
 			              dpi_L7_scheduler* lb,

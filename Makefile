@@ -1,6 +1,6 @@
 export CC                   = /usr/local/gnu/packages/gcc-4.8.1/bin/gcc
 export CXX                  = /usr/local/gnu/packages/gcc-4.8.1/bin/g++
-export OPTIMIZE_FLAGS       = -finline-functions -O3 #-O0 -g
+export OPTIMIZE_FLAGS       = -finline-functions -O3
 export CXXFLAGS             = --std=c++11 -Wall -g -DFF_BOUNDED_BUFFER -DTRACE_FASTFLOW -DNO_DEFAULT_MAPPING #-DBLOCKING_MODE
 export INCS                 = -I $(realpath .) 
 MAMMUT               = $(realpath ./src/external/adaptivefastflow/src/external/Mammut)
@@ -15,8 +15,8 @@ all: noreconf
 reconf: export INCS += -I$(MAMMUT) -I$(ADPFF) -I$(LIBXML) -I$(ADPFF)/src/external/fastflow # For reconf I use the adpff fastflow
 reconf: export CXXFLAGS += -DENABLE_RECONFIGURATION -DFF_TASK_CALLBACK
 reconf: 
-#	git submodule update --init --recursive
-#	git submodule foreach git pull -q origin master
+	python submodules_init.py
+	git submodule foreach git pull -q origin master
 	make -C ./src/external/adaptivefastflow
 	make -C ./src all
 	mv ./lib/libmcdpi.a ./lib/libmcdpireconf.a

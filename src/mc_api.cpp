@@ -129,6 +129,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_emitter));
 	assert(tmp);
 	state->L3_L4_emitter=new (tmp) dpi::dpi_L3_L4_emitter(
+       	                state->sequential_state,
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
 			&(state->terminating),
@@ -146,6 +147,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_emitter));
 	assert(tmp);
 	state->L3_L4_emitter=new (tmp) dpi::dpi_L3_L4_emitter(
+                        state->sequential_state,
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
 			&(state->freeze_flag), &(state->terminating),
@@ -164,7 +166,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		tmp=malloc(sizeof(dpi::dpi_L3_L4_worker));
 		assert(tmp);
 		w1=new (tmp) dpi::dpi_L3_L4_worker(state->sequential_state, i,
-		   &(state->single_farm_active_workers),
+		   (state->single_farm_active_workers),
 		   state->mapping[last_mapped],
 		   size_v4,
 		   size_v6);
@@ -262,7 +264,7 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 			&(state->read_process_callbacks_user_data),
 			&(state->terminating),
 			state->tasks_pool, state->sequential_state,
-			&(state->single_farm_active_workers),
+			(state->single_farm_active_workers),
 			size_v4,
 			size_v6,
 			state->single_farm->getlb(),

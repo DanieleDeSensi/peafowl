@@ -37,6 +37,8 @@
 
 namespace dpi{
 
+  //#define DPI_DEBUG
+
 #ifndef DPI_DEBUG
 static inline
 #endif
@@ -53,7 +55,6 @@ mc_dpi_task_t* dpi_allocate_task(){
 		r=new mc_dpi_task_t;
 	#endif
 #endif
-	assert(r);
 	return r;
 }
 
@@ -78,12 +79,13 @@ void dpi_free_task(mc_dpi_task_t* task){
 /*****************************************************/
 /*                      L3_L4 nodes.                 */
 /*****************************************************/
-dpi_L3_L4_emitter::dpi_L3_L4_emitter(mc_dpi_packet_reading_callback** cb,
+dpi_L3_L4_emitter::dpi_L3_L4_emitter(dpi_library_state_t* state,
+                                    mc_dpi_packet_reading_callback** cb,
 		                             void** user_data,
 		                             u_int8_t* terminating,
 		                             u_int16_t proc_id,
 		                             ff::SWSR_Ptr_Buffer* tasks_pool)
-                                     :cb(cb), user_data(user_data),
+                                   :state(state), cb(cb), user_data(user_data),
                                       terminating(terminating),
                                       proc_id(proc_id),
                                       tasks_pool(tasks_pool),
@@ -150,15 +152,24 @@ dpi_L3_L4_emitter::~dpi_L3_L4_emitter(){
 	;
 }
 
+#ifdef ENABLE_RECONFIGURATION
+  void dpi_L3_L4_emitter::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
+    worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");
+    dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->db4,
+                                       newNumWorkers);
+    worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v6 table partitions");
+    dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->db6,
+                                       newNumWorkers);
+  }
+#endif
 
 dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
 									u_int16_t worker_id,
-			                        u_int16_t* num_L7_workers,
+			                        u_int16_t num_L7_workers,
 									u_int16_t proc_id,
 									u_int32_t v4_table_size,
 									u_int32_t v6_table_size):
 							    state(state),
-							    num_L7_workers(num_L7_workers),
 								v4_table_size(v4_table_size),
 								v6_table_size(v6_table_size),
 								worker_id(worker_id),
@@ -166,11 +177,8 @@ dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
 	assert(posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE,
 		   sizeof(L3_L4_input_task_struct)*
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE)==0);
-        v4_worker_table_size=ceil((float)v4_table_size/(float)(*num_L7_workers));
-        v6_worker_table_size=ceil((float)v6_table_size/(float)(*num_L7_workers));
-#ifdef ENABLE_RECONFIGURATION
-	notifyWorkersChange(0, *num_L7_workers);
-#endif
+        v4_worker_table_size=ceil((float)v4_table_size/(float)(num_L7_workers));
+        v6_worker_table_size=ceil((float)v6_table_size/(float)(num_L7_workers));
 }
 
 dpi_L3_L4_worker::~dpi_L3_L4_worker(){
@@ -181,18 +189,14 @@ dpi_L3_L4_worker::~dpi_L3_L4_worker(){
 void dpi_L3_L4_worker::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
     v4_worker_table_size=ceil((float)v4_table_size/(float)(newNumWorkers));
     v6_worker_table_size=ceil((float)v6_table_size/(float)(newNumWorkers));
+    printf("[worker.cpp]: %d -> %d\n", oldNumWorkers, newNumWorkers);
+    printf("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
+	   "v6_worker_table_size: %d\n", v4_worker_table_size,
+	   v6_worker_table_size);
     worker_debug_print("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
                        "v6_worker_table_size: %d\n", v4_worker_table_size,
                         v6_worker_table_size);
 
-
-    *num_L7_workers = newNumWorkers;
-    worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");
-    dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->db4,
-                                       newNumWorkers);
-    worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v6 table partitions");
-    dpi_flow_table_setup_partitions_v6((dpi_flow_DB_v6_t*)state->db6,
-                                       newNumWorkers);
 }
 #endif
 
@@ -560,14 +564,14 @@ dpi_collapsed_emitter::dpi_collapsed_emitter(
 		u_int8_t* terminating,
 		ff::SWSR_Ptr_Buffer* tasks_pool,
 		dpi_library_state_t* state,
-		u_int16_t* num_L7_workers,
+		u_int16_t num_L7_workers,
 		u_int32_t v4_table_size,
 		u_int32_t v6_table_size,
 		dpi_L7_scheduler* lb,
 		u_int16_t proc_id):
-				dpi_L7_emitter(lb, *num_L7_workers, proc_id),
+				dpi_L7_emitter(lb, num_L7_workers, proc_id),
 				proc_id(proc_id){
-	L3_L4_emitter=new dpi::dpi_L3_L4_emitter(cb, user_data,
+        L3_L4_emitter=new dpi::dpi_L3_L4_emitter(state, cb, user_data,
 			                                 terminating,
 			                                 proc_id,
 			                                 tasks_pool);
@@ -585,6 +589,7 @@ dpi_collapsed_emitter::~dpi_collapsed_emitter(){
 
 #ifdef ENABLE_RECONFIGURATION
 void dpi_collapsed_emitter::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
+    L3_L4_emitter->notifyWorkersChange(oldNumWorkers, newNumWorkers);
     L3_L4_worker->notifyWorkersChange(oldNumWorkers, newNumWorkers);
 }
 #endif
@@ -603,7 +608,8 @@ void* dpi_collapsed_emitter::svc(void* task){
 	if(unlikely(r==(void*) ff::FF_EOS || r==NULL)){
 		return r;
 	}else{
-		return dpi_L7_emitter::svc(L3_L4_worker->svc(r));
+	  r = L3_L4_worker->svc(r);
+		return dpi_L7_emitter::svc(r);
 	}
 }
 
