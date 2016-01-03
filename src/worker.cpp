@@ -189,10 +189,6 @@ dpi_L3_L4_worker::~dpi_L3_L4_worker(){
 void dpi_L3_L4_worker::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
     v4_worker_table_size=ceil((float)v4_table_size/(float)(newNumWorkers));
     v6_worker_table_size=ceil((float)v6_table_size/(float)(newNumWorkers));
-    printf("[worker.cpp]: %d -> %d\n", oldNumWorkers, newNumWorkers);
-    printf("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
-	   "v6_worker_table_size: %d\n", v4_worker_table_size,
-	   v6_worker_table_size);
     worker_debug_print("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
                        "v6_worker_table_size: %d\n", v4_worker_table_size,
                         v6_worker_table_size);
