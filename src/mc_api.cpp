@@ -564,8 +564,12 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
     }else{
         // Warm-up
 #ifdef ENABLE_RECONFIGURATION
-        state->mf = new adpff::ManagerFarm<dpi::dpi_L7_scheduler>(state->single_farm, *(state->adp_params));
-        state->mf->start();
+        try{
+            state->mf = new adpff::ManagerFarm<dpi::dpi_L7_scheduler>(state->single_farm, *(state->adp_params));
+            state->mf->start();
+        }catch(std::exception& e){
+            assert("Exception thrown by ManagerFarm" == NULL);
+        }
 #else
         assert(state->single_farm->run_then_freeze()>=0);
 #endif

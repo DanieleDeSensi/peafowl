@@ -26,7 +26,7 @@
  */
 
 
-#define _POSIX_C_SOURCE 1
+//#define _POSIX_C_SOURCE 1
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -53,7 +53,7 @@ using namespace antivirus;
 #define CAPACITY_CHUNK 1000
 #define SCANNER_POOL_SIZE 4096
 
-#define CLOCK_FREQ 2000000000L
+#define CLOCK_FREQ 2400000000L
 
 static ff::uSWSR_Ptr_Buffer* scanner_pool;
 

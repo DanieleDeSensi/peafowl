@@ -1,7 +1,7 @@
 export CC                   = gcc
 export CXX                  = g++
 export OPTIMIZE_FLAGS       = -finline-functions -O3
-export CXXFLAGS             = --std=c++11 -Wall -g -DFF_BOUNDED_BUFFER -DTRACE_FASTFLOW -DNO_DEFAULT_MAPPING #-DBLOCKING_MODE
+export CXXFLAGS             = --std=c++11 -Wall -DFF_BOUNDED_BUFFER -DTRACE_FASTFLOW -DNO_DEFAULT_MAPPING #-DBLOCKING_MODE
 export INCS                 = -I $(realpath .) 
 MAMMUT               = $(realpath ./src/external/adaptivefastflow/src/external/Mammut)
 ADPFF                = $(realpath ./src/external/adaptivefastflow)
