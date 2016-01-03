@@ -1,5 +1,5 @@
-export CC                   = /usr/local/gnu/packages/gcc-4.8.1/bin/gcc
-export CXX                  = /usr/local/gnu/packages/gcc-4.8.1/bin/g++
+export CC                   = gcc
+export CXX                  = g++
 export OPTIMIZE_FLAGS       = -finline-functions -O3
 export CXXFLAGS             = --std=c++11 -Wall -g -DFF_BOUNDED_BUFFER -DTRACE_FASTFLOW -DNO_DEFAULT_MAPPING #-DBLOCKING_MODE
 export INCS                 = -I $(realpath .) 

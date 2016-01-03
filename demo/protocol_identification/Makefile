@@ -2,7 +2,7 @@ CC                   = gcc
 CXX                  = g++ 
 LINK_OPT             = 
 VERSION              = 
-OPTIMIZE_FLAGS       = -O3 -finline-functions
+OPTIMIZE_FLAGS       = --std=c++11 -O3 -finline-functions
 CXXFLAGS             = -Wall -g
 CFLAGS               =
 LDFLAGS              = 
@@ -17,9 +17,9 @@ TARGET               = protocol_identification
 all: $(TARGET)
 
 %: %.c 
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
+	$(CC) $(CXXFLAGS) $(INCS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
 %: %.cpp 
-	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
+	$(CXX) $(CXXFLAGS) $(INCS) $(OPTIMIZE_FLAGS) $? -o $@ $(LIBS)
 clean: 
 	-rm -fr *.o *~ $(TARGET)
 cleanall:
