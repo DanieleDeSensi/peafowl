@@ -1,7 +1,7 @@
 firstline = 1
 day = "2005-06-08"
 sampledurationsecs = 300
-scalingfactor = 1000.0
+scalingfactor = 1 #1000.0
 
 with open("datamarket_orig.csv") as f:
     for line in f:
