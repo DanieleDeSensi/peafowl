@@ -14,17 +14,20 @@ Use datamarket_convert.py to convert it to the format used by Peafowl.
 + One sample every 5 minutes. 
 + A sample is the number of bits in a 5 minutes interval. 
 + 24 hours duration.
++ Packets of any type.
 
 ====================================================
-==== CAIDA_2015_CHICAGO_A_02012016_03012016.png ====
+==== CAIDA_2015_CHICAGO_A_03012016_04012016.png ====
 ====================================================
 Obtained from: http://www.caida.org/data/realtime/passive/?monitor=equinix-chicago-dirA
 
 This passive network monitor is connected to an OC192 link between Chicago, IL and Seattle, WA. See the equinix-chicago monitor description page for more details. Direction A. 
 
++ Used for ICPP 2016 paper.
 + One sample every 5 minutes. 
 + Each sample is the number of packets per second in that interval. 
-+ 24 hours duration (between 02/01/2016 and 03/01/2016). 
++ 24 hours duration (between 03/01/2016 and 04/01/2016). 
++ HTTP packets only.
 
 ==========================================
 ==== LINKX_NoVa_02012016_03012016.csv ====
@@ -36,6 +39,7 @@ LINX NoVA is available at three different datacenters in Northern Virginia/USA. 
 + One sample every 5 minutes. 
 + Each sample is the number of packets per second in that interval.
 + 24 hours duration (between 02/01/2016 and 03/01/2016).
++ Packets of any type.
 
 ================================================
 ==== LINKX_Manchester_02012016_03012016.csv ====
@@ -47,15 +51,18 @@ IXManchester is currently present in 4 different datacenters and build using Ext
 + One sample every 5 minutes. 
 + Each sample is the number of packets per second in that interval.
 + 24 hours duration (between 02/01/2016 and 03/01/2016).
++ Packets of any type.
 
 ===========================
 ==== rates_PDP2015.csv ====
 =========================== 
 Dataset used for PDP2015 paper.
 
++ Used for PDP2015 paper.
 + One sample every second. 
 + A sample is the number of packets in that second.
 + 1 hour duration.
++ Packets of any type.
 
 ****************************************************************
 *                  Figure to .csv conversion                   *
