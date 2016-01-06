@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adaptivityParameters>
+    <samplingInterval>1000</samplingInterval>
+    <strategyPersistence>SAMPLES</strategyPersistence>
+    <persistenceValue>6</persistenceValue>
+    <underloadThresholdFarm>80</underloadThresholdFarm>
+    <overloadThresholdFarm>90</overloadThresholdFarm>
+    <contractType>PERF_UTILIZATION</contractType>
+</adaptivityParameters>
+
+

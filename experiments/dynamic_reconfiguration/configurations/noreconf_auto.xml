@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<adaptivityParameters>
+    <samplingInterval>300000</samplingInterval>
+    <contractType>NONE</contractType>
+
+    <strategyPersistence>SAMPLES</strategyPersistence>
+    <persistenceValue>1</persistenceValue>
+
+    <triggerQBlocking>AUTO</triggerQBlocking>
+    <thresholdQBlocking>100</thresholdQBlocking>
+</adaptivityParameters>
+
+
