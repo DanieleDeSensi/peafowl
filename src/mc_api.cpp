@@ -357,7 +357,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	u_int8_t parallelism_form=parallelism_details.parallelism_form;
 
 	if(parallelism_details.available_processors){
-		state->available_processors=parallelism_details.available_processors;
+		state->available_processors = parallelism_details.available_processors;
 	}else{
 	    state->available_processors = get_num_cores();
 	}
@@ -374,9 +374,9 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
     uint k;
     for(k=0; k<state->available_processors; k++){
         if(parallelism_details.mapping==NULL){
-            state->mapping[k]=k;
+            state->mapping[k] = k;
         }else{
-            state->mapping[k]=parallelism_details.mapping[k];
+            state->mapping[k] = parallelism_details.mapping[k];
         }
     }
 

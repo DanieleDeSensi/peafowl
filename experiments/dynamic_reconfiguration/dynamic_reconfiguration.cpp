@@ -192,7 +192,7 @@ static void match_found(string::size_type position,
 }
  
 
-static void load_rates(char* fileName){
+static void load_rates(const char* fileName){
   FILE* f = NULL;
   char line[512];
   f = fopen(fileName, "r");
@@ -255,16 +255,22 @@ int main(int argc, char **argv){
   terminating=0;
 
   try {
-    if (argc<3){
-        cerr << "Usage: " << argv[0] << " virus-signatures-file input-file [reconf_params]\n";
+    if (argc < 5){
+        cerr << "Usage: " << argv[0] << " numcores rates-file virus-signatures-file input-file reconf_params\n";
         exit(EXIT_FAILURE);
     }
 
     string::size_type trie_depth=DEFAULT_TRIE_MAXIMUM_DEPTH;
     
-    char const *virus_signatures_file_name=argv[1];
-    char const *input_file_name=argv[2];
-    reconf_params=argv[3];
+    uint numcores = atoi(argv[1]);
+    if(numcores < 3){
+        cerr << "Error: At least 3 cores are needed." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    char const *rates_file = argv[2];
+    char const *virus_signatures_file_name=argv[3];
+    char const *input_file_name=argv[4];
+    reconf_params=argv[5];
 
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -309,8 +315,9 @@ int main(int argc, char **argv){
  
     mc_dpi_parallelism_details_t details;
     bzero(&details, sizeof(mc_dpi_parallelism_details_t));
-    load_rates("rates.txt"); 
-    mc_dpi_library_state_t* state=mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
+    details.available_processors = numcores;
+    load_rates(rates_file);
+    mc_dpi_library_state_t* state = mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
 
     printf("Open offline.\n");
     handle=pcap_open_offline(input_file_name, errbuf);
@@ -375,9 +382,6 @@ int main(int argc, char **argv){
     dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
     mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
     
-#if 0
-    reconf_params.stabilization_period = 4;
-#endif
     full_timer.start();
 
     start_time = time(NULL);
