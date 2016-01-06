@@ -14,6 +14,6 @@ clean:
 	-rm -fr *.o *~ 
 cleanall:
 	make clean
-	-rm -fr dynamic_reconfiguration_reconf dynamic_reconfiguration_noreconf
+	-rm -fr dynamic_reconfiguration
 
 

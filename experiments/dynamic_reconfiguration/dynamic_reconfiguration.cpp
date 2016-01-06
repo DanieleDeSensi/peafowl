@@ -392,7 +392,7 @@ int main(int argc, char **argv){
     std::string rp(reconf_params);
     std::string ad("archdata.xml");
     adpff::Parameters params(rp, ad);
-    adpff::Observer obs;
+    adpff::Observer obs("results_" + std::string(reconf_params) + ".csv");
     params.observer = &obs;
     std::cout << "Parameters created." << std::endl;
     mc_dpi_set_reconf_parameters(state, &params);
