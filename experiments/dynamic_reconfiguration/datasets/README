@@ -17,7 +17,7 @@ Use datamarket_convert.py to convert it to the format used by Peafowl.
 + Packets of any type.
 
 ====================================================
-==== CAIDA_2015_CHICAGO_A_03012016_04012016.png ====
+==== CAIDA_2015_CHICAGO_A_03012016_04012016.csv ====
 ====================================================
 Obtained from: http://www.caida.org/data/realtime/passive/?monitor=equinix-chicago-dirA
 
@@ -27,7 +27,8 @@ This passive network monitor is connected to an OC192 link between Chicago, IL a
 + One sample every 5 minutes. 
 + Each sample is the number of packets per second in that interval. 
 + 24 hours duration (between 03/01/2016 and 04/01/2016). 
-+ HTTP packets only.
++ *_HTTP contains HTTP packets only.
++ *_ALL contains all packets types.
 
 ==========================================
 ==== LINKX_NoVa_02012016_03012016.csv ====
