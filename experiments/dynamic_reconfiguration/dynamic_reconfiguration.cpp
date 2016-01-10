@@ -99,6 +99,9 @@ void* clock_thread(void*){
   last_sec = time(NULL);
   while(!terminating){
     sleep(1);
+#if 1
+    last_sec = time(NULL);
+#else
     if(i++ == CLOCK_RESYNC){
       i = 0;
       tmp = time(NULL);
@@ -108,6 +111,7 @@ void* clock_thread(void*){
     }else{
       ++last_sec;
     }
+#endif
   }
   return NULL;
 }
@@ -147,10 +151,10 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
     excess += (getticks()-def);
 
     if(excess >= ticks_to_sleep){
-      excess = 0;
-      //excess -= ticks_to_sleep;
+        //excess = 0;
+      excess -= ticks_to_sleep;
     }else{
-      excess = ticks_wait(ticks_to_sleep - excess);
+        excess = ticks_wait(ticks_to_sleep - excess);
     }
    
     def = getticks();
@@ -171,6 +175,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
     current_interval_start = last_sec;
     current_interval++;
     start_interval_ms = getmstime();
+    excess = 0;
   }
  
   r.current_time=last_sec;
@@ -326,6 +331,7 @@ int main(int argc, char **argv){
       fprintf(stderr, "Couldn't open device %s: %s\n", input_file_name, errbuf);
       exit(EXIT_FAILURE);
     }
+
     const u_char* packet;
     struct pcap_pkthdr header;
     unsigned char** packets;
