@@ -7,7 +7,7 @@
     <persistenceValue>1</persistenceValue>
 
     <triggerQBlocking>AUTO</triggerQBlocking>
-    <thresholdQBlocking>100</thresholdQBlocking>
+    <thresholdQBlocking>10</thresholdQBlocking>
 </adaptivityParameters>
 
 
