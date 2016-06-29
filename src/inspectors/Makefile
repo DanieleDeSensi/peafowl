@@ -9,7 +9,7 @@ LDFLAGS              =
 INCS                 = 
 LIBS                 = 
 INCLUDES             =
-TARGET               = dhcp.o dhcpv6.o bgp.o dns.o http_parser_joyent.o http.o smtp.o pop3.o mdns.o ntp.o
+TARGET               = dhcp.o dhcpv6.o bgp.o dns.o http_parser_joyent.o http.o sip.o smtp.o pop3.o mdns.o ntp.o
 
 .PHONY: all clean cleanall install uninstall
 .SUFFIXES: .cpp .o

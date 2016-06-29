@@ -72,7 +72,7 @@ int main(int argc, char** argv){
 		ip_offset=0;
 	}else if(datalink_type==DLT_LINUX_SLL){
 		printf("Datalink type: Linux Cooked\n");
-		ip_offset=sizeof(struct ether_header)+16;
+		ip_offset=16;
 	}else{
 		fprintf(stderr, "Datalink type not supported\n");
 		exit(-1);
@@ -92,6 +92,7 @@ int main(int argc, char** argv){
 	u_int32_t mdns_matches=0;
 	u_int32_t ntp_matches=0;
 	u_int32_t dhcp_matches=0;
+	u_int32_t sip_matches=0;
 	u_int32_t dhcpv6_matches=0;
 	u_int32_t unknown=0;
 
@@ -134,7 +135,10 @@ int main(int argc, char** argv){
 					++mdns_matches;
 					break;
 				case DPI_PROTOCOL_UDP_NTP:
-			        ++ntp_matches;
+				        ++ntp_matches;
+					break;
+				case DPI_PROTOCOL_UDP_SIP:
+				        ++sip_matches;
 					break;
 				default:
 					++unknown;
@@ -149,16 +153,17 @@ int main(int argc, char** argv){
 	dpi_terminate(state);
 
 
-	printf("Unknown packets: %"PRIu32"\n", unknown);
-	printf("HTTP packets: %"PRIu32"\n", http_matches);
-	printf("BGP packets: %"PRIu32"\n", bgp_matches);
-	printf("POP3 packets: %"PRIu32"\n", pop3_matches);
-	printf("SMTP packets: %"PRIu32"\n", smtp_matches);
-	printf("NTP packets: %"PRIu32"\n", ntp_matches);
-	printf("DNS packets: %"PRIu32"\n", dns_matches);
-	printf("MDNS packets: %"PRIu32"\n", mdns_matches);
-	printf("DHCP packets: %"PRIu32"\n", dhcp_matches);
-	printf("DHCPv6 packets: %"PRIu32"\n", dhcpv6_matches);
+	if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+	if (http_matches > 0) printf("HTTP packets: %"PRIu32"\n", http_matches);
+	if (sip_matches > 0 ) printf("SIP packets: %"PRIu32"\n", sip_matches);
+	if (bgp_matches > 0 ) printf("BGP packets: %"PRIu32"\n", bgp_matches);
+	if (pop3_matches > 0 ) printf("POP3 packets: %"PRIu32"\n", pop3_matches);
+	if (smtp_matches > 0 ) printf("SMTP packets: %"PRIu32"\n", smtp_matches);
+	if (ntp_matches > 0 ) printf("NTP packets: %"PRIu32"\n", ntp_matches);
+	if (dns_matches > 0 ) printf("DNS packets: %"PRIu32"\n", dns_matches);
+	if (mdns_matches > 0 ) printf("MDNS packets: %"PRIu32"\n", mdns_matches);
+	if (dhcp_matches > 0 ) printf("DHCP packets: %"PRIu32"\n", dhcp_matches);
+	if (dhcpv6_matches > 0 ) printf("DHCPv6 packets: %"PRIu32"\n", dhcpv6_matches);
 
 	return 0;
 }
