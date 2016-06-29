@@ -168,7 +168,7 @@ void mc_dpi_set_read_and_process_callbacks(
  * @param state A pointer to the state of the library.
  * @param p The reconfiguration parameters.
  */
-void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, adpff::Parameters* p);
+void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, nornir::Parameters* p);
 #endif
 
 /**

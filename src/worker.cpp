@@ -37,8 +37,6 @@
 
 namespace dpi{
 
-  //#define DPI_DEBUG
-
 #ifndef DPI_DEBUG
 static inline
 #endif
@@ -153,7 +151,7 @@ dpi_L3_L4_emitter::~dpi_L3_L4_emitter(){
 }
 
 #ifdef ENABLE_RECONFIGURATION
-  void dpi_L3_L4_emitter::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
+  void dpi_L3_L4_emitter::notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers){
     worker_debug_print("%s\n","[mc_dpi_api.cpp]: Changing v4 table partitions");
     dpi_flow_table_setup_partitions_v4((dpi_flow_DB_v4_t*)state->db4,
                                        newNumWorkers);
@@ -186,9 +184,9 @@ dpi_L3_L4_worker::~dpi_L3_L4_worker(){
 }
 
 #ifdef ENABLE_RECONFIGURATION
-void dpi_L3_L4_worker::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
-    v4_worker_table_size=ceil((float)v4_table_size/(float)(newNumWorkers));
-    v6_worker_table_size=ceil((float)v6_table_size/(float)(newNumWorkers));
+void dpi_L3_L4_worker::notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers){
+    v4_worker_table_size = ceil((float)v4_table_size/(float)(newNumWorkers));
+    v6_worker_table_size = ceil((float)v6_table_size/(float)(newNumWorkers));
     worker_debug_print("[worker.cpp]: L3_L4 worker. v4_worker_table_size: %d "
                        "v6_worker_table_size: %d\n", v4_worker_table_size,
                         v6_worker_table_size);
@@ -497,12 +495,6 @@ void* dpi_L7_worker::svc(void* task){
 	return real_task;
 }
 
-void dpi_L7_worker::svc_end(){
-	worker_debug_print("[worker.cpp]: L7 worker %d svc_end()\n",
-	                    worker_id);
-}
-
-
 dpi_L7_collector::dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 		                           void** user_data,
 		                           u_int16_t* proc_id,
@@ -543,7 +535,7 @@ void* dpi_L7_collector::svc(void* task){
 	return (void*) ff::FF_GO_ON;
 }
 
-void dpi_L7_collector::svc_end(){
+dpi_L7_collector::~dpi_L7_collector(){
 #if DPI_MULTICORE_USE_TASKS_POOL
 	mc_dpi_task_t* task=NULL;
 	while(!tasks_pool->empty()){
@@ -584,9 +576,9 @@ dpi_collapsed_emitter::~dpi_collapsed_emitter(){
 }
 
 #ifdef ENABLE_RECONFIGURATION
-void dpi_collapsed_emitter::notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers){
-    L3_L4_emitter->notifyWorkersChange(oldNumWorkers, newNumWorkers);
-    L3_L4_worker->notifyWorkersChange(oldNumWorkers, newNumWorkers);
+void dpi_collapsed_emitter::notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers){
+    L3_L4_emitter->notifyRethreading(oldNumWorkers, newNumWorkers);
+    L3_L4_worker->notifyRethreading(oldNumWorkers, newNumWorkers);
 }
 #endif
 
@@ -608,13 +600,6 @@ void* dpi_collapsed_emitter::svc(void* task){
 		return dpi_L7_emitter::svc(r);
 	}
 }
-
-void dpi_collapsed_emitter::svc_end(){
-	L3_L4_emitter->svc_end();
-	L3_L4_worker->svc_end();
-	dpi_L7_emitter::svc_end();
-}
-
 
 }
 

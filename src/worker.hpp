@@ -27,15 +27,15 @@
 #ifndef WORKER_HPP_
 #define WORKER_HPP_
 
-#include <ff/farm.hpp>
-#include <ff/svector.hpp>
-
 #include "api.h"
 #include "mc_api.h"
 #include "config.h"
 
+#include <ff/farm.hpp>
+#include <ff/svector.hpp>
+
 #ifdef ENABLE_RECONFIGURATION
-typedef adpff::AdaptiveNode ffnode;
+typedef nornir::AdaptiveNode ffnode;
 #else
 typedef ff::ff_node ffnode;
 #endif
@@ -111,7 +111,7 @@ public:
 			          ff::SWSR_Ptr_Buffer* tasks_pool);
 	~dpi_L3_L4_emitter();
 #ifdef ENABLE_RECONFIGURATION
-        void notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers);
+        void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
 	int svc_init();
 	void* svc(void*);
@@ -143,7 +143,7 @@ public:
 	int svc_init();
 	void* svc(void*);
 #ifdef ENABLE_RECONFIGURATION
-    void notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers);
+    void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
 };
 
@@ -236,7 +236,6 @@ public:
 
 	int svc_init();
 	void* svc(void*);
-	void svc_end();
 };
 
 
@@ -252,10 +251,10 @@ public:
 	dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 			         void** user_data, u_int16_t* proc_id,
 			         ff::SWSR_Ptr_Buffer* tasks_pool);
+        ~dpi_L7_collector();
 
 	int svc_init();
 	void* svc(void*);
-	void svc_end();
 };
 
 
@@ -280,9 +279,8 @@ public:
 	~dpi_collapsed_emitter();
 	int svc_init();
 	void* svc(void*);
-	void svc_end();
 #ifdef ENABLE_RECONFIGURATION
-    void notifyWorkersChange(size_t oldNumWorkers, size_t newNumWorkers);
+    void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
 };
 

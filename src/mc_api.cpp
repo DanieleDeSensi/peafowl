@@ -39,7 +39,7 @@
 #include <ff/pipeline.hpp>
 #include <ff/buffer.hpp>
 
-#define DPI_DEBUG_MC_API 0
+#define DPI_DEBUG_MC_API 1
 #define debug_print(fmt, ...)          \
             do { if (DPI_DEBUG_MC_API) \
             fprintf(stdout, fmt, __VA_ARGS__); } while (0)
@@ -74,8 +74,8 @@ typedef struct mc_dpi_library_state{
 
 	u_int16_t single_farm_active_workers;
 #ifdef ENABLE_RECONFIGURATION
-        adpff::ManagerFarm<dpi::dpi_L7_scheduler>* mf;
-	adpff::Parameters* adp_params;
+        nornir::ManagerFarm<dpi::dpi_L7_scheduler>* mf;
+	nornir::Parameters* adp_params;
 #endif
 
 	/******************************************************/
@@ -545,7 +545,7 @@ void mc_dpi_set_read_and_process_callbacks(
 /***************************************/
 
 #ifdef ENABLE_RECONFIGURATION
-void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, adpff::Parameters* p){
+void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, nornir::Parameters* p){
     state->adp_params = p;
 }
 #endif
@@ -565,7 +565,7 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
         // Warm-up
 #ifdef ENABLE_RECONFIGURATION
         try{
-            state->mf = new adpff::ManagerFarm<dpi::dpi_L7_scheduler>(state->single_farm, *(state->adp_params));
+            state->mf = new nornir::ManagerFarm<dpi::dpi_L7_scheduler>(state->single_farm, *(state->adp_params));
             state->mf->start();
         }catch(std::exception& e){
             assert("Exception thrown by ManagerFarm" == NULL);

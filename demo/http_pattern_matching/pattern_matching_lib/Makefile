@@ -1,6 +1,6 @@
 #GNU makefile
 CXX = g++
-CXXFLAGS = -O -g -Wall -W -ansi 
+CXXFLAGS = -O3 -Wall -W -ansi 
 
 OBJECTS = buffer.o signatures.o timer.o trie.o
 
