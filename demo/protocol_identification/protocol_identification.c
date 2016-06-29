@@ -70,10 +70,15 @@ int main(int argc, char** argv){
 	}else if(datalink_type==DLT_RAW){
 		printf("Datalink type: RAW\n");
 		ip_offset=0;
+	}else if(datalink_type==DLT_LINUX_SLL){
+		printf("Datalink type: Linux Cooked\n");
+		ip_offset=sizeof(struct ether_header)+16;
 	}else{
 		fprintf(stderr, "Datalink type not supported\n");
 		exit(-1);
 	}
+
+
 
 	const u_char* packet;
 	struct pcap_pkthdr header;
