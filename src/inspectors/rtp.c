@@ -1,5 +1,5 @@
 /**
- * sip.c
+ * rtp.c
  *
  * Created on: 29/06/2016
  *
@@ -31,43 +31,28 @@
 #include <stdio.h>
 
 
-#define DPI_DEBUG_SIP 0
+#define DPI_DEBUG_RTP 0
 #define debug_print(fmt, ...) \
-            do { if (DPI_DEBUG_SIP) fprintf(stdout, fmt, __VA_ARGS__); } while (0)
-
-#define DPI_SIP_NUM_MESSAGES_TO_MATCH 1
-
-#define DPI_SIP_NUM_REQUESTS 12
-#define DPI_SIP_MAX_REQUEST_LENGTH 1
-static const char* const requests[DPI_SIP_NUM_REQUESTS]={
-   	   "SIP/2.0"
-	   ,"INVITE "
-	   ,"REGISTER "
-	   ,"BYE "
-	   ,"CANCEL "
-	   ,"OPTIONS "
-	   ,"NOTIFY "
-	   ,"100 Try"
-	   ,"180 Rin"
-	   ,"200 OK"
-	   ,"ACK "
-	   ,"PUBLISH "
-};
+            do { if (DPI_DEBUG_RTP) fprintf(stdout, fmt, __VA_ARGS__); } while (0)
 
 
-u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
-	u_int8_t i;
+u_int8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
 
-	 if(pkt->dstport==port_sip || pkt->srcport==port_sip){
-		return DPI_PROTOCOL_MATCHES;
-	 }
 
-	for(i=0; i<DPI_SIP_NUM_REQUESTS; i++){
-		if(strncasecmp((const char*) app_data, requests[i], (sizeof(requests[i])/sizeof(*requests[i]) - 1) )==0){
-			if(++t->num_sip_matched_messages==DPI_SIP_NUM_MESSAGES_TO_MATCH){
-				return DPI_PROTOCOL_MATCHES;
-			}else
-				return DPI_PROTOCOL_MORE_DATA_NEEDED;
+
+	if ( data_length < 2 || pkt->dstport <= 1024 || pkt->srcport <= 1024 ) {
+	    return DPI_PROTOCOL_NO_MATCHES;
+	}
+
+
+  	//struct ndpi_packet_struct *packet = &flow->packet;
+  	u_int8_t payloadType, data_type = app_data[1] & 0x7F;
+  	u_int32_t *ssid = (u_int32_t*)&app_data[8];
+
+	if(data_length >= 12) {
+		if ( (app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0 ) /* RTP magic byte[1] */
+		{
+  		 	  return DPI_PROTOCOL_MATCHES;
 		}
 	}
 
