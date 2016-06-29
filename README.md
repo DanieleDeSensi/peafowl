@@ -66,6 +66,12 @@ The supported protocols are:
   <tr>
     <td>NTP</td><td>5/5</td>
   </tr>
+  <tr>
+    <td>SIP</td><td>3/5</td>
+  </tr>
+  <tr>
+    <td>RTP</td><td>3/5</td>
+  </tr>
 </table>
 
 At the moment, data and metadata extraction is supported for the following protocols:
@@ -308,7 +314,7 @@ Protocol identification
 First of all, we computed the bandwidth (in millions of packets per second) of the multicore version of the framework 
 over different datasets, obtaining the following results:
 
-![Multicore protocol identification: bandwidth](results/bandwidth_protocol_identification.pdf)
+![Multicore protocol identification: bandwidth](results/bandwidth_protocol_identification.png)
 
 HTTP pattern matching
 ---------------------------------------------------------------------------------------------------------------------
@@ -317,7 +323,7 @@ varying the number of worker threads used by the framework. We executed this tes
 with PF_RING and on data read by preloading a .pcap file in main memory and the reading data from the memory, 
 obtaining very similar results.
 
-![HTTP pattern matching application: bandwidth](results/bandwidth_app.pdf)
+![HTTP pattern matching application: bandwidth](results/bandwidth_app.png)
 
 How it works
 ================================================================================================================
