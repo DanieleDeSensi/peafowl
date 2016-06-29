@@ -114,8 +114,6 @@ protected:
             lb->register_worker(workers[i]);
             if (collector && !collector_removed) gt->register_worker(workers[i]);
         }
-
-#if defined(BLOCKING_MODE)
         for(size_t i=0;i<nworkers;++i) {
             pthread_mutex_t   *m        = NULL;
             pthread_cond_t    *c        = NULL;
@@ -159,7 +157,6 @@ protected:
             for(size_t i=0;i<nworkers;++i)
                 workers[i]->set_output_blocking(m,c,counter);
         }    
-#endif
         prepared=true;
         return 0;
     }
@@ -176,7 +173,6 @@ protected:
     }
 
 
-#if defined(BLOCKING_MODE)
     // consumer
     virtual inline bool init_input_blocking(pthread_mutex_t   *&m,
                                             pthread_cond_t    *&c,
@@ -213,8 +209,6 @@ protected:
     virtual inline pthread_mutex_t   &get_prod_m()        { return gt->prod_m; }
     virtual inline pthread_cond_t    &get_prod_c()        { return gt->prod_c; }
     virtual inline std::atomic_ulong &get_prod_counter()  { return gt->prod_counter;}
-#endif /* BLOCKING_MODE */
-
 
 public:
     /*
@@ -273,7 +267,6 @@ public:
             if (create_input_buffer(in_buffer_entries, fixedsize)<0) {
                 error("FARM, creating input buffer\n");
             }
-#if defined(BLOCKING_MODE)
             if (!init_input_blocking(p_cons_m,p_cons_c,p_cons_counter)) {
                 error("FARM, init input blocking mode for accelerator\n");
             }
@@ -284,7 +277,6 @@ public:
                 error("FARM, init output blocking mode for accelerator\n");
             }
             set_input_blocking(m,c,counter);
-#endif
         }
     }
 
@@ -333,7 +325,6 @@ public:
             if (create_input_buffer(in_buffer_entries, fixedsize)<0) {
                 error("FARM, creating input buffer\n");
             }
-#if defined(BLOCKING_MODE)
             if (!init_input_blocking(p_cons_m,p_cons_c,p_cons_counter)) {
                 error("FARM, init input blocking mode for accelerator\n");
             }
@@ -344,7 +335,6 @@ public:
                 error("FARM, init output blocking mode for accelerator\n");
             }           
             set_input_blocking(m,c,counter);
-#endif
         }
     }
     
@@ -503,7 +493,6 @@ public:
             // NOTE: the queue is forced to be unbounded
             if (create_output_buffer(out_buffer_entries, false)<0) return -1;
 
-#if defined(BLOCKING_MODE)
             pthread_mutex_t   *mtx      = NULL;
             pthread_cond_t    *cond     = NULL;
             std::atomic_ulong *counter  = NULL;           
@@ -514,7 +503,6 @@ public:
             if (!init_output_blocking(p_prod_m,p_prod_c,p_prod_counter)) {
                 error("FARM, add_collector, init input blocking mode for accelerator\n");
             }
-#endif
         }
         
         fftree *treeptr = new fftree(gt, COLLECTOR);
@@ -548,7 +536,6 @@ public:
             return 0;
         }
 
-#if defined(BLOCKING_MODE)
         pthread_mutex_t   *m        = NULL;
         pthread_cond_t    *c        = NULL;
         std::atomic_ulong *counter  = NULL;
@@ -563,7 +550,6 @@ public:
             return -1;
         }
         set_input_blocking(m,c,counter);             
-#endif
 
         if (!multi_input) {
             if (create_input_buffer(in_buffer_entries, false)<0) {
@@ -582,9 +568,7 @@ public:
             }
             ff_buffernode *tmpbuffer = new ff_buffernode(0, NULL,get_out_buffer());
             if (!tmpbuffer) return -1;
-#if defined(BLOCKING_MODE)
             tmpbuffer->set_input_blocking(m,c,counter);
-#endif
             internalSupportNodes.push_back(tmpbuffer);
             if (set_output_buffer(get_out_buffer())<0) {
                 error("FARM, setting output buffer for multi-input configuration\n");
@@ -775,7 +759,7 @@ public:
      * \internal
      * \brief Forces the thread to freeze at next FF_EOS.
      *
-     * It forces a thread to Freeze itself.
+     * It forces to freeze the farm at next EOS.
      */
     inline void freeze() {
         lb->freeze();
@@ -784,24 +768,17 @@ public:
 
     /**
      * \internal
-     * \brief Thaws the thread
+     * \brief Checks if the Farm has completed the computation.
      *
-     * If the thread is frozen, then thaw it. 
+     * It checks if the farm has completed the computation.
+     * 
+     *
+     * \return true if the pattern is frozen or has terminated the execution.
      */
-    inline void thaw(bool _freeze=false, ssize_t nw=-1) {
-        lb->thaw(_freeze, nw);
-        if (collector && !collector_removed) gt->thaw(_freeze, nw);
+    inline bool done() const { 
+        if (collector && !collector_removed) return (lb->done() && gt->done());
+        return lb->done();
     }
-
-    /**
-     * \internal
-     * \brief Checks if the Farm is frozen
-     *
-     * It checks if the farm is frozen.
-     *
-     * \return The status of \p isfrozen().
-     */
-    inline bool isfrozen() const { return lb->isfrozen(); }
 
     /**
      * \breif Offloads teh task to farm
@@ -820,37 +797,37 @@ public:
         FFBUFFER * inbuffer = get_in_buffer();
 
         if (inbuffer) {
-            for(unsigned long i=0;i<retry;++i) {
+            if (blocking_out) {
+            _retry:
                 if (inbuffer->push(task)) {
-#if defined(BLOCKING_MODE)
                     pthread_mutex_lock(p_cons_m);
                     if ((*p_cons_counter).load() == 0)
                         pthread_cond_signal(p_cons_c);
                     ++(*p_cons_counter);
                     pthread_mutex_unlock(p_cons_m);
                     ++prod_counter;
-#endif
                     return true;
                 }
-#if !defined(BLOCKING_MODE)
-                losetime_out(ticks);
-#else
                 pthread_mutex_lock(&prod_m);
                 while(prod_counter.load() >= (inbuffer->buffersize())) {
                     pthread_cond_wait(&prod_c, &prod_m);
                 }
                 pthread_mutex_unlock(&prod_m);
-#endif
-            }     
+                goto _retry;
+            }
+            for(unsigned long i=0;i<retry;++i) {
+                if (inbuffer->push(task)) return true;
+                losetime_out(ticks);
+            } 
             return false;
-        }
-        
+        }        
         if (!has_input_channel) 
             error("FARM: accelerator is not set, offload not available");
         else
             error("FARM: input buffer creation failed");
         return false;
     }
+
 
     /**
      * \brief Loads results into gatherer
@@ -863,11 +840,29 @@ public:
      *
      * \return \p false if EOS arrived or too many retries, \p true if  there is a new value
      */
-#if !defined(BLOCKING_MODE)
     inline bool load_result(void ** task,
                             unsigned long retry=((unsigned long)-1),
                             unsigned long ticks=ff_gatherer::TICKS2WAIT) {
         if (!collector) return false;
+
+        if (blocking_in) {
+        _retry:
+            if (gt->pop_nb(task)) {
+                // NOTE: the queue between collector and the main thread is forced to be unbounded
+                // therefore the collector cannot be blocked for the condition buffer full ! 
+                --(gt->prod_counter);
+                --cons_counter;
+                
+                if ((*task != (void *)FF_EOS)) return true;
+                else return false;
+            }
+            pthread_mutex_lock(&cons_m);
+            while(cons_counter.load() == 0) {
+                pthread_cond_wait(&cons_c, &cons_m);
+            }
+            pthread_mutex_unlock(&cons_m);
+            goto _retry;
+        }
         for(unsigned long i=0;i<retry;++i) {
             if (gt->pop_nb(task)) {
                 if ((*task != (void *)FF_EOS)) return true;
@@ -877,32 +872,6 @@ public:
         }
         return false;
     }
-#else
-    inline bool load_result(void ** task,
-                            unsigned long retry=((unsigned long)-1),
-                            unsigned long ticks=ff_gatherer::TICKS2WAIT) {
-        if (!collector) return false;
-    _retry:
-        if (gt->pop_nb(task)) {
-            // NOTE: the queue between collector and the main thread is forced to be unbounded
-            // therefore the collector cannot be blocked for the condition buffer full ! 
-            --(gt->prod_counter);
-            --cons_counter;
-
-            if ((*task != (void *)FF_EOS)) return true;
-            else return false;
-        } else {
-            pthread_mutex_lock(&cons_m);
-            while(cons_counter.load() == 0) {
-                pthread_cond_wait(&cons_c, &cons_m);
-            }
-            pthread_mutex_unlock(&cons_m);
-            goto _retry;
-        }   
-        return true;
-    }
-#endif
-
     /**
      * \brief Loads result with non-blocking
      *
@@ -958,7 +927,7 @@ public:
      *
      * \return A pointer of the FastFlow node which is actually the emitter.
      */
-    ff_node* getEmitter() const   { return emitter;}
+    virtual ff_node* getEmitter() const   { return emitter;}
 
     /**
      * \brief Gets Collector
@@ -967,7 +936,7 @@ public:
      *
      * \return A pointer to collector node if exists, otherwise a \p NULL
      */
-    ff_node* getCollector() const { 
+    virtual ff_node* getCollector() const { 
         if (collector == (ff_node*)gt) return NULL;
         return collector;
     }
@@ -1012,6 +981,16 @@ public:
             workers[i]->get_out_nodes(w);
         if (w.size()==0) w = workers;
     }
+
+
+    /*  WARNING: if these methods are called after prepare (i.e. after having called
+     *  run_and_wait_end/run_then_freeze/run/....) they have no effect.     
+     *
+     */
+    void setFixedSize(bool fs)        { fixedsize = fs;         }
+    void setInputQueueLength(int sz)  { in_buffer_entries = sz; }
+    void setOutputQueueLength(int sz) { out_buffer_entries = sz;}
+
 
     /**
      * \internal
@@ -1151,6 +1130,28 @@ protected:
     }
 
     int getCPUId() const { return -1;}
+
+    /**
+     * \internal
+     * \brief Thaws the thread
+     *
+     * If the thread is frozen, then thaw it. 
+     */
+    inline void thaw(bool _freeze=false, ssize_t nw=-1) {
+        lb->thaw(_freeze, nw);
+        if (collector && !collector_removed) gt->thaw(_freeze, nw);
+    }
+
+    /**
+     * \internal
+     * \brief Checks if the Farm is frozen
+     *
+     * It checks if the farm is frozen.
+     *
+     * \return The status of \p isfrozen().
+     */
+    inline bool isfrozen() const { return lb->isfrozen(); }
+
 
     /** 
      *  \brief Creates the input buffer for the emitter node
@@ -1318,6 +1319,72 @@ public:
      * \param v is the number of the worker.
      */
     void set_victim(size_t v) { victim=v;}
+
+    /**
+     * \brief broadcast the same task to all workers, respecting the scheduling order.
+     *
+     */
+    inline void broadcast_task(void * task) {
+        const svector<ff_node*> &W = getWorkers();
+        if (blocking_out) {
+            for(size_t i=victim;i<getnworkers();++i) {
+                while (!W[i]->put(task)) {
+                    pthread_mutex_lock(&prod_m);
+                    pthread_cond_wait(&prod_c, &prod_m);
+                    pthread_mutex_unlock(&prod_m); 
+                }
+                put_done(i);
+            }
+            for(size_t i=0;i<victim;++i) {
+                while (!W[i]->put(task)) {
+                    pthread_mutex_lock(&prod_m);
+                    pthread_cond_wait(&prod_c, &prod_m);
+                    pthread_mutex_unlock(&prod_m); 
+                }
+                put_done(i);
+            }     
+#if defined(FF_TASK_CALLBACK)
+           callbackOut(this);
+#endif
+           if (task == BLK || task == NBLK) { 
+               blocking_out = (task==BLK); 
+           }    
+           return;
+        }
+        
+        for(size_t i=victim;i<getnworkers();++i) {
+            while (!W[i]->put(task)) losetime_out();
+        }
+        for(size_t i=0;i<victim;++i) {
+            while (!W[i]->put(task)) losetime_out();
+        }
+
+#if defined(FF_TASK_CALLBACK)
+        callbackOut(this);
+#endif
+        if (task == BLK || task == NBLK) { 
+            blocking_out = (task==BLK); 
+        }    
+    }
+
+    inline void thaw(bool freeze=false, ssize_t nw=-1) {
+        if ((size_t)nw < victim) victim = 0;
+        ff_loadbalancer::thaw(freeze,nw);
+    }
+    inline int thawWorkers(bool freeze=false, ssize_t nw=-1) {
+        if ((size_t)nw < victim) victim = 0;
+        return ff_loadbalancer::thawWorkers(freeze,nw);
+    }
+
+private:
+    /* this function cannot be used. (How to delete the function ? ) */
+    bool ff_send_out_to(void *task, int id,  
+                        unsigned long retry=((unsigned long)-1),
+                        unsigned long ticks=(TICKS2WAIT)) { 
+        assert(1==0);
+        return false; 
+    }
+
 private:
     size_t victim;
 };
@@ -1388,6 +1455,12 @@ public:
     inline void revive() {
         for(size_t i=0;i<dead.size();++i) dead[i]=false;
     }
+
+    inline void thaw(bool freeze=false, ssize_t nw=-1) {
+        if ((size_t)nw < victim) victim = 0;
+        ff_gatherer::thaw(freeze,nw);
+    }
+    
 private:
     size_t victim;
     svector<bool> dead;
@@ -1409,7 +1482,13 @@ private:
      */
     class ofarmE: public ff_node {
         static inline bool ff_send_out_ofarmE(void * task,unsigned long retry,unsigned long ticks, void *obj) {
-            return ((ofarmE *)obj)->ff_send_out(task, retry, ticks);
+            ff_loadbalancer *lb = ((ofarmE*)obj)->getlb();
+            if (!lb->ff_send_out_emitter(task, retry, ticks, lb)) return false;
+#if defined(FF_TASK_CALLBACK)
+            ((ofarmE*)obj)->callbackOut(lb);
+#endif
+            ((ofarmE*)obj)->updatenextone();
+            return true;           
         }
     public:
         
@@ -1435,6 +1514,13 @@ private:
             if (f) f->registerCallback(ff_send_out_ofarmE, this);
         }
 
+        void updatenextone() {
+            nextone = (nextone+1) % lb->getnworkers();
+            lb->set_victim(nextone);
+        }
+
+        ofarm_lb *getlb() { return lb; }
+
         /**
          * \brief \p svc_init method
          *
@@ -1446,10 +1532,19 @@ private:
             assert(lb->getnworkers()>0);
             int ret = 0;
             if (E_f) ret = E_f->svc_init();
-            nextone = 0;
+            // restart from where we stopped before (if not the first time)
             lb->set_victim(nextone);
             return ret;
-        }  
+        } 
+
+#if defined(FF_TASK_CALLBACK)
+        void callbackIn(void  *t=NULL) {  
+            if (E_f) E_f->callbackIn(t);
+        }
+        void callbackOut(void *t=NULL) {  
+            if (E_f) E_f->callbackOut(t);
+        }
+#endif
 
         /**
          * \brief \p svc method
@@ -1464,10 +1559,9 @@ private:
          */
         void * svc(void * task) {
             if (E_f) task = E_f->svc(task);
-            if (task == (void*)FF_EOS) return task;
+            if (task == EOS || task == GO_ON) return task;
             ff_send_out(task);
-            nextone = (nextone+1) % lb->getnworkers();
-            lb->set_victim(nextone);
+            updatenextone();
             return GO_ON;
         }
 
@@ -1526,11 +1620,20 @@ private:
             assert(gt->getrunning()>0);
             int ret = 0;
             if (C_f) ret = C_f->svc_init();
-            nextone=0;
             gt->revive();
+            // restart from where we stopped before (if not the first time)
             gt->set_victim(nextone);
             return ret;
         }
+
+#if defined(FF_TASK_CALLBACK)
+        void callbackIn(void  *t=NULL) {  
+            if (C_f) C_f->callbackIn(t);
+        }
+        void callbackOut(void *t=NULL) {  
+            if (C_f) C_f->callbackOut(t);
+        }
+#endif
 
         /**
          * \brief \p svc method
@@ -1580,8 +1683,6 @@ private:
         ff_node*   C_f;
     };
 
-
-#if defined(BLOCKING_MODE)
     // consumer
     virtual inline bool init_input_blocking(pthread_mutex_t   *&m,
                                             pthread_cond_t    *&c,
@@ -1615,8 +1716,6 @@ private:
     virtual inline pthread_mutex_t   &get_prod_m()        { return (this->getgt())->prod_m; }
     virtual inline pthread_cond_t    &get_prod_c()        { return (this->getgt())->prod_c; }
     virtual inline std::atomic_ulong &get_prod_counter()  { return (this->getgt())->prod_counter;}
-#endif /* BLOCKING_MODE */
-
     
 public:
     /**
@@ -1672,6 +1771,10 @@ public:
      * \param f is the FastFlow node.
      */
     void setCollectorF(ff_node* f) { C_f = f; }
+
+    ff_node* getEmitter() const { return E_f;}
+
+    ff_node* getCollector() const { return C_f; }
     
     /**
      * \brief run
@@ -1815,9 +1918,11 @@ public:
     bool load_result_nb(void ** task)                             = delete;
 };
 
-    // ************************************
-    // TO COMPLETE  !!!!!!!!!!!!!!!!!!!!!!!
-    // ************************************
+
+/*
+ * Ordered task-farm pattern.
+ *
+ */
 template<typename IN_t=char, typename OUT_t=IN_t>
 class ff_OFarm: public ff_ofarm {
 protected:
