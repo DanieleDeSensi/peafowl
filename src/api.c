@@ -73,6 +73,7 @@ static const dpi_l7_prot_id const
 		,[port_dhcp_2]=DPI_PROTOCOL_UDP_DHCP
 		,[port_dhcpv6_1]=DPI_PROTOCOL_UDP_DHCPv6
 		,[port_dhcpv6_2]=DPI_PROTOCOL_UDP_DHCPv6
+		,[port_sip]=DPI_PROTOCOL_UDP_SIP
 		,[port_ntp]=DPI_PROTOCOL_UDP_NTP};
 
 
@@ -82,6 +83,8 @@ static const dpi_inspector_callback const
 		,[DPI_PROTOCOL_UDP_DHCPv6]=check_dhcpv6
 		,[DPI_PROTOCOL_UDP_DNS]=check_dns
 		,[DPI_PROTOCOL_UDP_MDNS]=check_mdns
+		,[DPI_PROTOCOL_UDP_SIP]=check_sip
+		,[DPI_PROTOCOL_UDP_RTP]=check_rtp
 		,[DPI_PROTOCOL_UDP_NTP]=check_ntp};
 
 static const dpi_inspector_callback const
@@ -202,6 +205,8 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 			DPI_PROTOCOL_UDP_DHCPv6;
 	dpi_well_known_ports_association_udp[port_ntp]=
 			DPI_PROTOCOL_UDP_NTP;
+	dpi_well_known_ports_association_udp[port_sip]=
+			DPI_PROTOCOL_UDP_SIP;
 
 
 	udp_inspectors[DPI_PROTOCOL_UDP_DHCP]=check_dhcp;
@@ -209,6 +214,8 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 	udp_inspectors[DPI_PROTOCOL_UDP_DNS]=check_dns;
 	udp_inspectors[DPI_PROTOCOL_UDP_MDNS]=check_mdns;
 	udp_inspectors[DPI_PROTOCOL_UDP_NTP]=check_ntp;
+	udp_inspectors[DPI_PROTOCOL_UDP_SIP]=check_sip;
+	udp_inspectors[DPI_PROTOCOL_UDP_SIP]=check_rtp;
 
 	tcp_inspectors[DPI_PROTOCOL_TCP_BGP]=check_bgp;
 	tcp_inspectors[DPI_PROTOCOL_TCP_HTTP]=check_http;
@@ -1528,6 +1535,10 @@ const char* const dpi_get_protocol_name(dpi_protocol_t protocol){
 				return "MDNS";
 			case DPI_PROTOCOL_UDP_NTP:
 				return "NTP";
+			case DPI_PROTOCOL_UDP_SIP:
+				return "SIP";
+			case DPI_PROTOCOL_UDP_RTP:
+				return "RTP";
 			default:
 				return "Unknown";
 		}

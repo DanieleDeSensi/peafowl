@@ -370,6 +370,11 @@ typedef struct dpi_tracking_informations{
 	u_int8_t num_smtp_matched_messages:2;
 
 	/*********************************/
+	/** SIP Tracking informations.  **/
+	/*********************************/
+	u_int8_t num_sip_matched_messages:2;
+
+	/*********************************/
 	/** POP3 Tracking informations. **/
 	/*********************************/
 	u_int8_t num_pop3_matched_messages:2;

@@ -1,0 +1,76 @@
+/**
+ * sip.c
+ *
+ * Created on: 29/06/2016
+ *
+ * =========================================================================
+ *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *  Copyright (C) 2016, Lorenzo Mangani (lorenzo.mangani@gmail.com), QXIP BV
+ *
+ *  This file is part of Peafowl.
+ *
+ *  Peafowl is free software: you can redistribute it and/or
+ *  modify it under the terms of the Lesser GNU General Public
+ *  License as published by the Free Software Foundation, either
+ *  version 3 of the License, or (at your option) any later version.
+
+ *  Peafowl is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  Lesser GNU General Public License for more details.
+ *
+ *  You should have received a copy of the Lesser GNU General Public
+ *  License along with Peafowl.
+ *  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * =========================================================================
+ */
+
+#include "inspectors.h"
+#include <string.h>
+#include <stdio.h>
+
+
+#define DPI_DEBUG_SIP 0
+#define debug_print(fmt, ...) \
+            do { if (DPI_DEBUG_SIP) fprintf(stdout, fmt, __VA_ARGS__); } while (0)
+
+#define DPI_SIP_NUM_MESSAGES_TO_MATCH 1
+
+#define DPI_SIP_NUM_REQUESTS 12
+#define DPI_SIP_MAX_REQUEST_LENGTH 1
+static const char* const requests[DPI_SIP_NUM_REQUESTS]={
+   	   "SIP/2.0"
+	   ,"INVITE "
+	   ,"REGISTER "
+	   ,"BYE "
+	   ,"CANCEL "
+	   ,"OPTIONS "
+	   ,"NOTIFY "
+	   ,"100 Try"
+	   ,"180 Rin"
+	   ,"200 OK"
+	   ,"ACK "
+	   ,"PUBLISH "
+};
+
+
+u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+	u_int8_t i;
+
+	 if(pkt->dstport==port_sip || pkt->srcport==port_sip){
+		return DPI_PROTOCOL_MATCHES;
+	 }
+
+	for(i=0; i<DPI_SIP_NUM_REQUESTS; i++){
+		if(strncasecmp((const char*) app_data, requests[i], (sizeof(requests[i])/sizeof(*requests[i]) - 1) )==0){
+			if(++t->num_sip_matched_messages==DPI_SIP_NUM_MESSAGES_TO_MATCH){
+				return DPI_PROTOCOL_MATCHES;
+			}else
+				return DPI_PROTOCOL_MORE_DATA_NEEDED;
+		}
+	}
+
+	return DPI_PROTOCOL_NO_MATCHES;
+}
+
