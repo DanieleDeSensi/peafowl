@@ -30,18 +30,46 @@
 #include <string.h>
 #include <stdio.h>
 
+/*Fast, compatible strstr() replacement.*/
+char *str2str(char *haystack, char *needle)
+{
+	size_t sl;
+	if(needle && haystack)
+	{
+	  sl = strlen(needle);
+	  if(!sl) return(haystack);
+	  sl--;
+	  while(1)
+	  {
+		haystack = strchr(haystack, *needle);
+		if(haystack)
+		{
+		if(!sl) return(haystack);
+		if(!strncmp(haystack + 1, needle + 1, sl)) return(haystack);
+		haystack++;
+		}
+		else
+		break;
+	  };
+	}
+   	return((char *)NULL);
+}
 
 #define DPI_DEBUG_SIP 0
 #define debug_print(fmt, ...) \
             do { if (DPI_DEBUG_SIP) fprintf(stdout, fmt, __VA_ARGS__); } while (0)
 
-#define DPI_SIP_NUM_MESSAGES_TO_MATCH 1
-
-#define DPI_SIP_NUM_REQUESTS 12
+#define DPI_SIP_NUM_REQUESTS 1
 #define DPI_SIP_MAX_REQUEST_LENGTH 1
 static const char* const requests[DPI_SIP_NUM_REQUESTS]={
-   	   "SIP/2.0"
-	   ,"INVITE "
+   	   " SIP/2.0"
+};
+
+#define DPI_SIP_MSG_CHECK 0
+#define DPI_SIP_NUM_MESSAGES_TO_MATCH 2
+#define DPI_SIP_NUM_REQUESTS_MATCH 11
+static const char* const requests_match[DPI_SIP_NUM_REQUESTS_MATCH]={
+	    "INVITE "
 	   ,"REGISTER "
 	   ,"BYE "
 	   ,"CANCEL "
@@ -55,6 +83,7 @@ static const char* const requests[DPI_SIP_NUM_REQUESTS]={
 };
 
 
+
 u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
 	u_int8_t i;
 
@@ -63,12 +92,20 @@ u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
 	 }
 
 	for(i=0; i<DPI_SIP_NUM_REQUESTS; i++){
-		if(strncasecmp((const char*) app_data, requests[i], (sizeof(requests[i])/sizeof(*requests[i]) - 1) )==0){
+		if(str2str((const char*) app_data, requests[i])){
+				return DPI_PROTOCOL_MATCHES;
+		}
+	}
+
+	if (DPI_SIP_MSG_CHECK){
+ 	  for(i=0; i<DPI_SIP_NUM_REQUESTS_MATCH; i++){
+		if(strncasecmp((const char*) app_data, requests_match[i], (sizeof(requests_match[i])/sizeof(*requests_match[i]) - 1) )==0){
 			if(++t->num_sip_matched_messages==DPI_SIP_NUM_MESSAGES_TO_MATCH){
 				return DPI_PROTOCOL_MATCHES;
 			}else
 				return DPI_PROTOCOL_MORE_DATA_NEEDED;
 		}
+	  }
 	}
 
 	return DPI_PROTOCOL_NO_MATCHES;
