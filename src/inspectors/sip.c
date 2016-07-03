@@ -31,28 +31,19 @@
 #include <stdio.h>
 
 /*Fast, compatible strstr() replacement.*/
-char *str2str(char *haystack, char *needle)
+char *sipmatch(char *body)
 {
-	size_t sl;
-	if(needle && haystack)
-	{
-	  sl = strlen(needle);
-	  if(!sl) return(haystack);
-	  sl--;
-	  while(1)
-	  {
-		haystack = strchr(haystack, *needle);
-		if(haystack)
-		{
-		if(!sl) return(haystack);
-		if(!strncmp(haystack + 1, needle + 1, sl)) return(haystack);
-		haystack++;
-		}
-		else
-		break;
-	  };
-	}
-   	return((char *)NULL);
+	char *c;
+	c = body;
+	for (; *c; c++) {
+	        if( ( (*c == ' ') && ( *(c+1) == 'S' ) && ( *(c+3) == 'P' ) && (*(c+5) == '2') && (*(c+6) == '.') ))
+                               {
+                                      return 1;
+                               }
+        }
+
+	return 0;
+
 }
 
 #define DPI_DEBUG_SIP 0
@@ -92,9 +83,14 @@ u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
 	 }
 
 	for(i=0; i<DPI_SIP_NUM_REQUESTS; i++){
-		if(str2str((const char*) app_data, requests[i])){
+		if(sipmatch((const char*) app_data)){
 				return DPI_PROTOCOL_MATCHES;
 		}
+		/*
+			if(str2str((const char*) app_data, requests[i])){
+					return DPI_PROTOCOL_MATCHES;
+			}
+		*/
 	}
 
 	if (DPI_SIP_MSG_CHECK){
