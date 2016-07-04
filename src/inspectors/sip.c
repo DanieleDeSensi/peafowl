@@ -30,10 +30,9 @@
 #include <string.h>
 #include <stdio.h>
 
-/*Fast, compatible strstr() replacement.*/
-char *sipmatch(char *body)
+int sipmatch(const char *body)
 {
-	char *c;
+	const char *c;
 	c = body;
 	for (; *c; c++) {
 	        if( ( (*c == ' ') && ( *(c+1) == 'S' ) && ( *(c+3) == 'P' ) && (*(c+5) == '2') && (*(c+6) == '.') ))
@@ -41,7 +40,6 @@ char *sipmatch(char *body)
                                       return 1;
                                }
         }
-
 	return 0;
 
 }
@@ -86,11 +84,6 @@ u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
 		if(sipmatch((const char*) app_data)){
 				return DPI_PROTOCOL_MATCHES;
 		}
-		/*
-			if(str2str((const char*) app_data, requests[i])){
-					return DPI_PROTOCOL_MATCHES;
-			}
-		*/
 	}
 
 	if (DPI_SIP_MSG_CHECK){

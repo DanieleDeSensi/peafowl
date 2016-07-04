@@ -89,6 +89,7 @@ u_int8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
 	if(data_length >= 12) {
 		if ( (app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0 ) /* RTP magic byte[1] */
 		{
+
 			if ( ((data_type < 72) || (data_type > 76)) && ((data_type <= 34)
 	 		     || ((data_type >= 96) && (data_type <= 127) ) ) && (*ssid != 0) )
 			{
@@ -99,6 +100,8 @@ u_int8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
 			{
   		 	  return DPI_PROTOCOL_MATCHES;
 			}
+		} else {
+			  return DPI_PROTOCOL_MORE_DATA_NEEDED;
 		}
 	}
 
