@@ -67,10 +67,13 @@ The supported protocols are:
     <td>NTP</td><td>5/5</td>
   </tr>
   <tr>
-    <td>SIP</td><td>3/5</td>
+    <td>SIP</td><td>4/5</td>
   </tr>
   <tr>
-    <td>RTP</td><td>3/5</td>
+    <td>RTP</td><td>4/5</td>
+  </tr>
+  <tr>
+    <td>SKYPE</td><td>3/5</td>
   </tr>
 </table>
 

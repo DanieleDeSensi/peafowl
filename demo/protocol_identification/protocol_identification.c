@@ -93,6 +93,7 @@ int main(int argc, char** argv){
 	u_int32_t ntp_matches=0;
 	u_int32_t dhcp_matches=0;
 	u_int32_t sip_matches=0;
+	u_int32_t skype_matches=0;
 	u_int32_t rtp_matches=0;
 	u_int32_t dhcpv6_matches=0;
 	u_int32_t unknown=0;
@@ -141,6 +142,9 @@ int main(int argc, char** argv){
 				case DPI_PROTOCOL_UDP_SIP:
 				        ++sip_matches;
 					break;
+				case DPI_PROTOCOL_UDP_SKYPE:
+				        ++skype_matches;
+					break;
 				case DPI_PROTOCOL_UDP_RTP:
 				        ++rtp_matches;
 					break;
@@ -160,6 +164,7 @@ int main(int argc, char** argv){
 	if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
 	if (http_matches > 0) printf("HTTP packets: %"PRIu32"\n", http_matches);
 	if (sip_matches > 0 ) printf("SIP packets: %"PRIu32"\n", sip_matches);
+	if (skype_matches > 0 ) printf("SKYPE packets: %"PRIu32"\n", skype_matches);
 	if (rtp_matches > 0 ) printf("RTP packets: %"PRIu32"\n", rtp_matches);
 	if (bgp_matches > 0 ) printf("BGP packets: %"PRIu32"\n", bgp_matches);
 	if (pop3_matches > 0 ) printf("POP3 packets: %"PRIu32"\n", pop3_matches);
