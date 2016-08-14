@@ -137,8 +137,9 @@ defragmentation please refer to the documentation in ["src/api.h"](src/api.h)).
 Multicore version
 ------------------------------------------------------------------------------------------------------------------ 
 You can take advantage of the multicore version by including the ["src/mc_api.h"](src/mc_api.h) header and by 
-linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available, if you 
-need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
+linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available,
+you can look at [this](demo/protocol_identification_mc/protocol_identification.cpp) simple demo file.
+If you  need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
 
 Demo application
 ---------------------------------------------------------------------------------------------------------------------
