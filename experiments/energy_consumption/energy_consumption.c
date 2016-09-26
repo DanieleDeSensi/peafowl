@@ -354,8 +354,6 @@ int main(int argc, char **argv){
    
     printf("Wrapping interval: %d seconds\n", mc_dpi_joules_counters_wrapping_interval(state));
 
-    mc_dpi_set_num_workers(state, num_workers);
-
     full_timer.start();
 
     mc_dpi_run(state);

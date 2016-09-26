@@ -290,7 +290,7 @@ int main(int argc, char **argv){
 		if (argc<4){
 			cerr << "Usage: " << argv[0] <<
 					" virus-signatures-file device "
-					"par_degree\n";
+					"availableCores\n";
 			exit(EXIT_FAILURE);
 		}
 
@@ -342,12 +342,11 @@ int main(int argc, char **argv){
 
 		mc_dpi_parallelism_details_t details;
 		bzero(&details, sizeof(mc_dpi_parallelism_details_t));
-		details.available_processors=AVAILABLE_CORES;
+		details.available_processors=num_workers;
 		details.mapping=mapping;
 
 		mc_dpi_library_state_t* state=mc_dpi_init_stateful(
 				32767, 32767, 1000000, 1000000, details);
-		mc_dpi_set_num_workers(state, num_workers);
 
 		int snaplen = SNAPLEN;
 		int flags = PF_RING_PROMISC;
