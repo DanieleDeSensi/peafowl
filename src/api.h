@@ -349,6 +349,7 @@ typedef struct dpi_tracking_informations{
 
 	/** Connection termination tracking informations. **/
 	u_int8_t seen_fin:2;
+	u_int8_t seen_rst:1;
 
 	u_int8_t first_packet_arrived:2;
 	u_int32_t highest_ack[2];

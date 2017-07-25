@@ -165,6 +165,10 @@ void dpi_reordering_tcp_analyze_out_of_order(
 		u_int32_t received_seq_num){
 	u_int32_t end=received_seq_num+pkt->data_length;
 	struct tcphdr* tcph=(struct tcphdr*) ((pkt->pkt)+(pkt->l4offset));
+
+	if(tcph->rst==1){
+		tracking->seen_rst=1;
+	}
 	/**
 	 * We pass a dummy variable because the memory bound on TCP
 	 * reordering is not implemented at the moment.
@@ -183,6 +187,7 @@ void dpi_reordering_tcp_analyze_out_of_order(
 			frag->tcp_fin=1;
 			SET_BIT(tracking->seen_fin, pkt->direction);
 		}
+
 		return;
 	}
 
@@ -250,16 +255,21 @@ dpi_tcp_reordering_reordered_segment_t
 			++tracking->expected_seq_num[pkt->direction];
 			SET_BIT(tracking->seen_fin, pkt->direction);
 		}
+		if(tcph->rst==1){
+			++tracking->expected_seq_num[pkt->direction];
+			tracking->seen_rst=1;
+		}
 
 		/**
 		 * If both FIN segments arrived and there are no more out of
 		 * order segments, then the TCP connection is terminated and
 		 * we can delete the flow informations.
+		 * TCP connection is also terminated if RST flag is received.
 		 **/
-		if(BIT_IS_SET(tracking->seen_fin, 0) &&
-		   BIT_IS_SET(tracking->seen_fin, 1) &&
-		   tracking->segments[0]==NULL &&
-		   tracking->segments[1]==NULL){
+		if(tracking->seen_rst || (BIT_IS_SET(tracking->seen_fin, 0) &&
+		                          BIT_IS_SET(tracking->seen_fin, 1) &&
+		                          tracking->segments[0]==NULL &&
+		                          tracking->segments[1]==NULL)){
 			to_return.connection_terminated=1;
 		}
 
@@ -344,12 +354,16 @@ u_int8_t dpi_reordering_tcp_track_connection_light(
 	if(tcph->fin==1){
 		SET_BIT(tracking->seen_fin, pkt->direction);
 	}
+	if(tcph->rst==1){
+		tracking->seen_rst=1;
+	}
 	/**
 	 * If both FIN segments arrived, then the TCP connection is
 	 * terminated and we can delete the flow informations.
+	 * This also happens if RST is received.
 	 **/
-	if(BIT_IS_SET(tracking->seen_fin, 0) &&
-	   BIT_IS_SET(tracking->seen_fin, 1)){
+	if(tracking->seen_rst || (BIT_IS_SET(tracking->seen_fin, 0) &&
+	                          BIT_IS_SET(tracking->seen_fin, 1))){
 		return 1;
 	}
 	return 0;

@@ -93,8 +93,11 @@ int main(int argc, char** argv){
 
 	while((packet=pcap_next(handle, &header))!=NULL){
 		if(header.len<ip_offset) continue;
-
-		r=dpi_stateful_identify_application_protocol(state, packet+ip_offset, header.len-ip_offset, time(NULL));
+		uint virtual_offset = 0;
+		if(((struct ether_header*) packet)->ether_type == htons(0x8100)){
+			virtual_offset = 4;
+		}
+		r=dpi_stateful_identify_application_protocol(state, packet+ip_offset+virtual_offset, header.len-ip_offset, time(NULL));
 
 		if(r.protocol.l4prot==IPPROTO_TCP){
 			switch(r.protocol.l7prot){
