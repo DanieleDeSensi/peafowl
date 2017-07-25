@@ -42,6 +42,9 @@ enum udp_protocols{
 	DPI_PROTOCOL_UDP_DHCP,
 	DPI_PROTOCOL_UDP_DHCPv6,
 	DPI_PROTOCOL_UDP_NTP,
+	DPI_PROTOCOL_UDP_SIP,
+	DPI_PROTOCOL_UDP_RTP,
+	DPI_PROTOCOL_UDP_SKYPE,
 	DPI_NUM_UDP_PROTOCOLS
 };
 
@@ -92,6 +95,7 @@ enum protocol_check_statuses{
 	#define port_dhcpv6_1 0x2202 /** 546 **/
 	#define port_dhcpv6_2 0x2302 /** 547 **/
 	#define port_smtp_2 0x4B02 /** 587 **/
+	#define port_sip 0x13C4 /** 5060 **/
 	#define port_mdns 0xE914 /** 5353 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 	#define port_smtp_1 0x0019 /** 25 **/
@@ -105,6 +109,7 @@ enum protocol_check_statuses{
 	#define port_dhcpv6_1 0x0222 /** 546 **/
 	#define port_dhcpv6_2 0x0223 /** 547 **/
 	#define port_smtp_2 0x024B /** 587 **/
+	#define port_sip 0xC413 /** 5060 **/
 	#define port_mdns 0x14E9 /** 5353 **/
 #else
 # error	"Please fix <bits/endian.h>"

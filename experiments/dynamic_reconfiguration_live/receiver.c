@@ -398,7 +398,6 @@ int main(int argc, char **argv){
       //pkt_buff->push(malloc(SNAPLEN));
     }
 #endif
-    mc_dpi_set_num_workers(state, details.available_processors);
 
     //    mc_dpi_ipv4_fragmentation_disable(state);
     //    mc_dpi_tcp_reordering_disable(state);

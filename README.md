@@ -66,6 +66,15 @@ The supported protocols are:
   <tr>
     <td>NTP</td><td>5/5</td>
   </tr>
+  <tr>
+    <td>SIP</td><td>4/5</td>
+  </tr>
+  <tr>
+    <td>RTP</td><td>4/5</td>
+  </tr>
+  <tr>
+    <td>SKYPE</td><td>3/5</td>
+  </tr>
 </table>
 
 At the moment, data and metadata extraction is supported for the following protocols:
@@ -128,8 +137,9 @@ defragmentation please refer to the documentation in ["src/api.h"](src/api.h)).
 Multicore version
 ------------------------------------------------------------------------------------------------------------------ 
 You can take advantage of the multicore version by including the ["src/mc_api.h"](src/mc_api.h) header and by 
-linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available, if you 
-need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
+linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available,
+you can look at [this](demo/protocol_identification_mc/protocol_identification.cpp) simple demo file.
+If you  need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
 
 Demo application
 ---------------------------------------------------------------------------------------------------------------------
@@ -296,7 +306,7 @@ More demo applications can be found in [demo](demo) folder:
   over multiple TCP segmentes. 
   It is possible to use this demo to read data [sequentially](demo/http_pattern_matching/http_pm_seq.cpp) from a .pcap file, 
   to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cpp) from a .pcap file, or to read data from the 
-  [network](demo/http_pattern_matching/http_pm_mc.cpp) by using [PF_RING.](http://www.ntop.org/products/pf_ring/) (PF_RING needs to be installed).
+  [network](demo/http_pattern_matching/http_pm_mc_pfring.cpp) by using [PF_RING.](http://www.ntop.org/products/pf_ring/) (PF_RING needs to be installed).
 
 Experimental results
 ================================================================================================================
@@ -308,7 +318,7 @@ Protocol identification
 First of all, we computed the bandwidth (in millions of packets per second) of the multicore version of the framework 
 over different datasets, obtaining the following results:
 
-![Multicore protocol identification: bandwidth](results/bandwidth_protocol_identification.pdf)
+![Multicore protocol identification: bandwidth](results/bandwidth_protocol_identification.png)
 
 HTTP pattern matching
 ---------------------------------------------------------------------------------------------------------------------
@@ -317,7 +327,7 @@ varying the number of worker threads used by the framework. We executed this tes
 with PF_RING and on data read by preloading a .pcap file in main memory and the reading data from the memory, 
 obtaining very similar results.
 
-![HTTP pattern matching application: bandwidth](results/bandwidth_app.pdf)
+![HTTP pattern matching application: bandwidth](results/bandwidth_app.png)
 
 How it works
 ================================================================================================================

@@ -1,7 +1,7 @@
 #GNU makefile
 CXX = g++
 CXXFLAGS = --std=c++11 -O3 -g -Wall -W -Xlinker -zmuldefs
-INCLUDES = -I../../src/ -I../../src/fastflow/
+INCLUDES = -I../../src/ -I../../src/external/fastflow/
 LIBS = -lpcap -L../../lib/ -L./pattern_matching_lib/ -lpatternmatching 
 
 
