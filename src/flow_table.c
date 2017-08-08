@@ -37,6 +37,7 @@
 #include <time.h>
 #include <inttypes.h>
 #include <math.h>
+#include <netinet/tcp.h>
 
 #if DPI_NUMA_AWARE
 #include <numa.h>
@@ -791,6 +792,25 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
 	/** Flow searching. **/
 	while(iterator!=head && !v4_equals(iterator, pkt_infos)){
 		iterator=iterator->next;
+	}
+
+	/** 
+	 * Check for RST. We need to do this check here. Multiple RST may be received
+	 * in a row. If we close the connection when the first RST is received,
+	 * the next RSTs would create another flow (one for each of the following
+	 * RSTs). For this reason, we close the connection when a SYN (new connection)
+	 * is received on the same 5tuple (or when the flow expires).
+	 * Expiration check is done in another place, here we need to check if 
+	 * a SYN has been received on a connection where some RSTs where received.
+	 **/
+	if(iterator != head && pkt_infos->l4prot == IPPROTO_TCP && 
+	   iterator->infos.tracking.seen_rst && 
+	   ((struct tcphdr*) (pkt_infos->pkt + pkt_infos->l4offset))->syn){
+		// Delete old flow.
+		mc_dpi_flow_table_delete_flow_v4(db, state->flow_cleaner_callback,
+					                     partition_id, iterator);
+		// Force the following code to create a new flow.
+		iterator = head;
 	}
 
 	/**Flow not found, add it after the head.**/

@@ -93,7 +93,7 @@ extern "C" {
 #define DPI_STATUS_IP_FRAGMENT 1
 #define DPI_STATUS_IP_LAST_FRAGMENT 2
 #define DPI_STATUS_TCP_OUT_OF_ORDER 3
-#define DPI_STATUS_TCP_CONNECTION_TERMINATED 4
+#define DPI_STATUS_TCP_CONNECTION_TERMINATED 4 // Terminated means FIN received. This status is not set for connection closed by RST
 
 enum dpi_state_update_status{
 	DPI_STATE_UPDATE_SUCCESS

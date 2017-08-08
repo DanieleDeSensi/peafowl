@@ -264,12 +264,11 @@ dpi_tcp_reordering_reordered_segment_t
 		 * If both FIN segments arrived and there are no more out of
 		 * order segments, then the TCP connection is terminated and
 		 * we can delete the flow informations.
-		 * TCP connection is also terminated if RST flag is received.
 		 **/
-		if(tracking->seen_rst || (BIT_IS_SET(tracking->seen_fin, 0) &&
-		                          BIT_IS_SET(tracking->seen_fin, 1) &&
-		                          tracking->segments[0]==NULL &&
-		                          tracking->segments[1]==NULL)){
+		if((BIT_IS_SET(tracking->seen_fin, 0) &&
+            BIT_IS_SET(tracking->seen_fin, 1) &&
+            tracking->segments[0]==NULL &&
+            tracking->segments[1]==NULL)){
 			to_return.connection_terminated=1;
 		}
 
@@ -360,10 +359,9 @@ u_int8_t dpi_reordering_tcp_track_connection_light(
 	/**
 	 * If both FIN segments arrived, then the TCP connection is
 	 * terminated and we can delete the flow informations.
-	 * This also happens if RST is received.
 	 **/
-	if(tracking->seen_rst || (BIT_IS_SET(tracking->seen_fin, 0) &&
-	                          BIT_IS_SET(tracking->seen_fin, 1))){
+	if((BIT_IS_SET(tracking->seen_fin, 0) &&
+	   BIT_IS_SET(tracking->seen_fin, 1))){
 		return 1;
 	}
 	return 0;

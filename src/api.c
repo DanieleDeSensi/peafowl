@@ -1344,7 +1344,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 			}else{
 				if(dpi_reordering_tcp_track_connection_light(
 						  pkt_infos, &(flow->tracking)))
-					r.status=DPI_STATUS_TCP_CONNECTION_TERMINATED;;
+					r.status=DPI_STATUS_TCP_CONNECTION_TERMINATED;
 			}
 		}else if(pkt_infos->l4prot==IPPROTO_UDP &&
 				 state->udp_active_protocols>0){
