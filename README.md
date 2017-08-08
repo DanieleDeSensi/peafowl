@@ -31,7 +31,9 @@ synchronization mechanisms.
 
 
 **If you use Peafowl for scientific purposes, please cite our paper:**
+
 *Deep Packet Inspection on Commodity Hardware using FastFlow*
+
 M. Danelutto, L. Deri, D. De Sensi, M. Torquati
 
 
