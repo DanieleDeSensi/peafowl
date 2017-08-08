@@ -29,11 +29,11 @@ This possibility have been implemented by using [FastFlow](http://calvados.di.un
 a parallel programming framework for multicore platforms based upon non-blocking lock-free/fence-free 
 synchronization mechanisms.
 
-------
+
 **If you use Peafowl for scientific purposes, please cite our paper:**
 *Deep Packet Inspection on Commodity Hardware using FastFlow*
 M. Danelutto, L. Deri, D. De Sensi, M. Torquati
-------
+
 
 Supported protocols
 ================================================================================================================
