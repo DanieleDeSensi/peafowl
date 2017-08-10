@@ -308,7 +308,7 @@ u_int8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsi
 	}
 	tracking->http_informations[pkt->direction].pkt_informations=pkt;
 
-	http_parser_settings x;
+	http_parser_settings x = { 0 };
 
 	if(state->http_callbacks){
 		if(((dpi_http_callbacks_t*) state->http_callbacks)->header_url_callback!=NULL)
