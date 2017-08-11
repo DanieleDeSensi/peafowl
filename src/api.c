@@ -62,7 +62,8 @@ static const dpi_l7_prot_id const
 		,[port_bgp]=DPI_PROTOCOL_TCP_BGP
 		,[port_smtp_1]=DPI_PROTOCOL_TCP_SMTP
 		,[port_smtp_2]=DPI_PROTOCOL_TCP_SMTP
-		,[port_pop3]=DPI_PROTOCOL_TCP_POP3};
+		,[port_pop3]=DPI_PROTOCOL_TCP_POP3
+		,[port_ssl]=DPI_PROTOCOL_TCP_SSL};
 
 static const dpi_l7_prot_id const
 	dpi_well_known_ports_association_udp[DPI_MAX_UINT_16+1]=
@@ -93,15 +94,16 @@ static const dpi_inspector_callback const
 		{[DPI_PROTOCOL_TCP_BGP]=check_bgp
 		,[DPI_PROTOCOL_TCP_HTTP]=check_http
 		,[DPI_PROTOCOL_TCP_SMTP]=check_smtp
-		,[DPI_PROTOCOL_TCP_POP3]=check_pop3};
+		,[DPI_PROTOCOL_TCP_POP3]=check_pop3
+		,[DPI_PROTOCOL_TCP_SSL]=check_ssl};
 
 static const dpi_inspector_callback const
 	udp_callbacks_manager[DPI_NUM_UDP_PROTOCOLS];
 
 static const dpi_inspector_callback const
 	tcp_callbacks_manager[DPI_NUM_TCP_PROTOCOLS]=
-		{[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_http
-		,
+		{[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_http,
+		[DPI_PROTOCOL_TCP_SSL]=invoke_callbacks_ssl
 		};
 
 #else
@@ -223,8 +225,10 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 	tcp_inspectors[DPI_PROTOCOL_TCP_HTTP]=check_http;
 	tcp_inspectors[DPI_PROTOCOL_TCP_SMTP]=check_smtp;
 	tcp_inspectors[DPI_PROTOCOL_TCP_POP3]=check_pop3;
+	tcp_inspectors[DPI_PROTOCOL_TCP_POP3]=check_ssl;
 
 	tcp_callbacks_manager[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_http;
+	tcp_callbacks_manager[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_ssl;
 #endif
 	return state;
 }
@@ -1158,10 +1162,12 @@ dpi_identification_result_t dpi_stateful_get_app_protocol(
 
 	if(pkt_infos->ip_version==DPI_IP_VERSION_4){
 		ipv4_flow=dpi_flow_table_find_or_create_flow_v4(state, pkt_infos);
-		flow_infos=&(ipv4_flow->infos);
+		if(ipv4_flow)
+			flow_infos=&(ipv4_flow->infos);
 	}else{
 		ipv6_flow=dpi_flow_table_find_or_create_flow_v6(state, pkt_infos);
-		flow_infos=&(ipv6_flow->infos);
+		if(ipv6_flow)
+			flow_infos=&(ipv6_flow->infos);
 	}
 
 	if(unlikely(flow_infos==NULL)){
@@ -1522,6 +1528,8 @@ const char* const dpi_get_protocol_name(dpi_protocol_t protocol){
 				return "SMTP";
 			case DPI_PROTOCOL_TCP_POP3:
 				return "POP3";
+			case DPI_PROTOCOL_TCP_SSL:
+				return "SSL";
 			default:
 				return "Unknown";
 		}

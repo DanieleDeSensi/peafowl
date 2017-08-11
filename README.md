@@ -49,6 +49,9 @@ The supported protocols are:
     <td>HTTP</td><td>5/5</td>
   </tr>
   <tr>
+  	<td>SSL</td><td>5/5</td>
+  </tr>
+  <tr>
     <td>POP3</td><td>3/5</td>
   </tr>
   <tr>

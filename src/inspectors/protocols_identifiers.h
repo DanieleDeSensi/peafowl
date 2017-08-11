@@ -55,6 +55,7 @@ enum tcp_protocols{
 	DPI_PROTOCOL_TCP_BGP,
 	DPI_PROTOCOL_TCP_SMTP,
 	DPI_PROTOCOL_TCP_POP3,
+	DPI_PROTOCOL_TCP_SSL,
 	DPI_NUM_TCP_PROTOCOLS
 };
 /** Remember to set the callback in init() and to increase the number of supported protocols. **/
@@ -97,6 +98,7 @@ enum protocol_check_statuses{
 	#define port_smtp_2 0x4B02 /** 587 **/
 	#define port_sip 0x13C4 /** 5060 **/
 	#define port_mdns 0xE914 /** 5353 **/
+	#define port_ssl 0xBB01 /** 443 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 	#define port_smtp_1 0x0019 /** 25 **/
 	#define port_dns 0x0035 /** 53 **/
@@ -111,6 +113,7 @@ enum protocol_check_statuses{
 	#define port_smtp_2 0x024B /** 587 **/
 	#define port_sip 0xC413 /** 5060 **/
 	#define port_mdns 0x14E9 /** 5353 **/
+	#define port_ssl 0x01BB /** 443 **/
 #else
 # error	"Please fix <bits/endian.h>"
 #endif
