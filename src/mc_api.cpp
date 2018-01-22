@@ -150,7 +150,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
                         state->sequential_state,
 			&(state->reading_callback),
 			&(state->read_process_callbacks_user_data),
-			&(state->freeze_flag), &(state->terminating),
+			&(state->terminating),
 			state->mapping[last_mapped], state->tasks_pool);
 	last_mapped=(last_mapped+1)%state->available_processors;
 	state->L3_L4_farm->add_emitter(state->L3_L4_emitter);
@@ -583,14 +583,20 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
  * @param state A pointer to the state of the library.
  */
 void mc_dpi_wait_end(mc_dpi_library_state_t* state){
+	  if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
+        state->pipeline->wait();
+    }else{
 #ifdef ENABLE_RECONFIGURATION
-        state->mf->join();
+		state->mf->join();
 #else
+       state->single_farm->wait();
+#endif
+    }
+#if 0
 	while(!state->terminating){
 		sleep(1);
 	}
 #endif
-
     gettimeofday(&state->stop_time,NULL);
 	state->is_running=0;
 }

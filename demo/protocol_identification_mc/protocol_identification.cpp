@@ -87,7 +87,10 @@ mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
 	packet = pcap_next(handle, &header);
 	mc_dpi_packet_reading_result_t res;
 	if(packet){
-		res.pkt = packet + ip_offset;
+		u_char* packetCopy = (u_char*) malloc(sizeof(u_char)*header.caplen);
+		memcpy(packetCopy, packet, sizeof(u_char)*header.caplen);
+		res.pkt = packetCopy + ip_offset;
+		res.user_pointer = packetCopy;
 	}else{
 		res.pkt = NULL;
 	}
@@ -159,7 +162,7 @@ void processing_cb(mc_dpi_processing_result_t* processing_result, void* callback
 	}else{
 		++unknown;
 	}
-
+	free(processing_result->user_pointer);
 }
 
 
@@ -172,6 +175,7 @@ int main(int argc, char** argv){
 	char errbuf[PCAP_ERRBUF_SIZE];
 
 	mc_dpi_parallelism_details_t par;
+	memset(&par, 0, sizeof(par));
 	par.available_processors = AVAILABLE_PROCESSORS;
 	mc_dpi_library_state_t* state = mc_dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS, par);
 	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
