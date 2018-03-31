@@ -1,7 +1,7 @@
 [![HitCount](http://hits.dwyl.io/DanieleDeSensi/Peafowl.svg)](http://hits.dwyl.io/DanieleDeSensi/Peafowl)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](paypal.me/DanieleDeSensi)
-<noscript><a href="https://liberapay.com/~36438/donate"><img height="20" alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a></noscript>
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](http://paypal.me/DanieleDeSensi)
+<noscript><a href="https://liberapay.com/~36438/donate"><img height="22" alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a></noscript>
 
 
 Introduction
