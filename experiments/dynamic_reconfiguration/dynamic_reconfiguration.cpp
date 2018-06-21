@@ -93,8 +93,6 @@ double getmstime(){
 
 #define CLOCK_RESYNC 10
 void* clock_thread(void*){
-  int i = 0;
-  time_t tmp;
   ff_mapThreadToCpu(0, -20);
   last_sec = time(NULL);
   while(!terminating){
@@ -102,6 +100,8 @@ void* clock_thread(void*){
 #if 1
     last_sec = time(NULL);
 #else
+    int i = 0;
+    time_t tmp;
     if(i++ == CLOCK_RESYNC){
       i = 0;
       tmp = time(NULL);
@@ -122,7 +122,6 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
   static u_int32_t current_burst_size = 0;
   static ticks excess = 0;
   static ticks def = getticks();
-  static double start_interval_ms;
  
   mc_dpi_packet_reading_result_t r;
  
@@ -165,7 +164,6 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 
   if(current_interval_start == 0){
     current_interval_start = last_sec;
-    start_interval_ms = getmstime();
   }
 
   ++processed_packets;
@@ -174,7 +172,6 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
   if(last_sec - current_interval_start >= durations[current_interval]){
     current_interval_start = last_sec;
     current_interval++;
-    start_interval_ms = getmstime();
     excess = 0;
   }
  
@@ -199,7 +196,6 @@ static void match_found(string::size_type position,
 
 static void load_rates(const char* fileName){
   FILE* f = NULL;
-  char line[512];
   f = fopen(fileName, "r");
   float rate = 0;
   float duration = 0;
@@ -209,6 +205,7 @@ static void load_rates(const char* fileName){
   size = 10;
   intervals = 0;
   if(f){
+    char line[512];
     while(fgets(line, 512, f) != NULL){
       sscanf(line, "%f %f", &rate, &duration);
       rates[intervals] = rate;
@@ -217,8 +214,18 @@ static void load_rates(const char* fileName){
 
       if(intervals == size){
         size += 10;
-        rates = (double*) realloc(rates, sizeof(double)*size);
-        durations = (double*) realloc(durations, sizeof(double)*size);
+        double* tmp = (double*) realloc(rates, sizeof(double)*size);
+        if(!tmp){
+            cerr << "NULL realloc" << endl;
+            exit(EXIT_FAILURE);
+        }
+        rates = tmp;
+        tmp = (double*) realloc(durations, sizeof(double)*size);
+        if(!tmp){
+            cerr << "NULL realloc" << endl;
+            exit(EXIT_FAILURE);
+        }
+        durations = tmp;
       }
     }
     fclose(f);
@@ -255,7 +262,6 @@ FILE* outstats = NULL;
 int main(int argc, char **argv){
   pthread_t clock;
   using namespace std;
-  char* reconf_params;
   ff_mapThreadToCpu(0, -20);
   terminating=0;
 
@@ -275,7 +281,9 @@ int main(int argc, char **argv){
     char const *rates_file = argv[2];
     char const *virus_signatures_file_name=argv[3];
     char const *input_file_name=argv[4];
-    reconf_params=argv[5];
+#ifdef ENABLE_RECONFIGURATION
+    char* reconf_params=argv[5];
+#endif
 
     ifstream signatures;
     signatures.open(virus_signatures_file_name);
@@ -350,9 +358,18 @@ int main(int argc, char **argv){
         }
  
         if(num_packets==current_capacity){
-            packets=(unsigned char**)
-	        realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
-            sizes=(u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+            unsigned char** tmp=(unsigned char**)realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
+            if(!tmp){
+                cerr << "NULL realloc" << endl;
+                exit(EXIT_FAILURE);
+            }
+            packets = tmp;
+            u_int32_t* tmp2 = realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+            if(!tmp2){
+                cerr << "NULL realloc" << endl;
+                exit(EXIT_FAILURE);
+            }
+            sizes = tmp2;
             current_capacity+=CAPACITY_CHUNK;
             assert(packets);
             assert(sizes);

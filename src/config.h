@@ -46,7 +46,9 @@
 #define DPI_FLOW_TABLE_ALIGN_FLOWS 0
 #endif
 
+#ifndef DPI_USE_LIKELY
 #define DPI_USE_LIKELY 1
+#endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
    #define DPI_USE_INLINING 1

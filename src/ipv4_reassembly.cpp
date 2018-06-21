@@ -137,10 +137,11 @@ void dpi_ipv4_fragmentation_delete_source(
  */
 dpi_ipv4_fragmentation_state_t* dpi_reordering_enable_ipv4_fragmentation(
 		                        u_int16_t table_size){
-	dpi_ipv4_fragmentation_state_t* r=(dpi_ipv4_fragmentation_state_t*)
-			           calloc(1, sizeof(dpi_ipv4_fragmentation_state_t));
-	if(unlikely(r==NULL))
+    dpi_ipv4_fragmentation_state_t* r = (dpi_ipv4_fragmentation_state_t*) calloc(1, sizeof(dpi_ipv4_fragmentation_state_t));
+    if(unlikely(r == NULL)){
+        free(r);
 		return NULL;
+    }
 	r->table_size=table_size;
 	r->table=(dpi_ipv4_fragmentation_source_t**)
 			malloc(table_size * sizeof(dpi_ipv4_fragmentation_source_t*));
@@ -545,7 +546,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 		u_int8_t more_fragments, int tid){
 	struct iphdr *iph = (struct iphdr*) data;
 
-	dpi_ipv4_fragmentation_source_t* source,*tmpsource;
+    dpi_ipv4_fragmentation_source_t *source;
 	dpi_ipv4_fragmentation_flow_t* flow;
 
 	u_int16_t tot_len=ntohs(iph->tot_len);
@@ -616,7 +617,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 	while((state->timer_head) &&
 		  ((state->timer_head->expiration_time<current_time) ||
 		  (state->total_used_mem>=state->total_memory_limit))){
-		tmpsource=((dpi_ipv4_fragmentation_flow_t*)
+        dpi_ipv4_fragmentation_source_t* tmpsource = ((dpi_ipv4_fragmentation_flow_t*)
 				    state->timer_head->data)->source;
 		dpi_ipv4_fragmentation_delete_flow(
 				state,

@@ -201,8 +201,7 @@ int main(int argc, char **argv){
     u_int16_t num_iterations=atoi(argv[3]);
     unsigned int num_workers=atoi(argv[4]);
      
-    ifstream signatures;
-    signatures.open(virus_signatures_file_name);
+    ifstream signatures(virus_signatures_file_name);
     if(!signatures){
             cerr << argv[0] << ": failed to open '" <<
 	      virus_signatures_file_name << "'\n";
@@ -213,7 +212,7 @@ int main(int argc, char **argv){
      
     cout << "reading '" << virus_signatures_file_name << "'... ";
      
-    timer read_signatures_timer;
+    timer read_signatures_timer();
     read_signatures_timer.start();
     trie t(trie_depth);
     while (reader.next()) {
@@ -224,7 +223,7 @@ int main(int argc, char **argv){
     cout << setiosflags(ios_base::fixed) << setprecision(3) <<
       read_signatures_timer.real_time() << " seconds.\n";
     cout << "preparing '" << virus_signatures_file_name << "'... ";
-    timer prepare_signatures_timer;
+    timer prepare_signatures_timer();
     prepare_signatures_timer.start();
     t.prepare();
     prepare_signatures_timer.stop();
@@ -234,7 +233,7 @@ int main(int argc, char **argv){
  
     cout << "# of allocated trie nodes: " << t.node_count() << endl;
  
-    timer full_timer;
+    timer full_timer();
 
     /******************************************************/
     /*             Start scanning the files.              */
@@ -280,15 +279,21 @@ int main(int argc, char **argv){
       }
  
       if(num_packets==current_capacity){
-	packets=(unsigned char**)
-	  realloc(packets, sizeof(unsigned char*)*
-		  (current_capacity+CAPACITY_CHUNK));
-	sizes=(u_int32_t*)
-	  realloc(sizes, sizeof(u_int32_t)*
-		  (current_capacity+CAPACITY_CHUNK));
-	current_capacity+=CAPACITY_CHUNK;
-	assert(packets);
-	assert(sizes);
+          unsigned char** tmp = (unsigned char**) realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
+          if(!tmp){
+              fprintf(stderr, "NULL realloc\n");
+              exit(EXIT_FAILURE);
+          }
+          packets = tmp;
+          u_int32_t* tmp2 = (u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+          if(!tmp2){
+              fprintf(stderr, "NULL realloc\n");
+              exit(EXIT_FAILURE);
+          }
+          sizes = tmp2;
+          current_capacity+=CAPACITY_CHUNK;
+          assert(packets);
+          assert(sizes);
       }
  
       assert(header.len>sizeof(struct ether_header));

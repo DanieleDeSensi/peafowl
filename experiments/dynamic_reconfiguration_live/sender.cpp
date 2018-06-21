@@ -55,30 +55,6 @@ void error(const char *msg)
     exit(0);
 }
 
-void* clock_thread(void*){
-  int i = 0;
-  time_t tmp;
-  ff_mapThreadToCpu(0, -20);
-  //  last_sec = time(NULL);
-  while(!terminating){
-    /**
-    sleep(1);
-    if(i++ == CLOCK_RESYNC){
-      i = 0;
-      tmp = time(NULL);
-      if(tmp>=last_sec){
-        last_sec = tmp;
-      }
-    }else{
-      ++last_sec;
-    }
-    **/
-    ;
-  }
-  return NULL;
-}
-
-
 static int dummy = 0;
 void* spinner_thread(void*){
   while(!terminating){
@@ -118,15 +94,19 @@ void load_packets_from_file(char* filename){
     }
 
     if(num_packets==current_capacity){
-      packets=(unsigned char**)
-	realloc(packets, sizeof(unsigned char*)*
-		(current_capacity+CAPACITY_CHUNK));
-      sizes=(u_int32_t*)
-	realloc(sizes, sizeof(u_int32_t)*
-		(current_capacity+CAPACITY_CHUNK));
+      unsigned char** tmp = (unsigned char**)	realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
+      if(!tmp){
+          cerr << "NULL realloc" << endl;
+          exit(EXIT_FAILURE);
+      }
+      packets = tmp;
+      u_int32_t* tmp2 =(u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+      if(!tmp2){
+          cerr << "NULL realloc" << endl;
+          exit(EXIT_FAILURE);
+      }
+      sizes=tmp2;
       current_capacity+=CAPACITY_CHUNK;
-      assert(packets);
-      assert(sizes);
     }
 
     assert(header.len>sizeof(struct ether_header));
@@ -152,7 +132,6 @@ void load_packets_from_file(char* filename){
 
 static void load_rates(char* fileName){
   FILE* f = NULL;
-  char line[512];
   f = fopen(fileName, "r");
   float rate = 0;
   float duration = 0;
@@ -162,6 +141,7 @@ static void load_rates(char* fileName){
   size = 10;
   intervals = 0;
   if(f){
+    char line[512];
     while(fgets(line, 512, f) != NULL){
       sscanf(line, "%f %f", &rate, &duration);
       rates[intervals] = rate;
@@ -170,8 +150,18 @@ static void load_rates(char* fileName){
 
       if(intervals == size){
         size += 10;
-        rates = (double*) realloc(rates, sizeof(double)*size);
-        durations = (double*) realloc(durations, sizeof(double)*size);
+        double* tmp = (double*) realloc(rates, sizeof(double)*size);
+        if(!tmp){
+            cerr << "NULL realloc" << endl;
+            exit(EXIT_FAILURE);
+        }
+        rates = tmp;
+        tmp = (double*) realloc(durations, sizeof(double)*size);
+        if(!tmp){
+            cerr << "NULL realloc" << endl;
+            exit(EXIT_FAILURE);
+        }
+        durations = tmp;
       }
     }
     fclose(f);
@@ -181,18 +171,15 @@ static void load_rates(char* fileName){
 
 int main(int argc, char *argv[])
 {
-    int sockfd, portno, n;
+    int sockfd, portno;
     struct sockaddr_in serv_addr;
     struct hostent *server;
     char* pcapfile = NULL;
-
-    char buffer[256];
 
     time_t current_interval_start=0;
     u_int32_t current_burst_size = 0;
     ticks excess = 0;
     ticks def = getticks();
-    double start_interval_ms;
     u_int32_t next_packet_to_send = 0;
     u_int64_t current_interval_packets = 0;
     u_int64_t current_interval_bytes = 0;
@@ -231,8 +218,7 @@ int main(int argc, char *argv[])
     printf("Connected.\n");
 
 
-    pthread_t clock, spinner;
-    pthread_create(&clock, NULL, clock_thread, NULL);
+    pthread_t spinner;
     pthread_create(&spinner, NULL, spinner_thread, NULL);
     load_packets_from_file(pcapfile);
     load_rates("rates.txt");
@@ -249,7 +235,6 @@ int main(int argc, char *argv[])
 	printf("Finishing!\n");
 	fflush(stdout);
 	terminating = 1;
-	pthread_join(clock, NULL);
 	pthread_join(spinner, NULL);
 	break;
       }
@@ -282,10 +267,8 @@ int main(int argc, char *argv[])
       }
 
 
-
       if(current_interval_start == 0){
 	current_interval_start = last_sec;
-	start_interval_ms = getmstime();
       }
 
       ++processed_packets;
@@ -303,10 +286,9 @@ int main(int argc, char *argv[])
 
 	current_interval_start = last_sec;
 	current_interval++;
-	start_interval_ms = getmstime();
       }
 
-      n = write(sockfd,packets[next_packet_to_send],sizes[next_packet_to_send]);
+      int n = write(sockfd,packets[next_packet_to_send],sizes[next_packet_to_send]);
 
       ++next_packet_to_send;
 

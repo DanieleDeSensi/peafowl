@@ -555,7 +555,7 @@ unsigned char* dpi_reordering_manage_ipv6_fragment(
 		u_int16_t offset, u_int8_t more_fragments,
 		u_int32_t identification, u_int8_t next_header,
 		u_int32_t current_time, int tid){
-	dpi_ipv6_fragmentation_source_t* source,*tmpsource;
+    dpi_ipv6_fragmentation_source_t* source;
 	dpi_ipv6_fragmentation_flow_t* flow;
 
 	struct ip6_hdr* ip6=(struct ip6_hdr*) unfragmentable_start;
@@ -630,7 +630,7 @@ unsigned char* dpi_reordering_manage_ipv6_fragment(
 	while((state->timer_head) &&
 		  ((state->timer_head->expiration_time<current_time) ||
 		  (state->total_used_mem>=state->total_memory_limit))){
-		tmpsource=((dpi_ipv6_fragmentation_flow_t*)
+        dpi_ipv6_fragmentation_source_t* tmpsource=((dpi_ipv6_fragmentation_flow_t*)
 				     state->timer_head->data)->source;
 		dpi_ipv6_fragmentation_delete_flow(state,
 				                          (dpi_ipv6_fragmentation_flow_t*)

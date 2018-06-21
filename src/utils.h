@@ -39,7 +39,7 @@
 
 
 #if !defined(likely)
- #if defined(__GNUC__) && defined(DPI_USE_LIKELY)
+ #if defined(__GNUC__) && (DPI_USE_LIKELY == 1)
   #define likely(x)       __builtin_expect(!!(x),1)
  #else
   #define likely(x)       (x)
@@ -47,7 +47,7 @@
 #endif
 
 #if !defined(unlikely)
- #if defined(__GNUC__) && defined(DPI_USE_LIKELY)
+ #if defined(__GNUC__) && (DPI_USE_LIKELY == 1)
   #define unlikely(x)     __builtin_expect(!!(x),0)
  #else
   #define unlikely(x)     (x)

@@ -111,12 +111,12 @@ int
 readn(int f, char *av, int n)
 {
   char *a;
-  int m, t;
+  int t;
 
   a = av;
   t = 0;
   while(t < n){
-    m = read(f, a+t, n-t);
+    int m = read(f, a+t, n-t);
     if(m <= 0){
       if(t == 0)
 	return m;
@@ -132,8 +132,8 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
     static unsigned long long i = 0;
     /* Grab a packet */
     void *pkt_handle;
-    int n = 0;
     while(1){
+        int n = 0;
     	mc_dpi_packet_reading_result_t r;
 
     	if(getticks()-last_ts>CLOCK_FREQ){
@@ -228,7 +228,7 @@ void print_stats_callback(u_int16_t num_workers, unsigned long int cores_frequen
   ticks currentticks;
   float pktloss=0;
   unsigned long long tmp_rcvd_pkts = rcvd_pkts;
-  double interval = polling_interval;
+  double interval;
   currentticks = getticks();
   interval = (double) (currentticks - lastticks) / (double) CLOCK_FREQ;
   fprintf(outstats, "%d %d %lu %f %f %f %f %f %f %f %f %f %f %f\n", last_sec,
@@ -257,9 +257,9 @@ int main(int argc, char **argv){
   terminating=0;
 
   try {
-    if (argc<4){
+    if (argc<3){
             cerr << "Usage: " << argv[0] <<
-	            " virus-signatures-file iface polling-interval\n";
+                " virus-signatures-file polling-interval\n";
             exit(EXIT_FAILURE);
     }
 
@@ -267,13 +267,11 @@ int main(int argc, char **argv){
     string::size_type trie_depth=DEFAULT_TRIE_MAXIMUM_DEPTH;
      
     char const *virus_signatures_file_name=argv[1];
-    char const *iface=argv[2];
-    polling_interval=atoi(argv[3]);
+    polling_interval=atoi(argv[2]);
     outstats = fopen("stats.txt", "w");
     fprintf(outstats, "#CurrentTime NumWorkers Frequency TotalRate PktLoss WattsSocket WattsCores WattsOffCores WattsDRAM\n");
      
-    ifstream signatures;
-    signatures.open(virus_signatures_file_name);
+    ifstream signatures(virus_signatures_file_name);
     if(!signatures){
             cerr << argv[0] << ": failed to open '" <<
 	      virus_signatures_file_name << "'\n";
@@ -284,7 +282,7 @@ int main(int argc, char **argv){
      
     cout << "reading '" << virus_signatures_file_name << "'... ";
      
-    timer read_signatures_timer;
+    timer read_signatures_timer();
     read_signatures_timer.start();
     trie t(trie_depth);
     while (reader.next()) {
@@ -295,7 +293,7 @@ int main(int argc, char **argv){
     cout << setiosflags(ios_base::fixed) << setprecision(3) <<
       read_signatures_timer.real_time() << " seconds.\n";
     cout << "preparing '" << virus_signatures_file_name << "'... ";
-    timer prepare_signatures_timer;
+    timer prepare_signatures_timer();
     prepare_signatures_timer.start();
     t.prepare();
     prepare_signatures_timer.stop();
@@ -305,7 +303,7 @@ int main(int argc, char **argv){
  
     cout << "# of allocated trie nodes: " << t.node_count() << endl;
  
-    timer full_timer;
+    timer full_timer();
 
     load_pktlengths();
     sockfd = socket(AF_INET,SOCK_STREAM,0);
@@ -355,9 +353,7 @@ int main(int argc, char **argv){
     mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
     dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
     mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
-    
-    unsigned int i=0;
-   
+     
     mc_dpi_joules_counters joules_before, joules_after, joules_diff;
     joules_before = mc_dpi_joules_counters_read(state);
     double interval = 10;

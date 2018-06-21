@@ -1,0 +1,7 @@
+// External libraries
+*:src/external/*
+*:demo/http_pattern_matching/pattern_matching_lib/*
+*:src/inspectors/http_parser_joyent.*
+nullPointerRedundantCheck:src/ipv4_reassembly.cpp
+nullPointerRedundantCheck:src/ipv6_reassembly.cpp
+nullPointerRedundantCheck:src/reassembly.cpp

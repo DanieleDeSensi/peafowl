@@ -105,7 +105,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	void *pkt_handle;
 #endif
 	struct pfring_pkthdr hdr;
-	int rc;
+
 
 	if(numPkts == 0) gettimeofday(&startTime, NULL);
 
@@ -122,6 +122,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	if(verbose) printf("pkt_buff->pop()\n");
 
 	while(1) {
+        int rc;
 #ifdef USE_PF_RING_CLUSTER
 		rc = pfring_recv_pkt_buff(ring, pkt_handle, &hdr, 1);
 #else
@@ -216,7 +217,7 @@ double delta_time (struct timeval * now,
 void print_stats() {
 	pfring_stat pfringStat;
 	struct timeval endTime;
-	double deltaMillisecInterval, deltaMillisecSinceStart;
+    double deltaMillisecSinceStart;
 	static u_int64_t lastPkts = 0;
 	static u_int64_t lastBytes = 0;
 	u_int64_t diffPkts, diffBytes;
@@ -236,7 +237,8 @@ void print_stats() {
 	}
 
 	if(lastTime.tv_sec > 0) {
-	        deltaMillisecSinceStart = delta_time(&endTime, &startTime);
+        double deltaMillisecInterval;
+        deltaMillisecSinceStart = delta_time(&endTime, &startTime);
 		deltaMillisecInterval = delta_time(&endTime, &lastTime);
 		diffPkts = numPkts-lastPkts;
 		diffBytes = numBytes-lastBytes;

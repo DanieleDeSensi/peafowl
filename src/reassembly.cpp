@@ -144,8 +144,10 @@ dpi_reassembly_fragment_t* dpi_reassembly_create_fragment(
 	dpi_reassembly_fragment_t* fragment;
 	fragment=(dpi_reassembly_fragment_t*)
 			   calloc(1, sizeof(dpi_reassembly_fragment_t));
-	if(unlikely(fragment==NULL))
+    if(unlikely(fragment==NULL)){
+        free(fragment);
 		return NULL;
+    }
 
 	/* Fill in the structure. */
 	fragment->offset=offset;

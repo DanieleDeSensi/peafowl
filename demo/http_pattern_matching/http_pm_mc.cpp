@@ -202,8 +202,18 @@ int main(int argc, char **argv){
 			}
 
 			if(num_packets==current_capacity){
-				packets=(unsigned char**) realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
-				sizes=(u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+                unsigned char** tmp = (unsigned char**) realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
+                if(!tmp){
+                    fprintf(stderr, "NULL on realloc\n");
+                    exit(EXIT_FAILURE);
+                }
+                packets=tmp;
+                tmp=(u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+                if(!tmp){
+                    fprintf(stderr, "NULL on realloc\n");
+                    exit(EXIT_FAILURE);
+                }
+                sizes=tmp;
 				current_capacity+=CAPACITY_CHUNK;
 				assert(packets);
 				assert(sizes);
