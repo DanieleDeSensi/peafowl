@@ -3,7 +3,7 @@
  **/
 #include "common.h"
 
-TEST(HTTPTest, Generic) {
+TEST(SMTPTest, Generic) {
     std::vector<uint> tcpProtocols;
     std::vector<uint> udpProtocols;
     uint unknown;

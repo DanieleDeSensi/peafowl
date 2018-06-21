@@ -9,4 +9,6 @@ TEST(HTTPTest, Generic) {
     uint unknown;
     getProtocols("./pcaps/http.cap", tcpProtocols, udpProtocols, unknown);
     EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_HTTP], (uint) 35);
+    getProtocols("./pcaps/skype-irc.cap", tcpProtocols, udpProtocols, unknown);
+    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_HTTP], (uint) 12);
 }
