@@ -7,7 +7,7 @@ CXXFLAGS             = --std=c++11 -Wall -g
 CFLAGS               =
 LDFLAGS              = 
 INCS                 = -I ../../src/
-LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread -lm
+LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread
 INCLUDES             =
 TARGET               = dump_jpeg
 

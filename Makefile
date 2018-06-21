@@ -1,6 +1,6 @@
 export CC                   = gcc
 export CXX                  = g++
-export OPTIMIZE_FLAGS       = -finline-functions -O3
+export OPTIMIZE_FLAGS       = -finline-functions -O3 -fPIC
 export CXXFLAGS             = --std=c++11 -Wall -DFF_BOUNDED_BUFFER -DNO_DEFAULT_MAPPING #-DDPI_DEBUG_TCP_REORDERING #-DBLOCKING_MODE
 export INCS                 = -I $(realpath .) 
 MAMMUT               = $(realpath ./src/external/nornir/src/external/Mammut)

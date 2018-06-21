@@ -7,7 +7,7 @@ CXXFLAGS             = -Wall -g
 CFLAGS               =
 LDFLAGS              = 
 INCS                 = -I ../../src/
-LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread -lm
+LIBS                 = -lpcap -L../../lib/ -ldpi -lpthread 
 INCLUDES             =
 TARGET               = protocol_identification
 

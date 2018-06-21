@@ -1,14 +1,3 @@
-CC                   = gcc 
-CXX                  = g++ 
-LINK_OPT             = 
-VERSION              = 
-OPTIMIZE_FLAGS       = -O3
-CXXFLAGS             = -Wall -g 
-CFLAGS               =
-LDFLAGS              = 
-INCS                 = 
-LIBS                 = 
-INCLUDES             =
 TARGET               = dhcp.o dhcpv6.o bgp.o dns.o http_parser_joyent.o http.o sip.o smtp.o pop3.o mdns.o rtp.o ntp.o skype.o ssl.o
 
 .PHONY: all clean cleanall install uninstall

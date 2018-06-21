@@ -44,8 +44,10 @@ seq: $(SEQTARGET)
 seqlib:
 	ar rs libdpi.a $(SEQTARGET) inspectors/*.o
 	mv libdpi.a ../lib/libdpi.a	
+	$(CXX) $(SEQTARGET) inspectors/*.o -lm -shared -o ../lib/libdpi.so
 par: $(SEQTARGET) $(PARTARGET)
 parlib:
 	make seqlib
 	ar rs libmcdpi.a $(SEQTARGET) $(PARTARGET) inspectors/*.o
 	mv libmcdpi.a ../lib/libmcdpi.a
+	$(CXX) $(SEQTARGET) $(PARTARGET) inspectors/*.o -lm -shared -o ../lib/libmcdpi.so
