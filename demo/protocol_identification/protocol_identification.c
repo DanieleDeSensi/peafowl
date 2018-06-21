@@ -89,6 +89,7 @@ int main(int argc, char** argv){
 	u_int32_t bgp_matches=0;
 	u_int32_t smtp_matches=0;
 	u_int32_t pop3_matches=0;
+    u_int32_t ssl_matches=0;
 	u_int32_t mdns_matches=0;
 	u_int32_t ntp_matches=0;
 	u_int32_t dhcp_matches=0;
@@ -121,6 +122,9 @@ int main(int argc, char** argv){
 				case DPI_PROTOCOL_TCP_POP3:
 					++pop3_matches;
 					break;
+                case DPI_PROTOCOL_TCP_SSL:
+                    ++ssl_matches;
+                    break;
 				default:
 					++unknown;
 					break;
@@ -171,6 +175,7 @@ int main(int argc, char** argv){
 	if (rtp_matches > 0 ) printf("RTP packets: %"PRIu32"\n", rtp_matches);
 	if (bgp_matches > 0 ) printf("BGP packets: %"PRIu32"\n", bgp_matches);
 	if (pop3_matches > 0 ) printf("POP3 packets: %"PRIu32"\n", pop3_matches);
+    if (ssl_matches > 0 ) printf("SSL packets: %"PRIu32"\n", ssl_matches);
 	if (smtp_matches > 0 ) printf("SMTP packets: %"PRIu32"\n", smtp_matches);
 	if (ntp_matches > 0 ) printf("NTP packets: %"PRIu32"\n", ntp_matches);
 	if (dns_matches > 0 ) printf("DNS packets: %"PRIu32"\n", dns_matches);

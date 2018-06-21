@@ -3,10 +3,10 @@
  **/
 #include "common.h"
 
-TEST(HTTPTest, Generic) {
+TEST(DNSTest, Generic) {
     std::vector<uint> tcpProtocols;
     std::vector<uint> udpProtocols;
     uint unknown;
     getProtocols("./pcaps/http.cap", tcpProtocols, udpProtocols, unknown);
-    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_HTTP], (uint) 35);
+    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_DNS], (uint) 2);
 }
