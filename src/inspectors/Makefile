@@ -6,7 +6,7 @@ TARGET               = dhcp.o dhcpv6.o bgp.o dns.o http_parser_joyent.o http.o s
 all: $(TARGET)
  
 %.o: %.c 
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) -c $? -o $@
+	$(CC) $(INCS) $(CCFLAGS) $(OPTIMIZE_FLAGS) -c $? -o $@
 clean: 
 	-rm -fr *.o *~ 
 cleanall: clean

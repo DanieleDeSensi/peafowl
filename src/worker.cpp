@@ -403,8 +403,8 @@ dpi_L7_worker::~dpi_L7_worker(){
 }
 
 int dpi_L7_worker::svc_init(){
-	worker_debug_print("[worker.cpp]: L7 worker %d mapped on"
-			   " processor: %d. Tid: %d\n", worker_id, proc_id, pthread_self());
+    worker_debug_print("[worker.cpp]: L7 worker %u mapped on"
+                       " processor: %u. Tid: %lu\n", worker_id, proc_id, pthread_self());
 	ff_mapThreadToCpu(proc_id,-20);
 	return 0;
 }
@@ -419,8 +419,6 @@ void* dpi_L7_worker::svc(void* task){
 
 #if MC_DPI_TICKS_WAIT == 1
 	ticks svcstart = getticks();
-#else
-	unsigned long svcstartns = getns();
 #endif
 	memcpy(temp, real_task->input_output_task_t.L3_L4_output_task_t,
 		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE*

@@ -1,7 +1,8 @@
 export CC                   = gcc
 export CXX                  = g++
 export OPTIMIZE_FLAGS       = -finline-functions -O3 -fPIC
-export CXXFLAGS             = $(PEAFOWL_COVERAGE_FLAGS) --std=c++11 -Wall -DFF_BOUNDED_BUFFER -DNO_DEFAULT_MAPPING #-DDPI_DEBUG_TCP_REORDERING #-DBLOCKING_MODE
+export CCFLAGS             = $(PEAFOWL_COVERAGE_FLAGS) -Wall -DFF_BOUNDED_BUFFER -DNO_DEFAULT_MAPPING #-DDPI_DEBUG_TCP_REORDERING #-DBLOCKING_MODE
+export CXXFLAGS             = $(CCFLAGS) --std=c++11
 export INCS                 = -I $(realpath .) 
 MAMMUT               = $(realpath ./src/external/nornir/src/external/Mammut)
 ADPFF                = $(realpath ./src/external/nornir)

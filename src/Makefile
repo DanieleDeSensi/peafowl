@@ -11,7 +11,7 @@ all:
 	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1 par
 	make parlib
 tcp_stream_management.o: tcp_stream_management.c
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c tcp_stream_management.c -o tcp_stream_management.o
+	$(CC) $(INCS) $(CCFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c tcp_stream_management.c -o tcp_stream_management.o
 utils.o: utils.cpp
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c utils.cpp -o utils.o
 reassembly.o: reassembly.cpp
@@ -23,16 +23,14 @@ ipv6_reassembly.o: ipv6_reassembly.cpp
 hash_functions.o: hash_functions.cpp
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c hash_functions.cpp -o hash_functions.o
 flow_table.o: flow_table.c
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c flow_table.c -o flow_table.o
+	$(CC) $(INCS) $(CCFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c flow_table.c -o flow_table.o
 api.o: api.c
 	make -C ./inspectors
-	$(CC) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c api.c -o api.o
+	$(CC) $(INCS) $(CCFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c api.c -o api.o
 worker.o: worker.cpp
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c worker.cpp  -o worker.o 
 mc_api.o: mc_api.cpp 
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c mc_api.cpp -o mc_api.o 
-energy_utils.o: energy_utils.c
-	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c energy_utils.c -o energy_utils.o
 clean: 
 	make -C ./inspectors clean
 	-rm -fr *.o *~ *.a
