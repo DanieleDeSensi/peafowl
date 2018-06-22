@@ -100,9 +100,38 @@ static const dpi_l7_prot_id const
 In this way, when the framework receives a protocol on the telnet port, it will first check if the carried
 protocol is telnet and, if this is not the case, it will check the other protocols.
 In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to 
-"dpi_well_known_ports_association_udp" array.
+```dpi_well_known_ports_association_udp``` array.
 
-6) Recompile the framework.
+6) Add unit tests for the protocol. Suppose you are adding the support for the ```foobar``` protocol. 
+First, you need to add a ```foobar.cpp``` file under ```./test/```. This file will be automatically compiled and
+executed when the tests are run. In this file you should put the code for checking that the protocol ```foobar```
+is correctly identified. You can check correctness in the way you prefer.
+
+However, the suggested (and simplest) way is the following:
+- Place a .pcap file containing some packets for the protocol under the ```./test/pcaps```
+folder. Suppose this file is called ```foobar.pcap```. If the protocol is a TCP-based protocol,
+check that the .pcap contains the SYN packets which open the TCP connection.
+- Peafowl relies on [googletest](https://github.com/google/googletest). In the ```foobar.cpp``` file
+you can check the correctness of the identification by running the following code:
+
+```C
+#include "common.h"
+
+TEST(FoobarTest, Generic) {
+    std::vector<uint> tcpProtocols, udpProtocols;
+    uint unknown;
+    getProtocols("./pcaps/foobar.pcap", tcpProtocols, udpProtocols, unknown);
+    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_FOOBAR], (uint) 42);
+}
+
+```
+
+Where ```42``` is the number of ```foobar``` packets you expect to be identified by the protocol inspector.
+Of course, you can check the correctness of the protocol in any other way.
+
+7) Recompile the framework.
+
+8) Run a ```make testquick``` to check that the unit test succeeds.
 
 If you implemented the support for some other protocols please let me know so I can add them to the framework.
 
