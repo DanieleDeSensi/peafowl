@@ -6,7 +6,7 @@ Adding new protocols
 If you want to add the support for new protocols, you can do it by following some simple steps.
 For example, if you want to add the support for the Telnet protocol:
 
-1) Define the protocol and give to it the next available numeric identifier (file inspectors/protocols_identifiers.h).
+1) Define the protocol and give to it the next available numeric identifier (file ```inspectors/protocols_identifiers.h```).
 
 ```C
 /** Protocols over TCP. **/
@@ -21,7 +21,12 @@ enum tcp_protocols{
 ```
 In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to "enum udp_protocols".
 
-2) Create a new inspector, by implementing a C function with the following signature and semantic:
+2) In file ```inspectors/protocols_identifiers.h```, add a string representation for the protocol, adding the string
+```"TELNET"``` to the ```tcp_protocols_strings``` array (or to ```udp_protocols_strings``` in case of an UDP-based protocol).
+The position of the string in the array must be equal to the corresponding enum value,
+such that ```tcp_protocols_strings[DPI_PROTOCOL_TCP_TELNET] == "TELNET"```.
+
+3) Create a new inspector, by implementing a C function with the following signature and semantic:
 
 ```C
 u_int8_t check_telnet(dpi_library_state_t* state,    // The state of the library
@@ -49,7 +54,7 @@ can return one of four different values:
 + DPI_PROTOCOL_MORE_DATA_NEEDED: If the inspector needs more data to be sure that the protocol matches 
 + DPI_PROTOCOL_ERROR: If an error occurred
 
-3) If the inspector needs to store information about the application flow, add an appropriate structure in the 
+4) If the inspector needs to store information about the application flow, add an appropriate structure in the 
 flow data description (api.h, struct dpi_tracking_informations). These data can be then used by the inspector
 by accessing the last parameter of the call described in point 2).
 
@@ -67,7 +72,7 @@ typedef struct dpi_tracking_informations{
 }dpi_tracking_informations_t;
 ```
 
-4) Add the inspector to the set of inspectors which will be called by the framework. This can be done by 
+5) Add the inspector to the set of inspectors which will be called by the framework. This can be done by 
 inserting a pointer to the corresponding function into an appropriate array (api.c).
 
 ```C
@@ -82,7 +87,7 @@ static const dpi_inspector_callback const
 
 In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to "tcp_inspectors" array.
 
-5) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
+6) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
 the protocol identifier (api.c).
 
 ```C
@@ -102,36 +107,36 @@ protocol is telnet and, if this is not the case, it will check the other protoco
 In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to 
 ```dpi_well_known_ports_association_udp``` array.
 
-6) Add unit tests for the protocol. Suppose you are adding the support for the ```foobar``` protocol. 
-First, you need to add a ```foobar.cpp``` file under ```./test/```. This file will be automatically compiled and
-executed when the tests are run. In this file you should put the code for checking that the protocol ```foobar```
+7) Add unit tests for the protocol. Suppose you are adding the support for the ```TELNET``` protocol. 
+First, you need to add a ```testTelnet.cpp``` file under ```./test/```. This file will be automatically compiled and
+executed when the tests are run. In this file you should put the code for checking that the protocol ```TELNET```
 is correctly identified. You can check correctness in the way you prefer.
 
 However, the suggested (and simplest) way is the following:
 - Place a .pcap file containing some packets for the protocol under the ```./test/pcaps```
-folder. Suppose this file is called ```foobar.pcap```. If the protocol is a TCP-based protocol,
+folder. Suppose this file is called ```TELNET.pcap```. If the protocol is a TCP-based protocol,
 check that the .pcap contains the SYN packets which open the TCP connection.
-- Peafowl relies on [googletest](https://github.com/google/googletest). In the ```foobar.cpp``` file
+- Peafowl relies on [googletest](https://github.com/google/googletest). In the ```testTelnet.cpp``` file
 you can check the correctness of the identification by running the following code:
 
 ```C
 #include "common.h"
 
-TEST(FoobarTest, Generic) {
+TEST(TELNETTest, Generic) {
     std::vector<uint> tcpProtocols, udpProtocols;
     uint unknown;
-    getProtocols("./pcaps/foobar.pcap", tcpProtocols, udpProtocols, unknown);
-    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_FOOBAR], (uint) 42);
+    getProtocols("./pcaps/TELNET.pcap", tcpProtocols, udpProtocols, unknown);
+    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_TELNET], (uint) 42);
 }
 
 ```
 
-Where ```42``` is the number of ```foobar``` packets you expect to be identified by the protocol inspector.
+Where ```42``` is the number of ```TELNET``` packets you expect to be identified by the protocol inspector.
 Of course, you can check the correctness of the protocol in any other way.
 
-7) Recompile the framework.
+8) Recompile the framework.
 
-8) Run a ```make testquick``` to check that the unit test succeeds.
+9) Run a ```make testquick``` to check that the unit test succeeds.
 
 If you implemented the support for some other protocols please let me know so I can add them to the framework.
 

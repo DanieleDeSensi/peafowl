@@ -28,6 +28,9 @@
 #ifndef PROTOCOLS_IDENTIFIERS_H_
 #define PROTOCOLS_IDENTIFIERS_H_
 
+#include <stdlib.h>
+#include <string.h>
+
 #define DPI_IP_VERSION_4 0x4
 #define DPI_IP_VERSION_6 0x6
 
@@ -48,6 +51,16 @@ enum udp_protocols{
 	DPI_NUM_UDP_PROTOCOLS
 };
 
+static const char * udp_protocols_strings[] = {
+    "DNS",
+    "MDNS",
+    "DHCP",
+    "DHCPv6",
+    "NTP",
+    "SIP",
+    "RTP",
+    "SKYPE"
+};
 
 /** Protocols over TCP. **/
 enum tcp_protocols{
@@ -58,6 +71,15 @@ enum tcp_protocols{
 	DPI_PROTOCOL_TCP_SSL,
 	DPI_NUM_TCP_PROTOCOLS
 };
+
+static const char * tcp_protocols_strings[] = {
+    "HTTP",
+    "BGP",
+    "SMTP",
+    "POP3",
+    "SSL"
+};
+
 /** Remember to set the callback in init() and to increase the number of supported protocols. **/
 
 typedef u_int8_t dpi_l7_prot_id;
@@ -66,6 +88,42 @@ typedef struct dpi_protocol{
 	dpi_l7_prot_id l7prot;
 }dpi_protocol_t;
 
+
+static inline const char* protoToString(dpi_protocol_t proto){
+    if(proto.l4prot == IPPROTO_TCP){
+        if(proto.l7prot < DPI_NUM_TCP_PROTOCOLS){
+            return tcp_protocols_strings[proto.l7prot];
+        }
+    }else if(proto.l4prot == IPPROTO_UDP){
+        if(proto.l7prot < DPI_NUM_UDP_PROTOCOLS){
+            return udp_protocols_strings[proto.l7prot];
+        }
+    }
+    return NULL;
+}
+
+static inline dpi_protocol_t stringToProto(const char* string){
+    dpi_protocol_t r;
+    r.l4prot = -1;
+    r.l7prot = -1;
+
+    for(size_t i = 0; i < (size_t) DPI_NUM_UDP_PROTOCOLS; i++){
+        if(strcmp(string, udp_protocols_strings[i]) == 0){
+            r.l4prot = IPPROTO_UDP;
+            r.l7prot = (enum udp_protocols) i;
+            return r;
+        }
+    }
+
+    for(size_t i = 0; i < (size_t) DPI_NUM_TCP_PROTOCOLS; i++){
+        if(strcmp(string, tcp_protocols_strings[i]) == 0){
+            r.l4prot = IPPROTO_TCP;
+            r.l7prot = (enum tcp_protocols) i;
+            return r;
+        }
+    }
+    return r;
+}
 
 
 /**
