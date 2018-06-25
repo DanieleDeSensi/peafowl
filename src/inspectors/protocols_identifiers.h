@@ -109,7 +109,7 @@ static inline dpi_protocol_t stringToProto(const char* string){
 
     size_t i;
     for(i = 0; i < (size_t) DPI_NUM_UDP_PROTOCOLS; i++){
-        if(strcmp(string, udp_protocols_strings[i]) == 0){
+        if(strcasecmp(string, udp_protocols_strings[i]) == 0){
             r.l4prot = IPPROTO_UDP;
             r.l7prot = (enum udp_protocols) i;
             return r;
@@ -117,7 +117,7 @@ static inline dpi_protocol_t stringToProto(const char* string){
     }
 
     for(i = 0; i < (size_t) DPI_NUM_TCP_PROTOCOLS; i++){
-        if(strcmp(string, tcp_protocols_strings[i]) == 0){
+        if(strcasecmp(string, tcp_protocols_strings[i]) == 0){
             r.l4prot = IPPROTO_TCP;
             r.l7prot = (enum tcp_protocols) i;
             return r;
