@@ -447,12 +447,14 @@ void* dpi_L7_worker::svc(void* task){
 			ipv4_flow=mc_dpi_flow_table_find_or_create_flow_v4(
 					state, this->worker_id, temp[i].hash_result,
 					&(infos));
-			flow_infos=&(ipv4_flow->infos);
+			if(ipv4_flow)
+				flow_infos=&(ipv4_flow->infos);
 		}else{
 			ipv6_flow=mc_dpi_flow_table_find_or_create_flow_v6(
 					state, this->worker_id, temp[i].hash_result,
 					&(infos));
-			flow_infos=&(ipv6_flow->infos);
+			if(ipv6_flow)
+				flow_infos=&(ipv6_flow->infos);
 		}
 
 		real_task->input_output_task_t.L7_output_task_t[i].result.

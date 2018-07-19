@@ -166,7 +166,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		tmp=malloc(sizeof(dpi::dpi_L3_L4_worker));
 		assert(tmp);
 		w1=new (tmp) dpi::dpi_L3_L4_worker(state->sequential_state, i,
-		   (state->single_farm_active_workers),
+		   (state->double_farm_L7_active_workers),
 		   state->mapping[last_mapped],
 		   size_v4,
 		   size_v6);

@@ -47,6 +47,12 @@ typedef struct mc_dpi_packet_reading_result{
 	void* user_pointer;
 }mc_dpi_packet_reading_result_t;
 
+typedef enum analysis_results{
+     MC_DPI_PARALLELISM_FORM_ONE_FARM=0
+    ,MC_DPI_PARALLELISM_FORM_DOUBLE_FARM
+    ,MC_DPI_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
+}analysis_results;
+
 /**
  * @struct mc_dpi_parallelism_details_t
  * @brief Represents some details that can be specified by the user
@@ -76,18 +82,10 @@ typedef struct mc_dpi_parallelism_details{
 	u_int16_t available_processors;
 	u_int16_t* mapping;
 	/** User manual specification of parallelism form. **/
-	u_int8_t parallelism_form;
+	analysis_results parallelism_form;
 	u_int16_t double_farm_num_L3_workers;
 	u_int16_t double_farm_num_L7_workers;
 }mc_dpi_parallelism_details_t;
-
-enum analysis_results{
-	 MC_DPI_PARALLELISM_FORM_ONE_FARM=0
-	,MC_DPI_PARALLELISM_FORM_DOUBLE_FARM
-	,MC_DPI_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
-};
-
-
 
 /**
  * This function will be called by the library (active mode only) to read
