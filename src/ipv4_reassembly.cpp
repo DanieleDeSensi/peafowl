@@ -114,7 +114,7 @@ typedef struct dpi_ipv4_fragmentation_state{
 	/** Reassembly timeout. **/
 	u_int8_t timeout;
 #if DPI_THREAD_SAFETY_ENABLED == 1
-	ff::CLHSpinLock lock;
+	ff::lock_t lock;
 #endif
 }dpi_ipv4_fragmentation_state_t;
 
@@ -163,8 +163,7 @@ dpi_ipv4_fragmentation_state_t* dpi_reordering_enable_ipv4_fragmentation(
 			DPI_IPv4_FRAGMENTATION_DEFAULT_REASSEMBLY_TIMEOUT;
 	r->total_used_mem=0;
 #if DPI_THREAD_SAFETY_ENABLED == 1
-	bzero(&(r->lock), sizeof(ff::CLHSpinLock));
-	ff::init_unlocked(&(r->lock));
+	ff::init_unlocked(r->lock);
 #endif
 	return r;
 }
@@ -234,9 +233,6 @@ void dpi_reordering_disable_ipv4_fragmentation(
 		}
 		free(frag_state->table);
 	}
-#if DPI_THREAD_SAFETY_ENABLED == 1
-	frag_state->lock.~CLHSpinLock();
-#endif
 	free(frag_state);
 }
 
@@ -575,14 +571,14 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 	}
 
 #if DPI_THREAD_SAFETY_ENABLED == 1
-	ff::spin_lock(&(state->lock), tid);
+	ff::spin_lock(state->lock);
 #endif
 	source=dpi_ipv4_fragmentation_find_or_create_source(state,
 			                                            iph->saddr);
 	if(unlikely(source==NULL)){
 		debug_print("%s\n","ERROR: Impossible to create the source.");
 #if DPI_THREAD_SAFETY_ENABLED == 1
-		ff::spin_unlock(&(state->lock), tid);
+		ff::spin_unlock(state->lock);
 #endif
 		return NULL;
 	}
@@ -600,7 +596,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 		if(source->flows==NULL){
 			dpi_ipv4_fragmentation_delete_source(state, source);
 #if DPI_THREAD_SAFETY_ENABLED == 1
-			ff::spin_unlock(&(state->lock), tid);
+			ff::spin_unlock(state->lock);
 #endif
 			return NULL;
 		}
@@ -625,7 +621,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 		if(source->flows==NULL){
 			dpi_ipv4_fragmentation_delete_source(state,tmpsource);
 #if DPI_THREAD_SAFETY_ENABLED == 1
-			ff::spin_unlock(&(state->lock), tid);
+			ff::spin_unlock(state->lock);
 #endif
 			return NULL;
 		}
@@ -640,7 +636,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 	if(unlikely(flow==NULL)){
 		debug_print("%s\n","ERROR: Impossible to create the flow.");
 #if DPI_THREAD_SAFETY_ENABLED == 1
-		ff::spin_unlock(&(state->lock), tid);
+		ff::spin_unlock(state->lock);
 #endif
 		return NULL;
 	}
@@ -653,7 +649,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 		debug_print("%s\n","Malformed fragment, starts after "
 				    "the end of the entire datagram.");
 #if DPI_THREAD_SAFETY_ENABLED == 1
-		ff::spin_unlock(&(state->lock), tid);
+		ff::spin_unlock(state->lock);
 #endif
 		return NULL;
 	}
@@ -668,7 +664,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 		if(unlikely(flow->iph==NULL)){
 			dpi_ipv4_fragmentation_delete_flow(state, flow);
 #if DPI_THREAD_SAFETY_ENABLED == 1
-			ff::spin_unlock(&(state->lock), tid);
+			ff::spin_unlock(state->lock);
 #endif
 			return NULL;
 		}
@@ -689,7 +685,7 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
 		 **/
 		if(flow->len!=0){
 #if DPI_THREAD_SAFETY_ENABLED == 1
-			ff::spin_unlock(&(state->lock), tid);
+			ff::spin_unlock(state->lock);
 #endif
 			return NULL;
 		}
@@ -725,12 +721,12 @@ unsigned char* dpi_reordering_manage_ipv4_fragment(
                     "recompacted datagram.");
 		r=dpi_ipv4_fragmentation_build_complete_datagram(state,flow);
 #if DPI_THREAD_SAFETY_ENABLED == 1
-		ff::spin_unlock(&(state->lock), tid);
+		ff::spin_unlock(state->lock);
 #endif
 		return r;
 	}
 #if DPI_THREAD_SAFETY_ENABLED == 1
-	ff::spin_unlock(&(state->lock), tid);
+	ff::spin_unlock(state->lock);
 #endif
 	return NULL;
 }

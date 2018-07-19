@@ -8,6 +8,7 @@ all:
 	make clean
 	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=0 seq
 	make seqlib
+	rm *.o
 	make CONFIGURATIONFLAGS=-DDPI_THREAD_SAFETY_ENABLED=1 par
 	make parlib
 tcp_stream_management.o: tcp_stream_management.c

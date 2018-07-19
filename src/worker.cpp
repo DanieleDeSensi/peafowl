@@ -413,7 +413,7 @@ void* dpi_L7_worker::svc(void* task){
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
 	int8_t l3_status;
 	dpi_pkt_infos_t infos;
-	dpi_flow_infos_t* flow_infos;
+	dpi_flow_infos_t* flow_infos = NULL;
 	ipv4_flow_t* ipv4_flow;
 	ipv6_flow_t* ipv6_flow;
 
@@ -466,15 +466,15 @@ void* dpi_L7_worker::svc(void* task){
 				free((unsigned char*) infos.pkt);
 			}
 			break;
-		}
+		}else{
 
-		real_task->input_output_task_t.L7_output_task_t[i].result=
-				dpi_stateless_get_app_protocol(state, flow_infos,
+                    real_task->input_output_task_t.L7_output_task_t[i].result=
+                        dpi_stateless_get_app_protocol(state, flow_infos,
 						                       &(infos));
-		if(real_task->input_output_task_t.L7_output_task_t[i].result.
-				status==DPI_STATUS_TCP_CONNECTION_TERMINATED){
+                    if(real_task->input_output_task_t.L7_output_task_t[i].result.
+                       status==DPI_STATUS_TCP_CONNECTION_TERMINATED){
 			if(ipv4_flow!=NULL){
-				mc_dpi_flow_table_delete_flow_v4(
+                            mc_dpi_flow_table_delete_flow_v4(
 						(dpi_flow_DB_v4_t*) state->db4,
 						state->flow_cleaner_callback,
 						this->worker_id,
@@ -486,11 +486,12 @@ void* dpi_L7_worker::svc(void* task){
 						this->worker_id,
 						ipv6_flow);
 			}
-		}
+                    }
 
-		if(unlikely(l3_status==DPI_STATUS_IP_LAST_FRAGMENT)){
+                    if(unlikely(l3_status==DPI_STATUS_IP_LAST_FRAGMENT)){
 			free((unsigned char*) infos.pkt);
-		}
+                    }
+                }
 	}
 	return real_task;
 }
