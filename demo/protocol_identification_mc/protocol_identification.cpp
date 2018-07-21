@@ -94,7 +94,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
 	}else{
 		res.pkt = NULL;
 	}
-	res.length = header.len-ip_offset;
+	res.length = header.caplen-ip_offset;
 	res.current_time = time(NULL);
 	return res;
 }

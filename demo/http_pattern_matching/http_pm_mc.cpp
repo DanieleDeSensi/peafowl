@@ -219,12 +219,12 @@ int main(int argc, char **argv){
 				assert(sizes);
 			}
 
-			assert(header.len>sizeof(struct ether_header));
+			assert(header.caplen>sizeof(struct ether_header));
 
-			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.len-sizeof(struct ether_header)));
+			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.caplen-sizeof(struct ether_header)));
 			assert(packets[num_packets]);
-			memcpy(packets[num_packets], packet+sizeof(struct ether_header), (header.len-sizeof(struct ether_header)));
-			sizes[num_packets]=(header.len-sizeof(struct ether_header));
+			memcpy(packets[num_packets], packet+sizeof(struct ether_header), (header.caplen-sizeof(struct ether_header)));
+			sizes[num_packets]=(header.caplen-sizeof(struct ether_header));
 			++num_packets;
 		}
 		std::cout << "Read " << num_packets << " packets." << std::endl;

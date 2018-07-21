@@ -109,18 +109,18 @@ void load_packets_from_file(char* filename){
       current_capacity+=CAPACITY_CHUNK;
     }
 
-    assert(header.len>sizeof(struct ether_header));
+    assert(header.caplen>sizeof(struct ether_header));
 
     posix_memalign((void**) &(packets[num_packets]),
 		   DPI_CACHE_LINE_SIZE,
 		   sizeof(unsigned char)*
-		   (header.len-sizeof(struct ether_header)));
+		   (header.caplen-sizeof(struct ether_header)));
     assert(packets[num_packets]);
     memcpy(packets[num_packets],
 	   packet+sizeof(struct ether_header),
-	   (header.len-sizeof(struct ether_header)));
+	   (header.caplen-sizeof(struct ether_header)));
     sizes[num_packets]=
-           (header.len-sizeof(struct ether_header));
+           (header.caplen-sizeof(struct ether_header));
     fprintf(sizesfile, "%u\n", sizes[num_packets]);
     ++num_packets;
   }

@@ -242,10 +242,10 @@ int main(int argc, char** argv){
 
 
 	while((packet=pcap_next(handle, &header))!=NULL){
-		if(header.len<ip_offset) continue;
+		if(header.caplen<ip_offset) continue;
 
 		r=dpi_stateful_identify_application_protocol(state, packet+ip_offset, 
-		                                             header.len-ip_offset, time(NULL));
+		                                             header.caplen-ip_offset, time(NULL));
 
 		if(r.protocol.l4prot==IPPROTO_TCP){
 			switch(r.protocol.l7prot){

@@ -146,7 +146,6 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	if(ethhdr->ether_type!=htons(ETHERTYPE_IP) && ethhdr->ether_type!=htons(ETHERTYPE_IPV6)){
 		continue;
 	}
-	assert(header.len==header.caplen);
 	*/
 #ifdef USE_PKT_POOL
         while(pkt_buff->empty()){printf("not enough buffers\n");exit(-1);}
