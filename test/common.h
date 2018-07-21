@@ -55,7 +55,7 @@ void getProtocols(const char* pcapName,
     const u_char* packet;
     struct pcap_pkthdr header;
     dpi_identification_result_t r;
-
+    uint16_t virtual_offset = 0;
     while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
             if(header.caplen < ip_offset + sizeof(struct ether_header)){
