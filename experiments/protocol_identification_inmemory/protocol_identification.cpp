@@ -60,7 +60,7 @@
 
 static int terminating = 0;
 
-
+u_int32_t total_pkts=0;
 u_int32_t http_matches=0;
 u_int32_t dns_matches=0;
 u_int32_t bgp_matches=0;
@@ -193,6 +193,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
   r.length=packets->sizes[packets->next_packet_to_sent];
   ++packets->next_packet_to_sent;
 
+  ++total_pkts;
   return r;
 }
 
@@ -257,7 +258,6 @@ void processing_cb(mc_dpi_processing_result_t* processing_result, void* callback
 	}else{
 		++unknown;
 	}
-	free(processing_result->user_pointer);
 }
 
 static void load_rates(const char* fileName){
@@ -406,10 +406,18 @@ int main(int argc, char** argv){
   pthread_t clock;
 	mc_dpi_set_read_and_process_callbacks(state, reading_cb, processing_cb, (void*) &x);
   pthread_create(&clock, NULL, clock_thread, NULL);
-	mc_dpi_run(state);
 
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  double time_start = ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) / 1000.0; 
+
+	mc_dpi_run(state);
 	mc_dpi_wait_end(state);
 	mc_dpi_terminate(state);
+
+  gettimeofday(&tv, NULL);
+  double time_end = ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) / 1000.0; 
 
 
 	if (unknown > 0) printf("Unknown packets: %" PRIu32 "\n", unknown);
@@ -426,6 +434,8 @@ int main(int argc, char** argv){
 	if (dhcp_matches > 0 ) printf("DHCP packets: %" PRIu32 "\n", dhcp_matches);
 	if (dhcpv6_matches > 0 ) printf("DHCPv6 packets: %" PRIu32 "\n", dhcpv6_matches);
 
+  double time_compute = time_end - time_start;
+  printf("Processed: %" PRIu32 " packets in %d seconds. Rate: %f pps\n", total_pkts, time_compute, total_pkts / time_compute);
 	return 0;
 }
 
