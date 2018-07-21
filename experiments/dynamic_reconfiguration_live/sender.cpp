@@ -143,7 +143,7 @@ static void load_rates(char* fileName){
   if(f){
     char line[512];
     while(fgets(line, 512, f) != NULL){
-      sscanf(line, "%.2f %.2f", &rate, &duration);
+      sscanf(line, "%2f %2f", &rate, &duration);
       rates[intervals] = rate;
       durations[intervals] = duration;
       ++intervals;
