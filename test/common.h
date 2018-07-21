@@ -57,12 +57,21 @@ void getProtocols(const char* pcapName,
     dpi_identification_result_t r;
 
     while((packet=pcap_next(handle, &header))!=NULL){
-        if(header.caplen<ip_offset) continue;
-        uint virtual_offset = 0;
-        if(((struct ether_header*) packet)->ether_type == htons(0x8100)){
-            virtual_offset = 4;
+        if(datalink_type == DLT_EN10MB){
+            if(header.caplen < ip_offset + sizeof(struct ether_header)){
+                continue;
+            }
+            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+            if(ether_type == htons(0x8100)){ // VLAN
+                virtual_offset = 4;
+            }
+            if(ether_type != htons(ETHERTYPE_IP) &&
+               ether_type != htons(ETHERTYPE_IPV6)){
+                continue;
+            }
         }
-        r=dpi_stateful_identify_application_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset, time(NULL));
+
+        r=dpi_stateful_identify_application_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
         dpi_l7_prot_id proto = r.protocol.l7prot;
         if(r.protocol.l4prot == IPPROTO_TCP){

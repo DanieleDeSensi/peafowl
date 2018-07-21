@@ -99,14 +99,24 @@ int main(int argc, char** argv){
 	u_int32_t dhcpv6_matches=0;
 	u_int32_t unknown=0;
 
+	uint virtual_offset = 0;
 
 	while((packet=pcap_next(handle, &header))!=NULL){
-		if(header.caplen<ip_offset) continue;
-		uint virtual_offset = 0;
-		if(((struct ether_header*) packet)->ether_type == htons(0x8100)){
-			virtual_offset = 4;
-		}
-		r=dpi_stateful_identify_application_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset, time(NULL));
+        if(datalink_type == DLT_EN10MB){
+            if(header.caplen < ip_offset + sizeof(struct ether_header)){
+                continue;
+            }
+            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+            if(ether_type == htons(0x8100)){ // VLAN
+                virtual_offset = 4;
+            }
+            if(ether_type != htons(ETHERTYPE_IP) &&
+               ether_type != htons(ETHERTYPE_IPV6)){
+                continue;
+            }
+        }
+
+		r=dpi_stateful_identify_application_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
 		if(r.protocol.l4prot==IPPROTO_TCP){
 			switch(r.protocol.l7prot){

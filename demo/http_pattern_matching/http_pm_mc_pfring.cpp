@@ -177,7 +177,7 @@ void body_cb(dpi_http_message_informations_t* http_informations,
 
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
 			*flow_specific_user_data=
-                    new byte_scanner(*(dynamic_cast<trie*>(user_data)), match_found);
+                    new byte_scanner(*(static_cast<trie*>(user_data)), match_found);
 		}
 	}
 	byte_scanner* scanner=(byte_scanner*) (*flow_specific_user_data);
@@ -188,7 +188,7 @@ void body_cb(dpi_http_message_informations_t* http_informations,
 
 void flow_cleaner(void* flow_specific_user_data){
 	if(scanner_pool->mp_push(flow_specific_user_data)==false){
-        delete dynamic_cast<byte_scanner*>(flow_specific_user_data);
+        delete static_cast<byte_scanner*>(flow_specific_user_data);
 	}
 }
 

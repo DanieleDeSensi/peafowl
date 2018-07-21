@@ -84,6 +84,7 @@ u_int8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
 	}
 
   	u_int8_t payloadType, data_type = app_data[1] & 0x7F;
+    // TODO: Accede ad app_data[8] senza controllare che la lunghezza di app_data (data_length) sia almeno 8
   	u_int32_t *ssid = (u_int32_t*)&app_data[8];
 
 	if(data_length >= 12) {

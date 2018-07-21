@@ -32,6 +32,7 @@
 
 int sipmatch(const char *body)
 {
+	// TODO: Non c'è controllo sulla lunghezza del pacchetto, potrebbe accedere a memoria non allocata (fuori pacchetto)
 	const char *c;
 	c = body;
 	for (; *c; c++) {

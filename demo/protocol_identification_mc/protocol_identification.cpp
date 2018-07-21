@@ -48,6 +48,8 @@
 
 #define AVAILABLE_PROCESSORS 8
 
+int datalink_type=0;
+
 u_int32_t http_matches=0;
 u_int32_t dns_matches=0;
 u_int32_t bgp_matches=0;
@@ -86,15 +88,30 @@ mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
 	struct pcap_pkthdr header;
 	packet = pcap_next(handle, &header);
 	mc_dpi_packet_reading_result_t res;
+	res.pkt = NULL;
+
+	uint virtual_offset = 0;
 	if(packet){
+		if(datalink_type == DLT_EN10MB){
+            if(header.caplen < ip_offset + sizeof(struct ether_header)){
+                return res;
+            }
+            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+            if(ether_type == htons(0x8100)){ // VLAN
+                virtual_offset = 4;
+            }
+            if(ether_type != htons(ETHERTYPE_IP) &&
+               ether_type != htons(ETHERTYPE_IPV6)){
+                return res;
+            }
+        }
+
 		u_char* packetCopy = (u_char*) malloc(sizeof(u_char)*header.caplen);
 		memcpy(packetCopy, packet, sizeof(u_char)*header.caplen);
-		res.pkt = packetCopy + ip_offset;
+		res.pkt = packetCopy + ip_offset + virtual_offset;
 		res.user_pointer = packetCopy;
-	}else{
-		res.pkt = NULL;
 	}
-	res.length = header.caplen-ip_offset;
+	res.length = header.caplen-ip_offset - virtual_offset;
 	res.current_time = time(NULL);
 	return res;
 }
@@ -185,7 +202,7 @@ int main(int argc, char** argv){
 		return (2);
 	}
 
-	int datalink_type=pcap_datalink(handle);
+	datalink_type=pcap_datalink(handle);
 	uint ip_offset=0;
 	if(datalink_type==DLT_EN10MB){
 		printf("Datalink type: Ethernet\n");

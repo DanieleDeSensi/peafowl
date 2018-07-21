@@ -100,7 +100,7 @@ static void match_found(string::size_type position, trie::value_type const &matc
 void body_cb(dpi_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, dpi_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
 	if(*flow_specific_user_data==NULL){
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
-            *flow_specific_user_data=new byte_scanner(*(dynamic_cast<trie*>(user_data)), match_found);
+            *flow_specific_user_data=new byte_scanner(*(static_cast<trie*>(user_data)), match_found);
 		}
 	}
 	byte_scanner* scanner=(byte_scanner*) (*flow_specific_user_data);
@@ -111,7 +111,7 @@ void body_cb(dpi_http_message_informations_t* http_informations, const u_char* a
 
 void flow_cleaner(void* flow_specific_user_data){
 	if(scanner_pool->mp_push(flow_specific_user_data)==false){
-        delete dynamic_cast<byte_scanner*>(flow_specific_user_data);
+        delete static_cast<byte_scanner*>(flow_specific_user_data);
 	}
 }
 
@@ -208,12 +208,12 @@ int main(int argc, char **argv){
                     exit(EXIT_FAILURE);
                 }
                 packets=tmp;
-                tmp=(u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
-                if(!tmp){
+                u_int32_t* tmp2 = (u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+                if(!tmp2){
                     fprintf(stderr, "NULL on realloc\n");
                     exit(EXIT_FAILURE);
                 }
-                sizes=tmp;
+                sizes=tmp2;
 				current_capacity+=CAPACITY_CHUNK;
 				assert(packets);
 				assert(sizes);
