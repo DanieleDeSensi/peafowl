@@ -206,7 +206,7 @@ static void load_rates(const char* fileName){
   if(f){
     char line[512];
     while(fgets(line, 512, f) != NULL){
-      sscanf(line, "%.4f %.4f", &rate, &duration);
+      sscanf(line, "%4f %4f", &rate, &duration);
       rates[intervals] = rate;
       durations[intervals] = duration;
       ++intervals;
@@ -215,13 +215,13 @@ static void load_rates(const char* fileName){
         size += 10;
         double* tmp = (double*) realloc(rates, sizeof(double)*size);
         if(!tmp){
-            cerr << "NULL realloc" << endl;
+            std::cerr << "NULL realloc" << std::endl;
             exit(EXIT_FAILURE);
         }
         rates = tmp;
         tmp = (double*) realloc(durations, sizeof(double)*size);
         if(!tmp){
-            cerr << "NULL realloc" << endl;
+            std::cerr << "NULL realloc" << std::endl;
             exit(EXIT_FAILURE);
         }
         durations = tmp;
@@ -365,6 +365,7 @@ int main(int argc, char **argv){
         fprintf(stderr, "Datalink type not supported\n");
         exit(-1);
     }
+    uint16_t virtual_offset = 0;
     while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
             if(header.caplen < ip_offset + sizeof(struct ether_header)){
@@ -384,13 +385,13 @@ int main(int argc, char **argv){
         if(num_packets==current_capacity){
             unsigned char** tmp=(unsigned char**)realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
             if(!tmp){
-                cerr << "NULL realloc" << endl;
+                std::cerr << "NULL realloc" << std::endl;
                 exit(EXIT_FAILURE);
             }
             packets = tmp;
-            u_int32_t* tmp2 = realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
+            u_int32_t* tmp2 = (u_int32_t*) realloc(sizes, sizeof(u_int32_t)*(current_capacity+CAPACITY_CHUNK));
             if(!tmp2){
-                cerr << "NULL realloc" << endl;
+                std::cerr << "NULL realloc" << std::endl;
                 exit(EXIT_FAILURE);
             }
             sizes = tmp2;
@@ -404,7 +405,7 @@ int main(int argc, char **argv){
         posix_memalign((void**) &(packets[num_packets]),
                        DPI_CACHE_LINE_SIZE,
                        sizeof(unsigned char)*
-                       (header.caplen-ip_offset-virtual_offset);
+                       (header.caplen-ip_offset-virtual_offset));
         assert(packets[num_packets]);
         memcpy(packets[num_packets], packet+ip_offset+virtual_offset,
                (header.caplen-ip_offset-virtual_offset));

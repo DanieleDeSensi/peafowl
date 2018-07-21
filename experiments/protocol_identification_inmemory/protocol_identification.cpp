@@ -75,8 +75,8 @@ u_int32_t rtp_matches=0;
 u_int32_t dhcpv6_matches=0;
 u_int32_t unknown=0;
 static unsigned int intervals;
-static double* rates;
-static double* durations;
+static double* rates = NULL;
+static double* durations = NULL;
 static u_int32_t current_interval=0;
 static time_t last_sec=0;
 static u_int64_t processed_packets=0;
@@ -299,21 +299,18 @@ static void load_rates(const char* fileName){
 }
 
 int main(int argc, char** argv){
-	if(argc < 2){
-		fprintf(stderr, "Usage: %s pcap_file [rates_file]\n", argv[0]);
+	if(argc < 3){
+		fprintf(stderr, "Usage: %s pcap_file rates_file\n", argv[0]);
 		return -1;
 	}
 	char* pcap_filename = argv[1];
-    char* rates_file = NULL;
-    if(argc >= 2){
-        rates_file = argv[2];
-    }
+  load_rates(argv[2]);
 	char errbuf[PCAP_ERRBUF_SIZE];
 
 	mc_dpi_parallelism_details_t par;
 	memset(&par, 0, sizeof(par));
 	par.available_processors = AVAILABLE_PROCESSORS;
-    load_rates(rates_file);
+    
 	mc_dpi_library_state_t* state = mc_dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS, par);
 	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
@@ -406,7 +403,9 @@ int main(int argc, char** argv){
     x.next_packet_to_sent=0;
     x.num_packets=num_packets;
 
+  pthread_t clock;
 	mc_dpi_set_read_and_process_callbacks(state, reading_cb, processing_cb, (void*) &x);
+  pthread_create(&clock, NULL, clock_thread, NULL);
 	mc_dpi_run(state);
 
 	mc_dpi_wait_end(state);
