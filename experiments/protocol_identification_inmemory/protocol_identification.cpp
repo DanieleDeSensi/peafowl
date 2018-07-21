@@ -435,7 +435,7 @@ int main(int argc, char** argv){
 	if (dhcpv6_matches > 0 ) printf("DHCPv6 packets: %" PRIu32 "\n", dhcpv6_matches);
 
   double time_compute = time_end - time_start;
-  printf("Processed: %" PRIu32 " packets in %d seconds. Rate: %f pps\n", total_pkts, time_compute, total_pkts / time_compute);
+  printf("Processed: %" PRIu32 " packets in %f seconds. Rate: %f pps\n", total_pkts, time_compute, total_pkts / time_compute);
 	return 0;
 }
 
