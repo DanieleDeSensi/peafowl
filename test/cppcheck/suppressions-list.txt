@@ -7,7 +7,7 @@ nullPointerRedundantCheck:src/ipv4_reassembly.cpp
 nullPointerRedundantCheck:src/ipv6_reassembly.cpp
 nullPointerRedundantCheck:src/reassembly.cpp
 
-invalidscanf:experiments/dynamic_reconfiguration_live/sender.cpp 
+invalidscanf:experiments/dynamic_reconfiguration_live/sender.cpp
 invalidscanf:experiments/dynamic_reconfiguration_live/receiver.c
-invalidscanf:experiments/protocol_identification_inmemory/protocol_identification.cpp 
+invalidscanf:experiments/protocol_identification_inmemory/protocol_identification.cpp
 invalidscanf:experiments/dynamic_reconfiguration/dynamic_reconfiguration.cpp
