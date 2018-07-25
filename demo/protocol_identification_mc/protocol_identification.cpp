@@ -84,35 +84,40 @@ typedef struct{
 mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
 	pcap_t *handle = ((reading_cb_data*) callback_data)->handle;
 	size_t ip_offset = ((reading_cb_data*) callback_data)->ip_offset;
-	const u_char* packet;
 	struct pcap_pkthdr header;
-	packet = pcap_next(handle, &header);
+	bool goodpacket = false;
+
 	mc_dpi_packet_reading_result_t res;
-	res.pkt = NULL;
+	do{
+			const u_char* packet = pcap_next(handle, &header);
+		res.pkt = NULL;
 
-	uint virtual_offset = 0;
-	if(packet){
-		if(datalink_type == DLT_EN10MB){
-            if(header.caplen < ip_offset + sizeof(struct ether_header)){
-                return res;
-            }
-            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
-            if(ether_type == htons(0x8100)){ // VLAN
-                virtual_offset = 4;
-            }
-            if(ether_type != htons(ETHERTYPE_IP) &&
-               ether_type != htons(ETHERTYPE_IPV6)){
-                return res;
-            }
-        }
-
-		u_char* packetCopy = (u_char*) malloc(sizeof(u_char)*header.caplen);
-		memcpy(packetCopy, packet, sizeof(u_char)*header.caplen);
-		res.pkt = packetCopy + ip_offset + virtual_offset;
-		res.user_pointer = packetCopy;
-	}
-	res.length = header.caplen-ip_offset - virtual_offset;
-	res.current_time = time(NULL);
+		size_t len = 0;
+		uint virtual_offset = 0;
+		if(packet){
+			if(datalink_type == DLT_EN10MB){
+	            if(header.caplen < ip_offset){
+	                continue;
+	            }
+	            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+	            if(ether_type == htons(0x8100)){ // VLAN
+	                virtual_offset = 4;
+	            }
+	            if(ether_type != htons(ETHERTYPE_IP) &&
+	               ether_type != htons(ETHERTYPE_IPV6)){
+	                continue;
+	            }
+	        }
+	        len = header.caplen - ip_offset - virtual_offset;
+			u_char* packetCopy = (u_char*) malloc(sizeof(u_char)*len);
+			memcpy(packetCopy, packet, sizeof(u_char)*len);
+			res.pkt = packetCopy + ip_offset + virtual_offset;
+			res.user_pointer = packetCopy;
+		}
+		res.length = len;
+		res.current_time = time(NULL);
+		goodpacket = true;
+	}while(!goodpacket);
 	return res;
 }
 

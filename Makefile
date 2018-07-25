@@ -8,11 +8,13 @@ MAMMUT               = $(realpath ./src/external/nornir/src/external/Mammut)
 ADPFF                = $(realpath ./src/external/nornir)
 LIBXML               = /usr/include/libxml2/
 
-.PHONY: all reconf noreconf clean cleanall install uninstall cppcheck develcheck gcov test testquick
+.PHONY: all reconf noreconf clean cleanall install uninstall cppcheck develcheck gcov test testquick demo
 .SUFFIXES: .cpp .o
 
 all: noreconf
 
+demo:
+	$(MAKE) -C demo
 cppcheck:
 	cppcheck --xml --xml-version=2 --enable=warning,performance,style --error-exitcode=1 --suppressions-list=./test/cppcheck/suppressions-list.txt -UNN_EXPORT . -isrc/external -idemo/http_pattern_matching/pattern_matching_lib -itest 2> cppcheck-report.xml || (cat cppcheck-report.xml; exit 2) 
 gcov:
@@ -27,7 +29,7 @@ testquick:
 	$(MAKE) "PEAFOWL_COVERAGE_LIBS=-fprofile-arcs -ftest-coverage -lgcov" -C test && cd test && ./runtests.sh
 	cd ..
 develcheck:
-	$(MAKE) cppcheck && $(MAKE) test && $(MAKE) gcov && $(MAKE) cleanall && $(MAKE)
+	$(MAKE) cppcheck && $(MAKE) test && $(MAKE) gcov && $(MAKE) cleanall && $(MAKE) && $(MAKE) demo
 reconf: export INCS += -I$(MAMMUT) -I$(ADPFF) -I$(LIBXML) -I$(ADPFF)/src/external/fastflow # For reconf I use the nornir fastflow
 reconf: export CXXFLAGS += -DENABLE_RECONFIGURATION 
 reconf: 

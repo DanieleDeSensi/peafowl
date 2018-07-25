@@ -352,7 +352,7 @@ int main(int argc, char** argv){
             continue;
         uint virtual_offset = 0;
         if(datalink_type == DLT_EN10MB){
-            if(header.caplen < ip_offset + sizeof(struct ether_header)){
+            if(header.caplen < ip_offset){
                 continue;
             }
             uint16_t ether_type = ((struct ether_header*) packet)->ether_type;

@@ -185,6 +185,24 @@ int main(int argc, char **argv){
 			fprintf(stderr, "Couldn't open device %s: %s\n", input_file_name, errbuf);
 			exit(EXIT_FAILURE);
 		}
+
+
+		int datalink_type=pcap_datalink(handle);
+		uint ip_offset=0;
+		if(datalink_type==DLT_EN10MB){
+			printf("Datalink type: Ethernet\n");
+			ip_offset=sizeof(struct ether_header);
+		}else if(datalink_type==DLT_RAW){
+			printf("Datalink type: RAW\n");
+			ip_offset=0;
+		}else if(datalink_type==DLT_LINUX_SLL){
+			printf("Datalink type: Linux Cooked\n");
+			ip_offset=16;
+		}else{
+			fprintf(stderr, "Datalink type not supported\n");
+			exit(-1);
+		}
+
 		const u_char* packet;
 		struct pcap_pkthdr header;
 		unsigned char** packets;
@@ -196,10 +214,21 @@ int main(int argc, char **argv){
 		assert(packets);
 		assert(sizes);
 		current_capacity+=CAPACITY_CHUNK;
+		uint virtual_offset = 0;
 		while((packet=pcap_next(handle, &header))!=NULL){
-			if((((struct ether_header*) packet)->ether_type)!=htons(ETHERTYPE_IP) && (((struct ether_header*) packet)->ether_type!=htons(ETHERTYPE_IPV6))){
-				continue;
-			}
+			if(datalink_type == DLT_EN10MB){
+	            if(header.caplen < ip_offset){
+	                continue;
+	            }
+	            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+	            if(ether_type == htons(0x8100)){ // VLAN
+	                virtual_offset = 4;
+	            }
+	            if(ether_type != htons(ETHERTYPE_IP) &&
+	               ether_type != htons(ETHERTYPE_IPV6)){
+	                continue;
+	            }
+	        }
 
 			if(num_packets==current_capacity){
                 unsigned char** tmp = (unsigned char**) realloc(packets, sizeof(unsigned char*)*(current_capacity+CAPACITY_CHUNK));
@@ -219,12 +248,12 @@ int main(int argc, char **argv){
 				assert(sizes);
 			}
 
-			assert(header.caplen>sizeof(struct ether_header));
 
-			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.caplen-sizeof(struct ether_header)));
+	        size_t len = header.caplen - ip_offset - virtual_offset;
+			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*len);
 			assert(packets[num_packets]);
-			memcpy(packets[num_packets], packet+sizeof(struct ether_header), (header.caplen-sizeof(struct ether_header)));
-			sizes[num_packets]=(header.caplen-sizeof(struct ether_header));
+			memcpy(packets[num_packets], packet + ip_offset + virtual_offset, len);
+			sizes[num_packets] = len;
 			++num_packets;
 		}
 		std::cout << "Read " << num_packets << " packets." << std::endl;

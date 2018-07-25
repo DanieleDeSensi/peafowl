@@ -103,7 +103,7 @@ int main(int argc, char** argv){
 
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
-            if(header.caplen < ip_offset + sizeof(struct ether_header)){
+            if(header.caplen < ip_offset){
                 continue;
             }
             uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
