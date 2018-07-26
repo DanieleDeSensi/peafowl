@@ -110,8 +110,8 @@ mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
 	        }
 	        len = header.caplen - ip_offset - virtual_offset;
 			u_char* packetCopy = (u_char*) malloc(sizeof(u_char)*len);
-			memcpy(packetCopy, packet, sizeof(u_char)*len);
-			res.pkt = packetCopy + ip_offset + virtual_offset;
+			memcpy(packetCopy, packet + ip_offset + virtual_offset, sizeof(u_char)*len);
+			res.pkt = packetCopy;
 			res.user_pointer = packetCopy;
 		}
 		res.length = len;
