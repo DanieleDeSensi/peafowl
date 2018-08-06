@@ -142,7 +142,7 @@ int main(int argc, char** argv){
 		if(ethhdr->ether_type!=htons(ETHERTYPE_IP) && ethhdr->ether_type!=htons(ETHERTYPE_IPV6)){
 			continue;
 		}
-		dpi_stateful_identify_application_protocol(state,(const u_char*) packet + sizeof(struct ether_header), header.caplen-sizeof(struct ether_header), time(NULL));
+        dpi_get_protocol(state,(const u_char*) packet + sizeof(struct ether_header), header.caplen-sizeof(struct ether_header), time(NULL));
 
 	}
 	printf("Finished.\n");

@@ -61,19 +61,8 @@
 static int terminating = 0;
 
 u_int32_t total_pkts=0;
-u_int32_t http_matches=0;
-u_int32_t dns_matches=0;
-u_int32_t bgp_matches=0;
-u_int32_t smtp_matches=0;
-u_int32_t pop3_matches=0;
-u_int32_t mdns_matches=0;
-u_int32_t ntp_matches=0;
-u_int32_t dhcp_matches=0;
-u_int32_t sip_matches=0;
-u_int32_t skype_matches=0;
-u_int32_t rtp_matches=0;
-u_int32_t dhcpv6_matches=0;
 u_int32_t unknown=0;
+u_int32_t protocols[DPI_NUM_PROTOCOLS];
 static unsigned int intervals;
 static double* rates = NULL;
 static double* durations = NULL;
@@ -207,57 +196,16 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
  */
 void processing_cb(mc_dpi_processing_result_t* processing_result, void* callback_data){
 	dpi_identification_result_t r = processing_result->result;
-	if(r.protocol.l4prot==IPPROTO_TCP){
-		switch(r.protocol.l7prot){
-			case DPI_PROTOCOL_TCP_BGP:
-				++bgp_matches;
-				break;
-			case DPI_PROTOCOL_TCP_HTTP:
-				++http_matches;
-				break;
-			case DPI_PROTOCOL_TCP_SMTP:
-				++smtp_matches;
-				break;
-			case DPI_PROTOCOL_TCP_POP3:
-				++pop3_matches;
-				break;
-			default:
-				++unknown;
-				break;
-		}
-	}else if(r.protocol.l4prot==IPPROTO_UDP){
-	  switch(r.protocol.l7prot){
-			case DPI_PROTOCOL_UDP_DHCP:
-				++dhcp_matches;
-				break;
-			case DPI_PROTOCOL_UDP_DHCPv6:
-				++dhcpv6_matches;
-				break;
-			case DPI_PROTOCOL_UDP_DNS:
-				++dns_matches;
-				break;
-			case DPI_PROTOCOL_UDP_MDNS:
-				++mdns_matches;
-				break;
-			case DPI_PROTOCOL_UDP_NTP:
-				++ntp_matches;
-				break;
-			case DPI_PROTOCOL_UDP_SIP:
-				++sip_matches;
-				break;
-			case DPI_PROTOCOL_UDP_SKYPE:
-				++skype_matches;
-				break;
-			case DPI_PROTOCOL_UDP_RTP:
-				++rtp_matches;
-				break;
-			default:
-				++unknown;
-				break;
-		}
-	}else{
-		++unknown;
-	}
+    if(r.protocol.l4prot == IPPROTO_TCP ||
+       r.protocol.l4prot == IPPROTO_UDP){
+        if(r.protocol.l7prot < DPI_NUM_PROTOCOLS){
+            ++protocols[r.protocol.l7prot];
+        }else{
+            ++unknown;
+        }
+    }else{
+        ++unknown;
+    }
 }
 
 static void load_rates(const char* fileName){
@@ -404,7 +352,7 @@ int main(int argc, char** argv){
     x.num_packets=num_packets;
 
   pthread_t clock;
-	mc_dpi_set_read_and_process_callbacks(state, reading_cb, processing_cb, (void*) &x);
+  mc_dpi_set_core_callbacks(state, reading_cb, processing_cb, (void*) &x);
   pthread_create(&clock, NULL, clock_thread, NULL);
 
   struct timeval tv;
@@ -419,20 +367,13 @@ int main(int argc, char** argv){
   gettimeofday(&tv, NULL);
   double time_end = ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) / 1000.0; 
 
-
-	if (unknown > 0) printf("Unknown packets: %" PRIu32 "\n", unknown);
-	if (http_matches > 0) printf("HTTP packets: %" PRIu32 "\n", http_matches);
-	if (sip_matches > 0 ) printf("SIP packets: %" PRIu32 "\n", sip_matches);
-	if (skype_matches > 0 ) printf("SKYPE packets: %" PRIu32 "\n", skype_matches);
-	if (rtp_matches > 0 ) printf("RTP packets: %" PRIu32 "\n", rtp_matches);
-	if (bgp_matches > 0 ) printf("BGP packets: %" PRIu32 "\n", bgp_matches);
-	if (pop3_matches > 0 ) printf("POP3 packets: %" PRIu32 "\n", pop3_matches);
-	if (smtp_matches > 0 ) printf("SMTP packets: %" PRIu32 "\n", smtp_matches);
-	if (ntp_matches > 0 ) printf("NTP packets: %" PRIu32 "\n", ntp_matches);
-	if (dns_matches > 0 ) printf("DNS packets: %" PRIu32 "\n", dns_matches);
-	if (mdns_matches > 0 ) printf("MDNS packets: %" PRIu32 "\n", mdns_matches);
-	if (dhcp_matches > 0 ) printf("DHCP packets: %" PRIu32 "\n", dhcp_matches);
-	if (dhcpv6_matches > 0 ) printf("DHCPv6 packets: %" PRIu32 "\n", dhcpv6_matches);
+  if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+  const char** protocols_names = dpi_get_protocols_names();
+  for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+      if(protocols[i] > 0){
+          printf("%s packets: %"PRIu32"\n", protocols_names[i], protocols[i]);
+      }
+  }
 
   double time_compute = time_end - time_start;
   printf("Processed: %" PRIu32 " packets in %f seconds. Rate: %f pps\n", total_pkts, time_compute, total_pkts / time_compute);

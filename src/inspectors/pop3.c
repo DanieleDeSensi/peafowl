@@ -63,6 +63,9 @@ static const char* const length_4_msgs[DPI_POP3_NUM_LEN4_MSGS]={
 
 
 u_int8_t check_pop3(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+    if(pkt->l4prot != IPPROTO_TCP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	u_int8_t i;
 	if(data_length<DPI_POP3_MIN_MESSAGE_LENGTH){
 		return DPI_PROTOCOL_MORE_DATA_NEEDED;

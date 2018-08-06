@@ -4,29 +4,24 @@
 #include "common.h"
 
 TEST(UtilsTest, ProtoToFromString) {
-    dpi_protocol_t p;
-    p.l4prot = IPPROTO_UDP;
-    p.l7prot = DPI_PROTOCOL_UDP_DHCP;
-    EXPECT_STREQ(protoToString(p), "DHCP");
+    EXPECT_STREQ(dpi_proto_to_string(DPI_PROTOCOL_DHCP), "DHCP");
+    EXPECT_STREQ(dpi_proto_to_string(DPI_PROTOCOL_HTTP), "HTTP");
+    EXPECT_EQ(dpi_proto_to_string(DPI_NUM_PROTOCOLS), reinterpret_cast<const char*>(NULL));
 
-    p.l4prot = IPPROTO_TCP;
-    p.l7prot = DPI_PROTOCOL_TCP_HTTP;
-    EXPECT_STREQ(protoToString(p), "HTTP");
+    EXPECT_EQ(dpi_string_to_proto("SMTP"), DPI_PROTOCOL_SMTP);
+    EXPECT_EQ(dpi_string_to_proto("SIP"), DPI_PROTOCOL_SIP);
+    EXPECT_EQ(dpi_string_to_proto("WRONGSTRING"), DPI_NUM_PROTOCOLS);
 
-    p.l4prot = IPPROTO_TCP;
-    p.l7prot = DPI_NUM_TCP_PROTOCOLS;
-    EXPECT_EQ(protoToString(p), reinterpret_cast<const char*>(NULL));
+    dpi_protocol_t pp;
+    pp.l4prot = IPPROTO_TCP;
+    pp.l7prot = DPI_PROTOCOL_TCP_HTTP;
+    EXPECT_EQ(dpi_old_protocols_to_new(pp), DPI_PROTOCOL_HTTP);
+    EXPECT_EQ(dpi_new_protocols_to_old(DPI_PROTOCOL_DNS), DPI_PROTOCOL_UDP_DNS);
 
-
-    p = stringToProto("SMTP");
-    EXPECT_EQ(p.l4prot, IPPROTO_TCP);
-    EXPECT_EQ(p.l7prot, DPI_PROTOCOL_TCP_SMTP);
-
-    p = stringToProto("SIP");
-    EXPECT_EQ(p.l4prot, IPPROTO_UDP);
-    EXPECT_EQ(p.l7prot, DPI_PROTOCOL_UDP_SIP);
-
-    p = stringToProto("WRONGSTRING");
-    EXPECT_EQ(p.l4prot, (u_int8_t) -1);
-    EXPECT_EQ(p.l7prot, (dpi_l7_prot_id) -1);
+    const char** protocols_names = dpi_get_protocols_names();
+    for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+        EXPECT_STREQ(protocols_names[i], dpi_proto_to_string((dpi_l7_prot_id)i));
+    }
+    EXPECT_STREQ("HTTP", protocols_names[(size_t) DPI_PROTOCOL_HTTP]);
+    EXPECT_STREQ("DHCP", protocols_names[(size_t) DPI_PROTOCOL_DHCP]);
 }

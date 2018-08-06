@@ -9,22 +9,20 @@ For example, if you want to add the support for the Telnet protocol:
 1) Define the protocol and give to it the next available numeric identifier (file ```inspectors/protocols_identifiers.h```).
 
 ```C
-/** Protocols over TCP. **/
-enum tcp_protocols{
- DPI_PROTOCOL_TCP_HTTP=0,
-	DPI_PROTOCOL_TCP_BGP,
-	DPI_PROTOCOL_TCP_SMTP,
-	DPI_PROTOCOL_TCP_POP3,
-	DPI_PROTOCOL_TCP_TELNET, // <--- Insert this line to assign an identifier to the new protocol
-	DPI_NUM_TCP_PROTOCOLS
+/** Protocols. **/
+enum protocols{
+    DPI_PROTOCOL_HTTP=0,
+	DPI_PROTOCOL_BGP,
+	DPI_PROTOCOL_SMTP,
+	DPI_PROTOCOL_POP3,
+	DPI_PROTOCOL_TELNET, // <--- Insert this line right befor 'DPI_NUM_PROTOCOLS' to assign an identifier to the new protocol
+	DPI_NUM_PROTOCOLS
 };
 ```
-In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to "enum udp_protocols".
-
 2) In file ```inspectors/protocols_identifiers.h```, add a string representation for the protocol, adding the string
-```"TELNET"``` to the ```tcp_protocols_strings``` array (or to ```udp_protocols_strings``` in case of an UDP-based protocol).
+```"TELNET"``` to the ```protocols_strings``` array.
 The position of the string in the array must be equal to the corresponding enum value,
-such that ```tcp_protocols_strings[DPI_PROTOCOL_TCP_TELNET] == "TELNET"```.
+such that ```protocols_strings[DPI_PROTOCOL_TELNET] == "TELNET"```.
 
 3) Create a new inspector, by implementing a C function with the following signature and semantic:
 
@@ -54,6 +52,10 @@ can return one of four different values:
 + DPI_PROTOCOL_MORE_DATA_NEEDED: If the inspector needs more data to be sure that the protocol matches 
 + DPI_PROTOCOL_ERROR: If an error occurred
 
+You can look at one of the existing inspectors to see some examples. An inspector will parse both TCP
+and UDP packets, so it may be a good idea, as a first thing, to return DPI_PROTOCOL_NO_MATCHES when 
+the inspectors is called on UDP packets for a protocol which only works over TCP (e.g. HTTP).
+
 4) If the inspector needs to store information about the application flow, add an appropriate structure in the 
 flow data description (api.h, struct dpi_tracking_informations). These data can be then used by the inspector
 by accessing the last parameter of the call described in point 2).
@@ -77,15 +79,13 @@ inserting a pointer to the corresponding function into an appropriate array (api
 
 ```C
 static const dpi_inspector_callback const
-	tcp_inspectors[DPI_NUM_TCP_PROTOCOLS]=
-		{[DPI_PROTOCOL_TCP_BGP]=check_bgp
-		,[DPI_PROTOCOL_TCP_HTTP]=check_http
-		,[DPI_PROTOCOL_TCP_SMTP]=check_smtp
-		,[DPI_PROTOCOL_TCP_POP3]=check_pop3
-		,[DPI_PROTOCOL_TCP_TELNET]=check_telnet};
+	inspectors[DPI_NUM_PROTOCOLS]=
+		{[DPI_PROTOCOL_BGP]=check_bgp
+		,[DPI_PROTOCOL_HTTP]=check_http
+		,[DPI_PROTOCOL_SMTP]=check_smtp
+		,[DPI_PROTOCOL_POP3]=check_pop3
+		,[DPI_PROTOCOL_TELNET]=check_telnet};
 ```
-
-In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to "tcp_inspectors" array.
 
 6) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
 the protocol identifier (api.c).
@@ -94,12 +94,12 @@ the protocol identifier (api.c).
 static const dpi_l7_prot_id const
 	dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16+1]=
 		{[0 ... DPI_MAX_UINT_16]=DPI_PROTOCOL_UNKNOWN
-		,[port_http]=DPI_PROTOCOL_TCP_HTTP
-		,[port_bgp]=DPI_PROTOCOL_TCP_BGP
-		,[port_smtp_1]=DPI_PROTOCOL_TCP_SMTP
-		,[port_smtp_2]=DPI_PROTOCOL_TCP_SMTP
-		,[port_pop3]=DPI_PROTOCOL_TCP_POP3
-		,[port_telnet]=DPI_PROTOCOL_TCP_TELNET};
+		,[port_http]=DPI_PROTOCOL_HTTP
+		,[port_bgp]=DPI_PROTOCOL_BGP
+		,[port_smtp_1]=DPI_PROTOCOL_SMTP
+		,[port_smtp_2]=DPI_PROTOCOL_SMTP
+		,[port_pop3]=DPI_PROTOCOL_POP3
+		,[port_telnet]=DPI_PROTOCOL_TELNET};
 ```
 
 In this way, when the framework receives a protocol on the telnet port, it will first check if the carried
@@ -123,10 +123,9 @@ you can check the correctness of the identification by running the following cod
 #include "common.h"
 
 TEST(TELNETTest, Generic) {
-    std::vector<uint> tcpProtocols, udpProtocols;
-    uint unknown;
-    getProtocols("./pcaps/TELNET.pcap", tcpProtocols, udpProtocols, unknown);
-    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_TELNET], (uint) 42);
+    std::vector<uint> protocols;
+    getProtocols("./pcaps/TELNET.pcap", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_TELNET], (uint) 42);
 }
 
 ```

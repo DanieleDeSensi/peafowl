@@ -204,7 +204,7 @@ int main(int argc, char **argv){
 		uint i,j;
 		for(j=0; j<num_iterations; j++){
 			for(i=0; i<num_packets; i++){
-				dpi_stateful_identify_application_protocol(state, packets[i], sizes[i], 0);
+                dpi_get_protocol(state, packets[i], sizes[i], 0);
 			}
 		}
 

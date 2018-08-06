@@ -367,7 +367,7 @@ int main(int argc, char **argv){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
 		//		mc_dpi_tcp_reordering_disable(state);
-		mc_dpi_set_read_and_process_callbacks(
+        mc_dpi_set_core_callbacks(
 				state, &reading_cb, &processing_cb, (void*) NULL);
 		mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
 		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};

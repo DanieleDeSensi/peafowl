@@ -56,8 +56,8 @@ u_int8_t dpi_ssl_activate_callbacks(
 		       void* user_data)
 {
 	if(state){
-		BITSET(state->tcp_protocols_to_inspect, DPI_PROTOCOL_TCP_SSL);
-		BITSET(state->tcp_active_callbacks, DPI_PROTOCOL_TCP_SSL);
+        BITSET(state->protocols_to_inspect, DPI_PROTOCOL_SSL);
+        BITSET(state->active_callbacks, DPI_PROTOCOL_SSL);
 		state->ssl_callbacks_user_data=user_data;
 		state->ssl_callbacks=callbacks;
 		return DPI_STATE_UPDATE_SUCCESS;
@@ -69,7 +69,7 @@ u_int8_t dpi_ssl_activate_callbacks(
 u_int8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state)
 {
 	if(state){
-		BITCLEAR(state->tcp_active_callbacks, DPI_PROTOCOL_TCP_SSL);
+        BITCLEAR(state->active_callbacks, DPI_PROTOCOL_SSL);
 		state->ssl_callbacks=NULL;
 		state->ssl_callbacks_user_data=NULL;
 		return DPI_STATE_UPDATE_SUCCESS;
@@ -254,6 +254,9 @@ u_int8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, 
 
 u_int8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* payload, u_int32_t data_length, dpi_tracking_informations_t* t)
 {
+    if(pkt->l4prot != IPPROTO_TCP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	int res;
 	debug_print("Checking ssl with size %d, direction %d\n", data_length, pkt->direction);
 	if(state->ssl_callbacks != NULL)

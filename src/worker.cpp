@@ -499,10 +499,11 @@ void* dpi_L7_worker::svc(void* task){
 dpi_L7_collector::dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 		                           void** user_data,
 		                           u_int16_t* proc_id,
-		                           ff::SWSR_Ptr_Buffer* tasks_pool)
+		                           ff::SWSR_Ptr_Buffer* tasks_pool, bool deprecated_callback)
                                    :cb(cb), user_data(user_data),
                                     proc_id(proc_id),
-                                    tasks_pool(tasks_pool){
+                                    tasks_pool(tasks_pool),
+                                    deprecated_callback(deprecated_callback){
 	;
 }
 
@@ -521,7 +522,10 @@ void* dpi_L7_collector::svc(void* task){
 		r.result=real_task->input_output_task_t.L7_output_task_t[i].
 				result;
 		r.user_pointer=real_task->input_output_task_t.
-				L7_output_task_t[i].user_pointer;
+                L7_output_task_t[i].user_pointer;
+        if(deprecated_callback){
+            r.result.protocol.l7prot = dpi_new_protocols_to_old(r.result.protocol.l7prot);
+        }
 		(*(*cb))(&r, *user_data);
 	}
 #if DPI_MULTICORE_USE_TASKS_POOL

@@ -58,8 +58,8 @@
  **/
 u_int8_t dpi_http_activate_callbacks(dpi_library_state_t* state, dpi_http_callbacks_t* callbacks, void* user_data){
 	if(state && callbacks->num_header_types<=128){
-		BITSET(state->tcp_protocols_to_inspect, DPI_PROTOCOL_TCP_HTTP);
-		BITSET(state->tcp_active_callbacks, DPI_PROTOCOL_TCP_HTTP);
+        BITSET(state->protocols_to_inspect, DPI_PROTOCOL_HTTP);
+        BITSET(state->active_callbacks, DPI_PROTOCOL_HTTP);
 		state->http_callbacks_user_data=user_data;
 		state->http_callbacks=callbacks;
 		return DPI_STATE_UPDATE_SUCCESS;
@@ -76,7 +76,7 @@ u_int8_t dpi_http_activate_callbacks(dpi_library_state_t* state, dpi_http_callba
  */
 u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state){
 	if(state){
-		BITCLEAR(state->tcp_active_callbacks, DPI_PROTOCOL_TCP_HTTP);
+        BITCLEAR(state->active_callbacks, DPI_PROTOCOL_HTTP);
 		state->http_callbacks=NULL;
 		state->http_callbacks_user_data=NULL;
 		return DPI_STATE_UPDATE_SUCCESS;
@@ -287,6 +287,9 @@ u_int8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
  * in its callback.
  */
 u_int8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* tracking){
+    if(pkt->l4prot != IPPROTO_TCP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	debug_print("%s\n","-------------------------------------------");
 	debug_print("%s\n", "[http.c] Executing HTTP inspector...");
 

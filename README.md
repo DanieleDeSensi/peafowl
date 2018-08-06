@@ -140,7 +140,7 @@ and the maximum number of flows that the framework should manage. When this numb
 framework will add no other flows to the table. This call returns an handle to the framework, which will
 be required as parameter for most of the framework calls;
 
-+ ```dpi_stateful_identify_application_protocol(state, packet, length, timestamp)```:
++ ```dpi_get_protocol(state, packet, length, timestamp)```:
  used to identify a specific packet. It requires the handle to the framework, a pointer to the beginning of
  IP header, its length starting from the IP header, and a timestamp in seconds. It returns a struct containing
  the protocol of the packet and an indication of the status of the processing (e.g. success/failure and reason
@@ -174,7 +174,7 @@ This application can be easily modified to read packet from the network instead 
  *  Author: Daniele De Sensi
  */
 
-#include "../api.h"
+#include <api.h>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <time.h>
@@ -194,119 +194,90 @@ This application can be easily modified to read packet from the network instead 
 #define MAX_IPv6_ACTIVE_FLOWS 500000
 
 int main(int argc, char** argv){
-	if(argc!=2){
-		fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
-		return -1;
-	}
-	char* pcap_filename=argv[1];
-	char errbuf[PCAP_ERRBUF_SIZE];
+    if(argc!=2){
+        fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
+        return -1;
+    }
+    char* pcap_filename=argv[1];
+    char errbuf[PCAP_ERRBUF_SIZE];
 
-	dpi_framework_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, 
-	                                             MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
-	u_int64_t bytes_contained=0;
+    dpi_library_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+    pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
-	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
+    if(handle==NULL){
+        fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
+        return (2);
+    }
 
-	if(handle==NULL){
-		fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
-		return (2);
-	}
-
-	int datalink_type=pcap_datalink(handle);
-	uint ip_offset=0;
-	if(datalink_type==DLT_EN10MB){
-		printf("Datalink type: Ethernet\n");
-		ip_offset=sizeof(struct ether_header);
-	}else if(datalink_type==DLT_RAW){
-		printf("Datalink type: RAW\n");
-		ip_offset=0;
-	}else{
-		fprintf(stderr, "Datalink type not supported\n");
-		exit(-1);
-	}
-
-	const u_char* packet;
-	struct pcap_pkthdr header;
-
-	dpi_identification_result_t r;
-	u_int32_t http_matches=0;
-	u_int32_t dns_matches=0;
-	u_int32_t bgp_matches=0;
-	u_int32_t smtp_matches=0;
-	u_int32_t pop3_matches=0;
-	u_int32_t mdns_matches=0;
-	u_int32_t ntp_matches=0;
-	u_int32_t dhcp_matches=0;
-	u_int32_t dhcpv6_matches=0;
-	u_int32_t unknown=0;
+    int datalink_type=pcap_datalink(handle);
+    uint ip_offset=0;
+    if(datalink_type==DLT_EN10MB){
+        printf("Datalink type: Ethernet\n");
+        ip_offset=sizeof(struct ether_header);
+    }else if(datalink_type==DLT_RAW){
+        printf("Datalink type: RAW\n");
+        ip_offset=0;
+    }else if(datalink_type==DLT_LINUX_SLL){
+        printf("Datalink type: Linux Cooked\n");
+        ip_offset=16;
+    }else{
+        fprintf(stderr, "Datalink type not supported\n");
+        exit(-1);
+    }
 
 
-	while((packet=pcap_next(handle, &header))!=NULL){
-		if(header.caplen<ip_offset) continue;
 
-		r=dpi_stateful_identify_application_protocol(state, packet+ip_offset, 
-		                                             header.caplen-ip_offset, time(NULL));
+    const u_char* packet;
+    struct pcap_pkthdr header;
 
-		if(r.protocol.l4prot==IPPROTO_TCP){
-			switch(r.protocol.l7prot){
-				case DPI_PROTOCOL_TCP_BGP:
-					++bgp_matches;
-					break;
-				case DPI_PROTOCOL_TCP_HTTP:
-					++http_matches;
-					break;
-				case DPI_PROTOCOL_TCP_SMTP:
-					++smtp_matches;
-					break;
-				case DPI_PROTOCOL_TCP_POP3:
-					++pop3_matches;
-					break;
-				default:
-					++unknown;
-					break;
-			}
-		}else if(r.protocol.l4prot==IPPROTO_UDP){
-		  switch(r.protocol.l7prot){
-				case DPI_PROTOCOL_UDP_DHCP:
-					++dhcp_matches;
-					break;
-				case DPI_PROTOCOL_UDP_DHCPv6:
-					++dhcpv6_matches;
-					break;
-				case DPI_PROTOCOL_UDP_DNS:
-					++dns_matches;
-					break;
-				case DPI_PROTOCOL_UDP_MDNS:
-					++mdns_matches;
-					break;
-				case DPI_PROTOCOL_UDP_NTP:
-			        ++ntp_matches;
-					break;
-				default:
-					++unknown;
-					break;
-			}
-		}else{
-			++unknown;
-		}
+    dpi_identification_result_t r;
+    u_int32_t protocols[DPI_NUM_PROTOCOLS];
+    memset(protocols, 0, sizeof(protocols));
+    u_int32_t unknown=0;
 
-	}
+    uint virtual_offset = 0;
 
-	dpi_terminate(state);
+    while((packet=pcap_next(handle, &header))!=NULL){
+        if(datalink_type == DLT_EN10MB){
+            if(header.caplen < ip_offset){
+                continue;
+            }
+            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+            if(ether_type == htons(0x8100)){ // VLAN
+                virtual_offset = 4;
+            }
+            if(ether_type != htons(ETHERTYPE_IP) &&
+               ether_type != htons(ETHERTYPE_IPV6)){
+                continue;
+            }
+        }
+
+        r=dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
 
-	printf("Unknown packets: %"PRIu32"\n", unknown);
-	printf("HTTP packets: %"PRIu32"\n", http_matches);
-	printf("BGP packets: %"PRIu32"\n", bgp_matches);
-	printf("POP3 packets: %"PRIu32"\n", pop3_matches);
-	printf("SMTP packets: %"PRIu32"\n", smtp_matches);
-	printf("NTP packets: %"PRIu32"\n", ntp_matches);
-	printf("DNS packets: %"PRIu32"\n", dns_matches);
-	printf("MDNS packets: %"PRIu32"\n", mdns_matches);
-	printf("DHCP packets: %"PRIu32"\n", dhcp_matches);
-	printf("DHCPv6 packets: %"PRIu32"\n", dhcpv6_matches);
+        if(r.protocol.l4prot == IPPROTO_TCP ||
+           r.protocol.l4prot == IPPROTO_UDP){
+            if(r.protocol.l7prot < DPI_NUM_PROTOCOLS){
+                ++protocols[r.protocol.l7prot];
+            }else{
+                ++unknown;
+            }
+        }else{
+            ++unknown;
+        }
 
-	return 0;
+    }
+
+    dpi_terminate(state);
+
+    if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+    const char** protocols_names = dpi_get_protocols_names();
+    for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+        if(protocols[i] > 0){
+            printf("%s packets: %"PRIu32"\n", protocols_names[i], protocols[i]);
+        }
+    }
+    return 0;
 }
 ```
 
@@ -324,6 +295,43 @@ More demo applications can be found in [demo](demo) folder:
   It is possible to use this demo to read data [sequentially](demo/http_pattern_matching/http_pm_seq.cpp) from a .pcap file, 
   to read data using [multiple cores](demo/http_pattern_matching/http_pm_mc.cpp) from a .pcap file, or to read data from the 
   [network](demo/http_pattern_matching/http_pm_mc_pfring.cpp) by using [PF_RING.](http://www.ntop.org/products/pf_ring/) (PF_RING needs to be installed).
+
+Deprecated functions and backward compatibility
+------------------------------------------------------------------------------------------------------------------
+Starting from August 2018, some functions have been deprecated, and replaced with new functions. This has been
+done to simplify the representation of protocols. The enums DPI_PROTOCOL_UDP_* and DPI_PROTOCOL_TCP_*, which
+were used to represent L7 protocols, have been deprecated as well and replaced by a new enum DPI_PROTOCOL_*.
+In the following table we report the old functions and their current replacement. If you do not mix deprecated
+functions with their replacement everything should work. However, we strongly suggest replacing the deprecated functions with their replacements.
+
+
+<table>
+  <tr>
+    <th>Deprecated Function</th><th>Replaced With</th>
+  </tr>
+  <tr>
+    <td>```dpi_set_protocol```</td><td>```dpi_enable_protocol```</td>
+  </tr>
+    <tr>
+    <td>```dpi_delete_protocol```</td><td>```dpi_disable_protocol```</td>
+  </tr>
+  <tr>
+    <td>```dpi_stateful_identify_application_protocol```</td><td>```dpi_get_protocol```</td>
+  </tr>
+  <tr>
+    <td>```dpi_get_protocol_name```</td><td>```dpi_get_protocols_names```</td>
+  </tr>
+  <tr>
+    <td>```mc_dpi_set_read_and_process_callbacks```</td><td>```mc_dpi_set_core_callbacks```</td>
+  </tr>
+  <tr>
+    <td>```mc_dpi_set_protocol```</td><td>```mc_dpi_enable_protocol```</td>
+  </tr>
+    <tr>
+    <td>```mc_dpi_delete_protocol```</td><td>```mc_dpi_disable_protocol```</td>
+  </tr>
+
+<table>
 
 Experimental results
 ================================================================================================================

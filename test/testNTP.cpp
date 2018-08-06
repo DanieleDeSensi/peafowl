@@ -3,10 +3,15 @@
  **/
 #include "common.h"
 
-TEST(NTPTest, Generic) {
+TEST(NTPTest, DeprecatedCalls) {
     std::vector<uint> tcpProtocols;
     std::vector<uint> udpProtocols;
-    uint unknown;
-    getProtocols("./pcaps/ntp.pcap", tcpProtocols, udpProtocols, unknown);
+    getProtocolsOld("./pcaps/ntp.pcap", tcpProtocols, udpProtocols);
     EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_NTP], (uint) 30);
+}
+
+TEST(NTPTest, Generic) {
+    std::vector<uint> protocols;
+    getProtocols("./pcaps/ntp.pcap", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_NTP], (uint) 30);
 }

@@ -32,6 +32,9 @@
 #define DPI_NTP_VERSION_MASK 0x38
 
 u_int8_t check_ntp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+    if(pkt->l4prot != IPPROTO_UDP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	if((pkt->srcport==port_ntp || pkt->dstport==port_ntp) && data_length>=48 && (((app_data[0] & DPI_NTP_VERSION_MASK) >> 3) <= DPI_NTP_MAX_VERSION)){
 		return DPI_PROTOCOL_MATCHES;
 	}else{

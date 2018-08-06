@@ -78,7 +78,9 @@ static u_int8_t isValidMSRTPType(u_int8_t payloadType) {
 
 
 u_int8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
-
+    if(pkt->l4prot != IPPROTO_UDP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	if ( data_length < 2 || pkt->dstport <= 1024 || pkt->srcport <= 1024 ) {
 	    return DPI_PROTOCOL_NO_MATCHES;
 	}

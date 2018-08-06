@@ -75,6 +75,9 @@ static const char* const requests_match[DPI_SIP_NUM_REQUESTS_MATCH]={
 
 
 u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+    if(pkt->l4prot != IPPROTO_UDP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	u_int8_t i;
 
 	 if(pkt->dstport==port_sip || pkt->srcport==port_sip){

@@ -28,6 +28,9 @@
 #include "inspectors.h"
 
 u_int8_t check_dhcpv6(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+    if(pkt->l4prot != IPPROTO_UDP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	if (data_length >= 4 &&
 		((pkt->srcport==port_dhcpv6_1 && pkt->dstport==port_dhcpv6_2) ||
 		(pkt->srcport==port_dhcpv6_2 && pkt->dstport==port_dhcpv6_1)) &&

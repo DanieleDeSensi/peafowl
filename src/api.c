@@ -58,52 +58,48 @@
 static const dpi_l7_prot_id const
 	dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16+1]=
 		{[0 ... DPI_MAX_UINT_16]=DPI_PROTOCOL_UNKNOWN
-		,[port_http]=DPI_PROTOCOL_TCP_HTTP
-		,[port_bgp]=DPI_PROTOCOL_TCP_BGP
-		,[port_smtp_1]=DPI_PROTOCOL_TCP_SMTP
-		,[port_smtp_2]=DPI_PROTOCOL_TCP_SMTP
-		,[port_pop3]=DPI_PROTOCOL_TCP_POP3
-		,[port_ssl]=DPI_PROTOCOL_TCP_SSL};
+        ,[port_dns]=DPI_PROTOCOL_DNS
+        ,[port_http]=DPI_PROTOCOL_HTTP
+        ,[port_bgp]=DPI_PROTOCOL_BGP
+        ,[port_smtp_1]=DPI_PROTOCOL_SMTP
+        ,[port_smtp_2]=DPI_PROTOCOL_SMTP
+        ,[port_pop3]=DPI_PROTOCOL_POP3
+        ,[port_ssl]=DPI_PROTOCOL_SSL};
 
 static const dpi_l7_prot_id const
 	dpi_well_known_ports_association_udp[DPI_MAX_UINT_16+1]=
 		{[0 ... DPI_MAX_UINT_16]=DPI_PROTOCOL_UNKNOWN
-		,[port_dns]=DPI_PROTOCOL_UDP_DNS
-		,[port_mdns]=DPI_PROTOCOL_UDP_MDNS
-		,[port_dhcp_1]=DPI_PROTOCOL_UDP_DHCP
-		,[port_dhcp_2]=DPI_PROTOCOL_UDP_DHCP
-		,[port_dhcpv6_1]=DPI_PROTOCOL_UDP_DHCPv6
-		,[port_dhcpv6_2]=DPI_PROTOCOL_UDP_DHCPv6
-		,[port_sip]=DPI_PROTOCOL_UDP_SIP
-		,[port_ntp]=DPI_PROTOCOL_UDP_NTP};
+        ,[port_dns]=DPI_PROTOCOL_DNS
+        ,[port_mdns]=DPI_PROTOCOL_MDNS
+        ,[port_dhcp_1]=DPI_PROTOCOL_DHCP
+        ,[port_dhcp_2]=DPI_PROTOCOL_DHCP
+        ,[port_dhcpv6_1]=DPI_PROTOCOL_DHCPv6
+        ,[port_dhcpv6_2]=DPI_PROTOCOL_DHCPv6
+        ,[port_sip]=DPI_PROTOCOL_SIP
+        ,[port_ntp]=DPI_PROTOCOL_NTP};
 
 
 static const dpi_inspector_callback const
-	udp_inspectors[DPI_NUM_UDP_PROTOCOLS]=
-		{[DPI_PROTOCOL_UDP_DHCP]=check_dhcp
-		,[DPI_PROTOCOL_UDP_DHCPv6]=check_dhcpv6
-		,[DPI_PROTOCOL_UDP_DNS]=check_dns
-		,[DPI_PROTOCOL_UDP_MDNS]=check_mdns
-		,[DPI_PROTOCOL_UDP_SIP]=check_sip
-		,[DPI_PROTOCOL_UDP_RTP]=check_rtp
-		,[DPI_PROTOCOL_UDP_SKYPE]=check_skype
-		,[DPI_PROTOCOL_UDP_NTP]=check_ntp};
+    inspectors[DPI_NUM_PROTOCOLS]=
+        {[DPI_PROTOCOL_DHCP]=check_dhcp
+        ,[DPI_PROTOCOL_DHCPv6]=check_dhcpv6
+        ,[DPI_PROTOCOL_DNS]=check_dns
+        ,[DPI_PROTOCOL_MDNS]=check_mdns
+        ,[DPI_PROTOCOL_SIP]=check_sip
+        ,[DPI_PROTOCOL_RTP]=check_rtp
+        ,[DPI_PROTOCOL_SKYPE]=check_skype
+        ,[DPI_PROTOCOL_NTP]=check_ntp
+        ,[DPI_PROTOCOL_BGP]=check_bgp
+        ,[DPI_PROTOCOL_HTTP]=check_http
+        ,[DPI_PROTOCOL_SMTP]=check_smtp
+        ,[DPI_PROTOCOL_POP3]=check_pop3
+        ,[DPI_PROTOCOL_SSL]=check_ssl};
+
 
 static const dpi_inspector_callback const
-	tcp_inspectors[DPI_NUM_TCP_PROTOCOLS]=
-		{[DPI_PROTOCOL_TCP_BGP]=check_bgp
-		,[DPI_PROTOCOL_TCP_HTTP]=check_http
-		,[DPI_PROTOCOL_TCP_SMTP]=check_smtp
-		,[DPI_PROTOCOL_TCP_POP3]=check_pop3
-		,[DPI_PROTOCOL_TCP_SSL]=check_ssl};
-
-static const dpi_inspector_callback const
-	udp_callbacks_manager[DPI_NUM_UDP_PROTOCOLS];
-
-static const dpi_inspector_callback const
-	tcp_callbacks_manager[DPI_NUM_TCP_PROTOCOLS]=
-		{[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_http,
-		[DPI_PROTOCOL_TCP_SSL]=invoke_callbacks_ssl
+    callbacks_manager[DPI_NUM_PROTOCOLS]=
+        {[DPI_PROTOCOL_HTTP]=invoke_callbacks_http,
+        [DPI_PROTOCOL_SSL]=invoke_callbacks_ssl
 		};
 
 #else
@@ -112,14 +108,10 @@ static dpi_l7_prot_id
 static dpi_l7_prot_id
        dpi_well_known_ports_association_udp[DPI_MAX_UINT_16+1];
 
-static dpi_inspector_callback udp_inspectors[DPI_NUM_UDP_PROTOCOLS];
-static dpi_inspector_callback tcp_inspectors[DPI_NUM_TCP_PROTOCOLS];
+static dpi_inspector_callback inspectors[DPI_NUM_PROTOCOLS];
 
 static dpi_inspector_callback
-       udp_callbacks_manager[DPI_NUM_UDP_PROTOCOLS];
-
-static dpi_inspector_callback
-       tcp_callbacks_manager[DPI_NUM_TCP_PROTOCOLS];
+       callbacks_manager[DPI_NUM_PROTOCOLS];
 #endif
 
 /**
@@ -179,10 +171,8 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 	dpi_tcp_reordering_enable(state);
 
 #if !defined(__GNUC__) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L)
-	memset(dpi_well_known_ports_association_tcp, DPI_PROTOCOL_UNKNOWN,
+    memset(dpi_well_known_ports_association, DPI_PROTOCOL_UNKNOWN,
 	       DPI_MAX_UINT_16+1);
-	memset(dpi_well_known_ports_association_udp, DPI_PROTOCOL_UNKNOWN,
-           DPI_MAX_UINT_16+1);
 	dpi_well_known_ports_association_tcp[port_http]=
 			DPI_PROTOCOL_TCP_HTTP;
 	dpi_well_known_ports_association_tcp[port_bgp]=
@@ -212,23 +202,22 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 			DPI_PROTOCOL_UDP_SIP;
 
 
-	udp_inspectors[DPI_PROTOCOL_UDP_DHCP]=check_dhcp;
-	udp_inspectors[DPI_PROTOCOL_UDP_DHCPv6]=check_dhcpv;
-	udp_inspectors[DPI_PROTOCOL_UDP_DNS]=check_dns;
-	udp_inspectors[DPI_PROTOCOL_UDP_MDNS]=check_mdns;
-	udp_inspectors[DPI_PROTOCOL_UDP_NTP]=check_ntp;
-	udp_inspectors[DPI_PROTOCOL_UDP_SIP]=check_sip;
-	udp_inspectors[DPI_PROTOCOL_UDP_RTP]=check_rtp;
-	udp_inspectors[DPI_PROTOCOL_UDP_SKYPE]=check_skype;
+    inspectors[DPI_PROTOCOL_DHCP]=check_dhcp;
+    inspectors[DPI_PROTOCOL_DHCPv6]=check_dhcpv;
+    inspectors[DPI_PROTOCOL_DNS]=check_dns;
+    inspectors[DPI_PROTOCOL_MDNS]=check_mdns;
+    inspectors[DPI_PROTOCOL_NTP]=check_ntp;
+    inspectors[DPI_PROTOCOL_SIP]=check_sip;
+    inspectors[DPI_PROTOCOL_RTP]=check_rtp;
+    inspectors[DPI_PROTOCOL_SKYPE]=check_skype;
+    inspectors[DPI_PROTOCOL_BGP]=check_bgp;
+    inspectors[DPI_PROTOCOL_HTTP]=check_http;
+    inspectors[DPI_PROTOCOL_SMTP]=check_smtp;
+    inspectors[DPI_PROTOCOL_POP3]=check_pop3;
+    inspectors[DPI_PROTOCOL_POP3]=check_ssl;
 
-	tcp_inspectors[DPI_PROTOCOL_TCP_BGP]=check_bgp;
-	tcp_inspectors[DPI_PROTOCOL_TCP_HTTP]=check_http;
-	tcp_inspectors[DPI_PROTOCOL_TCP_SMTP]=check_smtp;
-	tcp_inspectors[DPI_PROTOCOL_TCP_POP3]=check_pop3;
-	tcp_inspectors[DPI_PROTOCOL_TCP_POP3]=check_ssl;
-
-	tcp_callbacks_manager[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_http;
-	tcp_callbacks_manager[DPI_PROTOCOL_TCP_HTTP]=invoke_callbacks_ssl;
+    callbacks_manager[DPI_PROTOCOL_HTTP]=invoke_callbacks_http;
+    callbacks_manager[DPI_PROTOCOL_HTTP]=invoke_callbacks_ssl;
 #endif
 	return state;
 }
@@ -527,6 +516,7 @@ u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state){
 }
 
 /**
+ * --- DEPRECATED ---
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
  * @param protocol      The protocol to enable.
@@ -536,20 +526,11 @@ u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state){
  */
 u_int8_t dpi_set_protocol(dpi_library_state_t *state,
 		                  dpi_protocol_t protocol){
-	if(protocol.l4prot==IPPROTO_UDP){
-		BITSET(state->udp_protocols_to_inspect, protocol.l7prot);
-		++state->udp_active_protocols;
-		return DPI_STATE_UPDATE_SUCCESS;
-	}else if(protocol.l4prot==IPPROTO_TCP){
-		BITSET(state->tcp_protocols_to_inspect, protocol.l7prot);
-		++state->tcp_active_protocols;
-		return DPI_STATE_UPDATE_SUCCESS;
-	}else{
-		return DPI_STATE_UPDATE_FAILURE;
-	}
+    return dpi_enable_protocol(state, dpi_old_protocols_to_new(protocol));
 }
 
 /**
+ * --- DEPRECATED ---
  * Disable a protocol inspector.
  * @param state       A pointer to the state of the library.
  * @param protocol    The protocol to disable.
@@ -559,23 +540,31 @@ u_int8_t dpi_set_protocol(dpi_library_state_t *state,
  */
 u_int8_t dpi_delete_protocol(dpi_library_state_t *state,
 		                     dpi_protocol_t protocol){
-	char *protocol_mask;
-	char *inspector_mask;
-	if(protocol.l4prot==IPPROTO_UDP){
-		protocol_mask=state->udp_protocols_to_inspect;
-		inspector_mask=state->udp_active_callbacks;
-		--state->udp_active_protocols;
-	}else if(protocol.l4prot==IPPROTO_TCP){
-		protocol_mask=state->tcp_protocols_to_inspect;
-		inspector_mask=state->tcp_active_callbacks;
-		--state->tcp_active_protocols;
-	}else{
-		return DPI_STATE_UPDATE_FAILURE;
-	}
+    return dpi_disable_protocol(state, dpi_old_protocols_to_new(protocol));
+}
 
-	BITCLEAR(protocol_mask, protocol.l7prot);
-	BITCLEAR(inspector_mask, protocol.l7prot);
-	return DPI_STATE_UPDATE_SUCCESS;
+u_int8_t dpi_enable_protocol(dpi_library_state_t *state,
+                          dpi_l7_prot_id protocol){
+    if(protocol < DPI_NUM_PROTOCOLS){
+        BITSET(state->protocols_to_inspect, protocol);
+        ++state->active_protocols;
+        return DPI_STATE_UPDATE_SUCCESS;
+    }else{
+        return DPI_STATE_UPDATE_FAILURE;
+    }
+}
+
+
+u_int8_t dpi_disable_protocol(dpi_library_state_t *state,
+                             dpi_l7_prot_id protocol){
+    if(protocol < DPI_NUM_PROTOCOLS){
+        BITCLEAR(state->protocols_to_inspect, protocol);
+        BITCLEAR(state->active_callbacks, protocol);
+        --state->active_protocols;
+        return DPI_STATE_UPDATE_SUCCESS;
+    }else{
+        return DPI_STATE_UPDATE_SUCCESS;
+    }
 }
 
 /**
@@ -587,13 +576,9 @@ u_int8_t dpi_delete_protocol(dpi_library_state_t *state,
  */
 u_int8_t dpi_inspect_all(dpi_library_state_t *state){
 	unsigned char nonzero = ~0;
-	memset(state->udp_protocols_to_inspect, nonzero,
-	       BITNSLOTS(DPI_NUM_UDP_PROTOCOLS));
-	memset(state->tcp_protocols_to_inspect, nonzero,
-	       BITNSLOTS(DPI_NUM_TCP_PROTOCOLS));
-
-	state->udp_active_protocols=DPI_NUM_UDP_PROTOCOLS;
-	state->tcp_active_protocols=DPI_NUM_TCP_PROTOCOLS;
+    memset(state->protocols_to_inspect, nonzero,
+           BITNSLOTS(DPI_NUM_PROTOCOLS));
+    state->active_protocols=DPI_NUM_PROTOCOLS;
 	return DPI_STATE_UPDATE_SUCCESS;
 }
 
@@ -606,14 +591,11 @@ u_int8_t dpi_inspect_all(dpi_library_state_t *state){
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 u_int8_t dpi_inspect_nothing(dpi_library_state_t *state){
-	bzero(state->udp_protocols_to_inspect, BITNSLOTS(DPI_NUM_UDP_PROTOCOLS));
-	bzero(state->tcp_protocols_to_inspect, BITNSLOTS(DPI_NUM_TCP_PROTOCOLS));
+    bzero(state->protocols_to_inspect, BITNSLOTS(DPI_NUM_PROTOCOLS));
 
-	state->udp_active_protocols=0;
-	state->tcp_active_protocols=0;
+    state->active_protocols=0;
 
-	bzero(state->tcp_active_callbacks, DPI_NUM_TCP_PROTOCOLS);
-	bzero(state->udp_active_callbacks, DPI_NUM_UDP_PROTOCOLS);
+    bzero(state->active_callbacks, DPI_NUM_PROTOCOLS);
 	return DPI_STATE_UPDATE_SUCCESS;
 }
 
@@ -639,6 +621,7 @@ void dpi_terminate(dpi_library_state_t *state){
 
 
 /*
+ * --- DEPRECATED ---
  * Try to detect the application protocol.
  * @param   state The state of the library.
  * @param   pkt The pointer to the beginning of IP header.
@@ -669,42 +652,75 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
 		       const unsigned char* pkt,
 		       u_int32_t length,
 		       u_int32_t current_time){
-
-	dpi_identification_result_t r;
-	r.status=DPI_STATUS_OK;
-	dpi_pkt_infos_t infos;
-	memset(&infos, 0, sizeof(infos));
-	u_int8_t l3_status;
-
-	r.status=dpi_parse_L3_L4_headers(state, pkt, length, &infos,
-			                         current_time);
-
-	if(unlikely(r.status==DPI_STATUS_IP_FRAGMENT || r.status<0)){
-		return r;
-	}
-
-	if(infos.l4prot!=IPPROTO_TCP && infos.l4prot!=IPPROTO_UDP){
-		r.status=DPI_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
-		return r;
-	}
-
-	l3_status=r.status;
-	r.status=DPI_STATUS_OK;
-	/**
-	 * We return the status of dpi_stateful_get_app_protocol call,
-	 * without giving informations on status returned
-	 * by dpi_parse_L3_L4_headers. Basically we return the status which
-	 * provides more informations.
-	 */
-	r=dpi_stateful_get_app_protocol(state, &infos);
-
-	if(l3_status==DPI_STATUS_IP_LAST_FRAGMENT){
-		free((unsigned char*) infos.pkt);
-	}
-
-	return r;
+    dpi_identification_result_t r = dpi_get_protocol(state, pkt, length, current_time);
+    r.protocol.l7prot = dpi_new_protocols_to_old(r.protocol.l7prot);
+    return r;
 }
 
+
+/*
+ * Try to detect the application protocol.
+ * @param   state The state of the library.
+ * @param   pkt The pointer to the beginning of IP header.
+ * @param   data_length Length of the packet (from the beginning of the IP
+ *          header, without L2 headers/trailers).
+ * @param   current_time The current time in seconds.
+ * @return  The status of the operation.  It gives additional informations
+ *          about the processing of the request. If lesser than 0, an error
+ *          occurred. dpi_get_error_msg() can be used to get a textual
+ *          representation of the error. If greater or equal than 0 then
+ *          it should not be interpreted as an error but simply gives
+ *          additional informations (e.g. if the packet was IP fragmented,
+ *          if it was out of order in the TCP stream, if is a segment of a
+ *          larger application request, etc..). dpi_get_status_msg() can
+ *          be used to get a textual representation of the status. Status
+ *          and error codes are defined above in this header file. If an
+ *          error occurred, the other returned fields are not meaningful.
+ *
+ *          The application protocol identifier plus the transport
+ *          protocol identifier. The application protocol identifier is
+ *          relative to the specific transport protocol.
+ *
+ * 			The flow specific user data (possibly manipulated by the
+ * 			user callbacks).
+ */
+dpi_identification_result_t dpi_get_protocol(
+                 dpi_library_state_t* state, const unsigned char* pkt,
+                 u_int32_t length, u_int32_t current_time){
+    dpi_identification_result_t r;
+    r.status=DPI_STATUS_OK;
+    dpi_pkt_infos_t infos;
+    memset(&infos, 0, sizeof(infos));
+    u_int8_t l3_status;
+
+    r.status=dpi_parse_L3_L4_headers(state, pkt, length, &infos,
+                                     current_time);
+
+    if(unlikely(r.status==DPI_STATUS_IP_FRAGMENT || r.status<0)){
+        return r;
+    }
+
+    if(infos.l4prot!=IPPROTO_TCP && infos.l4prot!=IPPROTO_UDP){
+        r.status=DPI_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+        return r;
+    }
+
+    l3_status=r.status;
+    r.status=DPI_STATUS_OK;
+    /**
+     * We return the status of dpi_stateful_get_app_protocol call,
+     * without giving informations on status returned
+     * by dpi_parse_L3_L4_headers. Basically we return the status which
+     * provides more informations.
+     */
+    r=dpi_stateful_get_app_protocol(state, &infos);
+
+    if(l3_status==DPI_STATUS_IP_LAST_FRAGMENT){
+        free((unsigned char*) infos.pkt);
+    }
+
+    return r;
+}
 
 /*
  * Extract from the packet the informations about source and destination
@@ -1205,19 +1221,13 @@ void dpi_init_flow_infos(
 		       dpi_flow_infos_t *flow_infos,
 		       u_int8_t l4prot){
 	dpi_l7_prot_id i;
-	if(l4prot==IPPROTO_TCP){
-		for(i=0; i<BITNSLOTS(DPI_NUM_TCP_PROTOCOLS); i++){
-			flow_infos->possible_matching_protocols_t.tcp[i]=
-					      state->tcp_protocols_to_inspect[i];
-		}
-		flow_infos->possible_protocols=state->tcp_active_protocols;
-	}else{
-		for(i=0; i<BITNSLOTS(DPI_NUM_UDP_PROTOCOLS); i++){
-			flow_infos->possible_matching_protocols_t.udp[i]=
-					      state->udp_protocols_to_inspect[i];
-		}
-		flow_infos->possible_protocols=state->udp_active_protocols;
-	}
+
+    for(i=0; i<BITNSLOTS(DPI_NUM_PROTOCOLS); i++){
+        flow_infos->possible_matching_protocols[i]=
+                      state->protocols_to_inspect[i];
+    }
+    flow_infos->possible_protocols=state->active_protocols;
+
 	flow_infos->l7prot=DPI_PROTOCOL_NOT_DETERMINED;
 	flow_infos->trials=0;
 	flow_infos->tcp_reordering_enabled=state->tcp_reordering_enabled;
@@ -1272,12 +1282,9 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 	dpi_l7_prot_id i;
 
 	u_int8_t check_result=DPI_PROTOCOL_NO_MATCHES;
-	dpi_l7_prot_id num_protocols;
-	const dpi_l7_prot_id* well_known_ports;
-	char *active_protocols_mask;
+    const dpi_l7_prot_id* well_known_ports;
 	const unsigned char* app_data=pkt_infos->pkt+pkt_infos->l7offset;
-	u_int32_t data_length=pkt_infos->data_length;
-	dpi_inspector_callback const *inspectors;
+    u_int32_t data_length=pkt_infos->data_length;
 	dpi_tcp_reordering_reordered_segment_t seg;
 	seg.status=DPI_TCP_REORDERING_STATUS_IN_ORDER;
 	seg.data=NULL;
@@ -1306,9 +1313,9 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 								     pkt_infos, &(flow->tracking));
 			}
 
-			if(BITTEST(state->tcp_active_callbacks, flow->l7prot) &&
+            if(BITTEST(state->active_callbacks, flow->l7prot) &&
 					   data_length!=0){
-				(*(tcp_callbacks_manager[flow->l7prot]))(
+                (*(callbacks_manager[flow->l7prot]))(
 						 state, pkt_infos, app_data,
 						 data_length, &(flow->tracking));
 			}
@@ -1318,8 +1325,8 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 			}
 
 		}else if(pkt_infos->l4prot==IPPROTO_UDP &&
-				BITTEST(state->udp_active_callbacks, flow->l7prot)){
-			(*(udp_callbacks_manager[flow->l7prot]))(
+                BITTEST(state->active_callbacks, flow->l7prot)){
+            (*(callbacks_manager[flow->l7prot]))(
 					     state, pkt_infos, app_data,
 					     data_length, &(flow->tracking));
 		}
@@ -1329,11 +1336,8 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 		}
 		return r;
 	}else if(flow->l7prot==DPI_PROTOCOL_NOT_DETERMINED){
-		if(pkt_infos->l4prot==IPPROTO_TCP &&
-		   state->tcp_active_protocols>0){
-			active_protocols_mask=flow->possible_matching_protocols_t.tcp;
-			inspectors=tcp_inspectors;
-			num_protocols=DPI_NUM_TCP_PROTOCOLS;
+        if(pkt_infos->l4prot == IPPROTO_TCP &&
+           state->active_protocols > 0){
 			well_known_ports=dpi_well_known_ports_association_tcp;
 			if(flow->tcp_reordering_enabled){
 				seg=dpi_reordering_tcp_track_connection(
@@ -1352,11 +1356,8 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 						  pkt_infos, &(flow->tracking)))
 					r.status=DPI_STATUS_TCP_CONNECTION_TERMINATED;
 			}
-		}else if(pkt_infos->l4prot==IPPROTO_UDP &&
-				 state->udp_active_protocols>0){
-			active_protocols_mask=flow->possible_matching_protocols_t.udp;
-			inspectors=udp_inspectors;
-			num_protocols=DPI_NUM_UDP_PROTOCOLS;
+        }else if(pkt_infos->l4prot == IPPROTO_UDP &&
+                 state->active_protocols > 0){
 			well_known_ports=dpi_well_known_ports_association_udp;
 		}else{
 			return r;
@@ -1381,9 +1382,10 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 			first_protocol_to_check=0;
 		}
 
-		for(i=first_protocol_to_check; checked_protocols<num_protocols;
-		    i=(i+1)%num_protocols, ++checked_protocols){
-			if(BITTEST(active_protocols_mask, i)){
+        for(i = first_protocol_to_check;
+            checked_protocols < DPI_NUM_PROTOCOLS;
+            i=(i+1) % DPI_NUM_PROTOCOLS, ++checked_protocols){
+            if(BITTEST(flow->possible_matching_protocols, i)){
 				check_result=(*(inspectors[i]))(state, pkt_infos,
 						                        app_data, data_length,
 						                        &(flow->tracking));
@@ -1401,7 +1403,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 
 					return r;
 				}else if(check_result==DPI_PROTOCOL_NO_MATCHES){
-					BITCLEAR(active_protocols_mask, i);
+                    BITCLEAR(flow->possible_matching_protocols, i);
 					--(flow->possible_protocols);
 				}
 			}
@@ -1555,7 +1557,11 @@ const char* const dpi_get_protocol_name(dpi_protocol_t protocol){
 				return "Unknown";
 		}
 	}else
-		return "Unknown";
+        return "Unknown";
+}
+
+const char** const dpi_get_protocols_names(){
+    return protocols_strings;
 }
 
 /**

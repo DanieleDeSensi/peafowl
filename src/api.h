@@ -440,14 +440,10 @@ struct library_state{
 	/** Can be modified during the execution but only using the state  **/
 	/** update functions. They are never modified in other places      **/
 	/********************************************************************/
-	char udp_protocols_to_inspect[BITNSLOTS(DPI_NUM_UDP_PROTOCOLS)];
-	char tcp_protocols_to_inspect[BITNSLOTS(DPI_NUM_TCP_PROTOCOLS)];
+    char protocols_to_inspect[BITNSLOTS(DPI_NUM_PROTOCOLS)];
+    char active_callbacks[BITNSLOTS(DPI_NUM_PROTOCOLS)];
 
-	char udp_active_callbacks[BITNSLOTS(DPI_NUM_UDP_PROTOCOLS)];
-	char tcp_active_callbacks[BITNSLOTS(DPI_NUM_TCP_PROTOCOLS)];
-
-	dpi_l7_prot_id udp_active_protocols;
-	dpi_l7_prot_id tcp_active_protocols;
+    dpi_l7_prot_id active_protocols;
 
 	u_int16_t max_trials;
 
@@ -497,10 +493,7 @@ typedef struct dpi_flow_infos{
 	 * successive iterations we remove from the mask the protocols which
 	 * surely don't match).
 	 **/
-	union possible_matching_protocols{
-		char udp[BITNSLOTS(DPI_NUM_UDP_PROTOCOLS)];
-		char tcp[BITNSLOTS(DPI_NUM_TCP_PROTOCOLS)];
-	}possible_matching_protocols_t;
+    char possible_matching_protocols[BITNSLOTS(DPI_NUM_PROTOCOLS)];
 
 	/**
 	 * In this way if a flow was created when TCP reordering was enabled,
@@ -719,6 +712,7 @@ u_int8_t dpi_tcp_reordering_enable(dpi_library_state_t* state);
 u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state);
 
 /**
+ * ---- DEPRECATED, replaced by dpi_enable_protocol ----
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
  * @param protocol      The protocol to enable.
@@ -730,6 +724,7 @@ u_int8_t dpi_set_protocol(dpi_library_state_t *state,
 		                  dpi_protocol_t protocol);
 
 /**
+ * ---- DEPRECATED, replaced by dpi_disable_protocol ----
  * Disable a protocol inspector.
  * @param state       A pointer to the state of the library.
  * @param protocol    The protocol to disable.
@@ -739,6 +734,28 @@ u_int8_t dpi_set_protocol(dpi_library_state_t *state,
  */
 u_int8_t dpi_delete_protocol(dpi_library_state_t *state,
 		                     dpi_protocol_t protocol);
+
+/**
+ * Enable a protocol inspector.
+ * @param state         A pointer to the state of the library.
+ * @param protocol      The protocol to enable.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+u_int8_t dpi_enable_protocol(dpi_library_state_t *state,
+                          dpi_l7_prot_id protocol);
+
+/**
+ * Disable a protocol inspector.
+ * @param state       A pointer to the state of the library.
+ * @param protocol    The protocol to disable.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+u_int8_t dpi_disable_protocol(dpi_library_state_t *state,
+                             dpi_l7_prot_id protocol);
 
 /**
  * Enable all the protocol inspector.
@@ -760,6 +777,7 @@ u_int8_t dpi_inspect_nothing(dpi_library_state_t *state);
 
 
 /*
+ * --- DEPRECATED, replaced by dpi_get_protocol ---
  * Try to detect the application protocol.
  * @param   state The state of the library.
  * @param   pkt The pointer to the beginning of IP header.
@@ -789,6 +807,36 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
 		         dpi_library_state_t* state, const unsigned char* pkt,
 		         u_int32_t length, u_int32_t current_time);
 
+
+/*
+ * Try to detect the application protocol.
+ * @param   state The state of the library.
+ * @param   pkt The pointer to the beginning of IP header.
+ * @param   data_length Length of the packet (from the beginning of the IP
+ *          header, without L2 headers/trailers).
+ * @param   current_time The current time in seconds.
+ * @return  The status of the operation.  It gives additional informations
+ *          about the processing of the request. If lesser than 0, an error
+ *          occurred. dpi_get_error_msg() can be used to get a textual
+ *          representation of the error. If greater or equal than 0 then
+ *          it should not be interpreted as an error but simply gives
+ *          additional informations (e.g. if the packet was IP fragmented,
+ *          if it was out of order in the TCP stream, if is a segment of a
+ *          larger application request, etc..). dpi_get_status_msg() can
+ *          be used to get a textual representation of the status. Status
+ *          and error codes are defined above in this header file. If an
+ *          error occurred, the other returned fields are not meaningful.
+ *
+ *          The application protocol identifier plus the transport
+ *          protocol identifier. The application protocol identifier is
+ *          relative to the specific transport protocol.
+ *
+ * 			The flow specific user data (possibly manipulated by the
+ * 			user callbacks).
+ */
+dpi_identification_result_t dpi_get_protocol(
+                 dpi_library_state_t* state, const unsigned char* pkt,
+                 u_int32_t length, u_int32_t current_time);
 
 
 /*
@@ -950,12 +998,20 @@ const char* const dpi_get_status_msg(int8_t status_code);
 
 
 /**
+ * --- DEPRECATED, replaced by dpi_get_protocols_names ---
  * Returns a string corresponding to the given protocol.
  * @param   protocol The protocol identifier.
  * @return  A string representation of the given protocol.
  */
 const char* const dpi_get_protocol_name(dpi_protocol_t protocol);
 
+/**
+ * Returns the string represetations of the protocols.
+ * @param   protocol The protocol identifier.
+ * @return  An array A of string, such that A[i] is the
+ * string representation of the protocol with id 'i'.
+ */
+const char** const dpi_get_protocols_names();
 
 /**
  * Sets the callback that will be called when a flow expires.

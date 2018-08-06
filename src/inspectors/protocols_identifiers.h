@@ -34,12 +34,12 @@
 #define DPI_IP_VERSION_4 0x4
 #define DPI_IP_VERSION_6 0x6
 
-/** ATTENTION: These two values must be greater than DPI_NUM_UDP_PROTOCOLS and DPI_NUM_TCP_PROTOCOLS. **/
+/** ATTENTION: These two values must be greater than DPI_NUM_PROTOCOLS. **/
 #define DPI_PROTOCOL_NOT_DETERMINED 254
 #define DPI_PROTOCOL_UNKNOWN 255
 
-/** Protocols over UDP. **/
-enum udp_protocols{
+/** Old protocols identifiers (DEPRECATED). Use 'protocols' enum below. **/
+enum old_protocols{
 	DPI_PROTOCOL_UDP_DNS=0,
 	DPI_PROTOCOL_UDP_MDNS,
 	DPI_PROTOCOL_UDP_DHCP,
@@ -48,10 +48,33 @@ enum udp_protocols{
 	DPI_PROTOCOL_UDP_SIP,
 	DPI_PROTOCOL_UDP_RTP,
 	DPI_PROTOCOL_UDP_SKYPE,
-	DPI_NUM_UDP_PROTOCOLS
+    DPI_NUM_UDP_PROTOCOLS,
+    DPI_PROTOCOL_TCP_HTTP,
+    DPI_PROTOCOL_TCP_BGP,
+    DPI_PROTOCOL_TCP_SMTP,
+    DPI_PROTOCOL_TCP_POP3,
+    DPI_PROTOCOL_TCP_SSL,
+    DPI_NUM_TCP_PROTOCOLS
 };
 
-static const char * udp_protocols_strings[] = {
+enum protocols{
+    DPI_PROTOCOL_DNS = 0,
+    DPI_PROTOCOL_MDNS,
+    DPI_PROTOCOL_DHCP,
+    DPI_PROTOCOL_DHCPv6,
+    DPI_PROTOCOL_NTP,
+    DPI_PROTOCOL_SIP,
+    DPI_PROTOCOL_RTP,
+    DPI_PROTOCOL_SKYPE,
+    DPI_PROTOCOL_HTTP,
+    DPI_PROTOCOL_BGP,
+    DPI_PROTOCOL_SMTP,
+    DPI_PROTOCOL_POP3,
+    DPI_PROTOCOL_SSL,
+    DPI_NUM_PROTOCOLS
+};
+
+static const char * protocols_strings[] = {
     "DNS",
     "MDNS",
     "DHCP",
@@ -59,20 +82,7 @@ static const char * udp_protocols_strings[] = {
     "NTP",
     "SIP",
     "RTP",
-    "SKYPE"
-};
-
-/** Protocols over TCP. **/
-enum tcp_protocols{
-	DPI_PROTOCOL_TCP_HTTP=0,
-	DPI_PROTOCOL_TCP_BGP,
-	DPI_PROTOCOL_TCP_SMTP,
-	DPI_PROTOCOL_TCP_POP3,
-	DPI_PROTOCOL_TCP_SSL,
-	DPI_NUM_TCP_PROTOCOLS
-};
-
-static const char * tcp_protocols_strings[] = {
+    "SKYPE",
     "HTTP",
     "BGP",
     "SMTP",
@@ -89,43 +99,65 @@ typedef struct dpi_protocol{
 }dpi_protocol_t;
 
 
-static inline const char* protoToString(dpi_protocol_t proto){
-    if(proto.l4prot == IPPROTO_TCP){
-        if(proto.l7prot < DPI_NUM_TCP_PROTOCOLS){
-            return tcp_protocols_strings[proto.l7prot];
-        }
-    }else if(proto.l4prot == IPPROTO_UDP){
-        if(proto.l7prot < DPI_NUM_UDP_PROTOCOLS){
-            return udp_protocols_strings[proto.l7prot];
-        }
+static inline const char* dpi_proto_to_string(dpi_l7_prot_id proto){
+    if(proto < DPI_NUM_PROTOCOLS){
+        return protocols_strings[proto];
     }
     return NULL;
 }
 
-static inline dpi_protocol_t stringToProto(const char* string){
-    dpi_protocol_t r;
-    r.l4prot = -1;
-    r.l7prot = -1;
-
+static inline dpi_l7_prot_id dpi_string_to_proto(const char* string){
     size_t i;
-    for(i = 0; i < (size_t) DPI_NUM_UDP_PROTOCOLS; i++){
-        if(strcasecmp(string, udp_protocols_strings[i]) == 0){
-            r.l4prot = IPPROTO_UDP;
-            r.l7prot = (enum udp_protocols) i;
-            return r;
+    for(i = 0; i < (size_t) DPI_NUM_PROTOCOLS; i++){
+        if(strcasecmp(string, protocols_strings[i]) == 0){
+            return (dpi_l7_prot_id) i;;
         }
     }
-
-    for(i = 0; i < (size_t) DPI_NUM_TCP_PROTOCOLS; i++){
-        if(strcasecmp(string, tcp_protocols_strings[i]) == 0){
-            r.l4prot = IPPROTO_TCP;
-            r.l7prot = (enum tcp_protocols) i;
-            return r;
-        }
-    }
-    return r;
+    return DPI_NUM_PROTOCOLS;
 }
 
+static inline dpi_l7_prot_id dpi_old_protocols_to_new(dpi_protocol_t p){
+    if(p.l4prot == IPPROTO_UDP){
+        switch(p.l7prot){
+            case DPI_PROTOCOL_UDP_DNS: return DPI_PROTOCOL_DNS;
+            case DPI_PROTOCOL_UDP_MDNS: return DPI_PROTOCOL_MDNS;
+            case DPI_PROTOCOL_UDP_DHCP: return DPI_PROTOCOL_DHCP;
+            case DPI_PROTOCOL_UDP_DHCPv6: return DPI_PROTOCOL_DHCPv6;
+            case DPI_PROTOCOL_UDP_NTP: return DPI_PROTOCOL_NTP;
+            case DPI_PROTOCOL_UDP_SIP: return DPI_PROTOCOL_SIP;
+            case DPI_PROTOCOL_UDP_RTP: return DPI_PROTOCOL_RTP;
+            case DPI_PROTOCOL_UDP_SKYPE: return DPI_PROTOCOL_SKYPE;
+        }
+    }else if(p.l4prot == IPPROTO_TCP){
+        switch(p.l7prot){
+            case DPI_PROTOCOL_TCP_HTTP: return DPI_PROTOCOL_HTTP;
+            case DPI_PROTOCOL_TCP_BGP: return DPI_PROTOCOL_BGP;
+            case DPI_PROTOCOL_TCP_SMTP: return DPI_PROTOCOL_SMTP;
+            case DPI_PROTOCOL_TCP_POP3: return DPI_PROTOCOL_POP3;
+            case DPI_PROTOCOL_TCP_SSL: return DPI_PROTOCOL_SSL;
+        }
+    }
+    return DPI_NUM_PROTOCOLS;
+}
+
+static inline dpi_l7_prot_id dpi_new_protocols_to_old(dpi_l7_prot_id p){
+    switch(p){
+        case DPI_PROTOCOL_DNS: return DPI_PROTOCOL_UDP_DNS;
+        case DPI_PROTOCOL_MDNS: return DPI_PROTOCOL_UDP_MDNS;
+        case DPI_PROTOCOL_DHCP: return DPI_PROTOCOL_UDP_DHCP;
+        case DPI_PROTOCOL_DHCPv6: return DPI_PROTOCOL_UDP_DHCPv6;
+        case DPI_PROTOCOL_NTP: return DPI_PROTOCOL_UDP_NTP;
+        case DPI_PROTOCOL_SIP: return DPI_PROTOCOL_UDP_SIP;
+        case DPI_PROTOCOL_RTP: return DPI_PROTOCOL_UDP_RTP;
+        case DPI_PROTOCOL_SKYPE: return DPI_PROTOCOL_UDP_SKYPE;
+        case DPI_PROTOCOL_HTTP: return DPI_PROTOCOL_TCP_HTTP;
+        case DPI_PROTOCOL_BGP: return DPI_PROTOCOL_TCP_BGP;
+        case DPI_PROTOCOL_SMTP: return DPI_PROTOCOL_TCP_SMTP;
+        case DPI_PROTOCOL_POP3: return DPI_PROTOCOL_TCP_POP3;
+        case DPI_PROTOCOL_SSL: return DPI_PROTOCOL_TCP_SSL;
+    }
+    return DPI_NUM_TCP_PROTOCOLS;
+}
 
 /**
  *  Inspectors must catch all the possible packet types during the message exchange.

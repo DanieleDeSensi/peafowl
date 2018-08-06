@@ -246,11 +246,12 @@ private:
 	void** user_data;
 	u_int16_t* proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
+    bool deprecated_callback;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 			         void** user_data, u_int16_t* proc_id,
-			         ff::SWSR_Ptr_Buffer* tasks_pool);
+                     ff::SWSR_Ptr_Buffer* tasks_pool, bool deprecated_callback);
         ~dpi_L7_collector();
 
 	int svc_init();

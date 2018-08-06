@@ -55,8 +55,9 @@ typedef struct mc_dpi_library_state{
 	/*                     Callbacks                      */
 	/******************************************************/
 	mc_dpi_packet_reading_callback* reading_callback;
-	mc_dpi_processing_result_callback* processing_callback;
+    mc_dpi_processing_result_callback* processing_callback;
 	void* read_process_callbacks_user_data;
+    bool deprecated_callback;
 
 	u_int8_t terminating;
 	u_int8_t is_running;
@@ -226,7 +227,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	state->L7_collector=new (tmp) dpi::dpi_L7_collector(
 			&(state->processing_callback),
 			&(state->read_process_callbacks_user_data),
-			&(state->collector_proc_id), state->tasks_pool);
+            &(state->collector_proc_id), state->tasks_pool,
+            state->deprecated_callback);
 	last_mapped=(last_mapped+1)%state->available_processors;
 	assert(state->L7_farm->add_collector(state->L7_collector)>=0);
 
@@ -289,7 +291,8 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 	state->single_farm_collector=new dpi::dpi_L7_collector(
 			&(state->processing_callback),
 			&(state->read_process_callbacks_user_data),
-			&(state->collector_proc_id), state->tasks_pool);
+            &(state->collector_proc_id), state->tasks_pool,
+            state->deprecated_callback);
 	assert(state->single_farm_collector);
 	last_mapped=(last_mapped+1)%state->available_processors;
 	assert(state->single_farm->add_collector(
@@ -381,6 +384,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
     }
 
 	state->terminating=0;
+    state->deprecated_callback=0;
 
 	u_int16_t hash_table_partitions;
 
@@ -534,9 +538,18 @@ void mc_dpi_set_read_and_process_callbacks(
 		mc_dpi_packet_reading_callback* reading_callback,
 		mc_dpi_processing_result_callback* processing_callback,
 		void* user_data){
-	state->reading_callback=reading_callback;
-	state->processing_callback=processing_callback;
-	state->read_process_callbacks_user_data=user_data;
+    mc_dpi_set_core_callbacks(state, reading_callback, processing_callback, user_data);
+    state->deprecated_callback=1;
+}
+
+void mc_dpi_set_core_callbacks(
+        mc_dpi_library_state_t* state,
+        mc_dpi_packet_reading_callback* reading_callback,
+        mc_dpi_processing_result_callback* processing_callback,
+        void* user_data){
+    state->reading_callback=reading_callback;
+    state->processing_callback=processing_callback;
+    state->read_process_callbacks_user_data=user_data;
 }
 
 
@@ -899,6 +912,7 @@ u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
 }
 
 /**
+ * --- DEPRECATED ---
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
  * @param protocol      The protocol to enable.
@@ -918,6 +932,7 @@ u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
 }
 
 /**
+ * --- DEPRECATED ---
  * Disable a protocol inspector.
  * @param state       A pointer to the state of the library.
  * @param protocol    The protocol to disable.
@@ -934,6 +949,22 @@ u_int8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
 	u_int8_t r;
 	r=dpi_delete_protocol(state->sequential_state, protocol);
 	return r;
+}
+
+u_int8_t mc_dpi_enable_protocol(mc_dpi_library_state_t *state,
+                             dpi_l7_prot_id protocol){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
+    return dpi_enable_protocol(state->sequential_state, protocol);
+}
+
+u_int8_t mc_dpi_disable_protocol(mc_dpi_library_state_t *state,
+                                dpi_l7_prot_id protocol){
+    if(state->is_running){
+        return DPI_STATE_UPDATE_FAILURE;
+    }
+    return dpi_disable_protocol(state->sequential_state, protocol);
 }
 
 /**
@@ -970,6 +1001,15 @@ u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
 	return r;
 }
 
+/**
+ * Returns the string represetations of the protocols.
+ * @param   protocol The protocol identifier.
+ * @return  An array A of string, such that A[i] is the
+ * string representation of the protocol with id 'i'.
+ */
+const char** const mc_dpi_get_protocol_names(){
+    return dpi_get_protocols_names();
+}
 
 /**
  * Sets the callback that will be called when a flow expires.

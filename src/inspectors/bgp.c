@@ -26,6 +26,9 @@
 #include "inspectors.h"
 
 u_int8_t check_bgp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+    if(pkt->l4prot != IPPROTO_TCP){
+        return DPI_PROTOCOL_NO_MATCHES;
+    }
 	if(data_length>18){
 	   if(get_u64(app_data, 0) == 0xffffffffffffffffULL &&
 	   get_u64(app_data, 8) == 0xffffffffffffffffULL &&
