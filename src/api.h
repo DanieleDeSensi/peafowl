@@ -342,6 +342,117 @@ typedef struct dpi_ssl_internal_information
 } dpi_ssl_internal_information_t;
 
 
+
+typedef struct _miprtcp {
+        char* media_ip;
+        int media_port;
+        char* rtcp_ip;
+        int rtcp_port;
+        int prio_codec;
+} miprtcp_t;
+
+struct _codecmap;
+
+typedef struct _codecmap {
+        char name[120];
+        int id;
+        int rate;
+        struct _codecmap* next;
+} codecmap_t;
+
+
+typedef enum
+{
+        UNKNOWN = 0,
+        CANCEL = 1,
+        ACK = 2,
+        INVITE = 3,
+        BYE = 4,
+        INFO = 5,
+        REGISTER = 6,
+        SUBSCRIBE = 7,
+        NOTIFY = 8,
+        MESSAGE = 9,
+        OPTIONS = 10,
+        PRACK = 11,
+        UPDATE = 12,
+        REFER = 13,
+        PUBLISH = 14,
+        RESPONSE = 15,
+        SERVICE = 16
+} method_t;
+
+#define DPI_SIP_MAX_MEDIA_HOSTS 20
+
+typedef struct dpi_sip_internal_information{
+    unsigned int responseCode;
+    u_int8_t isRequest;
+    u_int8_t validMessage;
+    method_t methodType;
+    const char* methodString;
+    size_t methodString_len;
+    int method_len;
+    char* callId;
+    const char* reason;
+    size_t reason_len;
+    u_int8_t hasSdp;
+    codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
+    miprtcp_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
+    int cdm_count;
+    unsigned int mrp_size;
+    unsigned int contentLength;
+    unsigned int len;
+    unsigned int cSeqNumber;
+    u_int8_t hasVqRtcpXR;
+    char* rtcpxr_callid;
+    char* cSeqMethodString;
+    method_t cSeqMethod;
+
+    char* cSeq;
+    char* via;
+    char* contactURI;
+    /* extra */
+    char* ruriUser;
+    char* ruriDomain;
+    char* fromUser;
+    char* fromDomain;
+    char* toUser;
+    char* toDomain;
+    char* paiUser;
+    char* paiDomain;
+    const char* requestURI;
+    size_t requestURI_len;
+
+    char* pidURI;
+    u_int8_t hasPid;
+
+    const char* fromURI;
+    size_t fromURI_len;
+    u_int8_t hasFrom;
+
+    char* toURI;
+    u_int8_t hasTo;
+
+    char* ruriURI;
+    u_int8_t hasRuri;
+
+    char* toTag;
+    u_int8_t hasToTag;
+
+    char* fromTag;
+    u_int8_t hasFromTag;
+}dpi_sip_internal_information_t;
+
+typedef void(sip_requestURI_callback)(const char* requestURI, size_t requestURI_len);
+
+typedef struct dpi_sip_callbacks{
+    /**
+     * The callbacks that will be invoked when the specified messages are found.
+     **/
+    sip_requestURI_callback *requestURI_cb; //Invoked by the framework when a requestURI is found
+}dpi_sip_callbacks_t;
+
+
 /** This must be initialized to zero before use. **/
 typedef struct dpi_tracking_informations{
 	/**
@@ -395,7 +506,7 @@ typedef struct dpi_tracking_informations{
 	/*********************************/
 	/** SIP Tracking informations.  **/
 	/*********************************/
-	u_int8_t num_sip_matched_messages:2;
+    dpi_sip_internal_information_t sip_informations;
 
 	/*********************************/
 	/** POP3 Tracking informations. **/
@@ -467,6 +578,10 @@ struct library_state{
 	/** SSL callbacks **/
 	void *ssl_callbacks;
 	void *ssl_callbacks_user_data;
+
+    /** SIP callbacks **/
+    void *sip_callbacks;
+    void *sip_callbacks_user_data;
 
 	u_int8_t tcp_reordering_enabled:1;
 
@@ -1113,12 +1228,87 @@ u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state);
 /**
     SSL callbacks.
 **/
+/**
+ * Activate SSL callbacks. When a protocol is identified the default
+ * behavior is to not inspect the packets belonging to that flow anymore
+ * and keep simply returning the same protocol identifier.
+ *
+ * If a callback is enabled for a certain protocol, then we keep
+ * inspecting all the new flows with that protocol in order to invoke
+ * the callbacks specified by the user on the various parts of the
+ * message. Moreover, if the application protocol uses TCP, then we have
+ * the additional cost of TCP reordering for all the segments. Is highly
+ * recommended to enable TCP reordering if it is not already enabled
+ * (remember that is enabled by default). Otherwise the informations
+ * extracted could be erroneous/incomplete.
+ *
+ * The pointers to the data passed to the callbacks are valid only for the
+ * duration of the callback.
+ *
+ * @param state       A pointer to the state of the library.
+ * @param callbacks   A pointer to SSL callbacks.
+ * @param user_data   A pointer to global user SSL data. This pointer
+ *                    will be passed to any SSL callback when it is
+ *                    invoked.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ *
+ **/
 u_int8_t dpi_ssl_activate_callbacks(
 		       dpi_library_state_t* state,
 		       dpi_ssl_callbacks_t* callbacks,
 		       void* user_data);
+/**
+ * Disable the SSL callbacks. user_data is not freed/modified.
+ * @param state       A pointer to the state of the library.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
 u_int8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
 
+
+/**
+ * SIP callbacks.
+ **/
+/**
+ * Activate SIP callbacks. When a protocol is identified the default
+ * behavior is to not inspect the packets belonging to that flow anymore
+ * and keep simply returning the same protocol identifier.
+ *
+ * If a callback is enabled for a certain protocol, then we keep
+ * inspecting all the new flows with that protocol in order to invoke
+ * the callbacks specified by the user on the various parts of the
+ * message. Moreover, if the application protocol uses TCP, then we have
+ * the additional cost of TCP reordering for all the segments. Is highly
+ * recommended to enable TCP reordering if it is not already enabled
+ * (remember that is enabled by default). Otherwise the informations
+ * extracted could be erroneous/incomplete.
+ *
+ * The pointers to the data passed to the callbacks are valid only for the
+ * duration of the callback.
+ *
+ * @param state       A pointer to the state of the library.
+ * @param callbacks   A pointer to SIP callbacks.
+ * @param user_data   A pointer to global user SIP data. This pointer
+ *                    will be passed to any SIP callback when it is
+ *                    invoked.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ *
+ **/
+u_int8_t dpi_sip_activate_callbacks(dpi_library_state_t* state, dpi_sip_callbacks_t* callbacks, void* user_data);
+
+/**
+ * Disable the SIP callbacks. user_data is not freed/modified.
+ * @param state       A pointer to the state of the library.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
 
 /****************************************/
 /** Only to be used directly by mcdpi. **/

@@ -146,25 +146,18 @@ by the protocols to the application that uses the framework. In this way, the ap
 needs and which callback the framework has to invoke when this data is found. To add this capability to existing 
 inspector you need to follow some simple steps. For example, to add it to POP3 you need to:
 
-1) Create a struct that will be used by the application to indicate to the framework both the information about 
-the data to extract and the function to use to process them, and define it in api.h. 
+1) Create a struct that will be used by the application to indicate to the framework the functions to be used to process specific application data in the packet, and define it in api.h. 
 E.g.:
 
 ```C
 typedef struct dpi_pop3_callbacks{
-	/** Flags to specify which part of the POP3 message is needed by the application. **/
-	u_int8_t user:1; //Set to 1 if the application wants to process the "USER" message of POP3 connections
-	u_int8_t pass:1; //Set to 1 if the application wants to process the "PASS" message of POP3 connections
-	u_int8_t list:1; //Set to 1 if the application wants to process the "LIST" message of POP3 connections
-	u_int8_t retr:1; //Set to 1 if the application wants to process the "RETR" message of POP3 connections
-	[...]
 	/**
 	 * The callbacks that will be invoked when the specified messages are found.
 	 **/
-	pop3_user_callback user_cb; //Invoked by the framework when a POP3 "USER" message is found
-	pop3_pass_callback pass_cb; //Invoked by the framework when a POP3 "PASS" message is found
-	pop3_list_callback list_cb; //Invoked by the framework when a POP3 "LIST" message is found
-	pop3_retr_callback retr_cb; //Invoked by the framework when a POP3 "RETR" message is found
+	pop3_user_callback *user_cb; //Invoked by the framework when a POP3 "USER" message is found
+	pop3_pass_callback *pass_cb; //Invoked by the framework when a POP3 "PASS" message is found
+	pop3_list_callback *list_cb; //Invoked by the framework when a POP3 "LIST" message is found
+	pop3_retr_callback *retr_cb; //Invoked by the framework when a POP3 "RETR" message is found
 	[...]
 }dpi_pop3_callbacks_t;
 ```
@@ -177,10 +170,16 @@ typedef void(pop3_user_callback)(
 	uint length;  // Length of the "USER" message
 	);
 ```
-
-3) Define in api.h two functions to enable/disable these callbacks:
+3) Add to the library_state struct in api.h, the memebers for the callbacks and for the user data, for example:
 ```C
-u_int8_t dpi_pop3_enable_callbacks(dpi_library_state_t* state, dpi_pop3_callbacks_t* callbacks, void* user_data);
+    ...
+    void *pop3_callbacks;
+    void *pop3_callbacks_user_data;
+    ...
+```
+4) Define in api.h two functions to enable/disable these callbacks:
+```C
+u_int8_t dpi_pop3_activate_callbacks(dpi_library_state_t* state, dpi_pop3_callbacks_t* callbacks, void* user_data);
 
 u_int8_t dpi_pop3_disable_callbacks(dpi_library_state_t* state);
 ```
@@ -188,7 +187,7 @@ u_int8_t dpi_pop3_disable_callbacks(dpi_library_state_t* state);
 These two functions must then be implemented in inspectors/pop3.c and they should simply copy the content
 of "callbacks" into a sub-structure of "state".
 
-4) To implement the extraction of these information you have to define the following function and add it to 
+5) To implement the extraction of these information you have to define the following function and add it to 
 inspectors/pop3.c
 
 ```C
@@ -197,7 +196,7 @@ u_int8_t invoke_callbacks_pop3(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 ```
 
 The parameters are the same we described before for the creation of a new protocol inspector.
-Accessing a sub-structure of "state" (filled with the functions described in 3) when the data extraction
+Accessing a sub-structure of "state" (filled with the functions described in 4) when the data extraction
 capability is enabled), this function will have the knowledge of which data the application needs and how it
 want them to be processed.
 

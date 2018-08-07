@@ -99,7 +99,8 @@ static const dpi_inspector_callback const
 static const dpi_inspector_callback const
     callbacks_manager[DPI_NUM_PROTOCOLS]=
         {[DPI_PROTOCOL_HTTP]=invoke_callbacks_http,
-        [DPI_PROTOCOL_SSL]=invoke_callbacks_ssl
+        [DPI_PROTOCOL_SSL]=invoke_callbacks_ssl,
+        [DPI_PROTOCOL_SIP]=invoke_callbacks_sip,
 		};
 
 #else
@@ -236,6 +237,7 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 
     callbacks_manager[DPI_PROTOCOL_HTTP]=invoke_callbacks_http;
     callbacks_manager[DPI_PROTOCOL_HTTP]=invoke_callbacks_ssl;
+    callbacks_manager[DPI_PROTOCOL_SIP]=invoke_callbacks_sip;
 #endif
     state->l7_skip = NULL;
 

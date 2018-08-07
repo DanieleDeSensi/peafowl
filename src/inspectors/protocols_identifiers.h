@@ -156,7 +156,7 @@ enum protocol_check_statuses{
 	#define port_dhcpv6_1 0x2202 /** 546 **/
 	#define port_dhcpv6_2 0x2302 /** 547 **/
 	#define port_smtp_2 0x4B02 /** 587 **/
-	#define port_sip 0x13C4 /** 5060 **/
+    #define port_sip 0x13C4 /** 5060 **/
 	#define port_mdns 0xE914 /** 5353 **/
 	#define port_ssl 0xBB01 /** 443 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN

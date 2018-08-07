@@ -78,8 +78,6 @@ u_int8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state)
 	}
 }
 
-
-
 static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_internal_information_t *t, dpi_pkt_infos_t* pkt)
 {
 	if(payload[0] == 0x16 /* Handshake */)
