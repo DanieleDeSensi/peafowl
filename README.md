@@ -298,8 +298,8 @@ More demo applications can be found in [demo](demo) folder:
 Deprecated functions and backward compatibility
 ------------------------------------------------------------------------------------------------------------------
 Starting from August 2018, some functions have been deprecated, and replaced with new functions. This has been
-done to simplify the representation of protocols. The enums DPI_PROTOCOL_UDP_* and DPI_PROTOCOL_TCP_*, which
-were used to represent L7 protocols, have been deprecated as well and replaced by a new enum DPI_PROTOCOL_*.
+done to simplify the representation of protocols. The enums DPI_PROTOCOL_UDP_\* and DPI_PROTOCOL_TCP_\*, which
+were used to represent L7 protocols, have been deprecated as well and replaced by a new enum DPI_PROTOCOL_\*.
 In the following table we report the old functions and their current replacement. If you do not mix deprecated
 functions with their replacement everything should work. However, we strongly suggest replacing the deprecated functions with their replacements.
 
@@ -309,25 +309,25 @@ functions with their replacement everything should work. However, we strongly su
     <th>Deprecated Function</th><th>Replaced With</th>
   </tr>
   <tr>
-    <td>```dpi_set_protocol```</td><td>```dpi_enable_protocol```</td>
+    <td>dpi_set_protocol</td><td>dpi_enable_protocol</td>
   </tr>
     <tr>
-    <td>```dpi_delete_protocol```</td><td>```dpi_disable_protocol```</td>
+    <td>dpi_delete_protocol</td><td>dpi_disable_protocol</td>
   </tr>
   <tr>
-    <td>```dpi_stateful_identify_application_protocol```</td><td>```dpi_get_protocol```</td>
+    <td>dpi_stateful_identify_application_protocol</td><td>dpi_get_protocol</td>
   </tr>
   <tr>
-    <td>```dpi_get_protocol_name```</td><td>```dpi_get_protocol_string```</td>
+    <td>dpi_get_protocol_name</td><td>dpi_get_protocol_string</td>
   </tr>
   <tr>
-    <td>```mc_dpi_set_read_and_process_callbacks```</td><td>```mc_dpi_set_core_callbacks```</td>
+    <td>mc_dpi_set_read_and_process_callbacks</td><td>mc_dpi_set_core_callbacks</td>
   </tr>
   <tr>
-    <td>```mc_dpi_set_protocol```</td><td>```mc_dpi_enable_protocol```</td>
+    <td>mc_dpi_set_protocol</td><td>mc_dpi_enable_protocol</td>
   </tr>
     <tr>
-    <td>```mc_dpi_delete_protocol```</td><td>```mc_dpi_disable_protocol```</td>
+    <td>mc_dpi_delete_protocol</td><td>mc_dpi_disable_protocol</td>
   </tr>
 
 <table>

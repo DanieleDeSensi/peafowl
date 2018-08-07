@@ -619,7 +619,7 @@ u_int8_t dpi_inspect_nothing(dpi_library_state_t *state){
 	return DPI_STATE_UPDATE_SUCCESS;
 }
 
-u_int8_t dpi_skip_L7_parsing(dpi_library_state_t* state,
+u_int8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state,
                              u_int8_t l4prot,
                              u_int16_t port,
                              dpi_l7_prot_id id){
