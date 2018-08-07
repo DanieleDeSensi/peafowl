@@ -561,6 +561,12 @@ typedef struct dpi_l7_skipping_infos{
     UT_hash_handle hh; /* makes this structure hashable */
 }dpi_l7_skipping_infos_t;
 
+typedef enum{
+    DPI_INSPECTOR_ACCURACY_LOW = 0,
+    DPI_INSPECTOR_ACCURACY_MEDIUM,
+    DPI_INSPECTOR_ACCURACY_HIGH,
+}dpi_inspector_accuracy;
+
 struct library_state{
 	/********************************************************************/
 	/** Created by dpi_init_state and never modified                   **/
@@ -594,6 +600,11 @@ struct library_state{
 
 	u_int8_t tcp_reordering_enabled:1;
 
+    /** L7 skipping information. **/
+    dpi_l7_skipping_infos_t* l7_skip;
+
+    dpi_inspector_accuracy inspectors_accuracy[DPI_NUM_PROTOCOLS];
+
 	/********************************************************************/
 	/** The content of these structures can be modified during the     **/
 	/** execution also in functions different from the state update    **/
@@ -604,9 +615,6 @@ struct library_state{
 	/********************************************************************/
 	void* ipv4_frag_state;
 	void* ipv6_frag_state;
-
-    /** L7 skipping information. **/
-    dpi_l7_skipping_infos_t* l7_skip;
 };
 
 /**
@@ -1318,6 +1326,19 @@ u_int8_t dpi_sip_activate_callbacks(dpi_library_state_t* state, dpi_sip_callback
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
+
+/**
+ * Some protocols inspector (e.g. SIP) can be applied with a different
+ * level of accuracy (and of processing time). By using this call
+ * the user can decide if running the inspector in its most accurate
+ * version (at the cost of a higher processing latency).
+ * @param state       A pointer to the state of the library.
+ * @param protocol    The protocol for which we want to change the accuracy.
+ * @param accuracy    The accuracy level.
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy);
 
 /****************************************/
 /** Only to be used directly by mcdpi. **/

@@ -167,6 +167,15 @@ u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state)
     }
 }
 
+u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy){
+    if(state){
+        state->inspectors_accuracy[protocol] = accuracy;
+        return DPI_STATE_UPDATE_SUCCESS;
+    }else{
+        return DPI_STATE_UPDATE_FAILURE;
+    }
+}
+
 u_int8_t getUser(dpi_sip_str_t * user, dpi_sip_str_t * domain, const char *s, int len)
 {
 
@@ -936,7 +945,7 @@ int light_parse_message (const unsigned char *app_data, u_int32_t data_length, d
 }
 
 u_int8_t parse_message(const unsigned char* app_data, u_int32_t data_length,
-                  dpi_sip_internal_information_t *sip_info, unsigned int type)
+                  dpi_sip_internal_information_t *sip_info, dpi_inspector_accuracy type)
 {
     int header_offset = 0;
     const char *pch, *ped;
@@ -1011,7 +1020,7 @@ u_int8_t parse_message(const unsigned char* app_data, u_int32_t data_length,
         else if (!memcmp (tmp, PUBLISH_METHOD, PUBLISH_LEN)) {
             sip_info->methodType = PUBLISH;
             /* we need via and contact */
-            if (type == 2) {
+            if (type == DPI_INSPECTOR_ACCURACY_HIGH) {
                 parseVIA = 1;
                 parseContact = 1;
                 //allowRequest = 1;
@@ -1217,9 +1226,13 @@ u_int8_t parse_message(const unsigned char* app_data, u_int32_t data_length,
 
 u_int8_t parse_packet(const unsigned char* app_data,
                  u_int32_t data_length, dpi_sip_internal_information_t *sip_info,
-                 unsigned int type) {
-    u_int8_t r = parse_message(app_data, data_length,  sip_info, type);
-    //u_int8_t r = light_parse_message(app_data, data_length,  sip_info);
+                 dpi_inspector_accuracy type) {
+    u_int8_t r = 0;
+    if(type == DPI_INSPECTOR_ACCURACY_LOW){
+        r = light_parse_message(app_data, data_length,  sip_info);
+    }else{
+        r = parse_message(app_data, data_length,  sip_info, type);
+    }
     /* TODO: To be ported
     if(r == DPI_PROTOCOL_MATCHES && sip_info->hasVqRtcpXR) {
         msg->rcinfo.correlation_id.s = sip_info->rtcpxr_callid.s;
@@ -1254,7 +1267,7 @@ u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
     //TODO: TO be ported
     //msg->rcinfo.proto_type = PROTO_SIP;
 
-    u_int8_t r = parse_packet(app_data, data_length, &t->sip_informations, 2);
+    u_int8_t r = parse_packet(app_data, data_length, &t->sip_informations, state->inspectors_accuracy[DPI_PROTOCOL_SIP]);
 
     // Callbacks
     if((dpi_sip_callbacks_t*)state->sip_callbacks && r == DPI_PROTOCOL_MATCHES){
