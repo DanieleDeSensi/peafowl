@@ -342,27 +342,40 @@ typedef struct dpi_ssl_internal_information
 } dpi_ssl_internal_information_t;
 
 
-
-typedef struct _miprtcp {
-        char* media_ip;
+typedef struct dpi_sip_miprtcpstatic {
+        char media_ip_s[30];
+        int media_ip_len;
         int media_port;
-        char* rtcp_ip;
+        char rtcp_ip_s[30];
+        int rtcp_ip_len;
         int rtcp_port;
         int prio_codec;
-} miprtcp_t;
+} dpi_sip_miprtcpstatic_t;
 
-struct _codecmap;
 
-typedef struct _codecmap {
+typedef struct{
+    const char* s;
+    size_t len;
+}dpi_sip_str_t;
+
+typedef struct dpi_sip_miprtcp {
+        dpi_sip_str_t media_ip;
+        int media_port;
+        dpi_sip_str_t rtcp_ip;
+        int rtcp_port;
+        int prio_codec;
+} dpi_sip_miprtcp_t;
+
+struct dip_sip_codecmap;
+
+typedef struct dip_sip_codecmap {
         char name[120];
         int id;
         int rate;
-        struct _codecmap* next;
-} codecmap_t;
+        struct dip_sip_codecmap* next;
+} dpi_sip_codecmap_t;
 
-
-typedef enum
-{
+typedef enum{
         UNKNOWN = 0,
         CANCEL = 1,
         ACK = 2,
@@ -380,7 +393,7 @@ typedef enum
         PUBLISH = 14,
         RESPONSE = 15,
         SERVICE = 16
-} method_t;
+} dpi_sip_method_t;
 
 #define DPI_SIP_MAX_MEDIA_HOSTS 20
 
@@ -388,58 +401,54 @@ typedef struct dpi_sip_internal_information{
     unsigned int responseCode;
     u_int8_t isRequest;
     u_int8_t validMessage;
-    method_t methodType;
-    const char* methodString;
-    size_t methodString_len;
+    dpi_sip_method_t methodType;
+    dpi_sip_str_t methodString;
     int method_len;
-    char* callId;
-    const char* reason;
-    size_t reason_len;
+    dpi_sip_str_t callId;
+    dpi_sip_str_t reason;
     u_int8_t hasSdp;
-    codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
-    miprtcp_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
+    dpi_sip_codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
+    dpi_sip_miprtcpstatic_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
     int cdm_count;
     unsigned int mrp_size;
     unsigned int contentLength;
     unsigned int len;
     unsigned int cSeqNumber;
     u_int8_t hasVqRtcpXR;
-    char* rtcpxr_callid;
-    char* cSeqMethodString;
-    method_t cSeqMethod;
+    dpi_sip_str_t rtcpxr_callid;
+    dpi_sip_str_t cSeqMethodString;
+    dpi_sip_method_t cSeqMethod;
 
-    char* cSeq;
-    char* via;
-    char* contactURI;
+    dpi_sip_str_t cSeq;
+    dpi_sip_str_t via;
+    dpi_sip_str_t contactURI;
     /* extra */
-    char* ruriUser;
-    char* ruriDomain;
-    char* fromUser;
-    char* fromDomain;
-    char* toUser;
-    char* toDomain;
-    char* paiUser;
-    char* paiDomain;
-    const char* requestURI;
-    size_t requestURI_len;
+    dpi_sip_str_t ruriUser;
+    dpi_sip_str_t ruriDomain;
+    dpi_sip_str_t fromUser;
+    dpi_sip_str_t fromDomain;
+    dpi_sip_str_t toUser;
+    dpi_sip_str_t toDomain;
+    dpi_sip_str_t paiUser;
+    dpi_sip_str_t paiDomain;
+    dpi_sip_str_t requestURI;
 
-    char* pidURI;
+    dpi_sip_str_t pidURI;
     u_int8_t hasPid;
 
-    const char* fromURI;
-    size_t fromURI_len;
+    dpi_sip_str_t fromURI;
     u_int8_t hasFrom;
 
-    char* toURI;
+    dpi_sip_str_t toURI;
     u_int8_t hasTo;
 
-    char* ruriURI;
+    dpi_sip_str_t ruriURI;
     u_int8_t hasRuri;
 
-    char* toTag;
+    dpi_sip_str_t toTag;
     u_int8_t hasToTag;
 
-    char* fromTag;
+    dpi_sip_str_t fromTag;
     u_int8_t hasFromTag;
 }dpi_sip_internal_information_t;
 
