@@ -79,6 +79,7 @@ extern "C" {
 #include "reassembly.h"
 #include "inspectors/protocols_identifiers.h"
 #include "inspectors/http_parser_joyent.h"
+#include "external/utils/uthash.h"
 
 /** Errors **/
 #define	DPI_ERROR_WRONG_IPVERSION -1
@@ -429,6 +430,17 @@ typedef u_int8_t(*dpi_inspector_callback)(
 		         dpi_tracking_informations_t* tracking);
 
 
+typedef struct dpi_l7_skipping_infos_key{
+    u_int16_t port;
+    u_int8_t l4prot;
+}dpi_l7_skipping_infos_key_t;
+
+typedef struct dpi_l7_skipping_infos{
+    dpi_l7_skipping_infos_key_t key;
+    dpi_l7_prot_id protocol;
+    UT_hash_handle hh; /* makes this structure hashable */
+}dpi_l7_skipping_infos_t;
+
 struct library_state{
 	/********************************************************************/
 	/** Created by dpi_init_state and never modified                   **/
@@ -468,6 +480,9 @@ struct library_state{
 	/********************************************************************/
 	void* ipv4_frag_state;
 	void* ipv6_frag_state;
+
+    /** L7 skipping information. **/
+    dpi_l7_skipping_infos_t* l7_skip;
 };
 
 /**
@@ -775,6 +790,20 @@ u_int8_t dpi_inspect_all(dpi_library_state_t *state);
  */
 u_int8_t dpi_inspect_nothing(dpi_library_state_t *state);
 
+/**
+ * Skips the L7 parsing for packets traveling on some ports for some L4 protocol.
+ * @param state A pointer to the state of the library.
+ * @param l4prot The L4 protocol.
+ * @param port The port.
+ * @param id The protocol id that will be assigned to packets that matches with this rule. If
+ * id >= DPI_NUM_PROTOCOLS, it would be considered as a custom user protocol.
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+u_int8_t dpi_skip_L7_parsing(dpi_library_state_t* state,
+                             u_int8_t l4prot,
+                             u_int16_t port,
+                             dpi_l7_prot_id id);
 
 /*
  * --- DEPRECATED, replaced by dpi_get_protocol ---
@@ -998,7 +1027,7 @@ const char* const dpi_get_status_msg(int8_t status_code);
 
 
 /**
- * --- DEPRECATED, replaced by dpi_get_protocols_names ---
+ * --- DEPRECATED, replaced by dpi_get_protocol_string ---
  * Returns a string corresponding to the given protocol.
  * @param   protocol The protocol identifier.
  * @return  A string representation of the given protocol.
@@ -1006,12 +1035,25 @@ const char* const dpi_get_status_msg(int8_t status_code);
 const char* const dpi_get_protocol_name(dpi_protocol_t protocol);
 
 /**
- * Returns the string represetations of the protocols.
+ * Returns the string represetation of a protocol.
  * @param   protocol The protocol identifier.
+ * @return  The string representation of the protocol with id 'protocol'.
+ */
+const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol);
+
+/**
+ * Returns the protocol id corresponding to a protocol string.
+ * @param string The protocols tring.
+ * @return The protocol id corresponding to a protocol string.
+ */
+dpi_l7_prot_id dpi_get_protocol_id(const char* const string);
+
+/**
+ * Returns the string represetations of the protocols.
  * @return  An array A of string, such that A[i] is the
  * string representation of the protocol with id 'i'.
  */
-const char** const dpi_get_protocols_names();
+const char** const dpi_get_protocols_strings();
 
 /**
  * Sets the callback that will be called when a flow expires.

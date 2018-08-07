@@ -1003,12 +1003,19 @@ u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
 
 /**
  * Returns the string represetations of the protocols.
- * @param   protocol The protocol identifier.
  * @return  An array A of string, such that A[i] is the
  * string representation of the protocol with id 'i'.
  */
-const char** const mc_dpi_get_protocol_names(){
-    return dpi_get_protocols_names();
+const char** const mc_dpi_get_protocol_strings(){
+    return dpi_get_protocols_strings();
+}
+
+const char* const mc_dpi_get_protocol_string(dpi_l7_prot_id protocol){
+    return dpi_get_protocol_string(protocol);
+}
+
+dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string){
+    return dpi_get_protocol_id(string);
 }
 
 /**

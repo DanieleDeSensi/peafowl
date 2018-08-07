@@ -39,7 +39,7 @@
 #define DPI_PROTOCOL_UNKNOWN 255
 
 /** Old protocols identifiers (DEPRECATED). Use 'protocols' enum below. **/
-enum old_protocols{
+enum old_protocols_udp{
 	DPI_PROTOCOL_UDP_DNS=0,
 	DPI_PROTOCOL_UDP_MDNS,
 	DPI_PROTOCOL_UDP_DHCP,
@@ -49,6 +49,9 @@ enum old_protocols{
 	DPI_PROTOCOL_UDP_RTP,
 	DPI_PROTOCOL_UDP_SKYPE,
     DPI_NUM_UDP_PROTOCOLS,
+};
+
+enum old_protocols_tcp{
     DPI_PROTOCOL_TCP_HTTP,
     DPI_PROTOCOL_TCP_BGP,
     DPI_PROTOCOL_TCP_SMTP,
@@ -74,22 +77,6 @@ enum protocols{
     DPI_NUM_PROTOCOLS
 };
 
-static const char * protocols_strings[] = {
-    "DNS",
-    "MDNS",
-    "DHCP",
-    "DHCPv6",
-    "NTP",
-    "SIP",
-    "RTP",
-    "SKYPE",
-    "HTTP",
-    "BGP",
-    "SMTP",
-    "POP3",
-    "SSL"
-};
-
 /** Remember to set the callback in init() and to increase the number of supported protocols. **/
 
 typedef u_int8_t dpi_l7_prot_id;
@@ -97,24 +84,6 @@ typedef struct dpi_protocol{
 	u_int8_t l4prot; /** Id corresponds to the id defined for IPv4 protocol field (IPv6 next header field). **/
 	dpi_l7_prot_id l7prot;
 }dpi_protocol_t;
-
-
-static inline const char* dpi_proto_to_string(dpi_l7_prot_id proto){
-    if(proto < DPI_NUM_PROTOCOLS){
-        return protocols_strings[proto];
-    }
-    return NULL;
-}
-
-static inline dpi_l7_prot_id dpi_string_to_proto(const char* string){
-    size_t i;
-    for(i = 0; i < (size_t) DPI_NUM_PROTOCOLS; i++){
-        if(strcasecmp(string, protocols_strings[i]) == 0){
-            return (dpi_l7_prot_id) i;;
-        }
-    }
-    return DPI_NUM_PROTOCOLS;
-}
 
 static inline dpi_l7_prot_id dpi_old_protocols_to_new(dpi_protocol_t p){
     if(p.l4prot == IPPROTO_UDP){
@@ -156,7 +125,7 @@ static inline dpi_l7_prot_id dpi_new_protocols_to_old(dpi_l7_prot_id p){
         case DPI_PROTOCOL_POP3: return DPI_PROTOCOL_TCP_POP3;
         case DPI_PROTOCOL_SSL: return DPI_PROTOCOL_TCP_SSL;
     }
-    return DPI_NUM_TCP_PROTOCOLS;
+    return DPI_PROTOCOL_UNKNOWN;
 }
 
 /**

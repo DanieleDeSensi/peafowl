@@ -19,7 +19,7 @@ enum protocols{
 	DPI_NUM_PROTOCOLS
 };
 ```
-2) In file ```inspectors/protocols_identifiers.h```, add a string representation for the protocol, adding the string
+2) In file ```api.c```, add a string representation for the protocol, by adding the string
 ```"TELNET"``` to the ```protocols_strings``` array.
 The position of the string in the array must be equal to the corresponding enum value,
 such that ```protocols_strings[DPI_PROTOCOL_TELNET] == "TELNET"```.

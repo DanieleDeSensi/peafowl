@@ -368,10 +368,9 @@ int main(int argc, char** argv){
   double time_end = ((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000) / 1000.0; 
 
   if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
-  const char** protocols_names = dpi_get_protocols_names();
   for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
       if(protocols[i] > 0){
-          printf("%s packets: %"PRIu32"\n", protocols_names[i], protocols[i]);
+          printf("%s packets: %"PRIu32"\n", dpi_get_protocol_string(i), protocols[i]);
       }
   }
 

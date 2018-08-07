@@ -114,6 +114,24 @@ static dpi_inspector_callback
        callbacks_manager[DPI_NUM_PROTOCOLS];
 #endif
 
+
+static const char * protocols_strings[] = {
+    "DNS",
+    "MDNS",
+    "DHCP",
+    "DHCPv6",
+    "NTP",
+    "SIP",
+    "RTP",
+    "SKYPE",
+    "HTTP",
+    "BGP",
+    "SMTP",
+    "POP3",
+    "SSL"
+};
+
+
 /**
  * Initializes the state of the library. If not specified otherwise after
  * the initialization, the library will consider all the protocols active.
@@ -219,6 +237,8 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
     callbacks_manager[DPI_PROTOCOL_HTTP]=invoke_callbacks_http;
     callbacks_manager[DPI_PROTOCOL_HTTP]=invoke_callbacks_ssl;
 #endif
+    state->l7_skip = NULL;
+
 	return state;
 }
 
@@ -599,6 +619,19 @@ u_int8_t dpi_inspect_nothing(dpi_library_state_t *state){
 	return DPI_STATE_UPDATE_SUCCESS;
 }
 
+u_int8_t dpi_skip_L7_parsing(dpi_library_state_t* state,
+                             u_int8_t l4prot,
+                             u_int16_t port,
+                             dpi_l7_prot_id id){
+    dpi_l7_skipping_infos_t* skinfos = malloc(sizeof(dpi_l7_skipping_infos_t));
+    memset(skinfos, 0, sizeof(dpi_l7_skipping_infos_t));
+    skinfos->key.l4prot = l4prot;
+    skinfos->key.port = port;
+    skinfos->protocol = id;
+    HASH_ADD(hh, state->l7_skip, key, sizeof(skinfos->key), skinfos);
+    return DPI_STATE_UPDATE_SUCCESS;
+}
+
 /**
  * Terminates the library.
  * @param state A pointer to the state of the library.
@@ -695,25 +728,50 @@ dpi_identification_result_t dpi_get_protocol(
 
     r.status=dpi_parse_L3_L4_headers(state, pkt, length, &infos,
                                      current_time);
+    l3_status=r.status;
 
     if(unlikely(r.status==DPI_STATUS_IP_FRAGMENT || r.status<0)){
         return r;
     }
 
-    if(infos.l4prot!=IPPROTO_TCP && infos.l4prot!=IPPROTO_UDP){
-        r.status=DPI_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
-        return r;
+    u_int8_t skip_l7 = 0;
+    u_int16_t srcport = ntohs(infos.srcport);
+    u_int16_t dstport = ntohs(infos.dstport);
+    dpi_l7_skipping_infos_t* sk = NULL;
+    dpi_l7_skipping_infos_key_t key;
+    memset(&key, 0, sizeof(key));
+    key.l4prot = infos.l4prot;
+    key.port = dstport;
+    HASH_FIND(hh, state->l7_skip, &key, sizeof(dpi_l7_skipping_infos_key_t), sk);
+    if(sk){
+        skip_l7 = 1;
+        r.protocol.l7prot = sk->protocol;
+    }else{
+        key.port = srcport;
+        HASH_FIND(hh, state->l7_skip, &key, sizeof(dpi_l7_skipping_infos_key_t), sk);
+        if(sk){
+            skip_l7 = 1;
+            r.protocol.l7prot = sk->protocol;
+        }
     }
 
-    l3_status=r.status;
-    r.status=DPI_STATUS_OK;
-    /**
-     * We return the status of dpi_stateful_get_app_protocol call,
-     * without giving informations on status returned
-     * by dpi_parse_L3_L4_headers. Basically we return the status which
-     * provides more informations.
-     */
-    r=dpi_stateful_get_app_protocol(state, &infos);
+    if(!skip_l7){
+        if(infos.l4prot!=IPPROTO_TCP && infos.l4prot!=IPPROTO_UDP){
+            r.status=DPI_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+            return r;
+        }
+
+        r.status=DPI_STATUS_OK;
+        /**
+         * We return the status of dpi_stateful_get_app_protocol call,
+         * without giving informations on status returned
+         * by dpi_parse_L3_L4_headers. Basically we return the status which
+         * provides more informations.
+         */
+        r=dpi_stateful_get_app_protocol(state, &infos);
+    }else{
+        r.protocol.l4prot=infos.l4prot;
+    }
 
     if(l3_status==DPI_STATUS_IP_LAST_FRAGMENT){
         free((unsigned char*) infos.pkt);
@@ -1560,7 +1618,25 @@ const char* const dpi_get_protocol_name(dpi_protocol_t protocol){
         return "Unknown";
 }
 
-const char** const dpi_get_protocols_names(){
+const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol){
+    if(protocol < DPI_NUM_PROTOCOLS){
+        return protocols_strings[protocol];
+    }else{
+        return "Unknown";
+    }
+}
+
+dpi_l7_prot_id dpi_get_protocol_id(const char* const string){
+    size_t i;
+    for(i = 0; i < (size_t) DPI_NUM_PROTOCOLS; i++){
+        if(strcasecmp(string, protocols_strings[i]) == 0){
+            return (dpi_l7_prot_id) i;;
+        }
+    }
+    return DPI_NUM_PROTOCOLS;
+}
+
+const char** const dpi_get_protocols_strings(){
     return protocols_strings;
 }
 

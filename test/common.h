@@ -136,4 +136,5 @@ void getProtocols(const char* pcapName,
     dpi_terminate(state);
 }
 
+
 #endif // PEAFOWL_TEST_COMMON

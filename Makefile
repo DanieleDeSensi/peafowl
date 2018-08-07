@@ -1,6 +1,6 @@
 export CC                   = gcc
 export CXX                  = g++
-export OPTIMIZE_FLAGS       = -finline-functions -O3 -fPIC
+export OPTIMIZE_FLAGS       = -finline-functions -O3 -fPIC -g
 export CCFLAGS             = $(PEAFOWL_COVERAGE_FLAGS) -Wall -DFF_BOUNDED_BUFFER -DNO_DEFAULT_MAPPING #-DDPI_DEBUG_TCP_REORDERING #-DBLOCKING_MODE
 export CXXFLAGS             = $(CCFLAGS) --std=c++11
 export INCS                 = -I $(realpath .) 

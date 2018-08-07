@@ -271,10 +271,9 @@ int main(int argc, char** argv){
     dpi_terminate(state);
 
     if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
-    const char** protocols_names = dpi_get_protocols_names();
     for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
         if(protocols[i] > 0){
-            printf("%s packets: %"PRIu32"\n", protocols_names[i], protocols[i]);
+            printf("%s packets: %"PRIu32"\n", dpi_get_protocol_string(i), protocols[i]);
         }
     }
     return 0;
@@ -319,7 +318,7 @@ functions with their replacement everything should work. However, we strongly su
     <td>```dpi_stateful_identify_application_protocol```</td><td>```dpi_get_protocol```</td>
   </tr>
   <tr>
-    <td>```dpi_get_protocol_name```</td><td>```dpi_get_protocols_names```</td>
+    <td>```dpi_get_protocol_name```</td><td>```dpi_get_protocol_string```</td>
   </tr>
   <tr>
     <td>```mc_dpi_set_read_and_process_callbacks```</td><td>```mc_dpi_set_core_callbacks```</td>

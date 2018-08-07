@@ -484,7 +484,22 @@ u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state);
  * @return  An array A of string, such that A[i] is the
  * string representation of the protocol with id 'i'.
  */
-const char** const mc_dpi_get_protocol_names();
+const char** const mc_dpi_get_protocol_strings();
+
+/**
+ * Returns the string represetation of a protocol.
+ * @param   protocol The protocol identifier.
+ * @return  The string representation of the protocol with id 'protocol'.
+ */
+const char* const mc_dpi_get_protocol_string(dpi_l7_prot_id protocol);
+
+
+/**
+ * Returns the protocol id corresponding to a protocol string.
+ * @param string The protocols tring.
+ * @return The protocol id corresponding to a protocol string.
+ */
+dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string);
 
 /**
  * Sets the callback that will be called when a flow expires.
