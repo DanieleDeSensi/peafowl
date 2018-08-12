@@ -386,6 +386,11 @@ Advanced usage
 ================================================================================================================
 Details on how to add new protocols and on different configuration parameters can be found in [README_ADVANCED.md](README_ADVANCED.md)
 
+Export to Prometheus DB
+================================================================================================================
+Dependencies:
+- libcurl: e.g. apt-get install libcurl4-openssl-dev
+
 Contributions
 ================================================================================================================
 Peafowl has been mainly developed by Daniele De Sensi (d.desensi.software@gmail.com).

@@ -43,6 +43,10 @@
 #include <numa.h>
 #endif
 
+#ifdef WITH_PROMETHEUS
+#include "prometheus.h"
+#endif
+
 #define DPI_CACHE_LINES_PADDING_REQUIRED(size)          \
 	(size%DPI_CACHE_LINE_SIZE==0?0:DPI_CACHE_LINE_SIZE- \
 	(size%DPI_CACHE_LINE_SIZE))
@@ -854,6 +858,10 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
 
 		++db->partitions[partition_id].partition.informations.
 		      active_flows;
+#ifdef WITH_PROMETHEUS
+		iterator->infos.prometheus_counter_packets = dpi_prometheus_counter_create(state->prometheus_stats, "packets", pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+		iterator->infos.prometheus_counter_bytes = dpi_prometheus_counter_create(state->prometheus_stats, "bytes", pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+#endif   
 	}
 #if DPI_USE_MTF
 	else if(iterator->prev!=head){
@@ -891,7 +899,12 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
 	}else{
 		pkt_infos->direction=1;
 	}
-
+#ifdef WITH_PROMETHEUS
+	if(iterator->infos.prometheus_counter_packets){
+		dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_packets, 1);
+		dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_bytes, pkt_infos->data_length);
+	}
+#endif		      
 	return iterator;
 }
 
@@ -980,6 +993,10 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
 
 		++db->partitions[partition_id].partition.informations.
 		                                         active_flows;
+#ifdef WITH_PROMETHEUS
+		iterator->infos.prometheus_counter_packets = dpi_prometheus_counter_create(state->prometheus_stats, "packets", pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+		iterator->infos.prometheus_counter_bytes = dpi_prometheus_counter_create(state->prometheus_stats, "bytes", pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+#endif   
 	}
 #if DPI_USE_MTF
 	else if(iterator->prev!=head){
@@ -1020,7 +1037,12 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
 		pkt_infos->direction=0;
 	}else
 		pkt_infos->direction=1;
-
+#ifdef WITH_PROMETHEUS
+	if(iterator->infos.prometheus_counter_packets){
+		dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_packets, 1);
+		dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_bytes, pkt_infos->data_length);
+	}
+#endif
 	return iterator;
 }
 

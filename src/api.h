@@ -615,6 +615,9 @@ struct library_state{
 	/********************************************************************/
 	void* ipv4_frag_state;
 	void* ipv6_frag_state;
+#ifdef WITH_PROMETHEUS
+    void* prometheus_stats;
+#endif
 };
 
 /**
@@ -650,6 +653,10 @@ typedef struct dpi_flow_infos{
 	 */
 	u_int8_t tcp_reordering_enabled:1;
 	dpi_tracking_informations_t tracking;
+#ifdef WITH_PROMETHEUS
+    void* prometheus_counter_packets;
+    void* prometheus_counter_bytes;
+#endif
 }dpi_flow_infos_t;
 
 
@@ -1339,6 +1346,15 @@ u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy);
+
+/**
+ * Initializes the exporter to Prometheus DB.
+ * @param state       A pointer to the state of the library.
+ * @param port        The port on which the server should listen.
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+u_int8_t dpi_prometheus_init(dpi_library_state_t* state, u_int16_t port);
 
 /****************************************/
 /** Only to be used directly by mcdpi. **/

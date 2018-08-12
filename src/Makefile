@@ -1,4 +1,4 @@
-SEQTARGET            = utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
+SEQTARGET            = prometheus.o utils.o ipv4_reassembly.o ipv6_reassembly.o reassembly.o tcp_stream_management.o hash_functions.o flow_table.o api.o 
 PARTARGET            = worker.o mc_api.o
 
 .PHONY: all clean cleanall install uninstall test seqlib parlib
@@ -32,6 +32,8 @@ worker.o: worker.cpp
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c worker.cpp  -o worker.o 
 mc_api.o: mc_api.cpp 
 	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c mc_api.cpp -o mc_api.o 
+prometheus.o: prometheus.cpp 
+	$(CXX) $(INCS) $(CXXFLAGS) $(OPTIMIZE_FLAGS) $(CONFIGURATIONFLAGS) -c prometheus.cpp -o prometheus.o 
 clean: 
 	make -C ./inspectors clean
 	-rm -fr *.o *~ *.a

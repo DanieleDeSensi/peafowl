@@ -42,10 +42,11 @@
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
 #include <assert.h>
-
-
 #include <arpa/inet.h>
 
+#ifdef WITH_PROMETHEUS
+#include "prometheus.h"
+#endif
 
 #define debug_print(fmt, ...) \
         do { if (DPI_DEBUG) fprintf(stderr, fmt, __VA_ARGS__); } while (0)
@@ -649,7 +650,9 @@ void dpi_terminate(dpi_library_state_t *state){
 				                 state->flow_cleaner_callback);
 		dpi_flow_table_delete_v6(state->db6,
 				                 state->flow_cleaner_callback);
-
+#ifdef WITH_PROMETHEUS
+        dpi_prometheus_terminate(state);
+#endif
 		free(state);
 	}
 }
@@ -1460,7 +1463,10 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 					if(seg.connection_terminated){
 						r.status=DPI_STATUS_TCP_CONNECTION_TERMINATED;
 					}
-
+#ifdef WITH_PROMETHEUS
+                    flow->prometheus_counter_packets = dpi_prometheus_counter_create(state->prometheus_stats, "packets", pkt_infos, flow->l7prot);
+                    flow->prometheus_counter_bytes = dpi_prometheus_counter_create(state->prometheus_stats, "bytes", pkt_infos, flow->l7prot);
+#endif                    
 					return r;
 				}else if(check_result==DPI_PROTOCOL_NO_MATCHES){
                     BITCLEAR(flow->possible_matching_protocols, i);
