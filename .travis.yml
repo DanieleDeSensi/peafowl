@@ -18,12 +18,11 @@ install:
   - pip install --user gcovr
 
 script:
-  # Runs compilation, tests and coverage collection
+  # Runs compilation, cppcheck, tests and coverage collection
   - mkdir build
   - cd build
-  - cmake ../ -DENABLE_CODECOV=ON -DENABLE_TESTS=ON
-  - make
-  - make test || (cat ./Testing/Temporary/LastTest.log)
+  - cmake ../ -DENABLE_CODECOV=ON -DENABLE_TESTS=ON -DENABLE_CPPCHECK=ON
+  - make && make cppcheck && (make test || (cat ./Testing/Temporary/LastTest.log))
   - cd ..
 
 after_success:

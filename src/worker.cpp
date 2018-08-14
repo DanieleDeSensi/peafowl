@@ -127,6 +127,7 @@ void* dpi_L3_L4_emitter::svc(void* task){
 			worker_debug_print("%s\n", "[worker.cpp]: No more task to "
 					           "process, terminating.");
 			*terminating=1;
+			dpi_free_task(r);
 			return (void*) ff::FF_EOS;
 		}
 
@@ -336,7 +337,6 @@ int dpi_L7_emitter::svc_init(){
 
 void* dpi_L7_emitter::svc(void* task){
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
-	uint16_t destination_worker;
 	mc_dpi_task_t* out;
 	uint pfs;
 
@@ -345,7 +345,7 @@ void* dpi_L7_emitter::svc(void* task){
         __builtin_prefetch(&(real_task->input_output_task_t.
         		L3_L4_output_task_t[i+4]), 0, 0);
 #endif
-		destination_worker=real_task->input_output_task_t.
+		uint16_t destination_worker=real_task->input_output_task_t.
 				L3_L4_output_task_t[i].destination_worker;
 		worker_debug_print("[worker.cpp]: L7 emitter: Inserted"
 				           " a task into the queue of worker: "
@@ -410,11 +410,8 @@ int dpi_L7_worker::svc_init(){
 
 void* dpi_L7_worker::svc(void* task){
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
-	int8_t l3_status;
 	dpi_pkt_infos_t infos;
 	dpi_flow_infos_t* flow_infos = NULL;
-	ipv4_flow_t* ipv4_flow;
-	ipv6_flow_t* ipv6_flow;
 
 #if MC_DPI_TICKS_WAIT == 1
 	ticks svcstart = getticks();
@@ -427,10 +424,10 @@ void* dpi_L7_worker::svc(void* task){
 	for(uint i=0; i<DPI_MULTICORE_DEFAULT_GRAIN_SIZE; i++){
 		real_task->input_output_task_t.L7_output_task_t[i].user_pointer=
 				temp[i].user_pointer;
-		ipv4_flow=NULL;
-		ipv6_flow=NULL;
+		ipv4_flow_t* ipv4_flow = NULL;
+		ipv6_flow_t* ipv6_flow = NULL;
 
-		l3_status=temp[i].status;
+		int8_t l3_status=temp[i].status;
 		if(unlikely(l3_status<0 || l3_status==DPI_STATUS_IP_FRAGMENT)){
 			real_task->input_output_task_t.L7_output_task_t[i].
 				result.status=l3_status;

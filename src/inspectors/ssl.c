@@ -98,13 +98,11 @@ static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_intern
 			}
 		}
 
-
-		int i;
 		if(handshake_protocol == 0x02 || handshake_protocol == 0xb)
 		{
 			u_int num_found = 0;
 			// Check after handshake protocol header (5 bytes) and message header (4 bytes)
-			for(i = 9; i < payload_len-3; i++)
+			for(int i = 9; i < payload_len-3; i++)
 			{
 				if(((payload[i] == 0x04) && (payload[i+1] == 0x03) && (payload[i+2] == 0x0c))
 				|| ((payload[i] == 0x04) && (payload[i+1] == 0x03) && (payload[i+2] == 0x13))
@@ -167,12 +165,11 @@ static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_intern
 					if(offset < total_len)
 					{
 						uint16_t compression_len;
-						uint16_t extensions_len;
 						compression_len = payload[offset+1];
 						offset += compression_len + 3;
 						if(offset < total_len)
 						{
-							extensions_len = payload[offset];
+							uint16_t extensions_len = payload[offset];
 							if((extensions_len+offset) < total_len)
 							{
 								/* Move to the first extension

@@ -163,11 +163,10 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 #endif
 
 	state->L3_L4_workers=new std::vector<ff::ff_node*>;
-	dpi::dpi_L3_L4_worker* w1;
 	for(uint i=0; i<state->double_farm_L3_L4_active_workers; i++){
 		tmp=malloc(sizeof(dpi::dpi_L3_L4_worker));
 		assert(tmp);
-		w1=new (tmp) dpi::dpi_L3_L4_worker(state->sequential_state, i,
+		dpi::dpi_L3_L4_worker* w1=new (tmp) dpi::dpi_L3_L4_worker(state->sequential_state, i,
 		   (state->double_farm_L7_active_workers),
 		   state->mapping[last_mapped],
 		   size_v4,
@@ -210,11 +209,10 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	state->L7_farm->add_emitter(state->L7_emitter);
 
 	state->L7_workers=new std::vector<ff::ff_node*>;
-	dpi::dpi_L7_worker* w2;
 	for(uint i=0; i<state->double_farm_L7_active_workers; i++){
 		tmp=malloc(sizeof(dpi::dpi_L7_worker));
 		assert(tmp);
-		w2=new (tmp) dpi::dpi_L7_worker(state->sequential_state, i,
+		dpi::dpi_L7_worker* w2=new (tmp) dpi::dpi_L7_worker(state->sequential_state, i,
 				                        state->mapping[last_mapped]);
 		state->L7_workers->push_back(w2);
 		last_mapped=(last_mapped+1)%state->available_processors;
@@ -230,7 +228,6 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 			&(state->read_process_callbacks_user_data),
             &(state->collector_proc_id), state->tasks_pool,
             state->deprecated_callback);
-	last_mapped=(last_mapped+1)%state->available_processors;
 	state->L7_farm->add_collector(state->L7_collector);
 
 	/********************************/
@@ -277,9 +274,8 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 	state->single_farm->add_emitter(state->single_farm_emitter);
 
 	state->single_farm_workers=new std::vector<ff::ff_node*>;
-	dpi::dpi_L7_worker* w;
 	for(uint16_t i=0; i<state->single_farm_active_workers; i++){
-		w=new dpi::dpi_L7_worker(state->sequential_state, i,
+		dpi::dpi_L7_worker* w=new dpi::dpi_L7_worker(state->sequential_state, i,
 				                 state->mapping[last_mapped]);
 		assert(w);
 		state->single_farm_workers->push_back(w);
@@ -294,25 +290,25 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
             &(state->collector_proc_id), state->tasks_pool,
             state->deprecated_callback);
 	assert(state->single_farm_collector);
-	last_mapped=(last_mapped+1)%state->available_processors;
 	state->single_farm->add_collector(state->single_farm_collector);
 	state->parallel_module_type=MC_DPI_PARALLELISM_FORM_ONE_FARM;
 }
 
 
 static inline ssize_t get_num_cores() {
-    ssize_t  n=-1;
+    ssize_t n;
 #if defined(_WIN32)
     n = 2; // Not yet implemented
 #else
+    n = 0;
 #if defined(__linux__)
     char inspect[]="cat /proc/cpuinfo|egrep 'core id|physical id'|tr -d '\n'|sed 's/physical/\\nphysical/g'|grep -v ^$|sort|uniq|wc -l";
 #elif defined (__APPLE__)
     char inspect[]="sysctl hw.physicalcpu | awk '{print $2}'";
 #else
     char inspect[]="";
-    n=1;
 #pragma message ("ff_realNumCores not supported on this platform")
+    return 1;
 #endif
     FILE       *f;
     f = popen(inspect, "r");

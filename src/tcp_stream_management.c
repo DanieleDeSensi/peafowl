@@ -104,12 +104,11 @@ static
 void dpi_reordering_tcp_group_contiguous_segments(
 			dpi_reassembly_fragment_t** head, unsigned char** where){
 	/* Copy the data portions of all segments into the new buffer. */
-	uint32_t fragment_length;
 	uint32_t offset=0, last_end=(*head)->offset;
 	dpi_reassembly_fragment_t *fragment=*head;
 	dpi_reassembly_fragment_t *tmp;
 	while(fragment!=NULL && fragment->offset==last_end){
-		fragment_length=dpi_reassembly_fragment_length(fragment->offset,
+		uint32_t fragment_length=dpi_reassembly_fragment_length(fragment->offset,
 				                                       fragment->end);
 		if(fragment_length!=0)
 			memcpy(((*where)+offset), fragment->ptr, fragment_length);

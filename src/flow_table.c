@@ -292,14 +292,12 @@ void dpi_flow_table_initialize_informations(
 }
 
 static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db){
-	uint32_t i;
-	uint16_t j;
 	ipv4_flow_t* cur;
 	if(db!=NULL){
 		if(db->table!=NULL){
-			for(j=0; j<db->num_partitions; ++j){
+			for(uint16_t j=0; j<db->num_partitions; ++j){
 				db->partitions[j].partition.informations.active_flows=0;
-				for(i=db->partitions[j].partition.informations.
+				for(uint32_t i=db->partitions[j].partition.informations.
 						  lowest_index;
 					i<=db->partitions[j].partition.informations.
 					      highest_index; ++i){
@@ -315,14 +313,12 @@ static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db){
 }
 
 static void dpi_flow_table_update_flow_count_v6(dpi_flow_DB_v6_t* db){
-	uint32_t i;
-	uint16_t j;
 	ipv6_flow_t* cur;
 	if(db!=NULL){
 		if(db->table!=NULL){
-			for(j=0; j<db->num_partitions; ++j){
+			for(uint16_t j=0; j<db->num_partitions; ++j){
 				db->partitions[j].partition.informations.active_flows=0;
-				for(i=db->partitions[j].partition.informations.
+				for(uint32_t i=db->partitions[j].partition.informations.
 						  lowest_index;
 					i<=db->partitions[j].partition.informations.
 					      highest_index; ++i){
@@ -346,7 +342,6 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 		uint32_t size, uint32_t max_active_v4_flows,
 		uint16_t num_partitions){
 #endif
-	uint32_t i;
 	dpi_flow_DB_v4_t* table = NULL;
 
 	if(size!=0){
@@ -361,13 +356,12 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(
 		table->start_pool_size=start_pool_size;
 #endif
 
-		for(i=0; i<table->total_size; i++){
+		for(uint32_t i=0; i<table->total_size; i++){
 			/** Creation of sentinel node. **/
 			table->table[i].next=&(table->table[i]);
 			table->table[i].prev=&(table->table[i]);
 		}
 		
-
 #if DPI_NUMA_AWARE
 		table->partitions=numa_alloc_onnode(
 				sizeof(dpi_flow_DB_v4_partition_t)*table->num_partitions,
@@ -476,7 +470,6 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
 		                                   uint32_t max_active_v6_flows,
 		                                   uint16_t num_partitions){
 #endif
-	uint32_t i;
 	dpi_flow_DB_v6_t* table = NULL;
 	if(size!=0){
 		table = (dpi_flow_DB_v6_t*) malloc(sizeof(dpi_flow_DB_v6_t));
@@ -490,7 +483,7 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
 		table->start_pool_size=start_pool_size;
 #endif
 		
-		for(i=0; i<table->total_size; i++){
+		for(uint32_t i=0; i<table->total_size; i++){
 			/** Creation of sentinel node. **/
 			table->table[i].next=&(table->table[i]);
 			table->table[i].prev=&(table->table[i]);
@@ -1147,14 +1140,10 @@ ipv6_flow_t* dpi_flow_table_find_flow_v6(
 void dpi_flow_table_delete_v4(
 		dpi_flow_DB_v4_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback){
-
-
-	uint32_t i;
-	uint16_t j;
 	if(db!=NULL){
 		if(db->table!=NULL){
-			for(j=0; j<db->num_partitions; ++j){
-				for(i=db->partitions[j].partition.informations.
+			for(uint16_t j=0; j<db->num_partitions; ++j){
+				for(uint32_t i=db->partitions[j].partition.informations.
 						  lowest_index;
 					i<=db->partitions[j].partition.informations.
 					      highest_index; ++i){
@@ -1198,12 +1187,10 @@ void dpi_flow_table_delete_v4(
 void dpi_flow_table_delete_v6(
 		dpi_flow_DB_v6_t* db,
 		dpi_flow_cleaner_callback* flow_cleaner_callback){
-	uint32_t i;
-	uint16_t j;
 	if(db!=NULL){
 		if(db->table!=NULL){
-			for(j=0; j<db->num_partitions; ++j){
-				for(i=db->partitions[j].partition.
+			for(uint16_t j=0; j<db->num_partitions; ++j){
+				for(uint32_t i=db->partitions[j].partition.
 						  informations.lowest_index;
 					i<=db->partitions[j].partition.
 					       informations.highest_index; ++i){

@@ -87,14 +87,14 @@ uint8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsign
 	    return DPI_PROTOCOL_NO_MATCHES;
 	}
 
-  	uint8_t payloadType, data_type = app_data[1] & 0x7F;
+  	uint8_t data_type = app_data[1] & 0x7F;
     // TODO: Accede ad app_data[8] senza controllare che la lunghezza di app_data (data_length) sia almeno 8
   	uint32_t *ssid = (uint32_t*)&app_data[8];
 
 	if(data_length >= 12) {
 		if ( (app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0 ) /* RTP magic byte[1] */
 		{
-
+      uint8_t payloadType;
 			if ( ((data_type < 72) || (data_type > 76)) && ((data_type <= 34)
 	 		     || ((data_type >= 96) && (data_type <= 127) ) ) && (*ssid != 0) )
 			{

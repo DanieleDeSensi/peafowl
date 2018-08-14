@@ -346,9 +346,9 @@ int32_t dpi_reassembly_ip_compact_fragments(
 		unsigned char** where,
 		uint32_t len){
 	/* Copy the data portions of all fragments into the new buffer. */
-	uint32_t fragment_length,count=0;
+	uint32_t count=0;
 	while(head!=NULL){
-		fragment_length=head->end-head->offset;
+		uint32_t fragment_length=head->end-head->offset;
 		if(unlikely(head->offset+fragment_length>len)){
 			return -1;
 		}
