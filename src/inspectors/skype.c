@@ -29,27 +29,27 @@
 #include <peafowl/api.h>
 #include <peafowl/inspectors/inspectors.h>
 
-#include <string.h>
 #include <stdio.h>
-
+#include <string.h>
 
 #define DPI_DEBUG_SKYPE 0
-#define debug_print(fmt, ...) \
-            do { if (DPI_DEBUG_SKYPE) fprintf(stdout, fmt, __VA_ARGS__); } while (0)
+#define debug_print(fmt, ...)                               \
+  do {                                                      \
+    if (DPI_DEBUG_SKYPE) fprintf(stdout, fmt, __VA_ARGS__); \
+  } while (0)
 
+uint8_t check_skype(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                    const unsigned char* app_data, uint32_t data_length,
+                    dpi_tracking_informations_t* t) {
+  if (pkt->l4prot != IPPROTO_UDP) {
+    return DPI_PROTOCOL_NO_MATCHES;
+  }
+  if (((data_length == 3) && ((app_data[2] & 0x0F) == 0x0d)) ||
+      ((data_length >= 16) &&
+       (app_data[0] != 0x30) /* Avoid invalid SNMP detection */
+       && (app_data[2] == 0x02))) {
+    return DPI_PROTOCOL_MATCHES;
+  }
 
-uint8_t check_skype(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* t){
-    if(pkt->l4prot != IPPROTO_UDP){
-        return DPI_PROTOCOL_NO_MATCHES;
-    }
-	if(((data_length == 3) && ((app_data[2] & 0x0F)== 0x0d))
-	   || ((data_length >= 16)
-	       && (app_data[0] != 0x30) /* Avoid invalid SNMP detection */
-	       && (app_data[2] == 0x02))) {
-		return DPI_PROTOCOL_MATCHES;
-
-	}
-
-	return DPI_PROTOCOL_NO_MATCHES;
+  return DPI_PROTOCOL_NO_MATCHES;
 }
-

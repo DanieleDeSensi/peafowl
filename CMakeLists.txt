@@ -13,6 +13,7 @@ option (ENABLE_PROMETHEUS "Enables the support for export to Prometheus DB" OFF)
 option (ENABLE_TESTS "Enables testing" OFF)
 option (ENABLE_CPPCHECK "Enables cppcheck checks" OFF)
 option (ENABLE_CODECOV "Enables code coverage reports" OFF)
+option (ENABLE_CLANGFORMAT "Enables clang-format formatting" OFF)
 
 add_compile_options(-Wall -finline-functions -O3)
 
@@ -61,3 +62,10 @@ if (ENABLE_CODECOV)
         DEPENDENCIES peafowl_static
     )
 endif (ENABLE_CODECOV)
+
+################
+# clang-format #
+################
+if (ENABLE_CLANGFORMAT)
+    include(cmake/clang_format.cmake)
+endif (ENABLE_CLANGFORMAT)

@@ -34,16 +34,15 @@
 extern "C" {
 #endif
 
-typedef struct dpi_ipv6_fragmentation_state
-			   dpi_ipv6_fragmentation_state_t;
+typedef struct dpi_ipv6_fragmentation_state dpi_ipv6_fragmentation_state_t;
 
 /**
  * Enables the IPv6 defragmentation.
  * @param table_size  The size of the table used to store the fragments.
  * @return            A pointer to the IPv6 defragmentation handle.
  */
-dpi_ipv6_fragmentation_state_t*
-		dpi_reordering_enable_ipv6_fragmentation(uint16_t table_size);
+dpi_ipv6_fragmentation_state_t* dpi_reordering_enable_ipv6_fragmentation(
+    uint16_t table_size);
 
 /**
  * Sets the maximum amount of memory that can be used to store
@@ -54,8 +53,7 @@ dpi_ipv6_fragmentation_state_t*
  *                               same source.
  */
 void dpi_reordering_ipv6_fragmentation_set_per_host_memory_limit(
-		dpi_ipv6_fragmentation_state_t *frag_state,
-		uint32_t per_host_memory_limit);
+    dpi_ipv6_fragmentation_state_t* frag_state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the maximum (global) amount of memory that can be used for
@@ -64,8 +62,7 @@ void dpi_reordering_ipv6_fragmentation_set_per_host_memory_limit(
  * @param total_memory_limit   The global memory limit.
  */
 void dpi_reordering_ipv6_fragmentation_set_total_memory_limit(
-		dpi_ipv6_fragmentation_state_t *frag_state,
-		uint32_t total_memory_limit);
+    dpi_ipv6_fragmentation_state_t* frag_state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum amount of time (seconds) which can elapse before the
@@ -74,15 +71,14 @@ void dpi_reordering_ipv6_fragmentation_set_total_memory_limit(
  * @param timeout_seconds   The timeout (seconds).
  */
 void dpi_reordering_ipv6_fragmentation_set_reassembly_timeout(
-		dpi_ipv6_fragmentation_state_t *frag_state,
-		uint8_t timeout_seconds);
+    dpi_ipv6_fragmentation_state_t* frag_state, uint8_t timeout_seconds);
 
 /**
  * Disables the IPv6 fragmentation and deallocates the handle.
  * @param frag_state  A pointer to the IPv6 defragmentation handle.
  */
 void dpi_reordering_disable_ipv6_fragmentation(
-		dpi_ipv6_fragmentation_state_t* frag_state);
+    dpi_ipv6_fragmentation_state_t* frag_state);
 
 /**
  * Reassemble the IP datagram if it is fragmented.
@@ -116,14 +112,11 @@ void dpi_reordering_disable_ipv6_fragmentation(
  * needed.
  */
 unsigned char* dpi_reordering_manage_ipv6_fragment(
-		dpi_ipv6_fragmentation_state_t *state,
-		const unsigned char* unfragmentable_start,
-		uint16_t unfragmentable_size,
-		const unsigned char* fragmentable_start,
-		uint16_t fragmentable_size,
-		uint16_t offset, uint8_t more_fragments,
-		uint32_t identification, uint8_t next_header,
-		uint32_t current_time, int tid);
+    dpi_ipv6_fragmentation_state_t* state,
+    const unsigned char* unfragmentable_start, uint16_t unfragmentable_size,
+    const unsigned char* fragmentable_start, uint16_t fragmentable_size,
+    uint16_t offset, uint8_t more_fragments, uint32_t identification,
+    uint8_t next_header, uint32_t current_time, int tid);
 
 #ifdef __cplusplus
 }

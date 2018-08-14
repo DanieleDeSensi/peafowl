@@ -44,35 +44,32 @@ extern "C" {
 typedef struct dpi_reassembly_timer dpi_reassembly_timer_t;
 typedef struct dpi_reassembly_fragment dpi_reassembly_fragment_t;
 
-
 /**If tail insertion, then the head will be the first to expire. **/
-struct dpi_reassembly_timer{
-	dpi_reassembly_timer_t *prev;
-	dpi_reassembly_timer_t *next;
-	void* data;
-	uint32_t expiration_time;
+struct dpi_reassembly_timer {
+  dpi_reassembly_timer_t* prev;
+  dpi_reassembly_timer_t* next;
+  void* data;
+  uint32_t expiration_time;
 };
 
 /* Describe an IP fragment (or TCP segment). */
-struct dpi_reassembly_fragment{
-	/* Offset of fragment. */
-	uint32_t offset;
-	/* Last byte of data in fragment. */
-	uint32_t end;
-	/**
-	 * This is needed because when a segment contains a FIN,
-	 * then the expected sequence number in the other direction
-	 * will be incremented by one.
-	 */
-	uint8_t tcp_fin:1;
-	/* Pointer into real fragment data. */
-	unsigned char* ptr;
-	/* Linked list pointers to the other fragments. */
-	dpi_reassembly_fragment_t *next;
-	dpi_reassembly_fragment_t *prev;
+struct dpi_reassembly_fragment {
+  /* Offset of fragment. */
+  uint32_t offset;
+  /* Last byte of data in fragment. */
+  uint32_t end;
+  /**
+   * This is needed because when a segment contains a FIN,
+   * then the expected sequence number in the other direction
+   * will be incremented by one.
+   */
+  uint8_t tcp_fin : 1;
+  /* Pointer into real fragment data. */
+  unsigned char* ptr;
+  /* Linked list pointers to the other fragments. */
+  dpi_reassembly_fragment_t* next;
+  dpi_reassembly_fragment_t* prev;
 };
-
-
 
 /**
  * Returns 1 if the sequence number x is before y, 0 otherwise.
@@ -81,7 +78,6 @@ struct dpi_reassembly_fragment{
  * @return 1 if x is before y, 0 otherwise.
  */
 uint8_t dpi_reassembly_before(uint32_t x, uint32_t y);
-
 
 /**
  * Returns 1 if the sequence number x is before or equal y, 0 otherwise.
@@ -122,8 +118,8 @@ uint32_t dpi_reassembly_fragment_length(uint32_t offset, uint32_t end);
  * @param timer The timer to insert.
  */
 void dpi_reassembly_add_timer(dpi_reassembly_timer_t** head,
-		                      dpi_reassembly_timer_t** tail,
-		                      dpi_reassembly_timer_t* timer);
+                              dpi_reassembly_timer_t** tail,
+                              dpi_reassembly_timer_t* timer);
 
 /**
  * Remove a timer to the list of IP reassembly timers.
@@ -132,9 +128,8 @@ void dpi_reassembly_add_timer(dpi_reassembly_timer_t** head,
  * @param timer The timer to remove.
  */
 void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
-		                         dpi_reassembly_timer_t** tail,
-		                         dpi_reassembly_timer_t* timer);
-
+                                 dpi_reassembly_timer_t** tail,
+                                 dpi_reassembly_timer_t* timer);
 
 /**
  * Insert a fragment in the correct position in the list of fragments,
@@ -151,10 +146,9 @@ void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
  * @return The created fragment.
  */
 dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
-		dpi_reassembly_fragment_t** head,
-		const unsigned char* data,
-		uint32_t offset, uint32_t end, uint32_t* bytes_removed,
-		uint32_t* bytes_inserted);
+    dpi_reassembly_fragment_t** head, const unsigned char* data,
+    uint32_t offset, uint32_t end, uint32_t* bytes_removed,
+    uint32_t* bytes_inserted);
 
 /**
  * See there is a train of contiguous fragments.
@@ -162,7 +156,7 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
  * @return 0 if there are missing fragments, 1 otherwise.
  */
 uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
-		dpi_reassembly_fragment_t* head);
+    dpi_reassembly_fragment_t* head);
 
 /**
  * Compacts a train of contiguous fragments and returns it.
@@ -172,10 +166,9 @@ uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
  * @return The data_length of the recompacted data. If an error
  * occurred (e.g. misbehaving packet), -1 is returned.
  */
-int32_t dpi_reassembly_ip_compact_fragments(
-		dpi_reassembly_fragment_t* head,
-		unsigned char** where,
-		uint32_t len);
+int32_t dpi_reassembly_ip_compact_fragments(dpi_reassembly_fragment_t* head,
+                                            unsigned char** where,
+                                            uint32_t len);
 
 #ifdef __cplusplus
 }

@@ -29,8 +29,8 @@
 #define UTILS_H_
 
 #include <limits.h>
-#include <strings.h>
 #include <netinet/in.h>
+#include <strings.h>
 
 #define DPI_MAX_UINT_16 65535
 #define DPI_MAX_INT_32 4294967295
@@ -42,16 +42,24 @@
 #define BIT_IS_SET(val, bitIndex) (val & (1 << bitIndex))
 
 #define BITMASK(b) (1 << ((b) % CHAR_BIT))
-#define BITSLOT(b) ((b) / CHAR_BIT) /** Gets the byte in which the b-th bit is located. **/
-#define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b)) /** Sets in the mask a the b-th bit. **/
-#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b)) /** Delete the b-th bit from the mask a. **/
-#define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b)) /** Tests if in the mask a the b-th bit is set. **/
-#define BITNSLOTS(nb) ((nb + CHAR_BIT - 1) / CHAR_BIT) /** Returns the number of chars that need to be used for an array of nb bits. **/
+#define BITSLOT(b) \
+  ((b) / CHAR_BIT) /** Gets the byte in which the b-th bit is located. **/
+#define BITSET(a, b) \
+  ((a)[BITSLOT(b)] |= BITMASK(b)) /** Sets in the mask a the b-th bit. **/
+#define BITCLEAR(a, b)                                                      \
+  ((a)[BITSLOT(b)] &= ~BITMASK(b)) /** Delete the b-th bit from the mask a. \
+                                      **/
+#define BITTEST(a, b) \
+  ((a)[BITSLOT(b)] &  \
+   BITMASK(b)) /** Tests if in the mask a the b-th bit is set. **/
+#define BITNSLOTS(nb)                                                        \
+  ((nb + CHAR_BIT - 1) / CHAR_BIT) /** Returns the number of chars that need \
+                                      to be used for an array of nb bits. **/
 
-#define get_u8(X,O)  (*(uint8_t *)(((uint8_t *)X) + O))
-#define get_u16(X,O)  (*(uint16_t *)(((uint8_t *)X) + O))
-#define get_u32(X,O)  (*(uint32_t *)(((uint8_t *)X) + O))
-#define get_u64(X,O)  (*(uint64_t *)(((uint8_t *)X) + O))
+#define get_u8(X, O) (*(uint8_t *)(((uint8_t *)X) + O))
+#define get_u16(X, O) (*(uint16_t *)(((uint8_t *)X) + O))
+#define get_u32(X, O) (*(uint32_t *)(((uint8_t *)X) + O))
+#define get_u64(X, O) (*(uint64_t *)(((uint8_t *)X) + O))
 
 #ifdef __cplusplus
 extern "C" {

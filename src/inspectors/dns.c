@@ -25,20 +25,24 @@
 #include <peafowl/api.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* t){
-	/* Check standard DNS port (53) */
-	if((pkt->dstport==port_dns || pkt->srcport==port_dns) && data_length>=12){
-		if((app_data[2] & 0x80)==0){
-			/** If QR==0 is a query. **/
-			if(get_u16(app_data, 4)!=0 && /** QDCOUNT: For queries this field must be >= 1. **/
-			   get_u16(app_data, 6)==0 && /** ANCOUNT **/
-			   get_u16(app_data, 8)==0 /** NSCOUNT **/){
-				return DPI_PROTOCOL_MATCHES;
-			}else
-				return DPI_PROTOCOL_NO_MATCHES;
-		}else{ /** DNS response. **/
-			return DPI_PROTOCOL_MATCHES;
-		}
-	}
-	return DPI_PROTOCOL_NO_MATCHES;
+uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t) {
+  /* Check standard DNS port (53) */
+  if ((pkt->dstport == port_dns || pkt->srcport == port_dns) &&
+      data_length >= 12) {
+    if ((app_data[2] & 0x80) == 0) {
+      /** If QR==0 is a query. **/
+      if (get_u16(app_data, 4) !=
+              0 && /** QDCOUNT: For queries this field must be >= 1. **/
+          get_u16(app_data, 6) == 0 && /** ANCOUNT **/
+          get_u16(app_data, 8) == 0 /** NSCOUNT **/) {
+        return DPI_PROTOCOL_MATCHES;
+      } else
+        return DPI_PROTOCOL_NO_MATCHES;
+    } else { /** DNS response. **/
+      return DPI_PROTOCOL_MATCHES;
+    }
+  }
+  return DPI_PROTOCOL_NO_MATCHES;
 }

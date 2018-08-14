@@ -29,14 +29,12 @@
 
 #include <stdint.h>
 
-
 /* To get the 'fragment offset' part. **/
 #define DPI_IPv4_FRAGMENTATION_OFFSET_MASK 0x1FFF
 /* Flag: "More Fragments" */
-#define DPI_IPv4_FRAGMENTATION_MF		   0x2000
+#define DPI_IPv4_FRAGMENTATION_MF 0x2000
 
-typedef struct dpi_ipv4_fragmentation_state
-               dpi_ipv4_fragmentation_state_t;
+typedef struct dpi_ipv4_fragmentation_state dpi_ipv4_fragmentation_state_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,7 +47,7 @@ extern "C" {
  * @return            A pointer to the IPv4 defragmentation handle.
  */
 dpi_ipv4_fragmentation_state_t* dpi_reordering_enable_ipv4_fragmentation(
-		                        uint16_t table_size);
+    uint16_t table_size);
 
 /**
  * Sets the maximum amount of memory that can be used to store
@@ -60,8 +58,7 @@ dpi_ipv4_fragmentation_state_t* dpi_reordering_enable_ipv4_fragmentation(
  *                               by the same source.
  */
 void dpi_reordering_ipv4_fragmentation_set_per_host_memory_limit(
-		dpi_ipv4_fragmentation_state_t *frag_state,
-		uint32_t per_host_memory_limit);
+    dpi_ipv4_fragmentation_state_t* frag_state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the maximum (global) amount of memory that can be used for
@@ -71,8 +68,7 @@ void dpi_reordering_ipv4_fragmentation_set_per_host_memory_limit(
  * @param total_memory_limit   The global memory limit.
  */
 void dpi_reordering_ipv4_fragmentation_set_total_memory_limit(
-		dpi_ipv4_fragmentation_state_t *frag_state,
-		uint32_t total_memory_limit);
+    dpi_ipv4_fragmentation_state_t* frag_state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum amount of time (seconds) which can elapse before
@@ -81,15 +77,14 @@ void dpi_reordering_ipv4_fragmentation_set_total_memory_limit(
  * @param timeout_seconds   The timeout (seconds).
  */
 void dpi_reordering_ipv4_fragmentation_set_reassembly_timeout(
-		dpi_ipv4_fragmentation_state_t *frag_state,
-		uint8_t timeout_seconds);
+    dpi_ipv4_fragmentation_state_t* frag_state, uint8_t timeout_seconds);
 
 /**
  * Disables the IPv4 fragmentation and deallocates the handle.
  * @param frag_state  A pointer to the IPv4 defragmentation handle.
  */
 void dpi_reordering_disable_ipv4_fragmentation(
-		dpi_ipv4_fragmentation_state_t* frag_state);
+    dpi_ipv4_fragmentation_state_t* frag_state);
 
 /**
  * Reassemble the IP datagram if it is fragmented. It is thread safe
@@ -111,10 +106,8 @@ void dpi_reordering_disable_ipv4_fragmentation(
  *         it is no more needed.
  */
 unsigned char* dpi_reordering_manage_ipv4_fragment(
-		dpi_ipv4_fragmentation_state_t *state,
-		const unsigned char* data,
-		uint32_t current_time, uint16_t offset,
-		uint8_t more_fragments, int tid);
+    dpi_ipv4_fragmentation_state_t* state, const unsigned char* data,
+    uint32_t current_time, uint16_t offset, uint8_t more_fragments, int tid);
 
 #ifdef __cplusplus
 }

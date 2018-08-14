@@ -27,26 +27,32 @@
 #include <peafowl/inspectors/inspectors.h>
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	#define DPI_MDNS_IPv4_DEST_ADDRESS 0xFB0000E0
+#define DPI_MDNS_IPv4_DEST_ADDRESS 0xFB0000E0
 #elif __BYTE_ORDER == __BIG_ENDIAN
-	#define DPI_MDNS_IPv4_DEST_ADDRESS 0xE00000FB
+#define DPI_MDNS_IPv4_DEST_ADDRESS 0xE00000FB
 #else
-# error	"Please fix <bits/endian.h>"
+#error "Please fix <bits/endian.h>"
 #endif
 
-const struct in6_addr DPI_MDNS_IPV6_DEST_ADDRESS={.s6_addr={0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFB}};
+const struct in6_addr DPI_MDNS_IPV6_DEST_ADDRESS = {
+    .s6_addr = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0xFB}};
 
-uint8_t check_mdns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* t){
-    if(pkt->l4prot != IPPROTO_UDP){
-        return DPI_PROTOCOL_NO_MATCHES;
+uint8_t check_mdns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                   const unsigned char* app_data, uint32_t data_length,
+                   dpi_tracking_informations_t* t) {
+  if (pkt->l4prot != IPPROTO_UDP) {
+    return DPI_PROTOCOL_NO_MATCHES;
+  }
+  if (pkt->dstport == port_mdns && data_length >= 12) {
+    if (pkt->ip_version == DPI_IP_VERSION_4 &&
+        pkt->dst_addr_t.ipv4_dstaddr == DPI_MDNS_IPv4_DEST_ADDRESS) {
+      return DPI_PROTOCOL_MATCHES;
+    } else if (pkt->ip_version == DPI_IP_VERSION_6 &&
+               dpi_v6_addresses_equal(pkt->dst_addr_t.ipv6_dstaddr,
+                                      DPI_MDNS_IPV6_DEST_ADDRESS)) {
+      return DPI_PROTOCOL_MATCHES;
     }
-	if(pkt->dstport==port_mdns && data_length>=12){
-		if(pkt->ip_version==DPI_IP_VERSION_4 && pkt->dst_addr_t.ipv4_dstaddr==DPI_MDNS_IPv4_DEST_ADDRESS){
-			return DPI_PROTOCOL_MATCHES;
-		}else if(pkt->ip_version==DPI_IP_VERSION_6 && dpi_v6_addresses_equal(pkt->dst_addr_t.ipv6_dstaddr, DPI_MDNS_IPV6_DEST_ADDRESS)){
-			return DPI_PROTOCOL_MATCHES;
-		}
-	}
-	return DPI_PROTOCOL_NO_MATCHES;
+  }
+  return DPI_PROTOCOL_NO_MATCHES;
 }
-

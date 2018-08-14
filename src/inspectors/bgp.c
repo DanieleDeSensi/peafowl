@@ -1,6 +1,6 @@
 /*
  * bgp.c
- * 
+ *
  * =========================================================================
  *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
  *
@@ -25,20 +25,21 @@
 #include <peafowl/api.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_bgp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* t){
-    if(pkt->l4prot != IPPROTO_TCP){
-        return DPI_PROTOCOL_NO_MATCHES;
-    }
-	if(data_length>18){
-	   if(get_u64(app_data, 0) == 0xffffffffffffffffULL &&
-	   get_u64(app_data, 8) == 0xffffffffffffffffULL &&
-	   ntohs(get_u16(app_data, 16)) <= data_length &&
-	   (pkt->dstport==port_bgp || pkt->srcport==port_bgp)
-	   && app_data[18] < 5){
-		   return DPI_PROTOCOL_MATCHES;
-	   }else
-		   return DPI_PROTOCOL_NO_MATCHES;
-	}else
-		return DPI_PROTOCOL_MORE_DATA_NEEDED;
+uint8_t check_bgp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t) {
+  if (pkt->l4prot != IPPROTO_TCP) {
+    return DPI_PROTOCOL_NO_MATCHES;
+  }
+  if (data_length > 18) {
+    if (get_u64(app_data, 0) == 0xffffffffffffffffULL &&
+        get_u64(app_data, 8) == 0xffffffffffffffffULL &&
+        ntohs(get_u16(app_data, 16)) <= data_length &&
+        (pkt->dstport == port_bgp || pkt->srcport == port_bgp) &&
+        app_data[18] < 5) {
+      return DPI_PROTOCOL_MATCHES;
+    } else
+      return DPI_PROTOCOL_NO_MATCHES;
+  } else
+    return DPI_PROTOCOL_MORE_DATA_NEEDED;
 }
-

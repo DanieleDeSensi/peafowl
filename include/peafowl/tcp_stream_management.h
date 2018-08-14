@@ -44,30 +44,25 @@ extern "C" {
  */
 #define DPI_TCP_MAX_OUT_OF_ORDER_BYTES 32768
 
-
-enum dpi_tcp_reordering_statuses{
-	DPI_TCP_REORDERING_STATUS_IN_ORDER=0
-   ,DPI_TCP_REORDERING_STATUS_OUT_OF_ORDER
-   ,DPI_TCP_REORDERING_STATUS_REBUILT
+enum dpi_tcp_reordering_statuses {
+  DPI_TCP_REORDERING_STATUS_IN_ORDER = 0,
+  DPI_TCP_REORDERING_STATUS_OUT_OF_ORDER,
+  DPI_TCP_REORDERING_STATUS_REBUILT
 };
 
-
-
-typedef struct dpi_tcp_reordering_reordered_segment{
-	unsigned char* data;
-	uint32_t data_length;
-	uint8_t status:2;
-	uint8_t connection_terminated:1;
-}dpi_tcp_reordering_reordered_segment_t;
-
+typedef struct dpi_tcp_reordering_reordered_segment {
+  unsigned char* data;
+  uint32_t data_length;
+  uint8_t status : 2;
+  uint8_t connection_terminated : 1;
+} dpi_tcp_reordering_reordered_segment_t;
 
 /**
  * Deletes all the pendent fragments belonging to a certain flow.
  * @param victim
  */
 void dpi_reordering_tcp_delete_all_fragments(
-		dpi_tracking_informations_t *victim);
-
+    dpi_tracking_informations_t* victim);
 
 /**
  * Tracks the TCP connection.
@@ -94,8 +89,8 @@ void dpi_reordering_tcp_delete_all_fragments(
  *         'data_length' field contains the length of the new (longer)
  *         segment.
  */
-dpi_tcp_reordering_reordered_segment_t dpi_reordering_tcp_track_connection
-	(dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking);
+dpi_tcp_reordering_reordered_segment_t dpi_reordering_tcp_track_connection(
+    dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking);
 
 /**
  * Only checks if the connection terminates.
@@ -104,8 +99,8 @@ dpi_tcp_reordering_reordered_segment_t dpi_reordering_tcp_track_connection
  *                 about the TCP connection.
  * @return 1 if the connection is terminated, 0 otherwise.
  */
-uint8_t dpi_reordering_tcp_track_connection_light
-	(dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking);
+uint8_t dpi_reordering_tcp_track_connection_light(
+    dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking);
 
 #ifdef __cplusplus
 }

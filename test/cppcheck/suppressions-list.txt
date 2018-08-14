@@ -12,6 +12,7 @@ invalidscanf:*/experiments/dynamic_reconfiguration_live/sender.cpp
 invalidscanf:*/experiments/dynamic_reconfiguration_live/receiver.c
 invalidscanf:*/experiments/protocol_identification_inmemory/protocol_identification.cpp
 invalidscanf:*/experiments/dynamic_reconfiguration/dynamic_reconfiguration.cpp
+invalidscanf:*/src/mc_api.cpp
 
 knownConditionTrueFalse:*/src/flow_table.c
 knownConditionTrueFalse:*/src/mc_api.cpp

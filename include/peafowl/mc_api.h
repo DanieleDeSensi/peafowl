@@ -35,23 +35,23 @@
 
 typedef struct mc_dpi_library_state mc_dpi_library_state_t;
 
-typedef struct mc_dpi_processing_result{
-	void* user_pointer;
-	dpi_identification_result_t result;
-}mc_dpi_processing_result_t;
+typedef struct mc_dpi_processing_result {
+  void* user_pointer;
+  dpi_identification_result_t result;
+} mc_dpi_processing_result_t;
 
-typedef struct mc_dpi_packet_reading_result{
-	const unsigned char* pkt;
-	uint32_t length;
-	uint32_t current_time;
-	void* user_pointer;
-}mc_dpi_packet_reading_result_t;
+typedef struct mc_dpi_packet_reading_result {
+  const unsigned char* pkt;
+  uint32_t length;
+  uint32_t current_time;
+  void* user_pointer;
+} mc_dpi_packet_reading_result_t;
 
-typedef enum analysis_results{
-     MC_DPI_PARALLELISM_FORM_ONE_FARM=0
-    ,MC_DPI_PARALLELISM_FORM_DOUBLE_FARM
-    ,MC_DPI_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
-}analysis_results;
+typedef enum analysis_results {
+  MC_DPI_PARALLELISM_FORM_ONE_FARM = 0,
+  MC_DPI_PARALLELISM_FORM_DOUBLE_FARM,
+  MC_DPI_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
+} analysis_results;
 
 /**
  * @struct mc_dpi_parallelism_details_t
@@ -77,15 +77,15 @@ typedef enum analysis_results{
  *                                   to activate for the second farm. It
  *                                   must be different from 0.
  */
-typedef struct mc_dpi_parallelism_details{
-	/** Mapping informations. **/
-	uint16_t available_processors;
-	uint16_t* mapping;
-	/** User manual specification of parallelism form. **/
-	analysis_results parallelism_form;
-	uint16_t double_farm_num_L3_workers;
-	uint16_t double_farm_num_L7_workers;
-}mc_dpi_parallelism_details_t;
+typedef struct mc_dpi_parallelism_details {
+  /** Mapping informations. **/
+  uint16_t available_processors;
+  uint16_t* mapping;
+  /** User manual specification of parallelism form. **/
+  analysis_results parallelism_form;
+  uint16_t double_farm_num_L3_workers;
+  uint16_t double_farm_num_L7_workers;
+} mc_dpi_parallelism_details_t;
 
 /**
  * This function will be called by the library (active mode only) to read
@@ -99,8 +99,8 @@ typedef struct mc_dpi_parallelism_details{
  *                        pkt=NULL, otherwise the behaviour is not
  *                        defined.
  */
-typedef mc_dpi_packet_reading_result_t(mc_dpi_packet_reading_callback)
-			(void* callback_data);
+typedef mc_dpi_packet_reading_result_t(mc_dpi_packet_reading_callback)(
+    void* callback_data);
 
 /**
  * This function will be called by the library (active mode only) to
@@ -110,9 +110,8 @@ typedef mc_dpi_packet_reading_result_t(mc_dpi_packet_reading_callback)
  * @param callback_data       A pointer to user specified data (e.g.
  *                            network socket).
  */
-typedef void(mc_dpi_processing_result_callback)
-			(mc_dpi_processing_result_t* processing_result,
-			 void* callback_data);
+typedef void(mc_dpi_processing_result_callback)(
+    mc_dpi_processing_result_t* processing_result, void* callback_data);
 
 /**
  * Initializes the library and sets the parallelism degree according to
@@ -135,12 +134,9 @@ typedef void(mc_dpi_processing_result_callback)
  * @return A pointer to the state of the library.
  */
 mc_dpi_library_state_t* mc_dpi_init_stateful(
-		uint32_t size_v4, uint32_t size_v6,
-		uint32_t max_active_v4_flows,
-		uint32_t max_active_v6_flows,
-		mc_dpi_parallelism_details_t parallelism_details);
-
-
+    uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
+    uint32_t max_active_v6_flows,
+    mc_dpi_parallelism_details_t parallelism_details);
 
 /**
  * --- DEPRECATED, replaced by mc_dpi_set_core_callbacks ---
@@ -156,10 +152,9 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
  *                              the callbacks.
  */
 void mc_dpi_set_read_and_process_callbacks(
-		mc_dpi_library_state_t* state,
-		mc_dpi_packet_reading_callback* reading_callback,
-		mc_dpi_processing_result_callback* processing_callback,
-                void* user_data);
+    mc_dpi_library_state_t* state,
+    mc_dpi_packet_reading_callback* reading_callback,
+    mc_dpi_processing_result_callback* processing_callback, void* user_data);
 
 /**
  * Sets the reading and processing callbacks. It can be done only after
@@ -174,11 +169,9 @@ void mc_dpi_set_read_and_process_callbacks(
  *                              the callbacks.
  */
 void mc_dpi_set_core_callbacks(
-        mc_dpi_library_state_t* state,
-        mc_dpi_packet_reading_callback* reading_callback,
-        mc_dpi_processing_result_callback* processing_callback,
-        void* user_data);
-
+    mc_dpi_library_state_t* state,
+    mc_dpi_packet_reading_callback* reading_callback,
+    mc_dpi_processing_result_callback* processing_callback, void* user_data);
 
 #ifdef ENABLE_RECONFIGURATION
 /**
@@ -186,7 +179,8 @@ void mc_dpi_set_core_callbacks(
  * @param state A pointer to the state of the library.
  * @param p The reconfiguration parameters.
  */
-void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state, nornir::Parameters* p);
+void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state,
+                                  nornir::Parameters* p);
 #endif
 
 /**
@@ -211,8 +205,7 @@ void mc_dpi_print_stats(mc_dpi_library_state_t* state);
  * Terminates the library.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_terminate(mc_dpi_library_state_t *state);
-
+void mc_dpi_terminate(mc_dpi_library_state_t* state);
 
 /*************************************************/
 /*          Status change API calls              */
@@ -231,9 +224,8 @@ void mc_dpi_terminate(mc_dpi_library_state_t *state);
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
-		                       uint16_t max_trials);
-
+uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t* state,
+                              uint16_t max_trials);
 
 /**
  * Enable IPv4 defragmentation.
@@ -245,8 +237,8 @@ uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
  *          updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
-		                                  uint16_t table_size);
+uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t* state,
+                                         uint16_t table_size);
 
 /**
  * Enable IPv6 defragmentation.
@@ -258,8 +250,8 @@ uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
-		                                  uint16_t table_size);
+uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t* state,
+                                         uint16_t table_size);
 
 /**
  * Sets the amount of memory that a single host can use for IPv4
@@ -273,8 +265,7 @@ uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
-		mc_dpi_library_state_t *state,
-		uint32_t per_host_memory_limit);
+    mc_dpi_library_state_t* state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the amount of memory that a single host can use for IPv6
@@ -288,8 +279,7 @@ uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
-		mc_dpi_library_state_t *state,
-		uint32_t per_host_memory_limit);
+    mc_dpi_library_state_t* state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for IPv4
@@ -306,8 +296,7 @@ uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
-		mc_dpi_library_state_t *state,
-		uint32_t total_memory_limit);
+    mc_dpi_library_state_t* state, uint32_t total_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for
@@ -324,8 +313,7 @@ uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
-		mc_dpi_library_state_t *state,
-		uint32_t total_memory_limit);
+    mc_dpi_library_state_t* state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to
@@ -340,8 +328,7 @@ uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
  *         state has not been changed because a problem happened.
  */
 uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
-		mc_dpi_library_state_t *state,
-		uint8_t timeout_seconds);
+    mc_dpi_library_state_t* state, uint8_t timeout_seconds);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly
@@ -356,8 +343,7 @@ uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
-		mc_dpi_library_state_t *state,
-		uint8_t timeout_seconds);
+    mc_dpi_library_state_t* state, uint8_t timeout_seconds);
 
 /**
  * Disable IPv4 defragmentation.
@@ -367,7 +353,7 @@ uint8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
  *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state);
+uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t* state);
 
 /**
  * Disable IPv6 defragmentation.
@@ -377,9 +363,7 @@ uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state);
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state);
-
-
+uint8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t* state);
 
 /**
  * If enabled, the library will reorder out of order TCP packets
@@ -407,7 +391,6 @@ uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state);
  */
 uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state);
 
-
 /**
  * --- DEPRECATED, replaced by mc_dpi_enable_protocol ---
  * Enable a protocol inspector.
@@ -418,8 +401,8 @@ uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state);
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
-		                     dpi_protocol_t protocol);
+uint8_t mc_dpi_set_protocol(mc_dpi_library_state_t* state,
+                            dpi_protocol_t protocol);
 
 /**
  * --- DEPRECATED, replaced by mc_dpi_disable_protocol ---
@@ -431,8 +414,8 @@ uint8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
-		                        dpi_protocol_t protocol);
+uint8_t mc_dpi_delete_protocol(mc_dpi_library_state_t* state,
+                               dpi_protocol_t protocol);
 
 /**
  * Enable a protocol inspector.
@@ -443,8 +426,8 @@ uint8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_enable_protocol(mc_dpi_library_state_t *state,
-                             dpi_l7_prot_id protocol);
+uint8_t mc_dpi_enable_protocol(mc_dpi_library_state_t* state,
+                               dpi_l7_prot_id protocol);
 
 /**
  * Disable a protocol inspector.
@@ -455,7 +438,7 @@ uint8_t mc_dpi_enable_protocol(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_disable_protocol(mc_dpi_library_state_t *state,
+uint8_t mc_dpi_disable_protocol(mc_dpi_library_state_t* state,
                                 dpi_l7_prot_id protocol);
 
 /**
@@ -466,7 +449,7 @@ uint8_t mc_dpi_disable_protocol(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state);
+uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t* state);
 
 /**
  * Disable all the protocol inspector.
@@ -476,7 +459,7 @@ uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state);
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state);
+uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t* state);
 
 /**
  * Returns the string represetations of the protocols.
@@ -492,7 +475,6 @@ const char** const mc_dpi_get_protocol_strings();
  * @return  The string representation of the protocol with id 'protocol'.
  */
 const char* const mc_dpi_get_protocol_string(dpi_l7_prot_id protocol);
-
 
 /**
  * Returns the protocol id corresponding to a protocol string.
@@ -512,9 +494,8 @@ dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string);
  *         the state has not been changed because a problem
  *         happened.
  */
-uint8_t mc_dpi_set_flow_cleaner_callback(
-		mc_dpi_library_state_t* state,
-		dpi_flow_cleaner_callback* cleaner);
+uint8_t mc_dpi_set_flow_cleaner_callback(mc_dpi_library_state_t* state,
+                                         dpi_flow_cleaner_callback* cleaner);
 
 /**
  * Sets callbacks informations. When a protocol is identified the
@@ -544,10 +525,9 @@ uint8_t mc_dpi_set_flow_cleaner_callback(
  *         been changed because a problem happened.
  *
  **/
-uint8_t mc_dpi_http_activate_callbacks(
-		mc_dpi_library_state_t* state,
-		dpi_http_callbacks_t* callbacks,
-		void* user_data);
+uint8_t mc_dpi_http_activate_callbacks(mc_dpi_library_state_t* state,
+                                       dpi_http_callbacks_t* callbacks,
+                                       void* user_data);
 
 /**
  * Remove the internal structure used to store callbacks informations.
@@ -559,6 +539,5 @@ uint8_t mc_dpi_http_activate_callbacks(
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state);
-
 
 #endif /* MP_DPI_API_H_ */
