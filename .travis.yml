@@ -14,7 +14,8 @@ install:
   - sudo apt-get install libpcap-dev
   # Gcovr
   - sudo apt-get install python-pip
-  - pip install gcovr
+  - pip install requests[security]
+  - pip install --user gcovr
 
 script:
   # Runs compilation, tests and coverage collection
