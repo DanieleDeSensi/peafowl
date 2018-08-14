@@ -31,9 +31,6 @@
 #include <peafowl/ipv6_reassembly.h>
 #include <peafowl/reassembly.h>
 #include <peafowl/utils.h>
-#if DPI_THREAD_SAFETY_ENABLED == 1
-#include <ff/spin-lock.hpp>
-#endif
 
 #include <inttypes.h>
 #include <netinet/ip6.h>
@@ -42,6 +39,10 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/types.h>
+
+#if DPI_THREAD_SAFETY_ENABLED == 1
+#include <ff/spin-lock.hpp>
+#endif
 
 #define DPI_DEBUG_FRAGMENTATION_v6 0
 

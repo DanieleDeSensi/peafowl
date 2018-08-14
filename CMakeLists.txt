@@ -55,7 +55,7 @@ endif (ENABLE_TESTS)
 # codecov #
 ###########
 if (ENABLE_CODECOV)
-    set(COVERAGE_GCOVR_EXCLUDES 'src/external/*' 'demo/*' 'experiments/*')
+    set(COVERAGE_GCOVR_EXCLUDES 'src/external/*' 'test/*' 'demo/*' 'experiments/*')
     SETUP_TARGET_FOR_COVERAGE_GCOVR_XML(
         NAME coverage
         EXECUTABLE make test

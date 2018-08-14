@@ -30,9 +30,6 @@
 #include <peafowl/config.h>
 #include <peafowl/ipv4_reassembly.h>
 #include <peafowl/reassembly.h>
-#if DPI_THREAD_SAFETY_ENABLED == 1
-#include <ff/spin-lock.hpp>
-#endif
 
 #include <netinet/ip.h>
 #include <stdio.h>
@@ -40,6 +37,10 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/types.h>
+
+#if DPI_THREAD_SAFETY_ENABLED == 1
+#include <ff/spin-lock.hpp>
+#endif
 
 #define DPI_DEBUG_FRAGMENTATION_v4 0
 

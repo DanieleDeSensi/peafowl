@@ -10,6 +10,7 @@ add_definitions(-g)
 # Parallel version #
 ####################
 if (ENABLE_PARALLEL)
+  find_package (Threads REQUIRED)
   include_directories(external/fastflow) 
   list(APPEND SOURCES "${CMAKE_SOURCE_DIR}/src/worker.cpp" "${CMAKE_SOURCE_DIR}/src/mc_api.cpp")
   add_definitions(-DDPI_THREAD_SAFETY_ENABLED=1 -DFF_BOUNDED_BUFFER -DNO_DEFAULT_MAPPING)
@@ -20,6 +21,10 @@ endif (ENABLE_PARALLEL)
 ####################
 add_library(peafowl SHARED ${SOURCES})
 add_library(peafowl_static STATIC ${SOURCES})
+
+if (ENABLE_PARALLEL)
+  target_link_libraries(peafowl ${CMAKE_THREAD_LIBS_INIT})
+endif (ENABLE_PARALLEL)
 
 install(TARGETS peafowl DESTINATION /usr/lib)
 install(TARGETS peafowl_static DESTINATION /usr/lib)

@@ -45,6 +45,7 @@
 #include "pattern_matching_lib/trie.h"
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
+#include <peafowl/config.h>
 #include <peafowl/mc_api.h>
 #include <ff/mapping_utils.hpp>
 #include <ff/ubuffer.hpp>
@@ -250,7 +251,9 @@ int main(int argc, char **argv){
 
 
 	        size_t len = header.caplen - ip_offset - virtual_offset;
-			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*len);
+			if(posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*len)){
+				throw std::runtime_error("posix_memalign failure.");
+			}
 			assert(packets[num_packets]);
 			memcpy(packets[num_packets], packet + ip_offset + virtual_offset, len);
 			sizes[num_packets] = len;

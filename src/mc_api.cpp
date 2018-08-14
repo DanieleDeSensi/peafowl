@@ -325,9 +325,11 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
     uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
     uint32_t max_active_v6_flows,
     mc_dpi_parallelism_details_t parallelism_details) {
-  mc_dpi_library_state_t* state;
-  posix_memalign((void**)&state, DPI_CACHE_LINE_SIZE,
-                 sizeof(mc_dpi_library_state_t) + DPI_CACHE_LINE_SIZE);
+  mc_dpi_library_state_t* state = NULL;
+  if(posix_memalign((void**)&state, DPI_CACHE_LINE_SIZE,
+                 sizeof(mc_dpi_library_state_t) + DPI_CACHE_LINE_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
   bzero(state, sizeof(mc_dpi_library_state_t));
 
   uint8_t parallelism_form = parallelism_details.parallelism_form;
@@ -388,9 +390,11 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 /*   Create the tasks pool.   */
 /******************************/
 #if DPI_MULTICORE_USE_TASKS_POOL
-  void* tmp;
-  posix_memalign((void**)&tmp, DPI_CACHE_LINE_SIZE,
-                 sizeof(ff::SWSR_Ptr_Buffer) + DPI_CACHE_LINE_SIZE);
+  void* tmp = NULL;
+  if(posix_memalign((void**)&tmp, DPI_CACHE_LINE_SIZE,
+                 sizeof(ff::SWSR_Ptr_Buffer) + DPI_CACHE_LINE_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
   state->tasks_pool =
       new (tmp) ff::SWSR_Ptr_Buffer(DPI_MULTICORE_TASKS_POOL_SIZE);
   state->tasks_pool->init();

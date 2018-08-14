@@ -117,10 +117,10 @@ typedef struct dpi_pkt_infos {
   uint16_t srcport;   /** In network byte order. **/
   uint16_t dstport;   /** In network byte order. **/
   uint8_t ip_version; /** 4 if IPv4, 6 in IPv6. **/
-                      /**
-                   * 0: From source to dest. 1: From dest to source
-                   * (with respect to src and dst stored in the flow).
-                   **/
+  /**
+* 0: From source to dest. 1: From dest to source
+* (with respect to src and dst stored in the flow).
+**/
   uint8_t direction;
   /**
 * Id corresponds to the id defined for IPv4 protocol

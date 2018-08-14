@@ -31,6 +31,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdexcept>
 
 #if DPI_NUMA_AWARE
 #include <numa.h>
@@ -49,7 +50,9 @@ static inline
                                         DPI_NUMA_AWARE_TASKS_NODE);
 #else
 #if DPI_MULTICORE_ALIGN_TASKS
-  posix_memalign((void**)&r, DPI_CACHE_LINE_SIZE, sizeof(mc_dpi_task_t));
+  if(posix_memalign((void**)&r, DPI_CACHE_LINE_SIZE, sizeof(mc_dpi_task_t))){
+    throw std::runtime_error("posix_memalign failed.");
+  }
 #else
   r = new mc_dpi_task_t;
 #endif
@@ -171,9 +174,11 @@ dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
       v6_table_size(v6_table_size),
       worker_id(worker_id),
       proc_id(proc_id) {
-  posix_memalign(
+  if(posix_memalign(
       (void**)&in, DPI_CACHE_LINE_SIZE,
-      sizeof(L3_L4_input_task_struct) * DPI_MULTICORE_DEFAULT_GRAIN_SIZE);
+      sizeof(L3_L4_input_task_struct) * DPI_MULTICORE_DEFAULT_GRAIN_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
   v4_worker_table_size = ceil((float)v4_table_size / (float)(num_L7_workers));
   v6_worker_table_size = ceil((float)v6_table_size / (float)(num_L7_workers));
 }
@@ -288,18 +293,24 @@ void* dpi_L3_L4_collector::svc(void* task) { return task; }
 dpi_L7_emitter::dpi_L7_emitter(dpi_L7_scheduler* lb, uint16_t num_L7_workers,
                                uint16_t proc_id)
     : proc_id(proc_id), lb(lb) {
-  posix_memalign((void**)&partially_filled_sizes, DPI_CACHE_LINE_SIZE,
-                 (sizeof(uint) * num_L7_workers) + DPI_CACHE_LINE_SIZE);
+  if(posix_memalign((void**)&partially_filled_sizes, DPI_CACHE_LINE_SIZE,
+                 (sizeof(uint) * num_L7_workers) + DPI_CACHE_LINE_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
   bzero(partially_filled_sizes, sizeof(uint) * num_L7_workers);
 
-  posix_memalign(
+  if(posix_memalign(
       (void**)&partially_filled, DPI_CACHE_LINE_SIZE,
-      (sizeof(mc_dpi_task_t) * num_L7_workers) + DPI_CACHE_LINE_SIZE);
+      (sizeof(mc_dpi_task_t) * num_L7_workers) + DPI_CACHE_LINE_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
   bzero(partially_filled, sizeof(mc_dpi_task_t) * num_L7_workers);
 
-  posix_memalign(
+  if(posix_memalign(
       (void**)&waiting_tasks, DPI_CACHE_LINE_SIZE,
-      (sizeof(mc_dpi_task_t*) * num_L7_workers * 2) + DPI_CACHE_LINE_SIZE);
+      (sizeof(mc_dpi_task_t*) * num_L7_workers * 2) + DPI_CACHE_LINE_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
 
   waiting_tasks_size = 0;
   for (uint i = 0; i < num_L7_workers; i++) {
@@ -377,10 +388,12 @@ void* dpi_L7_emitter::svc(void* task) {
 dpi_L7_worker::dpi_L7_worker(dpi_library_state_t* state, uint16_t worker_id,
                              uint16_t proc_id)
     : state(state), worker_id(worker_id), proc_id(proc_id) {
-  posix_memalign(
+  if(posix_memalign(
       (void**)&this->temp, DPI_CACHE_LINE_SIZE,
       (sizeof(L3_L4_output_task_struct) * DPI_MULTICORE_DEFAULT_GRAIN_SIZE) +
-          DPI_CACHE_LINE_SIZE);
+          DPI_CACHE_LINE_SIZE)){
+    throw std::runtime_error("posix_memalign failed.");
+  }
 }
 
 dpi_L7_worker::~dpi_L7_worker() { free(temp); }
