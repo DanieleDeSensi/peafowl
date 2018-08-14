@@ -12,6 +12,9 @@ install:
   - sudo apt-get install -qq cppcheck
   # Pcap
   - sudo apt-get install libpcap-dev
+  # Gcovr
+  - sudo apt-get install python-pip
+  - pip install gcovr
 
 script:
   # Runs compilation, tests and coverage collection
