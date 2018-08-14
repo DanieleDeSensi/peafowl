@@ -28,6 +28,7 @@
 #ifndef IPV6_REASSEMBLY_H_
 #define IPV6_REASSEMBLY_H_
 
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +43,7 @@ typedef struct dpi_ipv6_fragmentation_state
  * @return            A pointer to the IPv6 defragmentation handle.
  */
 dpi_ipv6_fragmentation_state_t*
-		dpi_reordering_enable_ipv6_fragmentation(u_int16_t table_size);
+		dpi_reordering_enable_ipv6_fragmentation(uint16_t table_size);
 
 /**
  * Sets the maximum amount of memory that can be used to store
@@ -54,7 +55,7 @@ dpi_ipv6_fragmentation_state_t*
  */
 void dpi_reordering_ipv6_fragmentation_set_per_host_memory_limit(
 		dpi_ipv6_fragmentation_state_t *frag_state,
-		u_int32_t per_host_memory_limit);
+		uint32_t per_host_memory_limit);
 
 /**
  * Sets the maximum (global) amount of memory that can be used for
@@ -64,7 +65,7 @@ void dpi_reordering_ipv6_fragmentation_set_per_host_memory_limit(
  */
 void dpi_reordering_ipv6_fragmentation_set_total_memory_limit(
 		dpi_ipv6_fragmentation_state_t *frag_state,
-		u_int32_t total_memory_limit);
+		uint32_t total_memory_limit);
 
 /**
  * Sets the maximum amount of time (seconds) which can elapse before the
@@ -74,7 +75,7 @@ void dpi_reordering_ipv6_fragmentation_set_total_memory_limit(
  */
 void dpi_reordering_ipv6_fragmentation_set_reassembly_timeout(
 		dpi_ipv6_fragmentation_state_t *frag_state,
-		u_int8_t timeout_seconds);
+		uint8_t timeout_seconds);
 
 /**
  * Disables the IPv6 fragmentation and deallocates the handle.
@@ -117,12 +118,12 @@ void dpi_reordering_disable_ipv6_fragmentation(
 unsigned char* dpi_reordering_manage_ipv6_fragment(
 		dpi_ipv6_fragmentation_state_t *state,
 		const unsigned char* unfragmentable_start,
-		u_int16_t unfragmentable_size,
+		uint16_t unfragmentable_size,
 		const unsigned char* fragmentable_start,
-		u_int16_t fragmentable_size,
-		u_int16_t offset, u_int8_t more_fragments,
-		u_int32_t identification, u_int8_t next_header,
-		u_int32_t current_time, int tid);
+		uint16_t fragmentable_size,
+		uint16_t offset, uint8_t more_fragments,
+		uint32_t identification, uint8_t next_header,
+		uint32_t current_time, int tid);
 
 #ifdef __cplusplus
 }

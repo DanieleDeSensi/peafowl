@@ -1,0 +1,1 @@
+set (CTEST_CUSTOM_POST_TEST "sleep 20; cat /home/daniele/Code/Peafowl_cmake/build/Testing/Temporary/LastTest.log")

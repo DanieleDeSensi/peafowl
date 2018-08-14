@@ -50,6 +50,22 @@
 #define DPI_USE_LIKELY 1
 #endif
 
+#if !defined(likely)
+ #if defined(__GNUC__) && (DPI_USE_LIKELY == 1)
+  #define likely(x)       __builtin_expect(!!(x),1)
+ #else
+  #define likely(x)       (x)
+ #endif
+#endif
+
+#if !defined(unlikely)
+ #if defined(__GNUC__) && (DPI_USE_LIKELY == 1)
+  #define unlikely(x)     __builtin_expect(!!(x),0)
+ #else
+  #define unlikely(x)     (x)
+ #endif
+#endif
+
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
    #define DPI_USE_INLINING 1
 #else
@@ -102,7 +118,7 @@ enum hashes{
 
 
 #ifndef DPI_THREAD_SAFETY_ENABLED
-	#define DPI_THREAD_SAFETY_ENABLED 1
+	#define DPI_THREAD_SAFETY_ENABLED 0
 #endif
 
 #define __STDC_FORMAT_MACROS //To enable inttypes.h macros also for g++

@@ -27,6 +27,9 @@
 #ifndef REORDERING_H_
 #define REORDERING_H_
 
+#include <stdint.h>
+
+
 /* To get the 'fragment offset' part. **/
 #define DPI_IPv4_FRAGMENTATION_OFFSET_MASK 0x1FFF
 /* Flag: "More Fragments" */
@@ -46,7 +49,7 @@ extern "C" {
  * @return            A pointer to the IPv4 defragmentation handle.
  */
 dpi_ipv4_fragmentation_state_t* dpi_reordering_enable_ipv4_fragmentation(
-		                        u_int16_t table_size);
+		                        uint16_t table_size);
 
 /**
  * Sets the maximum amount of memory that can be used to store
@@ -58,7 +61,7 @@ dpi_ipv4_fragmentation_state_t* dpi_reordering_enable_ipv4_fragmentation(
  */
 void dpi_reordering_ipv4_fragmentation_set_per_host_memory_limit(
 		dpi_ipv4_fragmentation_state_t *frag_state,
-		u_int32_t per_host_memory_limit);
+		uint32_t per_host_memory_limit);
 
 /**
  * Sets the maximum (global) amount of memory that can be used for
@@ -69,7 +72,7 @@ void dpi_reordering_ipv4_fragmentation_set_per_host_memory_limit(
  */
 void dpi_reordering_ipv4_fragmentation_set_total_memory_limit(
 		dpi_ipv4_fragmentation_state_t *frag_state,
-		u_int32_t total_memory_limit);
+		uint32_t total_memory_limit);
 
 /**
  * Sets the maximum amount of time (seconds) which can elapse before
@@ -79,7 +82,7 @@ void dpi_reordering_ipv4_fragmentation_set_total_memory_limit(
  */
 void dpi_reordering_ipv4_fragmentation_set_reassembly_timeout(
 		dpi_ipv4_fragmentation_state_t *frag_state,
-		u_int8_t timeout_seconds);
+		uint8_t timeout_seconds);
 
 /**
  * Disables the IPv4 fragmentation and deallocates the handle.
@@ -110,8 +113,8 @@ void dpi_reordering_disable_ipv4_fragmentation(
 unsigned char* dpi_reordering_manage_ipv4_fragment(
 		dpi_ipv4_fragmentation_state_t *state,
 		const unsigned char* data,
-		u_int32_t current_time, u_int16_t offset,
-		u_int8_t more_fragments, int tid);
+		uint32_t current_time, uint16_t offset,
+		uint8_t more_fragments, int tid);
 
 #ifdef __cplusplus
 }

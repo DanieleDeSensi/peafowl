@@ -6,20 +6,27 @@ sudo: required
 dist: trusty
       
 install:
+  # Cmake
+  - sudo apt-get install cmake
   # CppCheck
   - sudo apt-get install -qq cppcheck
   # Pcap
   - sudo apt-get install libpcap-dev
 
 script:
-  # Runs compilation, cppcheck, tests and coverage collection
-  - make develcheck
+  # Runs compilation, tests and coverage collection
+  - mkdir build
+  - cd build
+  - cmake ../ -DENABLE_CODECOV=ON -DENABLE_TESTS=ON
+  - make
+  - make test || (cat ./Testing/Temporary/LastTest.log)
+  - cd ..
 
 after_success:
     # Remove unnecessary coverage files
     #- rm src/nn.hpp.gcov
     # codecov.io
-    - bash <(curl -s https://codecov.io/bash) -X gcov -f 'test/gcov/*.gcov'
+    - bash <(curl -s https://codecov.io/bash) -f 'build/coverage.xml'
 
 notifications:
   email:

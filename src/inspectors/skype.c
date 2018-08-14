@@ -26,7 +26,9 @@
  * =========================================================================
  */
 
-#include "inspectors.h"
+#include <peafowl/api.h>
+#include <peafowl/inspectors/inspectors.h>
+
 #include <string.h>
 #include <stdio.h>
 
@@ -36,7 +38,7 @@
             do { if (DPI_DEBUG_SKYPE) fprintf(stdout, fmt, __VA_ARGS__); } while (0)
 
 
-u_int8_t check_skype(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+uint8_t check_skype(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* t){
     if(pkt->l4prot != IPPROTO_UDP){
         return DPI_PROTOCOL_NO_MATCHES;
     }

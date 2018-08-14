@@ -24,9 +24,10 @@
  *
  * =========================================================================
  */
+#include <peafowl/config.h>
+#include <peafowl/reassembly.h>
+#include <peafowl/utils.h>
 
-#include "reassembly.h"
-#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -80,7 +81,7 @@ void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
  * @param y Second sequence number.
  * @return 1 if x is before y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_before(u_int32_t x, u_int32_t y){
+uint8_t dpi_reassembly_before(uint32_t x, uint32_t y){
 	return x<y || (x-y)>DPI_TCP_MAX_IN_TRAVEL_DATA;
 }
 
@@ -91,7 +92,7 @@ u_int8_t dpi_reassembly_before(u_int32_t x, u_int32_t y){
  * @param y Second sequence number.
  * @return 1 if x is before or equal y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_before_or_equal(u_int32_t x, u_int32_t y){
+uint8_t dpi_reassembly_before_or_equal(uint32_t x, uint32_t y){
 	return x<=y || (x-y)>=DPI_TCP_MAX_IN_TRAVEL_DATA;
 }
 
@@ -101,7 +102,7 @@ u_int8_t dpi_reassembly_before_or_equal(u_int32_t x, u_int32_t y){
  * @param y Second sequence number.
  * @return 1 if x is after y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_after(u_int32_t x, u_int32_t y){
+uint8_t dpi_reassembly_after(uint32_t x, uint32_t y){
 	return x>y || (y-x)>DPI_TCP_MAX_IN_TRAVEL_DATA;
 }
 
@@ -111,7 +112,7 @@ u_int8_t dpi_reassembly_after(u_int32_t x, u_int32_t y){
  * @param y Second sequence number.
  * @return 1 if x is after or equal y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_after_or_equal(u_int32_t x, u_int32_t y){
+uint8_t dpi_reassembly_after_or_equal(uint32_t x, uint32_t y){
 	return x>=y || (y-x)>=DPI_TCP_MAX_IN_TRAVEL_DATA;
 }
 
@@ -121,7 +122,7 @@ u_int8_t dpi_reassembly_after_or_equal(u_int32_t x, u_int32_t y){
  * @param end The last byte of the segment.
  * @return The length of the TCP segment (or IP fragment).
  */
-u_int32_t dpi_reassembly_fragment_length(u_int32_t offset, u_int32_t end){
+uint32_t dpi_reassembly_fragment_length(uint32_t offset, uint32_t end){
 	if(end>=offset)
 		return end-offset;
 	else
@@ -140,7 +141,7 @@ static
  * @return The created fragment.
  */
 dpi_reassembly_fragment_t* dpi_reassembly_create_fragment(
-		u_int32_t offset, u_int32_t end, const unsigned char *ptr){
+		uint32_t offset, uint32_t end, const unsigned char *ptr){
 	dpi_reassembly_fragment_t* fragment;
 	fragment=(dpi_reassembly_fragment_t*)
 			   calloc(1, sizeof(dpi_reassembly_fragment_t));
@@ -154,7 +155,7 @@ dpi_reassembly_fragment_t* dpi_reassembly_create_fragment(
 	fragment->end=end;
 	fragment->tcp_fin=0;
 
-	u_int32_t length=dpi_reassembly_fragment_length(offset, end);
+	uint32_t length=dpi_reassembly_fragment_length(offset, end);
 	fragment->ptr=(unsigned char*) malloc(sizeof(unsigned char)*(length));
 
 	if(unlikely(fragment->ptr==NULL)){
@@ -181,10 +182,10 @@ dpi_reassembly_fragment_t* dpi_reassembly_create_fragment(
 dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
 		dpi_reassembly_fragment_t** head,
 		const unsigned char* data,
-		u_int32_t offset, u_int32_t end, u_int32_t* bytes_removed,
-		u_int32_t* bytes_inserted){
+		uint32_t offset, uint32_t end, uint32_t* bytes_removed,
+		uint32_t* bytes_inserted){
 	dpi_reassembly_fragment_t *prev, *next, *iterator, *tmp;
-	u_int32_t fragment_start=0;
+	uint32_t fragment_start=0;
 	*bytes_removed=0;
 	*bytes_inserted=0;
 
@@ -315,10 +316,10 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
  * @param head The pointer to the head of the list of fragments.
  * @return 0 if there are missing fragments, 1 otherwise.
  */
-u_int8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
+uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
 		    dpi_reassembly_fragment_t* head){
 	if(!head) return 0;
-	u_int16_t offset=0;
+	uint16_t offset=0;
 
 	/* Check all fragment offsets to see if they connect. */
 	while(head){
@@ -343,9 +344,9 @@ u_int8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
 int32_t dpi_reassembly_ip_compact_fragments(
 		dpi_reassembly_fragment_t* head,
 		unsigned char** where,
-		u_int32_t len){
+		uint32_t len){
 	/* Copy the data portions of all fragments into the new buffer. */
-	u_int32_t fragment_length,count=0;
+	uint32_t fragment_length,count=0;
 	while(head!=NULL){
 		fragment_length=head->end-head->offset;
 		if(unlikely(head->offset+fragment_length>len)){

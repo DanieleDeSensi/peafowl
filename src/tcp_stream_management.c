@@ -24,11 +24,11 @@
  *
  * =========================================================================
  */
+#include <peafowl/flow_table.h>
+#include <peafowl/tcp_stream_management.h>
+#include <peafowl/reassembly.h>
+#include <peafowl/utils.h>
 
-
-#include "tcp_stream_management.h"
-#include "reassembly.h"
-#include "utils.h"
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
@@ -75,10 +75,10 @@ void dpi_reordering_tcp_delete_all_fragments(
 #ifndef DPI_DEBUG
 static
 #endif
-u_int32_t dpi_reordering_tcp_length_contiguous_segments(
+uint32_t dpi_reordering_tcp_length_contiguous_segments(
 			dpi_reassembly_fragment_t* head){
-	u_int32_t r=0;
-	u_int32_t last_end=head->offset;
+	uint32_t r=0;
+	uint32_t last_end=head->offset;
 	while(head){
 		if(head->offset!=last_end){
 			return r;
@@ -104,8 +104,8 @@ static
 void dpi_reordering_tcp_group_contiguous_segments(
 			dpi_reassembly_fragment_t** head, unsigned char** where){
 	/* Copy the data portions of all segments into the new buffer. */
-	u_int32_t fragment_length;
-	u_int32_t offset=0, last_end=(*head)->offset;
+	uint32_t fragment_length;
+	uint32_t offset=0, last_end=(*head)->offset;
 	dpi_reassembly_fragment_t *fragment=*head;
 	dpi_reassembly_fragment_t *tmp;
 	while(fragment!=NULL && fragment->offset==last_end){
@@ -143,11 +143,11 @@ void dpi_reordering_tcp_group_contiguous_segments(
 #ifndef DPI_DEBUG
 static
 #endif
-u_int8_t dpi_reordering_tcp_is_new_segment(
-		u_int32_t seqnum, dpi_tracking_informations_t* tracking,
-		u_int8_t direction){
-	u_int32_t lowest=tracking->expected_seq_num[direction];
-	u_int32_t highest=lowest+DPI_TCP_MAX_IN_TRAVEL_DATA;
+uint8_t dpi_reordering_tcp_is_new_segment(
+		uint32_t seqnum, dpi_tracking_informations_t* tracking,
+		uint8_t direction){
+	uint32_t lowest=tracking->expected_seq_num[direction];
+	uint32_t highest=lowest+DPI_TCP_MAX_IN_TRAVEL_DATA;
 
 	debug_print("Window: [%"PRIu32", %"PRIu32"]\n", lowest, highest);
 	if(lowest<=highest){
@@ -162,8 +162,8 @@ static
 #endif
 void dpi_reordering_tcp_analyze_out_of_order(
 		dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking,
-		u_int32_t received_seq_num){
-	u_int32_t end=received_seq_num+pkt->data_length;
+		uint32_t received_seq_num){
+	uint32_t end=received_seq_num+pkt->data_length;
 	struct tcphdr* tcph=(struct tcphdr*) ((pkt->pkt)+(pkt->l4offset));
 
 	if(tcph->rst==1){
@@ -173,7 +173,7 @@ void dpi_reordering_tcp_analyze_out_of_order(
 	 * We pass a dummy variable because the memory bound on TCP
 	 * reordering is not implemented at the moment.
 	 **/
-	u_int32_t dummy;
+	uint32_t dummy;
 	dpi_reassembly_fragment_t* frag;
 
 	if(pkt->data_length==0){
@@ -237,10 +237,10 @@ dpi_tcp_reordering_reordered_segment_t
 	to_return.status=DPI_TCP_REORDERING_STATUS_IN_ORDER;
 
 	struct tcphdr* tcph=(struct tcphdr*) ((pkt->pkt)+(pkt->l4offset));
-	u_int32_t received_seq_num=ntohl(tcph->seq);
-	u_int32_t expected_seq_num=tracking->expected_seq_num[pkt->direction];
+	uint32_t received_seq_num=ntohl(tcph->seq);
+	uint32_t expected_seq_num=tracking->expected_seq_num[pkt->direction];
 	/** Automatically wrapped when exceed the 32bit limit. **/
-	u_int32_t end=received_seq_num+pkt->data_length;
+	uint32_t end=received_seq_num+pkt->data_length;
 
 	debug_print("Direction: %d\n",pkt->direction);
 	debug_print("Received Seq Num: %"PRIu32" Expected: %"PRIu32"\n",
@@ -285,13 +285,13 @@ dpi_tcp_reordering_reordered_segment_t
 		 **/
 		if(tracking->segments[pkt->direction] &&
 		   tracking->segments[pkt->direction]->offset<=end){
-			u_int32_t overlap=
+			uint32_t overlap=
 					end-tracking->segments[pkt->direction]->offset;
-			u_int32_t pkt_length=pkt->data_length-overlap;
+			uint32_t pkt_length=pkt->data_length-overlap;
 
 			debug_print("%s\n", "The segment fills an 'hole'");
 
-			u_int32_t new_length=
+			uint32_t new_length=
 					dpi_reordering_tcp_length_contiguous_segments(
 							tracking->segments[pkt->direction])+
 							pkt_length;
@@ -347,7 +347,7 @@ dpi_tcp_reordering_reordered_segment_t
  *                 informations about the TCP connection.
  * @return 1 if the connection is terminated, 0 otherwise.
  */
-u_int8_t dpi_reordering_tcp_track_connection_light(
+uint8_t dpi_reordering_tcp_track_connection_light(
 			dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking){
 	struct tcphdr* tcph=(struct tcphdr*) ((pkt->pkt)+(pkt->l4offset));
 	if(tcph->fin==1){
@@ -456,8 +456,8 @@ dpi_tcp_reordering_reordered_segment_t dpi_reordering_tcp_track_connection(
 		 */
 		to_return.status=DPI_TCP_REORDERING_STATUS_OUT_OF_ORDER;
 
-		u_int32_t seq=ntohl(tcph->seq);
-		u_int32_t ack=ntohl(tcph->ack_seq);
+		uint32_t seq=ntohl(tcph->seq);
+		uint32_t ack=ntohl(tcph->ack_seq);
 		debug_print("NOSYN branch. Direction: %d\n", pkt->direction);
 
 		if(!BIT_IS_SET(tracking->first_packet_arrived, pkt->direction)){

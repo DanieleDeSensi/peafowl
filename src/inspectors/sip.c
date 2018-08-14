@@ -28,7 +28,10 @@
  * =========================================================================
  */
 
-#include "inspectors.h"
+#include <peafowl/api.h>
+#include <peafowl/flow_table.h>
+#include <peafowl/inspectors/inspectors.h>
+
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -139,7 +142,7 @@
 #define REGISTRATION_5XX_TERMINATION 4
 #define REGISTRATION_6XX_TERMINATION 5
 
-u_int8_t dpi_sip_activate_callbacks(
+uint8_t dpi_sip_activate_callbacks(
                dpi_library_state_t* state,
                dpi_sip_callbacks_t* callbacks,
                void* user_data)
@@ -155,7 +158,7 @@ u_int8_t dpi_sip_activate_callbacks(
     }
 }
 
-u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state)
+uint8_t dpi_sip_disable_callbacks(dpi_library_state_t* state)
 {
     if(state){
         BITCLEAR(state->active_callbacks, DPI_PROTOCOL_SIP);
@@ -167,7 +170,7 @@ u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state)
     }
 }
 
-u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy){
+uint8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy){
     if(state){
         state->inspectors_accuracy[protocol] = accuracy;
         return DPI_STATE_UPDATE_SUCCESS;
@@ -176,7 +179,7 @@ u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id pr
     }
 }
 
-u_int8_t getUser(dpi_sip_str_t * user, dpi_sip_str_t * domain, const char *s, int len)
+uint8_t getUser(dpi_sip_str_t * user, dpi_sip_str_t * domain, const char *s, int len)
 {
 
     enum state
@@ -195,7 +198,7 @@ u_int8_t getUser(dpi_sip_str_t * user, dpi_sip_str_t * domain, const char *s, in
     enum state st;
     int first_offset = 0, host_offset = 0;
     unsigned int i;
-    u_int8_t foundUser = 0, foundHost = 0, foundAtValue = 0;
+    uint8_t foundUser = 0, foundHost = 0, foundAtValue = 0;
     st = URI_BEGIN;
     //host_end_offset = len;
 
@@ -307,7 +310,7 @@ u_int8_t getUser(dpi_sip_str_t * user, dpi_sip_str_t * domain, const char *s, in
 }
 
 
-u_int8_t set_hname(dpi_sip_str_t * hname, int len, const char *s)
+uint8_t set_hname(dpi_sip_str_t * hname, int len, const char *s)
 {
 
     const char *end;
@@ -330,7 +333,7 @@ u_int8_t set_hname(dpi_sip_str_t * hname, int len, const char *s)
     return 1;
 }
 
-u_int8_t getTag (dpi_sip_str_t * hname, const char* uri, int len)
+uint8_t getTag (dpi_sip_str_t * hname, const char* uri, int len)
 {
 
     enum state
@@ -853,7 +856,7 @@ dpi_sip_method_t getMethodType(const char *s, size_t len)
     }
 }
 
-u_int8_t splitCSeq(dpi_sip_internal_information_t* sipStruct, const char *s, size_t len)
+uint8_t splitCSeq(dpi_sip_internal_information_t* sipStruct, const char *s, size_t len)
 {
 
     char *pch;
@@ -875,7 +878,7 @@ u_int8_t splitCSeq(dpi_sip_internal_information_t* sipStruct, const char *s, siz
     return 0;
 }
 
-int light_parse_message (const unsigned char *app_data, u_int32_t data_length, dpi_sip_internal_information_t* psip){
+int light_parse_message (const unsigned char *app_data, uint32_t data_length, dpi_sip_internal_information_t* psip){
     unsigned int new_len = data_length;
     int header_offset = 0;
 
@@ -944,15 +947,15 @@ int light_parse_message (const unsigned char *app_data, u_int32_t data_length, d
     }
 }
 
-u_int8_t parse_message(const unsigned char* app_data, u_int32_t data_length,
+uint8_t parse_message(const unsigned char* app_data, uint32_t data_length,
                   dpi_sip_internal_information_t *sip_info, dpi_inspector_accuracy type)
 {
     int header_offset = 0;
     const char *pch, *ped;
-    //u_int8_t allowRequest = 0;
-    u_int8_t allowPai = 0;
-    u_int8_t parseVIA = 0;
-    u_int8_t parseContact = 0;
+    //uint8_t allowRequest = 0;
+    uint8_t allowPai = 0;
+    uint8_t parseVIA = 0;
+    uint8_t parseContact = 0;
 
     if (data_length <= 2){
         return DPI_PROTOCOL_NO_MATCHES;
@@ -1224,10 +1227,10 @@ u_int8_t parse_message(const unsigned char* app_data, u_int32_t data_length,
 }
 
 
-u_int8_t parse_packet(const unsigned char* app_data,
-                 u_int32_t data_length, dpi_sip_internal_information_t *sip_info,
+uint8_t parse_packet(const unsigned char* app_data,
+                 uint32_t data_length, dpi_sip_internal_information_t *sip_info,
                  dpi_inspector_accuracy type) {
-    u_int8_t r = 0;
+    uint8_t r = 0;
     if(type == DPI_INSPECTOR_ACCURACY_LOW){
         r = light_parse_message(app_data, data_length,  sip_info);
     }else{
@@ -1242,9 +1245,9 @@ u_int8_t parse_packet(const unsigned char* app_data,
     return r;
 }
 
-u_int8_t invoke_callbacks_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* tracking)
+uint8_t invoke_callbacks_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* tracking)
 {
-    u_int8_t ret = check_sip(state, pkt, app_data, data_length, tracking);
+    uint8_t ret = check_sip(state, pkt, app_data, data_length, tracking);
     if(ret == DPI_PROTOCOL_NO_MATCHES){
         return DPI_PROTOCOL_ERROR;
     }else{
@@ -1253,8 +1256,8 @@ u_int8_t invoke_callbacks_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, 
 }
 
 
-u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data,
-                   u_int32_t data_length, dpi_tracking_informations_t* t){
+uint8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data,
+                   uint32_t data_length, dpi_tracking_informations_t* t){
     if(!data_length){
         return DPI_PROTOCOL_MORE_DATA_NEEDED;
     }
@@ -1267,7 +1270,7 @@ u_int8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsig
     //TODO: TO be ported
     //msg->rcinfo.proto_type = PROTO_SIP;
 
-    u_int8_t r = parse_packet(app_data, data_length, &t->sip_informations, state->inspectors_accuracy[DPI_PROTOCOL_SIP]);
+    uint8_t r = parse_packet(app_data, data_length, &t->sip_informations, state->inspectors_accuracy[DPI_PROTOCOL_SIP]);
 
     // Callbacks
     if((dpi_sip_callbacks_t*)state->sip_callbacks && r == DPI_PROTOCOL_MATCHES){

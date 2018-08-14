@@ -1,9 +1,9 @@
 #ifdef WITH_PROMETHEUS
 
-#include "api.h"
+#include <peafowl/api.h>
+
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>
-
 #include <arpa/inet.h>
 #include <unordered_map>
 #include <map>
@@ -22,7 +22,7 @@ typedef struct dpi_prometheus_stats{
     unordered_map<string, Family<Summary>&> summaries;
 }dpi_prometheus_stats_t;
 
-u_int8_t dpi_prometheus_init(dpi_library_state_t* state, u_int16_t port){
+uint8_t dpi_prometheus_init(dpi_library_state_t* state, uint16_t port){
     dpi_prometheus_stats_t* stats = new dpi_prometheus_stats_t();
     Exposer* exposer = new Exposer{(string("127.0.0.1:") + to_string(port)).c_str()};
     stats->exposer = exposer;
@@ -113,7 +113,7 @@ void dpi_prometheus_counter_increment(void* counter, double value){
     static_cast<Counter*>(counter)->Increment(value);
 }
 
-u_int8_t dpi_prometheus_terminate(dpi_library_state_t* state){
+uint8_t dpi_prometheus_terminate(dpi_library_state_t* state){
     if(state->prometheus_stats){
         dpi_prometheus_stats* stats = static_cast<dpi_prometheus_stats*>(state->prometheus_stats);
         delete stats->exposer;

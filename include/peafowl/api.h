@@ -73,13 +73,11 @@
 extern "C" {
 #endif
 
+#include <peafowl/utils.h>
+#include <peafowl/inspectors/protocols_identifiers.h>
+#include <peafowl/inspectors/http_parser_joyent.h>
+
 #include <sys/types.h>
-#include "config.h"
-#include "utils.h"
-#include "reassembly.h"
-#include "inspectors/protocols_identifiers.h"
-#include "inspectors/http_parser_joyent.h"
-#include "external/utils/uthash.h"
 
 /** Errors **/
 #define	DPI_ERROR_WRONG_IPVERSION -1
@@ -89,30 +87,23 @@ extern "C" {
 #define DPI_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED -5
 #define DPI_ERROR_MAX_FLOWS -6
 
+typedef struct dpi_flow_infos dpi_flow_infos_t;
+typedef struct dpi_reassembly_fragment dpi_reassembly_fragment_t;
+typedef struct dpi_tracking_informations dpi_tracking_informations_t;
+
 /** Statuses */
-#define DPI_STATUS_OK 0
-#define DPI_STATUS_IP_FRAGMENT 1
-#define DPI_STATUS_IP_LAST_FRAGMENT 2
-#define DPI_STATUS_TCP_OUT_OF_ORDER 3
-#define DPI_STATUS_TCP_CONNECTION_TERMINATED 4 // Terminated means FIN received. This status is not set for connection closed by RST
+typedef enum dpi_status{
+    DPI_STATUS_OK = 0,
+    DPI_STATUS_IP_FRAGMENT,
+    DPI_STATUS_IP_LAST_FRAGMENT,
+    DPI_STATUS_TCP_OUT_OF_ORDER,
+    DPI_STATUS_TCP_CONNECTION_TERMINATED, // Terminated means FIN received. This status is not set for connection closed by RST
+}dpi_status_t;
 
 enum dpi_state_update_status{
-	DPI_STATE_UPDATE_SUCCESS
-   ,DPI_STATE_UPDATE_FAILURE
+	DPI_STATE_UPDATE_SUCCESS = 0
+   ,DPI_STATE_UPDATE_FAILURE = 1
 };
-
-
-enum dpi_http_message_type{
-	DPI_HTTP_REQUEST=HTTP_REQUEST,
-	DPI_HTTP_RESPONSE=HTTP_RESPONSE
-};
-
-enum dpi_http_methods{
-#define XX(num, name, string) DPI_HTTP_##name = num,
-  HTTP_METHOD_MAP(XX)
-#undef XX
- };
-
 
 typedef struct dpi_identification_result{
 	int8_t status;
@@ -121,54 +112,65 @@ typedef struct dpi_identification_result{
 }dpi_identification_result_t;
 
 typedef struct dpi_pkt_infos{
-	u_int16_t srcport; /** In network byte order. **/
-	u_int16_t dstport; /** In network byte order. **/
-	u_int8_t ip_version; /** 4 if IPv4, 6 in IPv6. **/
+	uint16_t srcport; /** In network byte order. **/
+	uint16_t dstport; /** In network byte order. **/
+	uint8_t ip_version; /** 4 if IPv4, 6 in IPv6. **/
 	/**
      * 0: From source to dest. 1: From dest to source
      * (with respect to src and dst stored in the flow).
      **/
-	u_int8_t direction;
+	uint8_t direction;
 	/**
      * Id corresponds to the id defined for IPv4 protocol
      * field (IPv6 next header field).
      **/
-	u_int8_t l4prot;
+	uint8_t l4prot;
 
 	const unsigned char* pkt;
-	u_int16_t l4offset;
-	u_int16_t l7offset;
+	uint16_t l4offset;
+	uint16_t l7offset;
 	/**
 	 * Length of the application data (from the end of L4 header to the
 	 * end).
      **/
-	u_int32_t data_length;
+	uint32_t data_length;
 	union src_addr{ /** Addresses mantained in network byte order. **/
 		struct in6_addr ipv6_srcaddr;
-		u_int32_t ipv4_srcaddr;
+		uint32_t ipv4_srcaddr;
 	}src_addr_t;
 	union dst_addr{
 		struct in6_addr ipv6_dstaddr;
-		u_int32_t ipv4_dstaddr;
+		uint32_t ipv4_dstaddr;
 	}dst_addr_t;
 	/** Time when the library started the processing (in seconds). **/
-	u_int32_t processing_time;
+	uint32_t processing_time;
 }dpi_pkt_infos_t;
 
+enum dpi_http_message_type{
+    DPI_HTTP_REQUEST = HTTP_REQUEST,
+    DPI_HTTP_RESPONSE = HTTP_RESPONSE
+};
+
+enum dpi_http_methods{
+#define XX(num, name, string) DPI_HTTP_##name = num,
+  HTTP_METHOD_MAP(XX)
+#undef XX
+ };
+
 typedef struct dpi_http_message_informations{
-	u_int8_t http_version_major;
-	u_int8_t http_version_minor;
+	uint8_t http_version_major;
+	uint8_t http_version_minor;
 	/**
 	 * HTTP method identifier if request_or_response==DPI_HTTP_REQUEST,
 	 * otherwise is the HTTP status code. The method identifiers are
 	 * named DPI_HTTP_METHOD_GET, DPI_HTTP_METHOD_POST, etc.
 	 */
-	u_int16_t method_or_code;
+	uint16_t method_or_code;
 	/**
 	 * DPI_HTTP_REQUEST if the header field belongs to an HTTP request,
 	 * DPI_HTTP_RESPONSE otherwise.
 	 **/
-	u_int8_t request_or_response;
+	uint8_t request_or_response;
 }dpi_http_message_informations_t;
 
 /**
@@ -202,7 +204,7 @@ typedef void(dpi_ssl_certificate_callback)(char *certificate, int size, void *us
  */
 typedef void(dpi_http_header_url_callback)(
 		         const unsigned char* url,
-		         u_int32_t url_length,
+		         uint32_t url_length,
 		         dpi_pkt_infos_t* pkt_informations,
 		         void** flow_specific_user_data,
 		         void* user_data);
@@ -235,7 +237,7 @@ typedef void(dpi_http_header_url_callback)(
 typedef void(dpi_http_header_field_callback)(
 		       dpi_http_message_informations_t* http_message_informations,
 		       const unsigned char* header_value,
-		       u_int32_t header_value_length,
+		       uint32_t header_value_length,
 		       dpi_pkt_infos_t* pkt_informations,
 		       void** flow_specific_user_data,
 		       void* user_data);
@@ -287,11 +289,11 @@ typedef void(dpi_http_header_completion_callback)(
 typedef void(dpi_http_body_callback)(
 		       dpi_http_message_informations_t* http_message_informations,
 		       const unsigned char* body_chunk,
-		       u_int32_t body_chunk_length,
+		       uint32_t body_chunk_length,
 		       dpi_pkt_infos_t* pkt_informations,
 		       void** flow_specific_user_data,
 		       void* user_data,
-		       u_int8_t last_chunk);
+		       uint8_t last_chunk);
 
 typedef struct dpi_http_callbacks{
 	/** Called on the HTTP request-URI. **/
@@ -301,7 +303,7 @@ typedef struct dpi_http_callbacks{
 	const char** header_names;
 
 	/** The number of headers types that the user wants to inspect. **/
-	u_int8_t num_header_types;
+	uint8_t num_header_types;
 
 	/**
 	 * The callbacks that will be invoked for the specified header fields.
@@ -399,14 +401,14 @@ typedef enum{
 
 typedef struct dpi_sip_internal_information{
     unsigned int responseCode;
-    u_int8_t isRequest;
-    u_int8_t validMessage;
+    uint8_t isRequest;
+    uint8_t validMessage;
     dpi_sip_method_t methodType;
     dpi_sip_str_t methodString;
     int method_len;
     dpi_sip_str_t callId;
     dpi_sip_str_t reason;
-    u_int8_t hasSdp;
+    uint8_t hasSdp;
     dpi_sip_codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
     dpi_sip_miprtcpstatic_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
     int cdm_count;
@@ -414,7 +416,7 @@ typedef struct dpi_sip_internal_information{
     unsigned int contentLength;
     unsigned int len;
     unsigned int cSeqNumber;
-    u_int8_t hasVqRtcpXR;
+    uint8_t hasVqRtcpXR;
     dpi_sip_str_t rtcpxr_callid;
     dpi_sip_str_t cSeqMethodString;
     dpi_sip_method_t cSeqMethod;
@@ -434,22 +436,22 @@ typedef struct dpi_sip_internal_information{
     dpi_sip_str_t requestURI;
 
     dpi_sip_str_t pidURI;
-    u_int8_t hasPid;
+    uint8_t hasPid;
 
     dpi_sip_str_t fromURI;
-    u_int8_t hasFrom;
+    uint8_t hasFrom;
 
     dpi_sip_str_t toURI;
-    u_int8_t hasTo;
+    uint8_t hasTo;
 
     dpi_sip_str_t ruriURI;
-    u_int8_t hasRuri;
+    uint8_t hasRuri;
 
     dpi_sip_str_t toTag;
-    u_int8_t hasToTag;
+    uint8_t hasToTag;
 
     dpi_sip_str_t fromTag;
-    u_int8_t hasFromTag;
+    uint8_t hasFromTag;
 }dpi_sip_internal_information_t;
 
 typedef void(sip_requestURI_callback)(const char* requestURI, size_t requestURI_len);
@@ -460,71 +462,6 @@ typedef struct dpi_sip_callbacks{
      **/
     sip_requestURI_callback *requestURI_cb; //Invoked by the framework when a requestURI is found
 }dpi_sip_callbacks_t;
-
-
-/** This must be initialized to zero before use. **/
-typedef struct dpi_tracking_informations{
-	/**
-	 *  This data is passed to the user when a callback is invoked. It can
-	 *  be used by the user to read/write flow specific informations or
-	 *  informations which must be passed from one callback to another
-	 *  (E.g. subprotocols informations). It is returned to the user when
-	 *  dpi_state*_identify_application_protocol() is invoked.
-	 **/
-	void* flow_specific_user_data;
-
-	/*********************************/
-	/** TCP Tracking informations.  **/
-	/*********************************/
-	/**
-	 * The expected sequence numbers in the two directions.
-	 * (Stored in host byte order).
-	 **/
-	u_int32_t expected_seq_num[2];
-	/** A pointer to out of order segments. **/
-	dpi_reassembly_fragment_t* segments[2];
-
-	/** Three-way handshake tracking informations. **/
-	u_int8_t seen_syn:1;
-	u_int8_t seen_syn_ack:1;
-	u_int8_t seen_ack:1;
-
-	/** Connection termination tracking informations. **/
-	u_int8_t seen_fin:2;
-	u_int8_t seen_rst:1;
-
-	u_int8_t first_packet_arrived:2;
-	u_int32_t highest_ack[2];
-
-	/************************************/
-	/* Protocol inspectors support data */
-	/************************************/
-
-	/*********************************/
-	/** HTTP Tracking informations. **/
-	/*********************************/
-	/** One HTTP parser per direction. **/
-	http_parser http[2];
-	dpi_http_internal_informations_t http_informations[2];
-
-	/*********************************/
-	/** SMTP Tracking informations. **/
-	/*********************************/
-	u_int8_t num_smtp_matched_messages:2;
-
-	/*********************************/
-	/** SIP Tracking informations.  **/
-	/*********************************/
-    dpi_sip_internal_information_t sip_informations;
-
-	/*********************************/
-	/** POP3 Tracking informations. **/
-	/*********************************/
-	u_int8_t num_pop3_matched_messages:2;
-
-	/*** SSL ***/
-	dpi_ssl_internal_information_t ssl_information[2];
-}dpi_tracking_informations_t;
 
 typedef struct library_state dpi_library_state_t;
 
@@ -542,30 +479,23 @@ typedef struct library_state dpi_library_state_t;
  *                       needs more data to decide.
  *                       DPI_ERROR if an error occurred.
  */
-typedef u_int8_t(*dpi_inspector_callback)(
+typedef uint8_t(*dpi_inspector_callback)(
 		         dpi_library_state_t* state,
 		         dpi_pkt_infos_t* pkt,
 		         const unsigned char* app_data,
-		         u_int32_t data_length,
+		         uint32_t data_length,
 		         dpi_tracking_informations_t* tracking);
 
 
-typedef struct dpi_l7_skipping_infos_key{
-    u_int16_t port;
-    u_int8_t l4prot;
-}dpi_l7_skipping_infos_key_t;
-
-typedef struct dpi_l7_skipping_infos{
-    dpi_l7_skipping_infos_key_t key;
-    dpi_l7_prot_id protocol;
-    UT_hash_handle hh; /* makes this structure hashable */
-}dpi_l7_skipping_infos_t;
+typedef struct dpi_l7_skipping_infos dpi_l7_skipping_infos_t;
 
 typedef enum{
     DPI_INSPECTOR_ACCURACY_LOW = 0,
     DPI_INSPECTOR_ACCURACY_MEDIUM,
     DPI_INSPECTOR_ACCURACY_HIGH,
 }dpi_inspector_accuracy;
+
+struct library_state;
 
 struct library_state{
 	/********************************************************************/
@@ -583,7 +513,7 @@ struct library_state{
 
     dpi_l7_prot_id active_protocols;
 
-	u_int16_t max_trials;
+	uint16_t max_trials;
 
 	dpi_flow_cleaner_callback* flow_cleaner_callback;
 	/** HTTP callbacks. **/
@@ -598,7 +528,7 @@ struct library_state{
     void *sip_callbacks;
     void *sip_callbacks_user_data;
 
-	u_int8_t tcp_reordering_enabled:1;
+	uint8_t tcp_reordering_enabled:1;
 
     /** L7 skipping information. **/
     dpi_l7_skipping_infos_t* l7_skip;
@@ -621,46 +551,6 @@ struct library_state{
 };
 
 /**
- * If stateless version is used, this structure the first time must be
- * initialized with 'dpi_init_flow_infos'.
- **/
-typedef struct dpi_flow_infos{
-	/** The possible number of l7 protocols that match with this flow. **/
-	u_int8_t possible_protocols;
-
-	/**
-	 * The protocol of this flow. It can be DPI_PROTOCOL_NOT_DETERMINED if
-	 * it is not been yet determined; DPI_PROTOCOL_UNKNOWN if it is unknown
-	 * or the matching protocol identifier.
-	 */
-	dpi_l7_prot_id l7prot;
-
-	/** Number of times that the library tried to guess the protocol. **/
-	u_int16_t trials;
-	/**
-	 * Contains the possible matching protocols for the flow (At the first
-	 * iteration the mask contains all the active protocols. During the
-	 * successive iterations we remove from the mask the protocols which
-	 * surely don't match).
-	 **/
-    char possible_matching_protocols[BITNSLOTS(DPI_NUM_PROTOCOLS)];
-
-	/**
-	 * In this way if a flow was created when TCP reordering was enabled,
-	 * we will continue doing TCP reordering for this flow also if it is
-	 * disabled. Basically the change in TCP reordering enabling/disabling
-	 * will be applied only to new flows.
-	 */
-	u_int8_t tcp_reordering_enabled:1;
-	dpi_tracking_informations_t tracking;
-#ifdef WITH_PROMETHEUS
-    void* prometheus_counter_packets;
-    void* prometheus_counter_bytes;
-#endif
-}dpi_flow_infos_t;
-
-
-/**
  * Initializes the state of the library. If not specified otherwise after
  * the initialization, the library will consider all the protocols active.
  * @param size_v4 Size of the array of pointers used to build the database
@@ -675,10 +565,10 @@ typedef struct dpi_flow_infos{
  *        will not be created.
  * @return A pointer to the state of the library otherwise.
  */
-dpi_library_state_t* dpi_init_stateful(u_int32_t size_v4,
-		                               u_int32_t size_v6,
-		                               u_int32_t max_active_v4_flows,
-		                               u_int32_t max_active_v6_flows);
+dpi_library_state_t* dpi_init_stateful(uint32_t size_v4,
+		                               uint32_t size_v6,
+		                               uint32_t max_active_v4_flows,
+		                               uint32_t max_active_v6_flows);
 
 /**
  * Initializes the state of the library. If not specified otherwise after
@@ -707,8 +597,8 @@ void dpi_terminate(dpi_library_state_t *state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-u_int8_t dpi_set_max_trials(dpi_library_state_t *state,
-                            u_int16_t max_trials);
+uint8_t dpi_set_max_trials(dpi_library_state_t *state,
+                            uint16_t max_trials);
 
 
 /**
@@ -720,8 +610,8 @@ u_int8_t dpi_set_max_trials(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_enable(dpi_library_state_t *state,
-                                       u_int16_t table_size);
+uint8_t dpi_ipv4_fragmentation_enable(dpi_library_state_t *state,
+                                       uint16_t table_size);
 
 /**
  * Enable IPv6 defragmentation.
@@ -732,8 +622,8 @@ u_int8_t dpi_ipv4_fragmentation_enable(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_enable(dpi_library_state_t *state,
-		                               u_int16_t table_size);
+uint8_t dpi_ipv6_fragmentation_enable(dpi_library_state_t *state,
+		                               uint16_t table_size);
 
 /**
  * Sets the amount of memory that a single host can use for IPv4
@@ -745,9 +635,9 @@ u_int8_t dpi_ipv6_fragmentation_enable(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_set_per_host_memory_limit(
+uint8_t dpi_ipv4_fragmentation_set_per_host_memory_limit(
 		        dpi_library_state_t *state,
-		        u_int32_t per_host_memory_limit);
+		        uint32_t per_host_memory_limit);
 
 /**
  * Sets the amount of memory that a single host can use for IPv6
@@ -759,9 +649,9 @@ u_int8_t dpi_ipv4_fragmentation_set_per_host_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_set_per_host_memory_limit(
+uint8_t dpi_ipv6_fragmentation_set_per_host_memory_limit(
 		         dpi_library_state_t *state,
-		         u_int32_t per_host_memory_limit);
+		         uint32_t per_host_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for IPv4
@@ -776,9 +666,9 @@ u_int8_t dpi_ipv6_fragmentation_set_per_host_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_set_total_memory_limit(
+uint8_t dpi_ipv4_fragmentation_set_total_memory_limit(
 		         dpi_library_state_t *state,
-		         u_int32_t total_memory_limit);
+		         uint32_t total_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for IPv6
@@ -791,9 +681,9 @@ u_int8_t dpi_ipv4_fragmentation_set_total_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_set_total_memory_limit(
+uint8_t dpi_ipv6_fragmentation_set_total_memory_limit(
 		         dpi_library_state_t *state,
-		         u_int32_t total_memory_limit);
+		         uint32_t total_memory_limit);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly an
@@ -805,9 +695,9 @@ u_int8_t dpi_ipv6_fragmentation_set_total_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_set_reassembly_timeout(
+uint8_t dpi_ipv4_fragmentation_set_reassembly_timeout(
 		         dpi_library_state_t *state,
-		         u_int8_t timeout_seconds);
+		         uint8_t timeout_seconds);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly an
@@ -819,9 +709,9 @@ u_int8_t dpi_ipv4_fragmentation_set_reassembly_timeout(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_set_reassembly_timeout(
+uint8_t dpi_ipv6_fragmentation_set_reassembly_timeout(
 		         dpi_library_state_t *state,
-		         u_int8_t timeout_seconds);
+		         uint8_t timeout_seconds);
 
 /**
  * Disable IPv4 defragmentation.
@@ -830,7 +720,7 @@ u_int8_t dpi_ipv6_fragmentation_set_reassembly_timeout(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_disable(dpi_library_state_t *state);
+uint8_t dpi_ipv4_fragmentation_disable(dpi_library_state_t *state);
 
 /**
  * Disable IPv6 defragmentation.
@@ -839,7 +729,7 @@ u_int8_t dpi_ipv4_fragmentation_disable(dpi_library_state_t *state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_disable(dpi_library_state_t *state);
+uint8_t dpi_ipv6_fragmentation_disable(dpi_library_state_t *state);
 
 /**
  * If enabled, the library will reorder out of order TCP packets
@@ -849,7 +739,7 @@ u_int8_t dpi_ipv6_fragmentation_disable(dpi_library_state_t *state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_tcp_reordering_enable(dpi_library_state_t* state);
+uint8_t dpi_tcp_reordering_enable(dpi_library_state_t* state);
 
 /**
  * If it is called, the library will not reorder out of order TCP packets.
@@ -863,7 +753,7 @@ u_int8_t dpi_tcp_reordering_enable(dpi_library_state_t* state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state);
+uint8_t dpi_tcp_reordering_disable(dpi_library_state_t* state);
 
 /**
  * ---- DEPRECATED, replaced by dpi_enable_protocol ----
@@ -874,7 +764,7 @@ u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_set_protocol(dpi_library_state_t *state,
+uint8_t dpi_set_protocol(dpi_library_state_t *state,
 		                  dpi_protocol_t protocol);
 
 /**
@@ -886,7 +776,7 @@ u_int8_t dpi_set_protocol(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_delete_protocol(dpi_library_state_t *state,
+uint8_t dpi_delete_protocol(dpi_library_state_t *state,
 		                     dpi_protocol_t protocol);
 
 /**
@@ -897,7 +787,7 @@ u_int8_t dpi_delete_protocol(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_enable_protocol(dpi_library_state_t *state,
+uint8_t dpi_enable_protocol(dpi_library_state_t *state,
                           dpi_l7_prot_id protocol);
 
 /**
@@ -908,7 +798,7 @@ u_int8_t dpi_enable_protocol(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_disable_protocol(dpi_library_state_t *state,
+uint8_t dpi_disable_protocol(dpi_library_state_t *state,
                              dpi_l7_prot_id protocol);
 
 /**
@@ -918,7 +808,7 @@ u_int8_t dpi_disable_protocol(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_inspect_all(dpi_library_state_t *state);
+uint8_t dpi_inspect_all(dpi_library_state_t *state);
 
 /**
  * Disable all the protocol inspector.
@@ -927,7 +817,7 @@ u_int8_t dpi_inspect_all(dpi_library_state_t *state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_inspect_nothing(dpi_library_state_t *state);
+uint8_t dpi_inspect_nothing(dpi_library_state_t *state);
 
 /**
  * Skips the L7 parsing for packets traveling on some ports for some L4 protocol.
@@ -939,9 +829,9 @@ u_int8_t dpi_inspect_nothing(dpi_library_state_t *state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state,
-                             u_int8_t l4prot,
-                             u_int16_t port,
+uint8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state,
+                             uint8_t l4prot,
+                             uint16_t port,
                              dpi_l7_prot_id id);
 
 /*
@@ -973,7 +863,7 @@ u_int8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state,
  */
 dpi_identification_result_t dpi_stateful_identify_application_protocol(
 		         dpi_library_state_t* state, const unsigned char* pkt,
-		         u_int32_t length, u_int32_t current_time);
+		         uint32_t length, uint32_t current_time);
 
 
 /*
@@ -1004,7 +894,7 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
  */
 dpi_identification_result_t dpi_get_protocol(
                  dpi_library_state_t* state, const unsigned char* pkt,
-                 u_int32_t length, u_int32_t current_time);
+                 uint32_t length, uint32_t current_time);
 
 
 /*
@@ -1046,9 +936,9 @@ dpi_identification_result_t dpi_get_protocol(
  */
 int8_t dpi_parse_L3_L4_headers(dpi_library_state_t *state,
 		                       const unsigned char* p_pkt,
-		                       u_int32_t p_length,
+		                       uint32_t p_length,
 		                       dpi_pkt_infos_t *pkt_infos,
-		                       u_int32_t current_time);
+		                       uint32_t current_time);
 
 /*
  * Try to detect the application protocol. Before calling it, a check on
@@ -1137,7 +1027,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 void dpi_init_flow_infos(
 		       dpi_library_state_t* state,
 		       dpi_flow_infos_t *flow_infos,
-		       u_int8_t l4prot);
+		       uint8_t l4prot);
 
 /**
  * Try to guess the protocol looking only at source/destination ports.
@@ -1203,7 +1093,7 @@ const char** const dpi_get_protocols_strings();
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_set_flow_cleaner_callback(
+uint8_t dpi_set_flow_cleaner_callback(
 		       dpi_library_state_t* state,
 		       dpi_flow_cleaner_callback* cleaner);
 
@@ -1234,7 +1124,7 @@ u_int8_t dpi_set_flow_cleaner_callback(
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  *
  **/
-u_int8_t dpi_http_activate_callbacks(
+uint8_t dpi_http_activate_callbacks(
 		       dpi_library_state_t* state,
 		       dpi_http_callbacks_t* callbacks,
 		       void* user_data);
@@ -1246,7 +1136,7 @@ u_int8_t dpi_http_activate_callbacks(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state);
+uint8_t dpi_http_disable_callbacks(dpi_library_state_t* state);
 
 
 /**
@@ -1279,7 +1169,7 @@ u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state);
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  *
  **/
-u_int8_t dpi_ssl_activate_callbacks(
+uint8_t dpi_ssl_activate_callbacks(
 		       dpi_library_state_t* state,
 		       dpi_ssl_callbacks_t* callbacks,
 		       void* user_data);
@@ -1290,7 +1180,7 @@ u_int8_t dpi_ssl_activate_callbacks(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
+uint8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
 
 
 /**
@@ -1323,7 +1213,7 @@ u_int8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  *
  **/
-u_int8_t dpi_sip_activate_callbacks(dpi_library_state_t* state, dpi_sip_callbacks_t* callbacks, void* user_data);
+uint8_t dpi_sip_activate_callbacks(dpi_library_state_t* state, dpi_sip_callbacks_t* callbacks, void* user_data);
 
 /**
  * Disable the SIP callbacks. user_data is not freed/modified.
@@ -1332,7 +1222,7 @@ u_int8_t dpi_sip_activate_callbacks(dpi_library_state_t* state, dpi_sip_callback
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
+uint8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
 
 /**
  * Some protocols inspector (e.g. SIP) can be applied with a different
@@ -1345,7 +1235,7 @@ u_int8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy);
+uint8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id protocol, dpi_inspector_accuracy accuracy);
 
 /**
  * Initializes the exporter to Prometheus DB.
@@ -1354,21 +1244,21 @@ u_int8_t dpi_set_protocol_accuracy(dpi_library_state_t* state, dpi_l7_prot_id pr
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_prometheus_init(dpi_library_state_t* state, u_int16_t port);
+uint8_t dpi_prometheus_init(dpi_library_state_t* state, uint16_t port);
 
 /****************************************/
 /** Only to be used directly by mcdpi. **/
 /****************************************/
 dpi_library_state_t* dpi_init_stateful_num_partitions(
-		       u_int32_t size_v4, u_int32_t size_v6,
-		       u_int32_t max_active_v4_flows,
-		       u_int32_t max_active_v6_flows,
-		       u_int16_t num_table_partitions);
+		       uint32_t size_v4, uint32_t size_v6,
+		       uint32_t max_active_v4_flows,
+		       uint32_t max_active_v6_flows,
+		       uint16_t num_table_partitions);
 int8_t mc_dpi_extract_packet_infos(
 		       dpi_library_state_t *state,
 		       const unsigned char* p_pkt,
-		       u_int32_t p_length, dpi_pkt_infos_t *pkt_infos,
-		       u_int32_t current_time, int tid);
+		       uint32_t p_length, dpi_pkt_infos_t *pkt_infos,
+		       uint32_t current_time, int tid);
 
 #ifdef __cplusplus
 }

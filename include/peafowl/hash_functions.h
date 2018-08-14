@@ -26,35 +26,37 @@
 
 #ifndef HASH_FUNCTIONS_H_
 #define HASH_FUNCTIONS_H_
+
+#include <peafowl/api.h>
+
 #include <sys/types.h>
-#include "api.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_FNV_HASH || DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-u_int32_t v4_fnv_hash_function(const dpi_pkt_infos_t* const in);
+uint32_t v4_fnv_hash_function(const dpi_pkt_infos_t* const in);
 
-u_int32_t v6_fnv_hash_function(const dpi_pkt_infos_t* const in);
+uint32_t v6_fnv_hash_function(const dpi_pkt_infos_t* const in);
 #endif
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH || DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-u_int32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, u_int32_t seed);
+uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed);
 
-u_int32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, u_int32_t seed);
+uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed);
 #endif
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_SIMPLE_HASH|| DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-u_int32_t v4_hash_function_simple(const dpi_pkt_infos_t* const in);
+uint32_t v4_hash_function_simple(const dpi_pkt_infos_t* const in);
 
-u_int32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in);
+uint32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in);
 #endif
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_BKDR_HASH || DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-u_int32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in);
+uint32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in);
 
-u_int32_t v6_hash_function_bkdr(const dpi_pkt_infos_t* const in);
+uint32_t v6_hash_function_bkdr(const dpi_pkt_infos_t* const in);
 #endif
 
 

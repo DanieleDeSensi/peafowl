@@ -22,8 +22,9 @@
  *
  * =========================================================================
  */
+#include <peafowl/api.h>
+#include <peafowl/inspectors/inspectors.h>
 
-#include "inspectors.h"
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	#define DPI_DHCP_MAGIC_COOKIE 0x63538263
 	#define DPI_DHCP_TYPE 0x0135
@@ -34,8 +35,8 @@
 # error	"Please fix <bits/endian.h>"
 #endif
 
-u_int8_t check_dhcp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
-		            const unsigned char* app_data, u_int32_t data_length,
+uint8_t check_dhcp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+		            const unsigned char* app_data, uint32_t data_length,
 		            dpi_tracking_informations_t* t){
     if(pkt->l4prot != IPPROTO_UDP){
         return DPI_PROTOCOL_NO_MATCHES;

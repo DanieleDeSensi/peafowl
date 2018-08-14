@@ -33,8 +33,9 @@
 #ifndef REASSEMBLY_H_
 #define REASSEMBLY_H_
 
+#include <peafowl/utils.h>
+
 #include <sys/types.h>
-#include "utils.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,21 +50,21 @@ struct dpi_reassembly_timer{
 	dpi_reassembly_timer_t *prev;
 	dpi_reassembly_timer_t *next;
 	void* data;
-	u_int32_t expiration_time;
+	uint32_t expiration_time;
 };
 
 /* Describe an IP fragment (or TCP segment). */
 struct dpi_reassembly_fragment{
 	/* Offset of fragment. */
-	u_int32_t offset;
+	uint32_t offset;
 	/* Last byte of data in fragment. */
-	u_int32_t end;
+	uint32_t end;
 	/**
 	 * This is needed because when a segment contains a FIN,
 	 * then the expected sequence number in the other direction
 	 * will be incremented by one.
 	 */
-	u_int8_t tcp_fin:1;
+	uint8_t tcp_fin:1;
 	/* Pointer into real fragment data. */
 	unsigned char* ptr;
 	/* Linked list pointers to the other fragments. */
@@ -79,7 +80,7 @@ struct dpi_reassembly_fragment{
  * @param y Second sequence number.
  * @return 1 if x is before y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_before(u_int32_t x, u_int32_t y);
+uint8_t dpi_reassembly_before(uint32_t x, uint32_t y);
 
 
 /**
@@ -88,7 +89,7 @@ u_int8_t dpi_reassembly_before(u_int32_t x, u_int32_t y);
  * @param y Second sequence number.
  * @return 1 if x is before or equal y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_before_or_equal(u_int32_t x, u_int32_t y);
+uint8_t dpi_reassembly_before_or_equal(uint32_t x, uint32_t y);
 
 /**
  * Returns 1 if the sequence number x is after y, 0 otherwise.
@@ -96,7 +97,7 @@ u_int8_t dpi_reassembly_before_or_equal(u_int32_t x, u_int32_t y);
  * @param y Second sequence number.
  * @return 1 if x is after y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_after(u_int32_t x, u_int32_t y);
+uint8_t dpi_reassembly_after(uint32_t x, uint32_t y);
 
 /**
  * Returns 1 if the sequence number x is after or equal y, 0 otherwise.
@@ -104,7 +105,7 @@ u_int8_t dpi_reassembly_after(u_int32_t x, u_int32_t y);
  * @param y Second sequence number.
  * @return 1 if x is after or equal y, 0 otherwise.
  */
-u_int8_t dpi_reassembly_after_or_equal(u_int32_t x, u_int32_t y);
+uint8_t dpi_reassembly_after_or_equal(uint32_t x, uint32_t y);
 
 /**
  * Returns the length of a TCP segment (or IP fragment).
@@ -112,7 +113,7 @@ u_int8_t dpi_reassembly_after_or_equal(u_int32_t x, u_int32_t y);
  * @param end The last byte of the segment.
  * @return The length of the TCP segment (or IP fragment).
  */
-u_int32_t dpi_reassembly_fragment_length(u_int32_t offset, u_int32_t end);
+uint32_t dpi_reassembly_fragment_length(uint32_t offset, uint32_t end);
 
 /**
  * Add a new timer to the list of IP reassembly timers.
@@ -152,15 +153,15 @@ void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
 dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
 		dpi_reassembly_fragment_t** head,
 		const unsigned char* data,
-		u_int32_t offset, u_int32_t end, u_int32_t* bytes_removed,
-		u_int32_t* bytes_inserted);
+		uint32_t offset, uint32_t end, uint32_t* bytes_removed,
+		uint32_t* bytes_inserted);
 
 /**
  * See there is a train of contiguous fragments.
  * @param head The pointer to the head of the list of fragments.
  * @return 0 if there are missing fragments, 1 otherwise.
  */
-u_int8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
+uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
 		dpi_reassembly_fragment_t* head);
 
 /**
@@ -174,7 +175,7 @@ u_int8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
 int32_t dpi_reassembly_ip_compact_fragments(
 		dpi_reassembly_fragment_t* head,
 		unsigned char** where,
-		u_int32_t len);
+		uint32_t len);
 
 #ifdef __cplusplus
 }

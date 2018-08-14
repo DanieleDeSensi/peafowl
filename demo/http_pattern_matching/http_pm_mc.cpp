@@ -45,7 +45,7 @@
 #include "pattern_matching_lib/trie.h"
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include <mc_api.h>
+#include <peafowl/mc_api.h>
 #include <ff/mapping_utils.hpp>
 #include <ff/ubuffer.hpp>
 #include <pcap.h>

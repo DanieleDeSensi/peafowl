@@ -28,8 +28,10 @@
 #ifndef PROTOCOLS_IDENTIFIERS_H_
 #define PROTOCOLS_IDENTIFIERS_H_
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netinet/ip.h>
 
 #define DPI_IP_VERSION_4 0x4
 #define DPI_IP_VERSION_6 0x6
@@ -79,9 +81,9 @@ enum protocols{
 
 /** Remember to set the callback in init() and to increase the number of supported protocols. **/
 
-typedef u_int8_t dpi_l7_prot_id;
+typedef uint8_t dpi_l7_prot_id;
 typedef struct dpi_protocol{
-	u_int8_t l4prot; /** Id corresponds to the id defined for IPv4 protocol field (IPv6 next header field). **/
+	uint8_t l4prot; /** Id corresponds to the id defined for IPv4 protocol field (IPv6 next header field). **/
 	dpi_l7_prot_id l7prot;
 }dpi_protocol_t;
 

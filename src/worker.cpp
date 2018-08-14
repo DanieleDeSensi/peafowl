@@ -24,12 +24,13 @@
  * ====================================================================
  */
 
-#include "worker.hpp"
-#include "flow_table.h"
+#include <peafowl/worker.hpp>
+#include <peafowl/flow_table.h>
+#include <ff/mapping_utils.hpp>
+
 #include <pthread.h>
 #include <stdlib.h>
 #include <math.h>
-#include <ff/mapping_utils.hpp>
 
 #if DPI_NUMA_AWARE
 #include <numa.h>
@@ -47,8 +48,7 @@ mc_dpi_task_t* dpi_allocate_task(){
 			           DPI_NUMA_AWARE_TASKS_NODE);
 #else
 	#if DPI_MULTICORE_ALIGN_TASKS
-		assert(posix_memalign((void**) &r, DPI_CACHE_LINE_SIZE,
-			   sizeof(mc_dpi_task_t))==0);
+		posix_memalign((void**) &r, DPI_CACHE_LINE_SIZE, sizeof(mc_dpi_task_t));
 	#else
 		r=new mc_dpi_task_t;
 	#endif
@@ -80,8 +80,8 @@ void dpi_free_task(mc_dpi_task_t* task){
 dpi_L3_L4_emitter::dpi_L3_L4_emitter(dpi_library_state_t* state,
                                     mc_dpi_packet_reading_callback** cb,
 		                             void** user_data,
-		                             u_int8_t* terminating,
-		                             u_int16_t proc_id,
+		                             uint8_t* terminating,
+		                             uint16_t proc_id,
 		                             ff::SWSR_Ptr_Buffer* tasks_pool)
                                    :state(state), cb(cb), user_data(user_data),
                                       terminating(terminating),
@@ -162,19 +162,18 @@ dpi_L3_L4_emitter::~dpi_L3_L4_emitter(){
 #endif
 
 dpi_L3_L4_worker::dpi_L3_L4_worker(dpi_library_state_t* state,
-									u_int16_t worker_id,
-			                        u_int16_t num_L7_workers,
-									u_int16_t proc_id,
-									u_int32_t v4_table_size,
-									u_int32_t v6_table_size):
+									uint16_t worker_id,
+			                        uint16_t num_L7_workers,
+									uint16_t proc_id,
+									uint32_t v4_table_size,
+									uint32_t v6_table_size):
 							    state(state),
 								v4_table_size(v4_table_size),
 								v6_table_size(v6_table_size),
 								worker_id(worker_id),
 								proc_id(proc_id){
-	assert(posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE,
-		   sizeof(L3_L4_input_task_struct)*
-		   DPI_MULTICORE_DEFAULT_GRAIN_SIZE)==0);
+	posix_memalign((void**) &in, DPI_CACHE_LINE_SIZE, sizeof(L3_L4_input_task_struct)*
+		           DPI_MULTICORE_DEFAULT_GRAIN_SIZE);
         v4_worker_table_size=ceil((float)v4_table_size/(float)(num_L7_workers));
         v6_worker_table_size=ceil((float)v6_table_size/(float)(num_L7_workers));
 }
@@ -275,7 +274,7 @@ void* dpi_L3_L4_worker::svc(void* task){
 }
 
 
-dpi_L3_L4_collector::dpi_L3_L4_collector(u_int16_t proc_id):
+dpi_L3_L4_collector::dpi_L3_L4_collector(uint16_t proc_id):
 		proc_id(proc_id){
 	;
 }
@@ -297,24 +296,24 @@ void* dpi_L3_L4_collector::svc(void* task){
 /*******************************************************************/
 
 dpi_L7_emitter::dpi_L7_emitter(dpi_L7_scheduler* lb,
-		                       u_int16_t num_L7_workers,
-		                       u_int16_t proc_id)
+		                       uint16_t num_L7_workers,
+		                       uint16_t proc_id)
                               :proc_id(proc_id), lb(lb){
-	assert(posix_memalign((void**) &partially_filled_sizes,
+	posix_memalign((void**) &partially_filled_sizes,
 		  DPI_CACHE_LINE_SIZE, (sizeof(uint)*num_L7_workers)+
-		  DPI_CACHE_LINE_SIZE)==0);
+		  DPI_CACHE_LINE_SIZE);
 	bzero(partially_filled_sizes, sizeof(uint)*num_L7_workers);
 
-	assert(posix_memalign((void**) &partially_filled,
+	posix_memalign((void**) &partially_filled,
 		  DPI_CACHE_LINE_SIZE,
 		  (sizeof(mc_dpi_task_t)*num_L7_workers)+
-		  DPI_CACHE_LINE_SIZE)==0);
+		  DPI_CACHE_LINE_SIZE);
 	bzero(partially_filled, sizeof(mc_dpi_task_t)*num_L7_workers);
 
-	assert(posix_memalign((void**) &waiting_tasks,
+	posix_memalign((void**) &waiting_tasks,
 		   DPI_CACHE_LINE_SIZE,
 		   (sizeof(mc_dpi_task_t*)*num_L7_workers*2)+
-		   DPI_CACHE_LINE_SIZE)==0);
+		   DPI_CACHE_LINE_SIZE);
 
 	waiting_tasks_size=0;
 	for(uint i=0; i<num_L7_workers; i++){
@@ -337,7 +336,7 @@ int dpi_L7_emitter::svc_init(){
 
 void* dpi_L7_emitter::svc(void* task){
 	mc_dpi_task_t* real_task=(mc_dpi_task_t*) task;
-	u_int16_t destination_worker;
+	uint16_t destination_worker;
 	mc_dpi_task_t* out;
 	uint pfs;
 
@@ -387,15 +386,15 @@ void* dpi_L7_emitter::svc(void* task){
 
 
 dpi_L7_worker::dpi_L7_worker(dpi_library_state_t* state,
-	                         u_int16_t worker_id,
-	                         u_int16_t proc_id):
+	                         uint16_t worker_id,
+	                         uint16_t proc_id):
 	                         state(state),
 	                         worker_id(worker_id),
 	                         proc_id(proc_id){
-	assert(posix_memalign((void**) &this->temp, DPI_CACHE_LINE_SIZE,
+	posix_memalign((void**) &this->temp, DPI_CACHE_LINE_SIZE,
 				          (sizeof(L3_L4_output_task_struct)*
 				        		  DPI_MULTICORE_DEFAULT_GRAIN_SIZE)+
-				        		  DPI_CACHE_LINE_SIZE)==0);
+				        		  DPI_CACHE_LINE_SIZE);
 }
 
 dpi_L7_worker::~dpi_L7_worker(){
@@ -498,7 +497,7 @@ void* dpi_L7_worker::svc(void* task){
 
 dpi_L7_collector::dpi_L7_collector(mc_dpi_processing_result_callback** cb,
 		                           void** user_data,
-		                           u_int16_t* proc_id,
+		                           uint16_t* proc_id,
 		                           ff::SWSR_Ptr_Buffer* tasks_pool, bool deprecated_callback)
                                    :cb(cb), user_data(user_data),
                                     proc_id(proc_id),
@@ -554,14 +553,14 @@ dpi_L7_collector::~dpi_L7_collector(){
 dpi_collapsed_emitter::dpi_collapsed_emitter(
 		mc_dpi_packet_reading_callback** cb,
 		void** user_data,
-		u_int8_t* terminating,
+		uint8_t* terminating,
 		ff::SWSR_Ptr_Buffer* tasks_pool,
 		dpi_library_state_t* state,
-		u_int16_t num_L7_workers,
-		u_int32_t v4_table_size,
-		u_int32_t v6_table_size,
+		uint16_t num_L7_workers,
+		uint32_t v4_table_size,
+		uint32_t v6_table_size,
 		dpi_L7_scheduler* lb,
-		u_int16_t proc_id):
+		uint16_t proc_id):
 				dpi_L7_emitter(lb, num_L7_workers, proc_id),
 				proc_id(proc_id){
         L3_L4_emitter=new dpi::dpi_L3_L4_emitter(state, cb, user_data,

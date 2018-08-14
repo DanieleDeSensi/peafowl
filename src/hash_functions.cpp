@@ -23,8 +23,7 @@
  *
  * =========================================================================
  */
-#include "hash_functions.h"
-
+#include <peafowl/hash_functions.h>
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_FNV_HASH || DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
 
@@ -44,9 +43,9 @@ inline
 #endif
 #endif
 /** FNV-1a 32-bit hash function. **/
-u_int32_t v4_fnv_hash_function(const dpi_pkt_infos_t* const in){
-	u_int32_t low_addr, high_addr;
-	u_int16_t low_port, high_port;
+uint32_t v4_fnv_hash_function(const dpi_pkt_infos_t* const in){
+	uint32_t low_addr, high_addr;
+	uint16_t low_port, high_port;
 
 	if(in->src_addr_t.ipv4_srcaddr<in->dst_addr_t.ipv4_dstaddr || (in->src_addr_t.ipv4_srcaddr==in->dst_addr_t.ipv4_dstaddr && in->srcport<=in->dstport)){
 		low_addr=in->src_addr_t.ipv4_srcaddr;
@@ -60,7 +59,7 @@ u_int32_t v4_fnv_hash_function(const dpi_pkt_infos_t* const in){
 		low_port=in->dstport;
 	}
 
-	u_int32_t hval=FNV1A_32_INIT;
+	uint32_t hval=FNV1A_32_INIT;
 
 	hval^=(low_addr & 0xFF);
 	DPI_HVAL_SECOND_STEP(hval)
@@ -104,11 +103,11 @@ inline
 #endif
 #endif
 /** FNV-1a 32-bit hash function. **/
-u_int32_t v6_fnv_hash_function(const dpi_pkt_infos_t* const in){
+uint32_t v6_fnv_hash_function(const dpi_pkt_infos_t* const in){
 	struct in6_addr low_addr, high_addr;
-	u_int16_t low_port, high_port;
+	uint16_t low_port, high_port;
 
-	u_int8_t i=0;
+	uint8_t i=0;
 	for(i=0; i<16; i++){
 		if(in->src_addr_t.ipv6_srcaddr.s6_addr[i]<in->src_addr_t.ipv6_srcaddr.s6_addr[i]){
 			low_addr=in->src_addr_t.ipv6_srcaddr;
@@ -140,7 +139,7 @@ u_int32_t v6_fnv_hash_function(const dpi_pkt_infos_t* const in){
 		}
 	}
 
-	u_int32_t hval=FNV1A_32_INIT;
+	uint32_t hval=FNV1A_32_INIT;
 	for(i=0; i<16; i++){
 		hval^=low_addr.s6_addr[i];
 		DPI_HVAL_SECOND_STEP(hval)
@@ -323,10 +322,10 @@ void MurmurHash3_x86_32 ( const void * key, int len,
   *(uint32_t*)out = h1;
 }
 
-u_int32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, u_int32_t seed){
+uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed){
 	char v4_key[13];
-	u_int32_t lower_addr=0, higher_addr=0;
-	u_int16_t lower_port=0, higher_port=0;
+	uint32_t lower_addr=0, higher_addr=0;
+	uint16_t lower_port=0, higher_port=0;
 
 	if(in->src_addr_t.ipv4_srcaddr<in->dst_addr_t.ipv4_dstaddr || (in->src_addr_t.ipv4_srcaddr==in->dst_addr_t.ipv4_dstaddr && in->srcport<=in->dstport)){
 		lower_addr=in->src_addr_t.ipv4_srcaddr;
@@ -358,18 +357,18 @@ u_int32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, u_int32_t seed){
 	v4_key[11]=((higher_port >> 8) & 0xFF);
 	v4_key[12]=(higher_port & 0xFF);
 
-	u_int32_t result;
+	uint32_t result;
 	MurmurHash3_x86_32(v4_key, 13, seed, &result);
 	return result;
 }
 
-u_int32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, u_int32_t seed){
+uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed){
 	char v6_key[37];
 
 	struct in6_addr low_addr, high_addr;
-	u_int16_t low_port, high_port;
+	uint16_t low_port, high_port;
 
-	u_int8_t i=0;
+	uint8_t i=0;
 	for(i=0; i<16; i++){
 		if(in->src_addr_t.ipv6_srcaddr.s6_addr[i]<in->src_addr_t.ipv6_srcaddr.s6_addr[i]){
 			low_addr=in->src_addr_t.ipv6_srcaddr;
@@ -417,22 +416,22 @@ u_int32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, u_int32_t seed){
 	v6_key[35]=((high_port >> 8) & 0xFF);
 	v6_key[36]=(high_port & 0xFF);
 
-	u_int32_t result;
+	uint32_t result;
 	MurmurHash3_x86_32(v6_key, 37, seed, &result);
 	return result;
 }
 #endif
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_SIMPLE_HASH || DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-u_int32_t v4_hash_function_simple(const dpi_pkt_infos_t* const in){
+uint32_t v4_hash_function_simple(const dpi_pkt_infos_t* const in){
 	return in->srcport+in->dstport+in->src_addr_t.ipv4_srcaddr+in->dst_addr_t.ipv4_dstaddr+in->l4prot;
 }
 
 
 
-u_int32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in){
-	u_int8_t i;
-	u_int32_t partsrc=0,partdst=0;
+uint32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in){
+	uint8_t i;
+	uint32_t partsrc=0,partdst=0;
 	for(i=0; i<16; i++){
 		partsrc+=in->src_addr_t.ipv6_srcaddr.s6_addr[i];
 		partdst+=in->dst_addr_t.ipv6_dstaddr.s6_addr[i];
@@ -444,12 +443,12 @@ u_int32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in){
 
 
 #if DPI_FLOW_TABLE_HASH_VERSION == DPI_BKDR_HASH || DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-u_int32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in){
-	u_int32_t seed = 131; // 31 131 1313 13131 131313 etc..
-	u_int32_t hash = 0;
+uint32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in){
+	uint32_t seed = 131; // 31 131 1313 13131 131313 etc..
+	uint32_t hash = 0;
 	char v4_key[13];
-	u_int32_t lower_addr=0, higher_addr=0;
-	u_int16_t lower_port=0, higher_port=0;
+	uint32_t lower_addr=0, higher_addr=0;
+	uint16_t lower_port=0, higher_port=0;
 
 	if(in->src_addr_t.ipv4_srcaddr<in->dst_addr_t.ipv4_dstaddr || (in->src_addr_t.ipv4_srcaddr==in->dst_addr_t.ipv4_dstaddr && in->srcport<=in->dstport)){
 		lower_addr=in->src_addr_t.ipv4_srcaddr;
@@ -488,15 +487,15 @@ u_int32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in){
 	return (hash & 0x7FFFFFFF);
 }
 
-u_int32_t v6_hash_function_bkdr(const dpi_pkt_infos_t* const in){
-	u_int32_t seed = 131; // 31 131 1313 13131 131313 etc..
-	u_int32_t hash = 0;
+uint32_t v6_hash_function_bkdr(const dpi_pkt_infos_t* const in){
+	uint32_t seed = 131; // 31 131 1313 13131 131313 etc..
+	uint32_t hash = 0;
 
 	char v6_key[37];
 	struct in6_addr low_addr, high_addr;
-	u_int16_t low_port, high_port;
+	uint16_t low_port, high_port;
 
-	u_int8_t i=0;
+	uint8_t i=0;
 	for(i=0; i<16; i++){
 		if(in->src_addr_t.ipv6_srcaddr.s6_addr[i]<in->src_addr_t.ipv6_srcaddr.s6_addr[i]){
 			low_addr=in->src_addr_t.ipv6_srcaddr;

@@ -25,19 +25,20 @@
  */
 
 
-#include "mc_api.h"
-#include "flow_table.h"
-#include "worker.hpp"
-#include <float.h>
-#include <iostream>
-#include <stddef.h>
-#include <vector>
-#include <cmath>
+#include <peafowl/mc_api.h>
+#include <peafowl/flow_table.h>
+#include <peafowl/worker.hpp>
 
 #include <ff/farm.hpp>
 #include <ff/mapping_utils.hpp>
 #include <ff/pipeline.hpp>
 #include <ff/buffer.hpp>
+
+#include <float.h>
+#include <iostream>
+#include <stddef.h>
+#include <vector>
+#include <cmath>
 
 #define DPI_DEBUG_MC_API 1
 #define debug_print(fmt, ...)          \
@@ -50,7 +51,7 @@ typedef struct mc_dpi_library_state{
 	dpi_library_state_t* sequential_state;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
 
-	u_int8_t parallel_module_type;
+	uint8_t parallel_module_type;
 	/******************************************************/
 	/*                     Callbacks                      */
 	/******************************************************/
@@ -59,10 +60,10 @@ typedef struct mc_dpi_library_state{
 	void* read_process_callbacks_user_data;
     bool deprecated_callback;
 
-	u_int8_t terminating;
-	u_int8_t is_running;
+	uint8_t terminating;
+	uint8_t is_running;
 
-	u_int16_t available_processors;
+	uint16_t available_processors;
 	unsigned int* mapping;
 	/******************************************************/
 	/*                 Nodes for single farm.             */
@@ -71,9 +72,9 @@ typedef struct mc_dpi_library_state{
 	std::vector<ff::ff_node*>* single_farm_workers;
 	dpi::dpi_collapsed_emitter* single_farm_emitter;
 	dpi::dpi_L7_collector* single_farm_collector;
-  	u_int16_t collector_proc_id;
+  	uint16_t collector_proc_id;
 
-	u_int16_t single_farm_active_workers;
+	uint16_t single_farm_active_workers;
 #ifdef ENABLE_RECONFIGURATION
         nornir::ManagerFarm<dpi::dpi_L7_scheduler>* mf;
 	nornir::Parameters* adp_params;
@@ -97,8 +98,8 @@ typedef struct mc_dpi_library_state{
 	std::vector<ff::ff_node*>* L7_workers;
 	dpi::dpi_L7_collector* L7_collector;
 	ff::ff_pipeline* pipeline;
-	u_int16_t double_farm_L3_L4_active_workers;
-	u_int16_t double_farm_L7_active_workers;
+	uint16_t double_farm_L3_L4_active_workers;
+	uint16_t double_farm_L7_active_workers;
 	/******************************************************/
 	/*                 Statistics.                        */
 	/******************************************************/
@@ -111,9 +112,9 @@ typedef struct mc_dpi_library_state{
 static inline
 #endif
 void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
-		                       u_int32_t size_v4,
-		                       u_int32_t size_v6){
-	u_int16_t last_mapped=0;
+		                       uint32_t size_v4,
+		                       uint32_t size_v6){
+	uint16_t last_mapped=0;
 	/******************************************/
 	/*         Create the first farm.         */
 	/******************************************/
@@ -174,7 +175,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		state->L3_L4_workers->push_back(w1);
 		last_mapped=(last_mapped+1)%state->available_processors;
 	}
-	assert(state->L3_L4_farm->add_workers(*(state->L3_L4_workers))==0);
+	state->L3_L4_farm->add_workers(*(state->L3_L4_workers));
 
 	tmp=malloc(sizeof(dpi::dpi_L3_L4_collector));
 	assert(tmp);
@@ -186,7 +187,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 	DPI_MULTICORE_L3_L4_ORDERED_FARM
 	state->L3_L4_farm->setCollectorF(state->L3_L4_collector);
 #else
-	assert(state->L3_L4_farm->add_collector(state->L3_L4_collector)>=0);
+	state->L3_L4_farm->add_collector(state->L3_L4_collector);
 #endif
 
 	/**************************************/
@@ -218,7 +219,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 		state->L7_workers->push_back(w2);
 		last_mapped=(last_mapped+1)%state->available_processors;
 	}
-	assert(state->L7_farm->add_workers(*(state->L7_workers))==0);
+	state->L7_farm->add_workers(*(state->L7_workers));
 
 	tmp=malloc(sizeof(dpi::dpi_L7_collector));
 	assert(tmp);
@@ -230,7 +231,7 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
             &(state->collector_proc_id), state->tasks_pool,
             state->deprecated_callback);
 	last_mapped=(last_mapped+1)%state->available_processors;
-	assert(state->L7_farm->add_collector(state->L7_collector)>=0);
+	state->L7_farm->add_collector(state->L7_collector);
 
 	/********************************/
 	/*     Create the pipeline.     */
@@ -252,8 +253,8 @@ void mc_dpi_create_double_farm(mc_dpi_library_state_t* state,
 static inline
 #endif
 void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
-		                       u_int32_t size_v4, u_int32_t size_v6){
-	u_int16_t last_mapped=0;
+		                       uint32_t size_v4, uint32_t size_v6){
+	uint16_t last_mapped=0;
 	state->single_farm=new ff::ff_farm<dpi::dpi_L7_scheduler>(
 			false,
 			DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
@@ -277,7 +278,7 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 
 	state->single_farm_workers=new std::vector<ff::ff_node*>;
 	dpi::dpi_L7_worker* w;
-	for(u_int16_t i=0; i<state->single_farm_active_workers; i++){
+	for(uint16_t i=0; i<state->single_farm_active_workers; i++){
 		w=new dpi::dpi_L7_worker(state->sequential_state, i,
 				                 state->mapping[last_mapped]);
 		assert(w);
@@ -285,8 +286,7 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
 		last_mapped=(last_mapped+1)%state->available_processors;
 	}
 
-	assert(state->single_farm->add_workers(
-				*(state->single_farm_workers))==0);
+	state->single_farm->add_workers(*(state->single_farm_workers));
 	state->collector_proc_id=state->mapping[last_mapped];
 	state->single_farm_collector=new dpi::dpi_L7_collector(
 			&(state->processing_callback),
@@ -295,8 +295,7 @@ void mc_dpi_create_single_farm(mc_dpi_library_state_t* state,
             state->deprecated_callback);
 	assert(state->single_farm_collector);
 	last_mapped=(last_mapped+1)%state->available_processors;
-	assert(state->single_farm->add_collector(
-			state->single_farm_collector)>=0);
+	state->single_farm->add_collector(state->single_farm_collector);
 	state->parallel_module_type=MC_DPI_PARALLELISM_FORM_ONE_FARM;
 }
 
@@ -348,16 +347,15 @@ static inline ssize_t get_num_cores() {
  * @return A pointer to the state of the library.
  */
 mc_dpi_library_state_t* mc_dpi_init_stateful(
-		u_int32_t size_v4, u_int32_t size_v6,
-		u_int32_t max_active_v4_flows,
-		u_int32_t max_active_v6_flows,
+		uint32_t size_v4, uint32_t size_v6,
+		uint32_t max_active_v4_flows,
+		uint32_t max_active_v6_flows,
 		mc_dpi_parallelism_details_t parallelism_details){
 	mc_dpi_library_state_t* state;
-	assert(posix_memalign((void**) &state, DPI_CACHE_LINE_SIZE,
-		   sizeof(mc_dpi_library_state_t)+DPI_CACHE_LINE_SIZE)==0);
+	posix_memalign((void**) &state, DPI_CACHE_LINE_SIZE, sizeof(mc_dpi_library_state_t)+DPI_CACHE_LINE_SIZE);
 	bzero(state, sizeof(mc_dpi_library_state_t));
 
-	u_int8_t parallelism_form=parallelism_details.parallelism_form;
+	uint8_t parallelism_form=parallelism_details.parallelism_form;
 
 	if(parallelism_details.available_processors){
 		state->available_processors = parallelism_details.available_processors;
@@ -386,7 +384,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	state->terminating=0;
     state->deprecated_callback=0;
 
-	u_int16_t hash_table_partitions;
+	uint16_t hash_table_partitions;
 
 	state->double_farm_L3_L4_active_workers = parallelism_details.double_farm_num_L3_workers;
 	state->double_farm_L7_active_workers = parallelism_details.double_farm_num_L7_workers;
@@ -416,8 +414,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
 	/******************************/
 #if DPI_MULTICORE_USE_TASKS_POOL
 	void* tmp;
-	assert(posix_memalign((void**) &tmp, DPI_CACHE_LINE_SIZE,
-		   sizeof(ff::SWSR_Ptr_Buffer)+DPI_CACHE_LINE_SIZE)==0);
+	posix_memalign((void**) &tmp, DPI_CACHE_LINE_SIZE, sizeof(ff::SWSR_Ptr_Buffer)+DPI_CACHE_LINE_SIZE);
 	state->tasks_pool=new (tmp) ff::SWSR_Ptr_Buffer(
 			DPI_MULTICORE_TASKS_POOL_SIZE);
 	state->tasks_pool->init();
@@ -573,7 +570,7 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
 	state->is_running=1;
     if(state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM){
         // Warm-up
-        assert(state->pipeline->run_then_freeze()>=0);
+        state->pipeline->run_then_freeze();
     }else{
         // Warm-up
 #ifdef ENABLE_RECONFIGURATION
@@ -584,7 +581,7 @@ void mc_dpi_run(mc_dpi_library_state_t* state){
             assert("Exception thrown by ManagerFarm" == NULL);
         }
 #else
-        assert(state->single_farm->run_then_freeze()>=0);
+        state->single_farm->run_then_freeze();
 #endif
     }
 	gettimeofday(&state->start_time,NULL);
@@ -632,12 +629,12 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state){
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
-		                       u_int16_t max_trials){
+uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
+		                       uint16_t max_trials){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_set_max_trials(state->sequential_state, max_trials);
 	return r;
 }
@@ -654,12 +651,12 @@ u_int8_t mc_dpi_set_max_trials(mc_dpi_library_state_t *state,
  *          updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
-		                                  u_int16_t table_size){
+uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
+		                                  uint16_t table_size){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv4_fragmentation_enable(state->sequential_state,
 		                        table_size);
 	return r;
@@ -675,12 +672,12 @@ u_int8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
-		                                  u_int16_t table_size){
+uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
+		                                  uint16_t table_size){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv6_fragmentation_enable(state->sequential_state,
 		                        table_size);
 	return r;
@@ -697,13 +694,13 @@ u_int8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
+uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
 		mc_dpi_library_state_t *state,
-		u_int32_t per_host_memory_limit){
+		uint32_t per_host_memory_limit){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv4_fragmentation_set_per_host_memory_limit(
 			state->sequential_state,
 			per_host_memory_limit);
@@ -721,13 +718,13 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
+uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
 		mc_dpi_library_state_t *state,
-		u_int32_t per_host_memory_limit){
+		uint32_t per_host_memory_limit){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv6_fragmentation_set_per_host_memory_limit(
 			state->sequential_state,
 			per_host_memory_limit);
@@ -748,13 +745,13 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
+uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
 		mc_dpi_library_state_t *state,
-		u_int32_t total_memory_limit){
+		uint32_t total_memory_limit){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv4_fragmentation_set_total_memory_limit(
 			state->sequential_state, total_memory_limit);
 	return r;
@@ -774,13 +771,13 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
+uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
 		mc_dpi_library_state_t *state,
-		u_int32_t total_memory_limit){
+		uint32_t total_memory_limit){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv6_fragmentation_set_total_memory_limit(
 			state->sequential_state, total_memory_limit);
 	return r;
@@ -798,13 +795,13 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
  *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
+uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
 		mc_dpi_library_state_t *state,
-		u_int8_t timeout_seconds){
+		uint8_t timeout_seconds){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv4_fragmentation_set_reassembly_timeout(
 			state->sequential_state, timeout_seconds);
 	return r;
@@ -823,13 +820,13 @@ u_int8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
+uint8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
 		mc_dpi_library_state_t *state,
-		u_int8_t timeout_seconds){
+		uint8_t timeout_seconds){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv6_fragmentation_set_reassembly_timeout(
 			state->sequential_state, timeout_seconds);
 	return r;
@@ -843,11 +840,11 @@ u_int8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
  *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
+uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv4_fragmentation_disable(state->sequential_state);
 	return r;
 }
@@ -860,11 +857,11 @@ u_int8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t *state){
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
+uint8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_ipv6_fragmentation_disable(state->sequential_state);
 	return r;
 }
@@ -880,11 +877,11 @@ u_int8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t *state){
  *         successfully updated. DPI_STATE_UPDATE_FAILURE if the state
  *         has not been changed because a problem happened.
  */
-u_int8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
+uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_tcp_reordering_enable(state->sequential_state);
 	return r;
 }
@@ -902,11 +899,11 @@ u_int8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state){
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
+uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_tcp_reordering_disable(state->sequential_state);
 	return r;
 }
@@ -921,12 +918,12 @@ u_int8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state){
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
+uint8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
 		                     dpi_protocol_t protocol){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_set_protocol(state->sequential_state, protocol);
 	return r;
 }
@@ -941,17 +938,17 @@ u_int8_t mc_dpi_set_protocol(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
+uint8_t mc_dpi_delete_protocol(mc_dpi_library_state_t *state,
 		                        dpi_protocol_t protocol){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_delete_protocol(state->sequential_state, protocol);
 	return r;
 }
 
-u_int8_t mc_dpi_enable_protocol(mc_dpi_library_state_t *state,
+uint8_t mc_dpi_enable_protocol(mc_dpi_library_state_t *state,
                              dpi_l7_prot_id protocol){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
@@ -959,7 +956,7 @@ u_int8_t mc_dpi_enable_protocol(mc_dpi_library_state_t *state,
     return dpi_enable_protocol(state->sequential_state, protocol);
 }
 
-u_int8_t mc_dpi_disable_protocol(mc_dpi_library_state_t *state,
+uint8_t mc_dpi_disable_protocol(mc_dpi_library_state_t *state,
                                 dpi_l7_prot_id protocol){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
@@ -975,11 +972,11 @@ u_int8_t mc_dpi_disable_protocol(mc_dpi_library_state_t *state,
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
+uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_inspect_all(state->sequential_state);
 	return r;
 }
@@ -992,11 +989,11 @@ u_int8_t mc_dpi_inspect_all(mc_dpi_library_state_t *state){
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
+uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t *state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_inspect_nothing(state->sequential_state);
 	return r;
 }
@@ -1029,13 +1026,13 @@ dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string){
  *         the state has not been changed because a problem
  *         happened.
  */
-u_int8_t mc_dpi_set_flow_cleaner_callback(
+uint8_t mc_dpi_set_flow_cleaner_callback(
 		mc_dpi_library_state_t* state,
 		dpi_flow_cleaner_callback* cleaner){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_set_flow_cleaner_callback(state->sequential_state, cleaner);
 	return r;
 }
@@ -1068,14 +1065,14 @@ u_int8_t mc_dpi_set_flow_cleaner_callback(
  *         been changed because a problem happened.
  *
  **/
-u_int8_t mc_dpi_http_activate_callbacks(
+uint8_t mc_dpi_http_activate_callbacks(
 		mc_dpi_library_state_t* state,
 		dpi_http_callbacks_t* callbacks,
 		void* user_data){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_http_activate_callbacks(state->sequential_state,
 		                      callbacks,
 		                      user_data);
@@ -1091,11 +1088,11 @@ u_int8_t mc_dpi_http_activate_callbacks(
  *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-u_int8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state){
+uint8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state){
     if(state->is_running){
         return DPI_STATE_UPDATE_FAILURE;
     }
-	u_int8_t r;
+	uint8_t r;
 	r=dpi_http_disable_callbacks(state->sequential_state);
 	return r;
 }

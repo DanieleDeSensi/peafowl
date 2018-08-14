@@ -27,7 +27,7 @@
 
 #ifndef UTILS_H_
 #define UTILS_H_
-#include "config.h"
+
 #include <limits.h>
 #include <strings.h>
 #include <netinet/in.h>
@@ -36,31 +36,10 @@
 #define DPI_MAX_INT_32 4294967295
 #define DPI_TCP_MAX_IN_TRAVEL_DATA 2147483648 /** 2^31 **/
 
-
-
-#if !defined(likely)
- #if defined(__GNUC__) && (DPI_USE_LIKELY == 1)
-  #define likely(x)       __builtin_expect(!!(x),1)
- #else
-  #define likely(x)       (x)
- #endif
-#endif
-
-#if !defined(unlikely)
- #if defined(__GNUC__) && (DPI_USE_LIKELY == 1)
-  #define unlikely(x)     __builtin_expect(!!(x),0)
- #else
-  #define unlikely(x)     (x)
- #endif
-#endif
-
-
-
 #define SET_BIT(val, bitIndex) val |= (1 << bitIndex)
 #define CLEAR_BIT(val, bitIndex) val &= ~(1 << bitIndex)
 #define TOGGLE_BIT(val, bitIndex) val ^= (1 << bitIndex)
 #define BIT_IS_SET(val, bitIndex) (val & (1 << bitIndex))
-
 
 #define BITMASK(b) (1 << ((b) % CHAR_BIT))
 #define BITSLOT(b) ((b) / CHAR_BIT) /** Gets the byte in which the b-th bit is located. **/
@@ -69,15 +48,15 @@
 #define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b)) /** Tests if in the mask a the b-th bit is set. **/
 #define BITNSLOTS(nb) ((nb + CHAR_BIT - 1) / CHAR_BIT) /** Returns the number of chars that need to be used for an array of nb bits. **/
 
-#define get_u8(X,O)  (*(u_int8_t *)(((u_int8_t *)X) + O))
-#define get_u16(X,O)  (*(u_int16_t *)(((u_int8_t *)X) + O))
-#define get_u32(X,O)  (*(u_int32_t *)(((u_int8_t *)X) + O))
-#define get_u64(X,O)  (*(u_int64_t *)(((u_int8_t *)X) + O))
+#define get_u8(X,O)  (*(uint8_t *)(((uint8_t *)X) + O))
+#define get_u16(X,O)  (*(uint16_t *)(((uint8_t *)X) + O))
+#define get_u32(X,O)  (*(uint32_t *)(((uint8_t *)X) + O))
+#define get_u64(X,O)  (*(uint64_t *)(((uint8_t *)X) + O))
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-u_int8_t dpi_v6_addresses_equal(struct in6_addr x, struct in6_addr y);
+uint8_t dpi_v6_addresses_equal(struct in6_addr x, struct in6_addr y);
 #ifdef __cplusplus
 }
 #endif

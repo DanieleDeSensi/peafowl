@@ -28,8 +28,9 @@
 #ifndef TCP_STREAM_MANAGEMENT_H_
 #define TCP_STREAM_MANAGEMENT_H_
 
+#include <peafowl/api.h>
+
 #include <sys/types.h>
-#include "api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,9 +55,9 @@ enum dpi_tcp_reordering_statuses{
 
 typedef struct dpi_tcp_reordering_reordered_segment{
 	unsigned char* data;
-	u_int32_t data_length;
-	u_int8_t status:2;
-	u_int8_t connection_terminated:1;
+	uint32_t data_length;
+	uint8_t status:2;
+	uint8_t connection_terminated:1;
 }dpi_tcp_reordering_reordered_segment_t;
 
 
@@ -103,7 +104,7 @@ dpi_tcp_reordering_reordered_segment_t dpi_reordering_tcp_track_connection
  *                 about the TCP connection.
  * @return 1 if the connection is terminated, 0 otherwise.
  */
-u_int8_t dpi_reordering_tcp_track_connection_light
+uint8_t dpi_reordering_tcp_track_connection_light
 	(dpi_pkt_infos_t* pkt, dpi_tracking_informations_t* tracking);
 
 #ifdef __cplusplus

@@ -23,9 +23,10 @@
  * =========================================================================
  */
 
-#include "inspectors.h"
-#include "http_parser_joyent.h"
-#include "../api.h"
+#include <peafowl/api.h>
+#include <peafowl/flow_table.h>
+#include <peafowl/inspectors/inspectors.h>
+#include <peafowl/inspectors/http_parser_joyent.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -56,7 +57,7 @@
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE otherwise.
  *
  **/
-u_int8_t dpi_http_activate_callbacks(dpi_library_state_t* state, dpi_http_callbacks_t* callbacks, void* user_data){
+uint8_t dpi_http_activate_callbacks(dpi_library_state_t* state, dpi_http_callbacks_t* callbacks, void* user_data){
 	if(state && callbacks->num_header_types<=128){
         BITSET(state->protocols_to_inspect, DPI_PROTOCOL_HTTP);
         BITSET(state->active_callbacks, DPI_PROTOCOL_HTTP);
@@ -74,7 +75,7 @@ u_int8_t dpi_http_activate_callbacks(dpi_library_state_t* state, dpi_http_callba
  *
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state){
+uint8_t dpi_http_disable_callbacks(dpi_library_state_t* state){
 	if(state){
         BITCLEAR(state->active_callbacks, DPI_PROTOCOL_HTTP);
 		state->http_callbacks=NULL;
@@ -92,7 +93,7 @@ u_int8_t dpi_http_disable_callbacks(dpi_library_state_t* state){
 #ifndef DPI_DEBUG
 static
 #endif
-u_int8_t dpi_http_manage_pdu_reassembly(http_parser* parser, const char *at, size_t length, char** temp_buffer, size_t* size){
+uint8_t dpi_http_manage_pdu_reassembly(http_parser* parser, const char *at, size_t length, char** temp_buffer, size_t* size){
 	/**
 	 * If I have old data present, I have anyway to concatenate the new data.
 	 * Then, if copy==0, I can free the data after the use, otherwise I simply
@@ -134,7 +135,7 @@ int on_url(http_parser* parser, const char *at, size_t length){
 
 	const char *real_data=at;
 	size_t real_length=length;
-	u_int8_t segmentation_result=dpi_http_manage_pdu_reassembly(parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
+	uint8_t segmentation_result=dpi_http_manage_pdu_reassembly(parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
 	if(segmentation_result==0){
 		return 0;
 	}else if(segmentation_result==2){
@@ -164,7 +165,7 @@ int on_field(http_parser* parser, const char *at, size_t length){
 
 	const char *real_data=at;
 	size_t real_length=length;
-	u_int8_t segmentation_result=dpi_http_manage_pdu_reassembly(parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
+	uint8_t segmentation_result=dpi_http_manage_pdu_reassembly(parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
 	if(segmentation_result==0){
 		return 0;
 	}else if(segmentation_result==2){
@@ -199,7 +200,7 @@ int on_value(http_parser* parser, const char *at, size_t length){
 
 		const char *real_data=at;
 		size_t real_length=length;
-		u_int8_t segmentation_result=dpi_http_manage_pdu_reassembly(parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
+		uint8_t segmentation_result=dpi_http_manage_pdu_reassembly(parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
 		if(segmentation_result==0){
 			return 0;
 		}else if(segmentation_result==2){
@@ -269,9 +270,9 @@ int on_body(http_parser* parser, const char *at, size_t length){
 }
 
 
-u_int8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* tracking){
+uint8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* tracking){
 	debug_print("%s\n", "[http.c] HTTP callback manager invoked.");
-	u_int8_t ret=check_http(state, pkt, app_data, data_length, tracking);
+	uint8_t ret=check_http(state, pkt, app_data, data_length, tracking);
 	if(ret==DPI_PROTOCOL_NO_MATCHES){
 		debug_print("%s\n", "[http.c] An error occurred in the HTTP protocol manager.");
 		return DPI_PROTOCOL_ERROR;
@@ -286,7 +287,7 @@ u_int8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
  * I decided to avoid the concept of subprotocol. This indeed can easily be derived from host address so the user can include this identification
  * in its callback.
  */
-u_int8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* tracking){
+uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* tracking){
     if(pkt->l4prot != IPPROTO_TCP){
         return DPI_PROTOCOL_NO_MATCHES;
     }

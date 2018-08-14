@@ -24,14 +24,16 @@
  * =========================================================================
  */
 
-#include "api.h"
-#include "flow_table.h"
-#include "hash_functions.h"
-#include "utils.h"
-#include "./inspectors/inspectors.h"
-#include "tcp_stream_management.h"
-#include "ipv4_reassembly.h"
-#include "ipv6_reassembly.h"
+#include <peafowl/api.h>
+#include <peafowl/config.h>
+#include <peafowl/flow_table.h>
+#include <peafowl/hash_functions.h>
+#include <peafowl/utils.h>
+#include <peafowl/tcp_stream_management.h>
+#include <peafowl/ipv4_reassembly.h>
+#include <peafowl/ipv6_reassembly.h>
+#include <peafowl/inspectors/inspectors.h>
+
 #include <time.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -43,6 +45,8 @@
 #include <netinet/tcp.h>
 #include <assert.h>
 #include <arpa/inet.h>
+
+#include "external/utils/uthash.h"
 
 #ifdef WITH_PROMETHEUS
 #include "prometheus.h"
@@ -133,6 +137,16 @@ static const char * protocols_strings[] = {
     "SSL"
 };
 
+typedef struct dpi_l7_skipping_infos_key{
+    u_int16_t port;
+    u_int8_t l4prot;
+}dpi_l7_skipping_infos_key_t;
+
+typedef struct dpi_l7_skipping_infos{
+    dpi_l7_skipping_infos_key_t key;
+    dpi_l7_prot_id protocol;
+    UT_hash_handle hh; /* makes this structure hashable */
+}dpi_l7_skipping_infos_t;
 
 /**
  * Initializes the state of the library. If not specified otherwise after
@@ -155,10 +169,10 @@ static const char * protocols_strings[] = {
  * @return A pointer to the state of the library otherwise.
  */
 dpi_library_state_t* dpi_init_stateful_num_partitions(
-		       u_int32_t size_v4, u_int32_t size_v6,
-		       u_int32_t max_active_v4_flows,
-		       u_int32_t max_active_v6_flows,
-		       u_int16_t num_table_partitions){
+		       uint32_t size_v4, uint32_t size_v6,
+		       uint32_t max_active_v4_flows,
+		       uint32_t max_active_v6_flows,
+		       uint16_t num_table_partitions){
 
 	dpi_library_state_t* state =
 			 (dpi_library_state_t*) malloc(sizeof(dpi_library_state_t));
@@ -246,9 +260,9 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 }
 
 dpi_library_state_t* dpi_init_stateful(
-		       u_int32_t size_v4, u_int32_t size_v6,
-		       u_int32_t max_active_v4_flows,
-		       u_int32_t max_active_v6_flows){
+		       uint32_t size_v4, uint32_t size_v6,
+		       uint32_t max_active_v4_flows,
+		       uint32_t max_active_v6_flows){
 
 	return dpi_init_stateful_num_partitions(size_v4, size_v6,
 	                                        max_active_v4_flows,
@@ -279,7 +293,7 @@ dpi_library_state_t* dpi_init_stateless(void){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-u_int8_t dpi_set_max_trials(dpi_library_state_t *state, u_int16_t max_trials){
+uint8_t dpi_set_max_trials(dpi_library_state_t *state, uint16_t max_trials){
 	state->max_trials=max_trials;
 	return DPI_STATE_UPDATE_SUCCESS;
 }
@@ -294,8 +308,8 @@ u_int8_t dpi_set_max_trials(dpi_library_state_t *state, u_int16_t max_trials){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_enable(dpi_library_state_t *state,
-		                               u_int16_t table_size){
+uint8_t dpi_ipv4_fragmentation_enable(dpi_library_state_t *state,
+		                               uint16_t table_size){
 	if(likely(state)){
 		state->ipv4_frag_state=dpi_reordering_enable_ipv4_fragmentation(table_size);
 		if(state->ipv4_frag_state)
@@ -315,8 +329,8 @@ u_int8_t dpi_ipv4_fragmentation_enable(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_enable(dpi_library_state_t *state,
-                                       u_int16_t table_size){
+uint8_t dpi_ipv6_fragmentation_enable(dpi_library_state_t *state,
+                                       uint16_t table_size){
 	if(likely(state)){
 		state->ipv6_frag_state=dpi_reordering_enable_ipv6_fragmentation(
 				                 table_size);
@@ -339,9 +353,9 @@ u_int8_t dpi_ipv6_fragmentation_enable(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_set_per_host_memory_limit(
+uint8_t dpi_ipv4_fragmentation_set_per_host_memory_limit(
 		        dpi_library_state_t *state,
-		        u_int32_t per_host_memory_limit){
+		        uint32_t per_host_memory_limit){
 	if(likely(state && state->ipv4_frag_state)){
 		dpi_reordering_ipv4_fragmentation_set_per_host_memory_limit(
 				          state->ipv4_frag_state, per_host_memory_limit);
@@ -361,9 +375,9 @@ u_int8_t dpi_ipv4_fragmentation_set_per_host_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_set_per_host_memory_limit(
+uint8_t dpi_ipv6_fragmentation_set_per_host_memory_limit(
 		         dpi_library_state_t *state,
-		         u_int32_t per_host_memory_limit){
+		         uint32_t per_host_memory_limit){
 	if(likely(state && state->ipv6_frag_state)){
 		dpi_reordering_ipv6_fragmentation_set_per_host_memory_limit(
 				      state->ipv6_frag_state, per_host_memory_limit);
@@ -386,9 +400,9 @@ u_int8_t dpi_ipv6_fragmentation_set_per_host_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_set_total_memory_limit(
+uint8_t dpi_ipv4_fragmentation_set_total_memory_limit(
 		         dpi_library_state_t *state,
-		         u_int32_t total_memory_limit){
+		         uint32_t total_memory_limit){
 	if(likely(state && state->ipv4_frag_state)){
 		dpi_reordering_ipv4_fragmentation_set_total_memory_limit(
 				      state->ipv4_frag_state, total_memory_limit);
@@ -409,9 +423,9 @@ u_int8_t dpi_ipv4_fragmentation_set_total_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_set_total_memory_limit(
+uint8_t dpi_ipv6_fragmentation_set_total_memory_limit(
 		         dpi_library_state_t *state,
-		         u_int32_t total_memory_limit){
+		         uint32_t total_memory_limit){
 	if(likely(state && state->ipv6_frag_state)){
 		dpi_reordering_ipv6_fragmentation_set_total_memory_limit(
 				      state->ipv6_frag_state, total_memory_limit);
@@ -431,9 +445,9 @@ u_int8_t dpi_ipv6_fragmentation_set_total_memory_limit(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_set_reassembly_timeout(
+uint8_t dpi_ipv4_fragmentation_set_reassembly_timeout(
 		         dpi_library_state_t *state,
-		         u_int8_t timeout_seconds){
+		         uint8_t timeout_seconds){
 	if(likely(state && state->ipv4_frag_state)){
 		dpi_reordering_ipv4_fragmentation_set_reassembly_timeout(
 				      state->ipv4_frag_state, timeout_seconds);
@@ -453,9 +467,9 @@ u_int8_t dpi_ipv4_fragmentation_set_reassembly_timeout(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_set_reassembly_timeout(
+uint8_t dpi_ipv6_fragmentation_set_reassembly_timeout(
 		         dpi_library_state_t *state,
-		         u_int8_t timeout_seconds){
+		         uint8_t timeout_seconds){
 	if(likely(state && state->ipv6_frag_state)){
 		dpi_reordering_ipv6_fragmentation_set_reassembly_timeout(
 				      state->ipv6_frag_state, timeout_seconds);
@@ -472,7 +486,7 @@ u_int8_t dpi_ipv6_fragmentation_set_reassembly_timeout(
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv4_fragmentation_disable(dpi_library_state_t *state){
+uint8_t dpi_ipv4_fragmentation_disable(dpi_library_state_t *state){
 	if(likely(state && state->ipv4_frag_state)){
 		dpi_reordering_disable_ipv4_fragmentation(state->ipv4_frag_state);
 		state->ipv4_frag_state=NULL;
@@ -489,7 +503,7 @@ u_int8_t dpi_ipv4_fragmentation_disable(dpi_library_state_t *state){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_ipv6_fragmentation_disable(dpi_library_state_t *state){
+uint8_t dpi_ipv6_fragmentation_disable(dpi_library_state_t *state){
 	if(likely(state && state->ipv6_frag_state)){
 		dpi_reordering_disable_ipv6_fragmentation(state->ipv6_frag_state);
 		state->ipv6_frag_state=NULL;
@@ -508,7 +522,7 @@ u_int8_t dpi_ipv6_fragmentation_disable(dpi_library_state_t *state){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_tcp_reordering_enable(dpi_library_state_t* state){
+uint8_t dpi_tcp_reordering_enable(dpi_library_state_t* state){
 	if(likely(state)){
 		state->tcp_reordering_enabled=1;
 		return DPI_STATE_UPDATE_SUCCESS;
@@ -529,7 +543,7 @@ u_int8_t dpi_tcp_reordering_enable(dpi_library_state_t* state){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state){
+uint8_t dpi_tcp_reordering_disable(dpi_library_state_t* state){
 	if(likely(state)){
 		state->tcp_reordering_enabled=0;
 		return DPI_STATE_UPDATE_SUCCESS;
@@ -547,7 +561,7 @@ u_int8_t dpi_tcp_reordering_disable(dpi_library_state_t* state){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_set_protocol(dpi_library_state_t *state,
+uint8_t dpi_set_protocol(dpi_library_state_t *state,
 		                  dpi_protocol_t protocol){
     return dpi_enable_protocol(state, dpi_old_protocols_to_new(protocol));
 }
@@ -561,12 +575,12 @@ u_int8_t dpi_set_protocol(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_delete_protocol(dpi_library_state_t *state,
+uint8_t dpi_delete_protocol(dpi_library_state_t *state,
 		                     dpi_protocol_t protocol){
     return dpi_disable_protocol(state, dpi_old_protocols_to_new(protocol));
 }
 
-u_int8_t dpi_enable_protocol(dpi_library_state_t *state,
+uint8_t dpi_enable_protocol(dpi_library_state_t *state,
                           dpi_l7_prot_id protocol){
     if(protocol < DPI_NUM_PROTOCOLS){
         BITSET(state->protocols_to_inspect, protocol);
@@ -578,7 +592,7 @@ u_int8_t dpi_enable_protocol(dpi_library_state_t *state,
 }
 
 
-u_int8_t dpi_disable_protocol(dpi_library_state_t *state,
+uint8_t dpi_disable_protocol(dpi_library_state_t *state,
                              dpi_l7_prot_id protocol){
     if(protocol < DPI_NUM_PROTOCOLS){
         BITCLEAR(state->protocols_to_inspect, protocol);
@@ -597,7 +611,7 @@ u_int8_t dpi_disable_protocol(dpi_library_state_t *state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_inspect_all(dpi_library_state_t *state){
+uint8_t dpi_inspect_all(dpi_library_state_t *state){
 	unsigned char nonzero = ~0;
     memset(state->protocols_to_inspect, nonzero,
            BITNSLOTS(DPI_NUM_PROTOCOLS));
@@ -613,7 +627,7 @@ u_int8_t dpi_inspect_all(dpi_library_state_t *state){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_inspect_nothing(dpi_library_state_t *state){
+uint8_t dpi_inspect_nothing(dpi_library_state_t *state){
     bzero(state->protocols_to_inspect, BITNSLOTS(DPI_NUM_PROTOCOLS));
 
     state->active_protocols=0;
@@ -622,9 +636,9 @@ u_int8_t dpi_inspect_nothing(dpi_library_state_t *state){
 	return DPI_STATE_UPDATE_SUCCESS;
 }
 
-u_int8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state,
-                             u_int8_t l4prot,
-                             u_int16_t port,
+uint8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state,
+                             uint8_t l4prot,
+                             uint16_t port,
                              dpi_l7_prot_id id){
     dpi_l7_skipping_infos_t* skinfos = malloc(sizeof(dpi_l7_skipping_infos_t));
     memset(skinfos, 0, sizeof(dpi_l7_skipping_infos_t));
@@ -688,8 +702,8 @@ void dpi_terminate(dpi_library_state_t *state){
 dpi_identification_result_t dpi_stateful_identify_application_protocol(
 		       dpi_library_state_t* state,
 		       const unsigned char* pkt,
-		       u_int32_t length,
-		       u_int32_t current_time){
+		       uint32_t length,
+		       uint32_t current_time){
     dpi_identification_result_t r = dpi_get_protocol(state, pkt, length, current_time);
     r.protocol.l7prot = dpi_new_protocols_to_old(r.protocol.l7prot);
     return r;
@@ -724,12 +738,12 @@ dpi_identification_result_t dpi_stateful_identify_application_protocol(
  */
 dpi_identification_result_t dpi_get_protocol(
                  dpi_library_state_t* state, const unsigned char* pkt,
-                 u_int32_t length, u_int32_t current_time){
+                 uint32_t length, uint32_t current_time){
     dpi_identification_result_t r;
     r.status=DPI_STATUS_OK;
     dpi_pkt_infos_t infos;
     memset(&infos, 0, sizeof(infos));
-    u_int8_t l3_status;
+    uint8_t l3_status;
 
     r.status=dpi_parse_L3_L4_headers(state, pkt, length, &infos,
                                      current_time);
@@ -739,9 +753,9 @@ dpi_identification_result_t dpi_get_protocol(
         return r;
     }
 
-    u_int8_t skip_l7 = 0;
-    u_int16_t srcport = ntohs(infos.srcport);
-    u_int16_t dstport = ntohs(infos.dstport);
+    uint8_t skip_l7 = 0;
+    uint16_t srcport = ntohs(infos.srcport);
+    uint16_t dstport = ntohs(infos.dstport);
     dpi_l7_skipping_infos_t* sk = NULL;
     dpi_l7_skipping_infos_key_t key;
     memset(&key, 0, sizeof(key));
@@ -826,10 +840,10 @@ dpi_identification_result_t dpi_get_protocol(
  */
 int8_t mc_dpi_extract_packet_infos(
 		       dpi_library_state_t *state, const unsigned char* p_pkt,
-		       u_int32_t p_length, dpi_pkt_infos_t *pkt_infos,
-		       u_int32_t current_time, int tid){
+		       uint32_t p_length, dpi_pkt_infos_t *pkt_infos,
+		       uint32_t current_time, int tid){
 	if(unlikely(p_length==0)) return DPI_STATUS_OK;
-	u_int8_t version;
+	uint8_t version;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	version=(p_pkt[0]>>4)&0x0F;
 #elif __BYTE_ORDER == __BIG_ENDIAN
@@ -839,23 +853,23 @@ int8_t mc_dpi_extract_packet_infos(
 #endif
 
     unsigned char* pkt=(unsigned char*) p_pkt;
-    u_int32_t length=p_length;
-	u_int16_t offset;
-	u_int8_t more_fragments;
+    uint32_t length=p_length;
+	uint16_t offset;
+	uint8_t more_fragments;
 
     pkt_infos->l4prot=0;
 	pkt_infos->srcport=0;
 	pkt_infos->dstport=0;
 
 	/** Offset starting from the beginning of p_pkt. **/
-    u_int32_t application_offset;
+    uint32_t application_offset;
     /**
      * Offset starting from the last identified IPv4 or IPv6 header
      * (used to support tunneling).
      **/
-    u_int32_t relative_offset;
-    u_int32_t tmp;
-	u_int8_t next_header,stop=0;
+    uint32_t relative_offset;
+    uint32_t tmp;
+	uint8_t next_header,stop=0;
 
 	int8_t to_return=DPI_STATUS_OK;
 
@@ -864,7 +878,7 @@ int8_t mc_dpi_extract_packet_infos(
 
 	if(version==DPI_IP_VERSION_4){ 	/** IPv4 **/
 		ip4=(struct iphdr*) (p_pkt);
-		u_int16_t tot_len=ntohs(ip4->tot_len);
+		uint16_t tot_len=ntohs(ip4->tot_len);
 
 #ifdef DPI_ENABLE_L3_TRUNCATION_PROTECTION
 		if(unlikely(length<(sizeof(struct iphdr)) || tot_len>length ||
@@ -918,7 +932,7 @@ int8_t mc_dpi_extract_packet_infos(
 		next_header=ip4->protocol;
 	}else if(version==DPI_IP_VERSION_6){ /** IPv6 **/
 		ip6=(struct ip6_hdr*) (pkt);
-		u_int16_t tot_len=ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen)+
+		uint16_t tot_len=ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen)+
 				          sizeof(struct ip6_hdr);
 #ifdef DPI_ENABLE_L3_TRUNCATION_PROTECTION
 		if(unlikely(tot_len>length)){
@@ -1057,12 +1071,12 @@ int8_t mc_dpi_extract_packet_infos(
 					if(state->ipv6_frag_state){
 						struct ip6_frag* frg_hdr=(struct ip6_frag*)
 								                 (pkt+application_offset);
-						u_int16_t offset=((frg_hdr->ip6f_offlg &
+						uint16_t offset=((frg_hdr->ip6f_offlg &
 								           IP6F_OFF_MASK)>>3)*8;
-						u_int8_t more_fragments=((frg_hdr->ip6f_offlg &
+						uint8_t more_fragments=((frg_hdr->ip6f_offlg &
 								                  IP6F_MORE_FRAG))?1:0;
 						offset=ntohs(offset);
-						u_int32_t fragment_size=ntohs(
+						uint32_t fragment_size=ntohs(
 								ip6->ip6_ctlun.ip6_un1.ip6_un1_plen)+
 								sizeof(struct ip6_hdr)-relative_offset-
 								sizeof(struct ip6_frag);
@@ -1186,9 +1200,9 @@ int8_t mc_dpi_extract_packet_infos(
 
 int8_t dpi_parse_L3_L4_headers(dpi_library_state_t *state,
 		                       const unsigned char* p_pkt,
-		                       u_int32_t p_length,
+		                       uint32_t p_length,
 		                       dpi_pkt_infos_t *pkt_infos,
-		                       u_int32_t current_time){
+		                       uint32_t current_time){
 	/**
 	 * We can pass any thread id, indeed in this case we don't
 	 * need lock synchronization.
@@ -1282,7 +1296,7 @@ dpi_identification_result_t dpi_stateful_get_app_protocol(
 void dpi_init_flow_infos(
 		       dpi_library_state_t* state,
 		       dpi_flow_infos_t *flow_infos,
-		       u_int8_t l4prot){
+		       uint8_t l4prot){
 	dpi_l7_prot_id i;
 
     for(i=0; i<BITNSLOTS(DPI_NUM_PROTOCOLS); i++){
@@ -1344,10 +1358,10 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 	r.user_flow_data=(flow->tracking.flow_specific_user_data);
 	dpi_l7_prot_id i;
 
-	u_int8_t check_result=DPI_PROTOCOL_NO_MATCHES;
+	uint8_t check_result=DPI_PROTOCOL_NO_MATCHES;
     const dpi_l7_prot_id* well_known_ports;
 	const unsigned char* app_data=pkt_infos->pkt+pkt_infos->l7offset;
-    u_int32_t data_length=pkt_infos->data_length;
+    uint32_t data_length=pkt_infos->data_length;
 	dpi_tcp_reordering_reordered_segment_t seg;
 	seg.status=DPI_TCP_REORDERING_STATUS_IN_ORDER;
 	seg.data=NULL;
@@ -1657,7 +1671,7 @@ const char** const dpi_get_protocols_strings(){
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-u_int8_t dpi_set_flow_cleaner_callback(
+uint8_t dpi_set_flow_cleaner_callback(
 		     dpi_library_state_t* state,
 		     dpi_flow_cleaner_callback* cleaner){
 	state->flow_cleaner_callback=cleaner;

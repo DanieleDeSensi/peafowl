@@ -29,10 +29,10 @@
  * Created by max197616 (https://github.com/max197616) and based on
  * nDPI's SSL dissector.
  **/
+#include <peafowl/api.h>
+#include <peafowl/flow_table.h>
+#include <peafowl/inspectors/inspectors.h>
 
-
-#include "inspectors.h"
-#include "../api.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +50,7 @@
 			  ((ch) >= '[' && (ch) <= '`') ||	\
 			  ((ch) >= '{' && (ch) <= '~'))
 
-u_int8_t dpi_ssl_activate_callbacks(
+uint8_t dpi_ssl_activate_callbacks(
 		       dpi_library_state_t* state,
 		       dpi_ssl_callbacks_t* callbacks,
 		       void* user_data)
@@ -66,7 +66,7 @@ u_int8_t dpi_ssl_activate_callbacks(
 	}
 }
 
-u_int8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state)
+uint8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state)
 {
 	if(state){
         BITCLEAR(state->active_callbacks, DPI_PROTOCOL_SSL);
@@ -82,8 +82,8 @@ static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_intern
 {
 	if(payload[0] == 0x16 /* Handshake */)
 	{
-		u_int16_t total_len  = (payload[3] << 8) + payload[4] + 5 /* SSL Header */;
-		u_int8_t handshake_protocol = payload[5]; /* handshake protocol a bit misleading, it is message type according TLS specs */
+		uint16_t total_len  = (payload[3] << 8) + payload[4] + 5 /* SSL Header */;
+		uint8_t handshake_protocol = payload[5]; /* handshake protocol a bit misleading, it is message type according TLS specs */
 
 		if(total_len <= 4)
 			return 0;
@@ -110,7 +110,7 @@ static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_intern
 				|| ((payload[i] == 0x04) && (payload[i+1] == 0x03) && (payload[i+2] == 0x13))
 				|| ((payload[i] == 0x55) && (payload[i+1] == 0x04) && (payload[i+2] == 0x03)))
 				{
-					u_int8_t server_len = payload[i+3];
+					uint8_t server_len = payload[i+3];
 					if(payload[i] == 0x55)
 					{
 						num_found++;
@@ -120,7 +120,7 @@ static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_intern
 					if(server_len+i+3 < payload_len)
 					{
 						char *server_name = (char*)&payload[i+4];
-						u_int8_t begin = 0, j, num_dots, len;
+						uint8_t begin = 0, j, num_dots, len;
 						while(begin < server_len)
 						{
 							if(!ndpi_isprint(server_name[begin]))
@@ -159,15 +159,15 @@ static int getSSLcertificate(uint8_t *payload, u_int payload_len, dpi_ssl_intern
 			u_int offset, base_offset = 43;
 			if (base_offset + 2 <= payload_len)
 			{
-				u_int16_t session_id_len = payload[base_offset];
+				uint16_t session_id_len = payload[base_offset];
 				if((session_id_len+base_offset+2) <= total_len)
 				{
-					u_int16_t cypher_len =  payload[session_id_len+base_offset+2] + (payload[session_id_len+base_offset+1] << 8);
+					uint16_t cypher_len =  payload[session_id_len+base_offset+2] + (payload[session_id_len+base_offset+1] << 8);
 					offset = base_offset + session_id_len + cypher_len + 2;
 					if(offset < total_len)
 					{
-						u_int16_t compression_len;
-						u_int16_t extensions_len;
+						uint16_t compression_len;
+						uint16_t extensions_len;
 						compression_len = payload[offset+1];
 						offset += compression_len + 3;
 						if(offset < total_len)
@@ -236,10 +236,10 @@ static int detectSSLFromCertificate(uint8_t *payload, int payload_len, dpi_ssl_i
 	return 0;
 }
 
-u_int8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* tracking)
+uint8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* tracking)
 {
 	debug_print("%s\n", "[ssl.c] SSL callback manager invoked.");
-	u_int8_t ret=check_ssl(state, pkt, app_data, data_length, tracking);
+	uint8_t ret=check_ssl(state, pkt, app_data, data_length, tracking);
 	if(ret==DPI_PROTOCOL_NO_MATCHES){
 		debug_print("%s\n", "[ssl.c] An error occurred in the SSL protocol manager.");
 		return DPI_PROTOCOL_ERROR;
@@ -250,7 +250,7 @@ u_int8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, 
 }
 
 
-u_int8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* payload, u_int32_t data_length, dpi_tracking_informations_t* t)
+uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* payload, uint32_t data_length, dpi_tracking_informations_t* t)
 {
     if(pkt->l4prot != IPPROTO_TCP){
         return DPI_PROTOCOL_NO_MATCHES;

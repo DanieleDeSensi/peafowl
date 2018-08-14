@@ -53,7 +53,7 @@
 #include "pattern_matching_lib/trie.h"
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include <mc_api.h>
+#include <peafowl/mc_api.h>
 #include <pcap.h>
 #include <netinet/in.h>
 #include <net/ethernet.h>

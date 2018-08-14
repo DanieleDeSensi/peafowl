@@ -27,9 +27,9 @@
 #ifndef WORKER_HPP_
 #define WORKER_HPP_
 
-#include "api.h"
-#include "mc_api.h"
-#include "config.h"
+#include <peafowl/api.h>
+#include <peafowl/mc_api.h>
+#include <peafowl/config.h>
 
 #include <ff/farm.hpp>
 #include <ff/svector.hpp>
@@ -49,14 +49,14 @@ namespace dpi{
 
 typedef struct L3_L4_input_task{
 	const unsigned char* pkt;
-	u_int32_t length;
-	u_int32_t current_time;
+	uint32_t length;
+	uint32_t current_time;
 	void* user_pointer;
 }L3_L4_input_task_struct;
 
 typedef struct L3_L4_output_task{
-	u_int32_t hash_result;
-	u_int16_t destination_worker;
+	uint32_t hash_result;
+	uint16_t destination_worker;
 	int8_t status;
 	dpi_pkt_infos_t pkt_infos;
 	void* user_pointer;
@@ -97,17 +97,17 @@ private:
         dpi_library_state_t* const state;
 	mc_dpi_packet_reading_callback** const cb;
 	void** user_data;
-	u_int8_t* terminating;
-	const u_int16_t proc_id;
+	uint8_t* terminating;
+	const uint16_t proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
-	u_int8_t initialized;
+	uint8_t initialized;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
         dpi_L3_L4_emitter(dpi_library_state_t* state,
                           mc_dpi_packet_reading_callback** cb,
 			          void** user_data,
-			          u_int8_t* terminating,
-			          u_int16_t proc_id,
+			          uint8_t* terminating,
+			          uint16_t proc_id,
 			          ff::SWSR_Ptr_Buffer* tasks_pool);
 	~dpi_L3_L4_emitter();
 #ifdef ENABLE_RECONFIGURATION
@@ -124,20 +124,20 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_library_state_t* const state;
 	L3_L4_input_task_struct* in;
-	const u_int32_t v4_table_size;
-	const u_int32_t v6_table_size;
-	u_int32_t v4_worker_table_size;
-	u_int32_t v6_worker_table_size;
-	const u_int16_t worker_id;
-	const u_int16_t proc_id;
+	const uint32_t v4_table_size;
+	const uint32_t v6_table_size;
+	uint32_t v4_worker_table_size;
+	uint32_t v6_worker_table_size;
+	const uint16_t worker_id;
+	const uint16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L3_L4_worker(dpi_library_state_t* state,
-						u_int16_t worker_id,
-						u_int16_t num_L7_workers,
-						u_int16_t proc_id,
-						u_int32_t v4_table_size,
-						u_int32_t v6_table_size);
+						uint16_t worker_id,
+						uint16_t num_L7_workers,
+						uint16_t proc_id,
+						uint32_t v4_table_size,
+						uint32_t v6_table_size);
 	~dpi_L3_L4_worker();
 
 	int svc_init();
@@ -150,10 +150,10 @@ public:
 class dpi_L3_L4_collector: public ffnode{
 private:
 	char padding1[DPI_CACHE_LINE_SIZE];
-	const u_int16_t proc_id;
+	const uint16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
-	dpi_L3_L4_collector(u_int16_t proc_id);
+	dpi_L3_L4_collector(uint16_t proc_id);
 
 	int svc_init();
 	void* svc(void*);
@@ -193,15 +193,15 @@ private:
 	mc_dpi_task_t* partially_filled;
 	uint* partially_filled_sizes;
 	mc_dpi_task_t** waiting_tasks;
-	u_int16_t waiting_tasks_size;
-	const u_int16_t proc_id;
+	uint16_t waiting_tasks_size;
+	const uint16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
 protected:
 	dpi_L7_scheduler* const lb;
 public:
 	dpi_L7_emitter(dpi_L7_scheduler* lb,
-			       u_int16_t num_L7_workers,
-			       u_int16_t proc_id);
+			       uint16_t num_L7_workers,
+			       uint16_t proc_id);
 	~dpi_L7_emitter();
 	int svc_init();
 	void* svc(void* task);
@@ -224,14 +224,14 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_library_state_t* const state;
 	L3_L4_output_task_struct* temp;
-	const u_int16_t worker_id;
-	const u_int16_t proc_id;
+	const uint16_t worker_id;
+	const uint16_t proc_id;
 
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_worker(dpi_library_state_t* state,
-			      u_int16_t worker_id,
-			      u_int16_t proc_id);
+			      uint16_t worker_id,
+			      uint16_t proc_id);
 	~dpi_L7_worker();
 
 	int svc_init();
@@ -244,13 +244,13 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	mc_dpi_processing_result_callback** const cb;
 	void** user_data;
-	u_int16_t* proc_id;
+	uint16_t* proc_id;
 	ff::SWSR_Ptr_Buffer* tasks_pool;
     bool deprecated_callback;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_L7_collector(mc_dpi_processing_result_callback** cb,
-			         void** user_data, u_int16_t* proc_id,
+			         void** user_data, uint16_t* proc_id,
                      ff::SWSR_Ptr_Buffer* tasks_pool, bool deprecated_callback);
         ~dpi_L7_collector();
 
@@ -264,19 +264,19 @@ private:
 	char padding1[DPI_CACHE_LINE_SIZE];
 	dpi_L3_L4_emitter* L3_L4_emitter;
 	dpi_L3_L4_worker* L3_L4_worker;
-	u_int16_t proc_id;
+	uint16_t proc_id;
 	char padding2[DPI_CACHE_LINE_SIZE];
 public:
 	dpi_collapsed_emitter(mc_dpi_packet_reading_callback** cb,
 			              void** user_data,
-			              u_int8_t* terminating,
+			              uint8_t* terminating,
 			              ff::SWSR_Ptr_Buffer* tasks_pool,
 			              dpi_library_state_t* state,
-			              u_int16_t num_L7_workers,
-			              u_int32_t v4_table_size,
-			              u_int32_t v6_table_size,
+			              uint16_t num_L7_workers,
+			              uint32_t v4_table_size,
+			              uint32_t v6_table_size,
 			              dpi_L7_scheduler* lb,
-			              u_int16_t proc_id);
+			              uint16_t proc_id);
 	~dpi_collapsed_emitter();
 	int svc_init();
 	void* svc(void*);

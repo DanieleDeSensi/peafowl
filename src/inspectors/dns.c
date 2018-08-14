@@ -22,9 +22,10 @@
  *
  * =========================================================================
  */
-#include "inspectors.h"
+#include <peafowl/api.h>
+#include <peafowl/inspectors/inspectors.h>
 
-u_int8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, u_int32_t data_length, dpi_tracking_informations_t* t){
+uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, uint32_t data_length, dpi_tracking_informations_t* t){
 	/* Check standard DNS port (53) */
 	if((pkt->dstport==port_dns || pkt->srcport==port_dns) && data_length>=12){
 		if((app_data[2] & 0x80)==0){
