@@ -1,3 +1,4 @@
+include_directories(${CMAKE_SOURCE_DIR}/include/peafowl/external/fastflow) 
 file(GLOB PMLIB "pattern_matching_lib/*.cc")
 add_executable(http_pm_seq http_pm_seq.cpp ${PMLIB})
 target_link_libraries(http_pm_seq LINK_PUBLIC peafowl pcap)
