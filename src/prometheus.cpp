@@ -1,6 +1,6 @@
 #ifdef WITH_PROMETHEUS
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 
 #include <arpa/inet.h>
 #include <prometheus/exposer.h>

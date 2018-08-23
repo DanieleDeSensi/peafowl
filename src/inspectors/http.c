@@ -23,7 +23,7 @@
  * =========================================================================
  */
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/flow_table.h>
 #include <peafowl/inspectors/http_parser_joyent.h>
 #include <peafowl/inspectors/inspectors.h>

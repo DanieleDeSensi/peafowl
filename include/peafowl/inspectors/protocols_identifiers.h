@@ -76,6 +76,7 @@ enum protocols {
   DPI_PROTOCOL_SMTP,
   DPI_PROTOCOL_POP3,
   DPI_PROTOCOL_SSL,
+  DPI_PROTOCOL_HANGOUT,
   DPI_NUM_PROTOCOLS
 };
 
@@ -191,9 +192,17 @@ enum protocol_check_statuses {
 #define port_dhcpv6_1 0x2202 /** 546 **/
 #define port_dhcpv6_2 0x2302 /** 547 **/
 #define port_smtp_2 0x4B02   /** 587 **/
-#define port_sip 0x13C4      /** 5060 **/
+#define port_sip 0xC413      /** 5060 **/
 #define port_mdns 0xE914     /** 5353 **/
 #define port_ssl 0xBB01      /** 443 **/
+#define port_hangout_19302 0x664B /** 19302 **/
+#define port_hangout_19303 0x674B /** 19303 **/
+#define port_hangout_19304 0x684B /** 19304 **/
+#define port_hangout_19305 0x694B /** 19305 **/
+#define port_hangout_19306 0x6A4B /** 19306 **/
+#define port_hangout_19307 0x6B4B /** 19307 **/
+#define port_hangout_19308 0x6C4B /** 19308 **/
+#define port_hangout_19309 0x4B6D /** 19309 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define port_smtp_1 0x0019   /** 25 **/
 #define port_dns 0x0035      /** 53 **/
@@ -206,9 +215,17 @@ enum protocol_check_statuses {
 #define port_dhcpv6_1 0x0222 /** 546 **/
 #define port_dhcpv6_2 0x0223 /** 547 **/
 #define port_smtp_2 0x024B   /** 587 **/
-#define port_sip 0xC413      /** 5060 **/
+#define port_sip 0x13C4      /** 5060 **/
 #define port_mdns 0x14E9     /** 5353 **/
 #define port_ssl 0x01BB      /** 443 **/
+#define port_hangout_19302 0x4B66 /** 19302 **/
+#define port_hangout_19303 0x4B67 /** 19303 **/
+#define port_hangout_19304 0x4B68 /** 19304 **/
+#define port_hangout_19305 0x4B69 /** 19305 **/
+#define port_hangout_19306 0x4B6A /** 19306 **/
+#define port_hangout_19307 0x4B6B /** 19307 **/
+#define port_hangout_19308 0x4B6C /** 19308 **/
+#define port_hangout_19309 0x4B6D /** 19309 **/
 #else
 #error "Please fix <bits/endian.h>"
 #endif

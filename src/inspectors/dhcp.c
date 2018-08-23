@@ -22,7 +22,7 @@
  *
  * =========================================================================
  */
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN

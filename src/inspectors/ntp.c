@@ -25,7 +25,7 @@
  * =========================================================================
  */
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
 #define DPI_NTP_MAX_VERSION 0x04

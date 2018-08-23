@@ -26,7 +26,7 @@
  * =========================================================================
  */
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
 #include <stdio.h>

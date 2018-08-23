@@ -27,7 +27,7 @@
 #ifndef HASH_FUNCTIONS_H_
 #define HASH_FUNCTIONS_H_
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 
 #include <sys/types.h>
 

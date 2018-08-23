@@ -27,7 +27,7 @@
 #ifndef FLOW_TABLE_H_
 #define FLOW_TABLE_H_
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/config.h>
 
 #ifdef __cplusplus

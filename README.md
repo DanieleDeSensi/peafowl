@@ -119,6 +119,9 @@ $ cd Peafowl
 Compile it with:
 
 ```
+$ mkdir build
+$ cd build
+$ cmake ../
 $ make
 ```
 
@@ -130,7 +133,7 @@ $ make install
 
 Sequential version
 ------------------------------------------------------------------------------------------------------------
-At this point, your application can use Peafowl by including the ["src/api.h"](src/api.h) header and by 
+At this point, your application can use Peafowl by including the ["src/peafowl.h"](src/peafowl.h) header and by 
 linking lib/libdpi.a.
 
 The API is based on 3 main calls:
@@ -150,11 +153,11 @@ be required as parameter for most of the framework calls;
 + ```dpi_terminate(state)```: used to terminate the framework. 
 
 For other API calls (e.g. to enable/disable protocol inspectors or to enable/disable TCP stream reassembly and IP 
-defragmentation please refer to the documentation in ["src/api.h"](src/api.h)).
+defragmentation please refer to the documentation in ["src/peafowl.h"](src/peafowl.h)).
 
 Multicore version
 ------------------------------------------------------------------------------------------------------------------ 
-You can take advantage of the multicore version by including the ["src/mc_api.h"](src/mc_api.h) header and by 
+You can take advantage of the multicore version by including the ["src/peafowl_mc.h"](src/peafowl_mc.h) header and by 
 linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available,
 you can look at [this](demo/protocol_identification_mc/protocol_identification.cpp) simple demo file.
 If you  need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
@@ -175,7 +178,7 @@ This application can be easily modified to read packet from the network instead 
  *  Author: Daniele De Sensi
  */
 
-#include <api.h>
+#include <peafowl.h>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <time.h>

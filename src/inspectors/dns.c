@@ -22,7 +22,7 @@
  *
  * =========================================================================
  */
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
 uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,

@@ -31,7 +31,7 @@
 #include <netinet/in.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include "../api.h"
+#include <peafowl/peafowl.h>
 #include "protocols_identifiers.h"
 
 uint8_t check_dhcp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
@@ -72,6 +72,9 @@ uint8_t check_pop3(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
                    dpi_tracking_informations_t* t);
 uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t);
+uint8_t check_hangout(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
                   dpi_tracking_informations_t* t);
 

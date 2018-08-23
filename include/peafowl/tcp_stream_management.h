@@ -28,7 +28,7 @@
 #ifndef TCP_STREAM_MANAGEMENT_H_
 #define TCP_STREAM_MANAGEMENT_H_
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 
 #include <sys/types.h>
 

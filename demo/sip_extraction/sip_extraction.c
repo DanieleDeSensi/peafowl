@@ -27,7 +27,7 @@
  * =========================================================================
  */
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <time.h>

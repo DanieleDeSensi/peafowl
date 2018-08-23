@@ -27,9 +27,9 @@
 #ifndef WORKER_HPP_
 #define WORKER_HPP_
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/config.h>
-#include <peafowl/mc_api.h>
+#include <peafowl/peafowl_mc.h>
 
 #include <ff/farm.hpp>
 #include <ff/svector.hpp>

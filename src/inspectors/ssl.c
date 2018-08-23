@@ -29,7 +29,7 @@
  * Created by max197616 (https://github.com/max197616) and based on
  * nDPI's SSL dissector.
  **/
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/flow_table.h>
 #include <peafowl/inspectors/inspectors.h>
 

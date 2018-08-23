@@ -44,7 +44,7 @@
 #include "pattern_matching_lib/trie.h"
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/config.h>
 #include <pcap.h>
 #include <netinet/in.h>

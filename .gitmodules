@@ -1,3 +1,0 @@
-[submodule "src/external/nornir"]
-	path = src/external/nornir
-	url = https://github.com/DanieleDeSensi/nornir.git

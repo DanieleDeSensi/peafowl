@@ -46,7 +46,7 @@
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
 #include <peafowl/config.h>
-#include <peafowl/mc_api.h>
+#include <peafowl/peafowl_mc.h>
 #include <ff/mapping_utils.hpp>
 #include <ff/ubuffer.hpp>
 #include <pcap.h>

@@ -26,10 +26,8 @@ script:
   - cd ..
 
 after_success:
-    # Remove unnecessary coverage files
-    #- rm src/nn.hpp.gcov
-    # codecov.io
-    - bash <(curl -s https://codecov.io/bash) -f 'build/coverage.xml'
+  # codecov.io
+  - bash <(curl -s https://codecov.io/bash) -f 'build/coverage.xml'
 
 notifications:
   email:
@@ -37,4 +35,3 @@ notifications:
       - d.desensi.software@gmail.com
     on_success: never # default: change
     on_failure: always # default: always
-  

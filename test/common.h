@@ -1,7 +1,7 @@
 #ifndef PEAFOWL_TEST_COMMON
 #define PEAFOWL_TEST_COMMON
 
-#include <peafowl/api.h>
+#include <peafowl/peafowl.h>
 #include "gtest/gtest.h"
 #include <pcap.h>
 #include <net/ethernet.h>
