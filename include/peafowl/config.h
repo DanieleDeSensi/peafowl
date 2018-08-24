@@ -66,12 +66,10 @@
 #endif
 #endif
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__cplusplus)
 #define DPI_USE_INLINING 1
 #else
-#define DPI_USE_INLINING                                                       \
-  0 /** Must always be == 0, 'inline' keyword has been introduced only in C99. \
-       **/
+#error "A compiler which supports at least C99 is needed"
 #endif
 
 /*******************************************************************/

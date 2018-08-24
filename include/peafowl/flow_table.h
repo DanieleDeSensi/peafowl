@@ -94,8 +94,15 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   uint8_t num_pop3_matched_messages : 2;
 
-  /*** SSL ***/
+  /*********************************/
+  /** SSL Tracking informations. **/
+  /*********************************/
   dpi_ssl_internal_information_t ssl_information[2];
+
+  /**************************************/
+  /** WhatsApp Tracking informations. **/
+  /**************************************/
+  size_t whatsapp_matched_sequence;
 } dpi_tracking_informations_t;
 
 /**

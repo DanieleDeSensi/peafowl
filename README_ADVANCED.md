@@ -31,7 +31,7 @@ uint8_t check_telnet(dpi_library_state_t* state,    // The state of the library
                       dpi_pkt_infos_t* pkt,          // The parsed information about the current packet
                       const unsigned char* app_data, // A pointer to the beginning of the 
                                                      // application (layer 7) data
-                      u_int32_t data_length,         // The lenght of the application data
+                      uint32_t data_length,         // The lenght of the application data
                       dpi_tracking_informations_t* t // Information about the current state of the 
                                                      // connection to which the packet belongs to
                       );
@@ -52,7 +52,7 @@ and UDP packets, so it may be a good idea, as a first thing, to return DPI_PROTO
 the inspectors is called on UDP packets for a protocol which only works over TCP (e.g. HTTP).
 
 4) If the inspector needs to store information about the application flow, add an appropriate structure in the 
-flow data description (peafowl.h, struct dpi_tracking_informations). These data can be then used by the inspector
+flow data description (```include/peafowl/flow_table.h```, ```struct dpi_tracking_informations```). These data can be then used by the inspector
 by accessing the last parameter of the call described in point 3).
 
 ```C
@@ -83,7 +83,7 @@ static const dpi_inspector_callback const
 ```
 
 6) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
-the protocol identifier (peafowl.c).
+the protocol identifier (```src/peafowl.c```).
 
 ```C
 static const dpi_l7_prot_id const

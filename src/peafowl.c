@@ -57,12 +57,6 @@
     if (DPI_DEBUG) fprintf(stderr, fmt, __VA_ARGS__); \
   } while (0)
 
-/**
- * Designated initializers has been introduced with C99.
- * gcc allows them also in c89.
- **/
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L || \
-     defined(__GNUC__))
 static const dpi_l7_prot_id const
     dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16 + 1] =
         {[0 ... DPI_MAX_UINT_16] = DPI_PROTOCOL_UNKNOWN,
@@ -106,27 +100,32 @@ static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
      [DPI_PROTOCOL_SKYPE] = check_skype, [DPI_PROTOCOL_NTP] = check_ntp,
      [DPI_PROTOCOL_BGP] = check_bgp,     [DPI_PROTOCOL_HTTP] = check_http,
      [DPI_PROTOCOL_SMTP] = check_smtp,   [DPI_PROTOCOL_POP3] = check_pop3,
-     [DPI_PROTOCOL_SSL] = check_ssl,     [DPI_PROTOCOL_HANGOUT] = check_hangout};
+     [DPI_PROTOCOL_SSL] = check_ssl,     [DPI_PROTOCOL_HANGOUT] = check_hangout,
+     [DPI_PROTOCOL_WHATSAPP] = check_whatsapp,};
 
-static const dpi_inspector_callback const callbacks_manager[DPI_NUM_PROTOCOLS] =
-    {
-            [DPI_PROTOCOL_HTTP] = invoke_callbacks_http,
-            [DPI_PROTOCOL_SSL] = invoke_callbacks_ssl,
-            [DPI_PROTOCOL_SIP] = invoke_callbacks_sip,
+static const dpi_inspector_callback const callbacks_manager[DPI_NUM_PROTOCOLS] = {
+    [DPI_PROTOCOL_HTTP] = invoke_callbacks_http,
+    [DPI_PROTOCOL_SSL] = invoke_callbacks_ssl,
+    [DPI_PROTOCOL_SIP] = invoke_callbacks_sip,
 };
 
-#else
-static dpi_l7_prot_id dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16 + 1];
-static dpi_l7_prot_id dpi_well_known_ports_association_udp[DPI_MAX_UINT_16 + 1];
-
-static dpi_inspector_callback inspectors[DPI_NUM_PROTOCOLS];
-
-static dpi_inspector_callback callbacks_manager[DPI_NUM_PROTOCOLS];
-#endif
-
-static const char* protocols_strings[] = {
-    "DNS",   "MDNS", "DHCP", "DHCPv6", "NTP",  "SIP", "RTP",
-    "Skype", "HTTP", "BGP",  "SMTP",   "POP3", "SSL", "Hangout"};
+static const char* protocols_strings[DPI_NUM_PROTOCOLS] = {
+    [DPI_PROTOCOL_DNS] = "DNS",   
+    [DPI_PROTOCOL_MDNS] = "MDNS", 
+    [DPI_PROTOCOL_DHCP] = "DHCP", 
+    [DPI_PROTOCOL_DHCPv6] = "DHCPv6",
+    [DPI_PROTOCOL_NTP] = "NTP",  
+    [DPI_PROTOCOL_SIP] = "SIP", 
+    [DPI_PROTOCOL_RTP] = "RTP",
+    [DPI_PROTOCOL_SKYPE] = "Skype", 
+    [DPI_PROTOCOL_HTTP] = "HTTP", 
+    [DPI_PROTOCOL_BGP] = "BGP",  
+    [DPI_PROTOCOL_SMTP] = "SMTP",
+    [DPI_PROTOCOL_POP3] = "POP3", 
+    [DPI_PROTOCOL_SSL] = "SSL", 
+    [DPI_PROTOCOL_HANGOUT] = "Hangout",
+    [DPI_PROTOCOL_WHATSAPP] = "WhatsApp",
+};
 
 typedef struct dpi_l7_skipping_infos_key {
   u_int16_t port;
@@ -192,58 +191,6 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 
   dpi_tcp_reordering_enable(state);
 
-#if !defined(__GNUC__) && \
-    (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L)
-  memset(dpi_well_known_ports_association, DPI_PROTOCOL_UNKNOWN,
-         DPI_MAX_UINT_16 + 1);
-  dpi_well_known_ports_association_tcp[port_http] = DPI_PROTOCOL_TCP_HTTP;
-  dpi_well_known_ports_association_tcp[port_bgp] = DPI_PROTOCOL_TCP_BGP;
-  dpi_well_known_ports_association_tcp[port_smtp_1] = DPI_PROTOCOL_TCP_SMTP;
-  dpi_well_known_ports_association_tcp[port_smtp_2] = DPI_PROTOCOL_TCP_SMTP;
-  dpi_well_known_ports_association_tcp[port_pop3] = DPI_PROTOCOL_TCP_POP3;
-  dpi_well_known_ports_association_tcp[port_hangout_19305] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_tcp[port_hangout_19306] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_tcp[port_hangout_19307] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_tcp[port_hangout_19308] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_tcp[port_hangout_19309] = DPI_PROTOCOL_HANGOUT;
-
-  dpi_well_known_ports_association_udp[port_dns] = DPI_PROTOCOL_UDP_DNS;
-  dpi_well_known_ports_association_udp[port_mdns] = D PI_PROTOCOL_UDP_MDNS;
-  dpi_well_known_ports_association_udp[port_dhcp_1] = DPI_PROTOCOL_UDP_DHCP;
-  dpi_well_known_ports_association_udp[port_dhcp_2] = DPI_PROTOCOL_UDP_DHCP;
-  dpi_well_known_ports_association_udp[port_dhcpv6_1] = DPI_PROTOCOL_UDP_DHCPv6;
-  dpi_well_known_ports_association_udp[port_dhcpv6_2] = DPI_PROTOCOL_UDP_DHCPv6;
-  dpi_well_known_ports_association_udp[port_ntp] = DPI_PROTOCOL_UDP_NTP;
-  dpi_well_known_ports_association_udp[port_sip] = DPI_PROTOCOL_UDP_SIP;
-  dpi_well_known_ports_association_udp[port_hangout_19302] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19303] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19304] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19305] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19306] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19307] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19308] = DPI_PROTOCOL_HANGOUT;
-  dpi_well_known_ports_association_udp[port_hangout_19309] = DPI_PROTOCOL_HANGOUT;
-
-
-  inspectors[DPI_PROTOCOL_DHCP] = check_dhcp;
-  inspectors[DPI_PROTOCOL_DHCPv6] = check_dhcpv;
-  inspectors[DPI_PROTOCOL_DNS] = check_dns;
-  inspectors[DPI_PROTOCOL_MDNS] = check_mdns;
-  inspectors[DPI_PROTOCOL_NTP] = check_ntp;
-  inspectors[DPI_PROTOCOL_SIP] = check_sip;
-  inspectors[DPI_PROTOCOL_RTP] = check_rtp;
-  inspectors[DPI_PROTOCOL_SKYPE] = check_skype;
-  inspectors[DPI_PROTOCOL_BGP] = check_bgp;
-  inspectors[DPI_PROTOCOL_HTTP] = check_http;
-  inspectors[DPI_PROTOCOL_SMTP] = check_smtp;
-  inspectors[DPI_PROTOCOL_POP3] = check_pop3;
-  inspectors[DPI_PROTOCOL_POP3] = check_ssl;
-  inspectors[DPI_PROTOCOL_HANGOUT] = check_hangout;
-
-  callbacks_manager[DPI_PROTOCOL_HTTP] = invoke_callbacks_http;
-  callbacks_manager[DPI_PROTOCOL_HTTP] = invoke_callbacks_ssl;
-  callbacks_manager[DPI_PROTOCOL_SIP] = invoke_callbacks_sip;
-#endif
   state->l7_skip = NULL;
 
   return state;

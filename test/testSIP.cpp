@@ -14,4 +14,6 @@ TEST(SIPTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/sip-rtp.pcap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 102);
+    getProtocols("./pcaps/whatsapp.pcap", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 6);
 }

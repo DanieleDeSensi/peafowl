@@ -18,4 +18,6 @@ TEST(HTTPTest, Generic) {
     EXPECT_EQ(protocols[DPI_PROTOCOL_HTTP], (uint) 35);
     getProtocols("./pcaps/skype-irc.cap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_HTTP], (uint) 12);
+    getProtocols("./pcaps/whatsapp.pcap", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_HTTP], (uint) 4);
 }

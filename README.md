@@ -91,7 +91,13 @@ The supported protocols are:
     <td>RTP</td><td>4/5</td>
   </tr>
   <tr>
-    <td>SKYPE</td><td>3/5</td>
+    <td>Skype</td><td>3/5</td>
+  </tr>
+  <tr>
+    <td>Hangout</td><td>3/5</td>
+  </tr>
+  <tr>
+    <td>WhatsApp</td><td>4/5</td>
   </tr>
 </table>
 
