@@ -27,7 +27,7 @@
  * =========================================================================
  */
 
-#include <mc_api.h>
+#include <peafowl/peafowl_mc.h>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <time.h>

@@ -24,15 +24,13 @@
  *
  * =========================================================================
  */
+#include <peafowl/utils.h>
 #include <sys/types.h>
-#include "utils.h"
 
-
-u_int8_t dpi_v6_addresses_equal(struct in6_addr x, struct in6_addr y){
-	u_int8_t i;
-	for(i=0; i<16; i++){
-		if(x.s6_addr[i]!=y.s6_addr[i])
-			return 0;
-	}
-	return 1;
+uint8_t dpi_v6_addresses_equal(struct in6_addr x, struct in6_addr y) {
+  uint8_t i;
+  for (i = 0; i < 16; i++) {
+    if (x.s6_addr[i] != y.s6_addr[i]) return 0;
+  }
+  return 1;
 }

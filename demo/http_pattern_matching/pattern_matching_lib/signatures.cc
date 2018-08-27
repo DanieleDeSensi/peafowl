@@ -21,7 +21,7 @@ namespace antivirus {
     
     bool
     signature_reader::read_name() {
-        return getline(_input, _current_name, '=');
+        return static_cast<bool>(getline(_input, _current_name, '='));
     }
 
     template <typename T> static inline bool

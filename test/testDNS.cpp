@@ -31,4 +31,6 @@ TEST(DNSTest, Generic) {
     EXPECT_EQ(protocols[DPI_PROTOCOL_DNS], (uint) 357);
     getProtocols("./pcaps/skype-irc.cap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_DNS], (uint) 707);
+    getProtocols("./pcaps/whatsapp.pcap", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_DNS], (uint) 10);
 }

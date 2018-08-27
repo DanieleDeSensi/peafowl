@@ -1,0 +1,2 @@
+add_executable(protocol_identification_mc protocol_identification.cpp)
+target_link_libraries(protocol_identification_mc LINK_PUBLIC peafowl pcap)

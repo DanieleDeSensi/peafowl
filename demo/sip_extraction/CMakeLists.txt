@@ -1,0 +1,2 @@
+add_executable(sip_extraction sip_extraction.c)
+target_link_libraries(sip_extraction LINK_PUBLIC peafowl pcap)

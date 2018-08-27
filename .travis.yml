@@ -6,20 +6,28 @@ sudo: required
 dist: trusty
       
 install:
+  # Cmake
+  - sudo apt-get install cmake
   # CppCheck
   - sudo apt-get install -qq cppcheck
   # Pcap
   - sudo apt-get install libpcap-dev
+  # Gcovr
+  - sudo apt-get install python-pip
+  - pip install requests[security]
+  - pip install --user gcovr
 
 script:
   # Runs compilation, cppcheck, tests and coverage collection
-  - make develcheck
+  - mkdir build
+  - cd build
+  - cmake ../ -DENABLE_CODECOV=ON -DENABLE_TESTS=ON -DENABLE_CPPCHECK=ON
+  - make && make cppcheck && (make coverage || (cat ./Testing/Temporary/LastTest.log))
+  - cd ..
 
 after_success:
-    # Remove unnecessary coverage files
-    #- rm src/nn.hpp.gcov
-    # codecov.io
-    - bash <(curl -s https://codecov.io/bash) -X gcov -f 'test/gcov/*.gcov'
+  # codecov.io
+  - bash <(curl -s https://codecov.io/bash) -f 'build/coverage.xml'
 
 notifications:
   email:
@@ -27,4 +35,3 @@ notifications:
       - d.desensi.software@gmail.com
     on_success: never # default: change
     on_failure: always # default: always
-  

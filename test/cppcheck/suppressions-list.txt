@@ -1,13 +1,18 @@
 // External libraries
-*:src/external/*
-*:demo/http_pattern_matching/pattern_matching_lib/*
-*:src/inspectors/http_parser_joyent.*
+*:*/src/external/*
+*:*/demo/http_pattern_matching/pattern_matching_lib/*
+*:*/src/inspectors/http_parser_joyent.*
+*:*/src/inspectors/sip.*
 
-nullPointerRedundantCheck:src/ipv4_reassembly.cpp
-nullPointerRedundantCheck:src/ipv6_reassembly.cpp
-nullPointerRedundantCheck:src/reassembly.cpp
+nullPointerRedundantCheck:*/src/ipv4_reassembly.cpp
+nullPointerRedundantCheck:*/src/ipv6_reassembly.cpp
+nullPointerRedundantCheck:*/src/reassembly.cpp
 
-invalidscanf:experiments/dynamic_reconfiguration_live/sender.cpp
-invalidscanf:experiments/dynamic_reconfiguration_live/receiver.c
-invalidscanf:experiments/protocol_identification_inmemory/protocol_identification.cpp
-invalidscanf:experiments/dynamic_reconfiguration/dynamic_reconfiguration.cpp
+invalidscanf:*/experiments/dynamic_reconfiguration_live/sender.cpp
+invalidscanf:*/experiments/dynamic_reconfiguration_live/receiver.c
+invalidscanf:*/experiments/protocol_identification_inmemory/protocol_identification.cpp
+invalidscanf:*/experiments/dynamic_reconfiguration/dynamic_reconfiguration.cpp
+invalidscanf:*/src/peafowl_mc.cpp
+
+knownConditionTrueFalse:*/src/flow_table.c
+knownConditionTrueFalse:*/src/peafowl_mc.cpp

@@ -44,7 +44,8 @@
 #include "pattern_matching_lib/trie.h"
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include <api.h>
+#include <peafowl/peafowl.h>
+#include <peafowl/config.h>
 #include <pcap.h>
 #include <netinet/in.h>
 #include <net/ethernet.h>
@@ -179,7 +180,9 @@ int main(int argc, char **argv){
 
 			assert(header.caplen>sizeof(struct ether_header));
 
-			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.caplen-sizeof(struct ether_header)));
+			if(posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.caplen-sizeof(struct ether_header)))){
+				throw std::runtime_error("posix_memalign failure.");
+			}
 			assert(packets[num_packets]);
 			memcpy(packets[num_packets], packet+sizeof(struct ether_header), (header.caplen-sizeof(struct ether_header)));
 			sizes[num_packets]=(header.caplen-sizeof(struct ether_header));

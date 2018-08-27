@@ -6,7 +6,7 @@ Adding new protocols
 If you want to add the support for new protocols, you can do it by following some simple steps.
 For example, if you want to add the support for the Telnet protocol:
 
-1) Define the protocol and give to it the next available numeric identifier (file ```inspectors/protocols_identifiers.h```).
+1) Define the protocol and give to it the next available numeric identifier (file ```include/peafowl/inspectors/protocols_identifiers.h```).
 
 ```C
 /** Protocols. **/
@@ -19,7 +19,7 @@ enum protocols{
 	DPI_NUM_PROTOCOLS
 };
 ```
-2) In file ```api.c```, add a string representation for the protocol, by adding the string
+2) In file ```src/peafowl.c```, add a string representation for the protocol, by adding the string
 ```"TELNET"``` to the ```protocols_strings``` array.
 The position of the string in the array must be equal to the corresponding enum value,
 such that ```protocols_strings[DPI_PROTOCOL_TELNET] == "TELNET"```.
@@ -27,22 +27,17 @@ such that ```protocols_strings[DPI_PROTOCOL_TELNET] == "TELNET"```.
 3) Create a new inspector, by implementing a C function with the following signature and semantic:
 
 ```C
-u_int8_t check_telnet(dpi_library_state_t* state,    // The state of the library
+uint8_t check_telnet(dpi_library_state_t* state,    // The state of the library
                       dpi_pkt_infos_t* pkt,          // The parsed information about the current packet
                       const unsigned char* app_data, // A pointer to the beginning of the 
                                                      // application (layer 7) data
-                      u_int32_t data_length,         // The lenght of the application data
+                      uint32_t data_length,         // The lenght of the application data
                       dpi_tracking_informations_t* t // Information about the current state of the 
                                                      // connection to which the packet belongs to
                       );
 ```
-The function declaration must be put in inspectors/inspectors.h, while its definition can be put 
-in a new source file in inspectors folder (e.g. inspectors/telnet.c) and then added to the 
-inspectors/Makefile targets
-
-```Makefile
-TARGET = dhcp.o dhcpv6.o bgp.o dns.o http_parser_joyent.o http.o smtp.o pop3.o mdns.o ntp.o telnet.o
-```
+The function declaration must be put in includ/peafowl/inspectors/inspectors.h, while its definition can be put 
+in a new source file in inspectors folder (e.g. src/inspectors/telnet.c).
 
 This function, after analyzing "app_data" and using the knowledge about the current state of the flow
 can return one of four different values:
@@ -57,8 +52,8 @@ and UDP packets, so it may be a good idea, as a first thing, to return DPI_PROTO
 the inspectors is called on UDP packets for a protocol which only works over TCP (e.g. HTTP).
 
 4) If the inspector needs to store information about the application flow, add an appropriate structure in the 
-flow data description (api.h, struct dpi_tracking_informations). These data can be then used by the inspector
-by accessing the last parameter of the call described in point 2).
+flow data description (```include/peafowl/flow_table.h```, ```struct dpi_tracking_informations```). These data can be then used by the inspector
+by accessing the last parameter of the call described in point 3).
 
 ```C
 typedef struct dpi_tracking_informations{
@@ -75,7 +70,7 @@ typedef struct dpi_tracking_informations{
 ```
 
 5) Add the inspector to the set of inspectors which will be called by the framework. This can be done by 
-inserting a pointer to the corresponding function into an appropriate array (api.c).
+inserting a pointer to the corresponding function into an appropriate array (```src/peafowl.c```).
 
 ```C
 static const dpi_inspector_callback const
@@ -88,7 +83,7 @@ static const dpi_inspector_callback const
 ```
 
 6) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
-the protocol identifier (api.c).
+the protocol identifier (```src/peafowl.c```).
 
 ```C
 static const dpi_l7_prot_id const
@@ -133,9 +128,15 @@ TEST(TELNETTest, Generic) {
 Where ```42``` is the number of ```TELNET``` packets you expect to be identified by the protocol inspector.
 Of course, you can check the correctness of the protocol in any other way.
 
-8) Recompile the framework.
+8) Recompile the framework with testing option enabled and run the tests to check that the unit tests succeed:
 
-9) Run a ```make testquick``` to check that the unit test succeeds.
+```
+$ cd build
+$ rm -rf *
+$ cmake -DENABLE_TESTS=ON ../
+$ make
+$ make test
+```
 
 If you implemented the support for some other protocols please let me know so I can add them to the framework.
 
@@ -146,7 +147,7 @@ by the protocols to the application that uses the framework. In this way, the ap
 needs and which callback the framework has to invoke when this data is found. To add this capability to existing 
 inspector you need to follow some simple steps. For example, to add it to POP3 you need to:
 
-1) Create a struct that will be used by the application to indicate to the framework the functions to be used to process specific application data in the packet, and define it in api.h. 
+1) Create a struct that will be used by the application to indicate to the framework the functions to be used to process specific application data in the packet, and define it in peafowl.h. 
 E.g.:
 
 ```C
@@ -170,14 +171,14 @@ typedef void(pop3_user_callback)(
 	uint length;  // Length of the "USER" message
 	);
 ```
-3) Add to the library_state struct in api.h, the memebers for the callbacks and for the user data, for example:
+3) Add to the library_state struct in peafowl.h, the memebers for the callbacks and for the user data, for example:
 ```C
     ...
     void *pop3_callbacks;
     void *pop3_callbacks_user_data;
     ...
 ```
-4) Define in api.h two functions to enable/disable these callbacks:
+4) Define in peafowl.h two functions to enable/disable these callbacks:
 ```C
 u_int8_t dpi_pop3_activate_callbacks(dpi_library_state_t* state, dpi_pop3_callbacks_t* callbacks, void* user_data);
 

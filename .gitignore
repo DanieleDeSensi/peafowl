@@ -25,4 +25,4 @@ test/testSMTP
 test/testSSL
 test/testSkype
 test/testUtils
-
+test/testSkipL7
