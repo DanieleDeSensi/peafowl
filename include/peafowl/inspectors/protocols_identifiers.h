@@ -81,6 +81,7 @@ enum protocols {
   DPI_PROTOCOL_WHATSAPP,
   DPI_PROTOCOL_TELEGRAM,
   DPI_PROTOCOL_DROPBOX,
+  DPI_PROTOCOL_SPOTIFY,
   DPI_NUM_PROTOCOLS
 };
 
@@ -212,6 +213,7 @@ enum protocol_check_statuses {
 #define port_hangout_19308 0x6C4B /** 19308 **/
 #define port_hangout_19309 0x4B6D /** 19309 **/
 #define port_dropbox 0x5C44 /** 17500 **/
+#define port_spotify 0x15E1 /** 57621 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define port_smtp_1 0x0019   /** 25 **/
 #define port_dns 0x0035      /** 53 **/
@@ -240,6 +242,7 @@ enum protocol_check_statuses {
 #define port_hangout_19308 0x4B6C /** 19308 **/
 #define port_hangout_19309 0x4B6D /** 19309 **/
 #define port_dropbox 0x445C /** 17500 **/
+#define port_spotify 0xE115 /** 57621 **/
 #else
 #error "Please fix <bits/endian.h>"
 #endif

@@ -1,6 +1,8 @@
 /*
  * whatsapp.c
  *
+ * This protocol inspector is adapted from
+ * the nDPI WhatsApp dissector (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/whatsapp.c)
  * =========================================================================
  *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
  *

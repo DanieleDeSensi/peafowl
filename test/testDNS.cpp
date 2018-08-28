@@ -37,4 +37,6 @@ TEST(DNSTest, Generic) {
     EXPECT_EQ(protocols[DPI_PROTOCOL_DNS], (uint) 4);
     getProtocols("./pcaps/dropbox.pcap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_DNS], (uint) 24);
+    getProtocols("./pcaps/spotify.pcapng", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_DNS], (uint) 14);
 }

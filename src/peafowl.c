@@ -96,7 +96,8 @@ static const dpi_l7_prot_id const
          [port_hangout_19307] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19308] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19309] = DPI_PROTOCOL_HANGOUT,
-         [port_dropbox] = DPI_PROTOCOL_DROPBOX,};
+         [port_dropbox] = DPI_PROTOCOL_DROPBOX,
+         [port_spotify] = DPI_PROTOCOL_SPOTIFY,};
 
 static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
     {[DPI_PROTOCOL_DHCP] = check_dhcp,   [DPI_PROTOCOL_DHCPv6] = check_dhcpv6,
@@ -108,7 +109,7 @@ static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
      [DPI_PROTOCOL_IMAP] = check_imap,
      [DPI_PROTOCOL_SSL] = check_ssl,     [DPI_PROTOCOL_HANGOUT] = check_hangout,
      [DPI_PROTOCOL_WHATSAPP] = check_whatsapp, [DPI_PROTOCOL_TELEGRAM] = check_telegram,
-     [DPI_PROTOCOL_DROPBOX] = check_dropbox,};
+     [DPI_PROTOCOL_DROPBOX] = check_dropbox, [DPI_PROTOCOL_SPOTIFY] = check_spotify,};
 
 static const dpi_inspector_callback const callbacks_manager[DPI_NUM_PROTOCOLS] = {
     [DPI_PROTOCOL_HTTP] = invoke_callbacks_http,
@@ -135,6 +136,7 @@ static const char* protocols_strings[DPI_NUM_PROTOCOLS] = {
     [DPI_PROTOCOL_WHATSAPP] = "WhatsApp",
     [DPI_PROTOCOL_TELEGRAM] = "Telegram",
     [DPI_PROTOCOL_DROPBOX] = "Dropbox",
+    [DPI_PROTOCOL_SPOTIFY] = "Spotify",
 };
 
 typedef struct dpi_l7_skipping_infos_key {

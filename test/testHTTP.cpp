@@ -24,4 +24,6 @@ TEST(HTTPTest, Generic) {
     EXPECT_EQ(protocols[DPI_PROTOCOL_HTTP], (uint) 6);
     getProtocols("./pcaps/dropbox.pcap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_HTTP], (uint) 11);
+    getProtocols("./pcaps/spotify.pcapng", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_HTTP], (uint) 10);
 }

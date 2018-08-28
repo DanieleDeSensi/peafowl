@@ -1,5 +1,5 @@
 /**
- *  Test for HTTP protocol.
+ *  Test for SSL protocol.
  **/
 #include "common.h"
 
@@ -18,4 +18,6 @@ TEST(SSLTest, Generic) {
     EXPECT_EQ(protocols[DPI_PROTOCOL_SSL], (uint) 54);
     getProtocols("./pcaps/dropbox.pcap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_SSL], (uint) 224);
+    getProtocols("./pcaps/spotify.pcapng", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_SSL], (uint) 11);
 }
