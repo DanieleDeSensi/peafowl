@@ -65,7 +65,11 @@ static const dpi_l7_prot_id const
          [port_bgp] = DPI_PROTOCOL_BGP,
          [port_smtp_1] = DPI_PROTOCOL_SMTP,
          [port_smtp_2] = DPI_PROTOCOL_SMTP,
+         [port_smtp_ssl] = DPI_PROTOCOL_SMTP,
          [port_pop3] = DPI_PROTOCOL_POP3,
+         [port_pop3_ssl] = DPI_PROTOCOL_POP3,
+         [port_imap] = DPI_PROTOCOL_IMAP,
+         [port_imap_ssl] = DPI_PROTOCOL_IMAP,
          [port_ssl] = DPI_PROTOCOL_SSL,
          [port_hangout_19305] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19306] = DPI_PROTOCOL_HANGOUT,
@@ -91,7 +95,8 @@ static const dpi_l7_prot_id const
          [port_hangout_19306] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19307] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19308] = DPI_PROTOCOL_HANGOUT,
-         [port_hangout_19309] = DPI_PROTOCOL_HANGOUT};
+         [port_hangout_19309] = DPI_PROTOCOL_HANGOUT,
+         [port_dropbox] = DPI_PROTOCOL_DROPBOX,};
 
 static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
     {[DPI_PROTOCOL_DHCP] = check_dhcp,   [DPI_PROTOCOL_DHCPv6] = check_dhcpv6,
@@ -100,8 +105,10 @@ static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
      [DPI_PROTOCOL_SKYPE] = check_skype, [DPI_PROTOCOL_NTP] = check_ntp,
      [DPI_PROTOCOL_BGP] = check_bgp,     [DPI_PROTOCOL_HTTP] = check_http,
      [DPI_PROTOCOL_SMTP] = check_smtp,   [DPI_PROTOCOL_POP3] = check_pop3,
+     [DPI_PROTOCOL_IMAP] = check_imap,
      [DPI_PROTOCOL_SSL] = check_ssl,     [DPI_PROTOCOL_HANGOUT] = check_hangout,
-     [DPI_PROTOCOL_WHATSAPP] = check_whatsapp,};
+     [DPI_PROTOCOL_WHATSAPP] = check_whatsapp, [DPI_PROTOCOL_TELEGRAM] = check_telegram,
+     [DPI_PROTOCOL_DROPBOX] = check_dropbox,};
 
 static const dpi_inspector_callback const callbacks_manager[DPI_NUM_PROTOCOLS] = {
     [DPI_PROTOCOL_HTTP] = invoke_callbacks_http,
@@ -122,9 +129,12 @@ static const char* protocols_strings[DPI_NUM_PROTOCOLS] = {
     [DPI_PROTOCOL_BGP] = "BGP",  
     [DPI_PROTOCOL_SMTP] = "SMTP",
     [DPI_PROTOCOL_POP3] = "POP3", 
+    [DPI_PROTOCOL_IMAP] = "IMAP",
     [DPI_PROTOCOL_SSL] = "SSL", 
     [DPI_PROTOCOL_HANGOUT] = "Hangout",
     [DPI_PROTOCOL_WHATSAPP] = "WhatsApp",
+    [DPI_PROTOCOL_TELEGRAM] = "Telegram",
+    [DPI_PROTOCOL_DROPBOX] = "Dropbox",
 };
 
 typedef struct dpi_l7_skipping_infos_key {
@@ -1247,6 +1257,10 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
   seg.data = NULL;
   seg.connection_terminated = 0;
 
+  if(data_length){
+    ++flow->tracking.num_packets;
+  }
+
   if (flow->l7prot < DPI_PROTOCOL_NOT_DETERMINED) {
     r.protocol.l7prot = flow->l7prot;
     if (pkt_infos->l4prot == IPPROTO_TCP) {
@@ -1405,6 +1419,17 @@ dpi_protocol_t dpi_guess_protocol(dpi_pkt_infos_t* pkt_infos) {
     r.l7prot = DPI_PROTOCOL_UNKNOWN;
   }
   return r;
+}
+
+uint8_t dpi_set_protocol_accuracy(dpi_library_state_t *state,
+                                  dpi_l7_prot_id protocol,
+                                  dpi_inspector_accuracy accuracy) {
+  if (state) {
+    state->inspectors_accuracy[protocol] = accuracy;
+    return DPI_STATE_UPDATE_SUCCESS;
+  } else {
+    return DPI_STATE_UPDATE_FAILURE;
+  }
 }
 
 /**

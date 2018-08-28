@@ -45,6 +45,8 @@ typedef struct dpi_tracking_informations {
    **/
   void* flow_specific_user_data;
 
+  size_t num_packets; // Number of packets received for the flow
+
   /*********************************/
   /** TCP Tracking informations.  **/
   /*********************************/
@@ -94,13 +96,19 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   uint8_t num_pop3_matched_messages : 2;
 
+  /**********************************/
+  /** IMAP Tracking informations.  **/
+  /**********************************/
+  uint8_t imap_starttls : 2;
+  uint8_t imap_stage : 3;
+
   /*********************************/
   /** SSL Tracking informations. **/
   /*********************************/
   dpi_ssl_internal_information_t ssl_information[2];
 
   /**************************************/
-  /** WhatsApp Tracking informations. **/
+  /** WhatsApp Tracking informations.  **/
   /**************************************/
   size_t whatsapp_matched_sequence;
 } dpi_tracking_informations_t;

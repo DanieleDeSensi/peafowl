@@ -81,6 +81,15 @@ uint8_t check_hangout(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 uint8_t check_whatsapp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
                   dpi_tracking_informations_t* t);
+uint8_t check_telegram(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t);
+uint8_t check_imap(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t);
+uint8_t check_dropbox(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t);
 
 uint8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                               const unsigned char* app_data,

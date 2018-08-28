@@ -64,6 +64,9 @@ The supported protocols are:
     <td>POP3</td><td>3/5</td>
   </tr>
   <tr>
+    <td>IMAP</td><td>5/5</td>
+  </tr>
+  <tr>
     <td>SMTP</td><td>3/5</td>
   </tr>
   <tr>
@@ -98,6 +101,12 @@ The supported protocols are:
   </tr>
   <tr>
     <td>WhatsApp</td><td>4/5</td>
+  </tr>
+  <tr>
+    <td>Telegram</td><td>?</td>
+  </tr>
+  <tr>
+    <td>Dropbox</td><td>3/5</td>
   </tr>
 </table>
 
