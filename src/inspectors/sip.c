@@ -168,17 +168,6 @@ uint8_t dpi_sip_disable_callbacks(dpi_library_state_t *state) {
   }
 }
 
-uint8_t dpi_set_protocol_accuracy(dpi_library_state_t *state,
-                                  dpi_l7_prot_id protocol,
-                                  dpi_inspector_accuracy accuracy) {
-  if (state) {
-    state->inspectors_accuracy[protocol] = accuracy;
-    return DPI_STATE_UPDATE_SUCCESS;
-  } else {
-    return DPI_STATE_UPDATE_FAILURE;
-  }
-}
-
 uint8_t getUser(dpi_sip_str_t *user, dpi_sip_str_t *domain, const char *s,
                 int len) {
   enum state {

@@ -1,8 +1,6 @@
 /*
- * whatsapp.c
+ * telegram.c
  *
- * This protocol inspector is adapted from
- * the nDPI WhatsApp dissector (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/whatsapp.c)
  * =========================================================================
  *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
  *
@@ -27,25 +25,28 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-static uint8_t whatsapp_sequence[] = {
-    0x45, 0x44, 0x0, 0x01, 0x0, 0x0, 0x02, 0x08,
-    0x0, 0x57, 0x41, 0x02, 0x0, 0x0, 0x0
- };
-
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-uint8_t check_whatsapp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_telegram(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                       const unsigned char* app_data, uint32_t data_length,
                       dpi_tracking_informations_t* t){
-  if(t->whatsapp_matched_sequence < sizeof(whatsapp_sequence)) {
-    if(memcmp(app_data, &whatsapp_sequence[t->whatsapp_matched_sequence], 
-      MIN(sizeof(whatsapp_sequence) - t->whatsapp_matched_sequence, data_length))) {
-      return DPI_PROTOCOL_NO_MATCHES;
-    } else {
-      t->whatsapp_matched_sequence += data_length;
+  uint16_t dport;
+
+  if (!data_length) {
+    return DPI_PROTOCOL_MORE_DATA_NEEDED;
+  } 
+
+  if (pkt->l4prot != IPPROTO_TCP) {
+    return DPI_PROTOCOL_NO_MATCHES;
+  }
+
+  if (data_length > 56) {
+    dport = ntohs(pkt->dstport);
+
+    if (app_data[0] == 0xef && (dport == 443 || dport == 80 || dport == 25)) {
+      if (app_data[1] == 0x7f || app_data[1]*4 <= data_length - 1) {
+        return DPI_PROTOCOL_MATCHES;
+      }
       return DPI_PROTOCOL_MORE_DATA_NEEDED;
     }
-  } else {
-    return DPI_PROTOCOL_MATCHES;
-  }
+  } 
+  return DPI_PROTOCOL_NO_MATCHES;
 }
