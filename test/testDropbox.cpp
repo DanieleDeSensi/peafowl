@@ -5,8 +5,8 @@
 
 TEST(DropboxTest, Generic) {
     std::vector<uint> protocols;
-    getProtocols("./pcaps/dropbox.pcap", protocols);
+    getProtocols("./pcaps/dropbox_old.pcap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_DROPBOX], (uint) 12);
-    getProtocols("./pcaps/dropbox_2.pcapng", protocols);
-    EXPECT_EQ(protocols[DPI_PROTOCOL_DROPBOX], (uint) 6);
+    getProtocols("./pcaps/dropbox.pcapng", protocols);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_DROPBOX], (uint) 12);
 }
