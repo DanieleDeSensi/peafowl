@@ -28,8 +28,6 @@
 uint8_t check_telegram(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                       const unsigned char* app_data, uint32_t data_length,
                       dpi_tracking_informations_t* t){
-  uint16_t dport;
-
   if (!data_length) {
     return DPI_PROTOCOL_MORE_DATA_NEEDED;
   } 
@@ -39,7 +37,7 @@ uint8_t check_telegram(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
   }
 
   if (data_length > 56) {
-    dport = ntohs(pkt->dstport);
+    uint16_t dport = ntohs(pkt->dstport);
 
     if (app_data[0] == 0xef && (dport == 443 || dport == 80 || dport == 25)) {
       if (app_data[1] == 0x7f || app_data[1]*4 <= data_length - 1) {

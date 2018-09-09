@@ -47,36 +47,41 @@ uint8_t check_spotify(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
         app_data[8] == 0x50) {
       return DPI_PROTOCOL_MATCHES;
     } else if (pkt->ip_version == 4) { /* IPv4 Only: we need to support packet->iphv6 at some point */
-        /*
-          Spotify
-          78.31.8.0 - 78.31.15.255 (78.31.8.0/22)
-          AS29017
-          193.235.232.0 - 193.235.235.255 (193.235.232.0/22)
-          AS29017
-          194.132.196.0 - 194.132.199.255 (194.132.198.147/22)
-          AS43650
-          194.132.176.0 - 194.132.179.255  (194.132.176.0/22)
-          AS43650
-          194.132.162.0 - 194.132.163.255   (194.132.162.0/24)
-          AS43650
-        */
+      /*
+        Spotify
+        78.31.8.0 - 78.31.15.255 (78.31.8.0/22)
+        AS29017
+        193.235.232.0 - 193.235.235.255 (193.235.232.0/22)
+        AS29017
+        194.132.196.0 - 194.132.199.255 (194.132.198.147/22)
+        AS43650
+        194.132.176.0 - 194.132.179.255  (194.132.176.0/22)
+        AS43650
+        194.132.162.0 - 194.132.163.255   (194.132.162.0/24)
+        AS43650
+      */
 
-        long src_addr_masked = ntohl(pkt->src_addr_t.ipv4_srcaddr) & 0xFFFFFC00 /* 255.255.252.0 */;
-        long dst_addr_masked = ntohl(pkt->dst_addr_t.ipv4_dstaddr) & 0xFFFFFC00 /* 255.255.252.0 */;
-        if (src_addr_masked == 0x4E1F0800 || /* 78.31.8.0 */
-            dst_addr_masked == 0x4E1F0800 ||
-            /* 193.235.232.0 */  
-            src_addr_masked == 0xC1EBE800 ||
-            dst_addr_masked == 0xC1EBE800 || 
-            /* 194.132.196.0 */
-            src_addr_masked == 0xC284C400 ||
-            dst_addr_masked == 0xC284C400 ||
-            /* 194.132.162.0 */
-            src_addr_masked == 0xC284A200 ||
-            dst_addr_masked == 0xC284A200) {
+      long src_addr_masked_22 = ntohl(pkt->src_addr_t.ipv4_srcaddr) & 0xFFFFFC00; // */22
+      long dst_addr_masked_22 = ntohl(pkt->dst_addr_t.ipv4_dstaddr) & 0xFFFFFC00; // */22
+      long src_addr_masked_24 = ntohl(pkt->src_addr_t.ipv4_srcaddr) & 0xFFFFFF00; // */24
+      long dst_addr_masked_24 = ntohl(pkt->dst_addr_t.ipv4_dstaddr) & 0xFFFFFF00; // */24
+      if (src_addr_masked_22 == 0x4E1F0800 || /* 78.31.8.0/22 */
+          dst_addr_masked_22 == 0x4E1F0800 ||
+          /* 193.235.232.0/22 */  
+          src_addr_masked_22 == 0xC1EBE800 ||
+          dst_addr_masked_22 == 0xC1EBE800 || 
+          /* 194.132.196.0/22 */
+          src_addr_masked_22 == 0xC284C400 ||
+          dst_addr_masked_22 == 0xC284C400 ||
+          /* 194.132.176.0/22 */
+          src_addr_masked_22 == 0xC284B000 ||
+          dst_addr_masked_22 == 0xC284B000 ||
+          /* 194.132.162.0/24 */
+          src_addr_masked_24 == 0xC284A200 ||
+          dst_addr_masked_24 == 0xC284A200) {
           return DPI_PROTOCOL_MATCHES;
-        }
       }
+    }
   }
   return DPI_PROTOCOL_NO_MATCHES;
 }

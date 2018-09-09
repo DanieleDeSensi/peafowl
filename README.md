@@ -108,6 +108,9 @@ The supported protocols are:
   <tr>
     <td>Dropbox</td><td>3/5</td>
   </tr>
+  <tr>
+    <td>Spotify</td><td>5/5</td>
+  </tr>
 </table>
 
 At the moment, data and metadata extraction is supported for the following protocols:
