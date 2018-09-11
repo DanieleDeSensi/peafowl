@@ -66,6 +66,9 @@ uint8_t check_skype(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 uint8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
                   dpi_tracking_informations_t* t);
+uint8_t check_ssh(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  const unsigned char* app_data, uint32_t data_length,
+                  dpi_tracking_informations_t* t);
 uint8_t check_smtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
                    dpi_tracking_informations_t* t);

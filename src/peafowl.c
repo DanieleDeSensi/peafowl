@@ -75,7 +75,8 @@ static const dpi_l7_prot_id const
          [port_hangout_19306] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19307] = DPI_PROTOCOL_HANGOUT,
          [port_hangout_19308] = DPI_PROTOCOL_HANGOUT,
-         [port_hangout_19309] = DPI_PROTOCOL_HANGOUT};
+         [port_hangout_19309] = DPI_PROTOCOL_HANGOUT,
+         [port_ssh] = DPI_PROTOCOL_SSH,};
 
 static const dpi_l7_prot_id const
     dpi_well_known_ports_association_udp[DPI_MAX_UINT_16 + 1] =
@@ -103,6 +104,7 @@ static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
     {[DPI_PROTOCOL_DHCP] = check_dhcp,   [DPI_PROTOCOL_DHCPv6] = check_dhcpv6,
      [DPI_PROTOCOL_DNS] = check_dns,     [DPI_PROTOCOL_MDNS] = check_mdns,
      [DPI_PROTOCOL_SIP] = check_sip,     [DPI_PROTOCOL_RTP] = check_rtp,
+     [DPI_PROTOCOL_SSH] = check_ssh,
      [DPI_PROTOCOL_SKYPE] = check_skype, [DPI_PROTOCOL_NTP] = check_ntp,
      [DPI_PROTOCOL_BGP] = check_bgp,     [DPI_PROTOCOL_HTTP] = check_http,
      [DPI_PROTOCOL_SMTP] = check_smtp,   [DPI_PROTOCOL_POP3] = check_pop3,
@@ -125,6 +127,7 @@ static const char* protocols_strings[DPI_NUM_PROTOCOLS] = {
     [DPI_PROTOCOL_NTP] = "NTP",  
     [DPI_PROTOCOL_SIP] = "SIP", 
     [DPI_PROTOCOL_RTP] = "RTP",
+    [DPI_PROTOCOL_SSH] = "SSH",
     [DPI_PROTOCOL_SKYPE] = "Skype", 
     [DPI_PROTOCOL_HTTP] = "HTTP", 
     [DPI_PROTOCOL_BGP] = "BGP",  

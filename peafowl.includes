@@ -1,9 +1,0 @@
-demo/http_pattern_matching/pattern_matching_lib
-include/peafowl
-include/peafowl/external/fastflow/ff
-include/peafowl/external/fastflow/ff/mpmc/asm
-include/peafowl/external/fastflow/ff/platforms
-include/peafowl/external/fastflow/ff/tpc
-include/peafowl/inspectors
-src/external/utils
-test

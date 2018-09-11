@@ -60,11 +60,12 @@ uint8_t check_spotify(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
         194.132.162.0 - 194.132.163.255   (194.132.162.0/24)
         AS43650
       */
-
-      long src_addr_masked_22 = ntohl(pkt->src_addr_t.ipv4_srcaddr) & 0xFFFFFC00; // */22
-      long dst_addr_masked_22 = ntohl(pkt->dst_addr_t.ipv4_dstaddr) & 0xFFFFFC00; // */22
-      long src_addr_masked_24 = ntohl(pkt->src_addr_t.ipv4_srcaddr) & 0xFFFFFF00; // */24
-      long dst_addr_masked_24 = ntohl(pkt->dst_addr_t.ipv4_dstaddr) & 0xFFFFFF00; // */24
+      long src_addr = ntohl(pkt->src_addr_t.ipv4_srcaddr);
+      long dst_addr = ntohl(pkt->dst_addr_t.ipv4_dstaddr);
+      long src_addr_masked_22 = src_addr & 0xFFFFFC00; // */22
+      long dst_addr_masked_22 = dst_addr & 0xFFFFFC00; // */22
+      long src_addr_masked_24 = src_addr & 0xFFFFFF00; // */24
+      long dst_addr_masked_24 = dst_addr & 0xFFFFFF00; // */24
       if (src_addr_masked_22 == 0x4E1F0800 || /* 78.31.8.0/22 */
           dst_addr_masked_22 == 0x4E1F0800 ||
           /* 193.235.232.0/22 */  

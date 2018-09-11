@@ -51,6 +51,19 @@ You can look at one of the existing inspectors to see some examples. An inspecto
 and UDP packets, so it may be a good idea, as a first thing, to return DPI_PROTOCOL_NO_MATCHES when 
 the inspectors is called on UDP packets for a protocol which only works over TCP (e.g. HTTP).
 
+Then, add the inspector to the set of inspectors which will be called by the framework. This can be done by 
+inserting a pointer to the corresponding function into an appropriate array (```src/peafowl.c```).
+
+```C
+static const dpi_inspector_callback const
+    inspectors[DPI_NUM_PROTOCOLS]=
+        {[DPI_PROTOCOL_BGP]=check_bgp
+        ,[DPI_PROTOCOL_HTTP]=check_http
+        ,[DPI_PROTOCOL_SMTP]=check_smtp
+        ,[DPI_PROTOCOL_POP3]=check_pop3
+        ,[DPI_PROTOCOL_TELNET]=check_telnet};
+```
+
 4) If the inspector needs to store information about the application flow, add an appropriate structure in the 
 flow data description (```include/peafowl/flow_table.h```, ```struct dpi_tracking_informations```). These data can be then used by the inspector
 by accessing the last parameter of the call described in point 3).
@@ -69,20 +82,7 @@ typedef struct dpi_tracking_informations{
 }dpi_tracking_informations_t;
 ```
 
-5) Add the inspector to the set of inspectors which will be called by the framework. This can be done by 
-inserting a pointer to the corresponding function into an appropriate array (```src/peafowl.c```).
-
-```C
-static const dpi_inspector_callback const
-	inspectors[DPI_NUM_PROTOCOLS]=
-		{[DPI_PROTOCOL_BGP]=check_bgp
-		,[DPI_PROTOCOL_HTTP]=check_http
-		,[DPI_PROTOCOL_SMTP]=check_smtp
-		,[DPI_PROTOCOL_POP3]=check_pop3
-		,[DPI_PROTOCOL_TELNET]=check_telnet};
-```
-
-6) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
+5) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
 the protocol identifier (```src/peafowl.c```).
 
 ```C
@@ -102,7 +102,7 @@ protocol is telnet and, if this is not the case, it will check the other protoco
 In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to 
 ```dpi_well_known_ports_association_udp``` array.
 
-7) Add unit tests for the protocol. Suppose you are adding the support for the ```TELNET``` protocol. 
+6) Add unit tests for the protocol. Suppose you are adding the support for the ```TELNET``` protocol. 
 First, you need to add a ```testTelnet.cpp``` file under ```./test/```. This file will be automatically compiled and
 executed when the tests are run. In this file you should put the code for checking that the protocol ```TELNET```
 is correctly identified. You can check correctness in the way you prefer.
@@ -128,7 +128,7 @@ TEST(TELNETTest, Generic) {
 Where ```42``` is the number of ```TELNET``` packets you expect to be identified by the protocol inspector.
 Of course, you can check the correctness of the protocol in any other way.
 
-8) Recompile the framework with testing option enabled and run the tests to check that the unit tests succeed:
+7) Recompile the framework with testing option enabled and run the tests to check that the unit tests succeed:
 
 ```
 $ cd build

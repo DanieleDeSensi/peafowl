@@ -70,6 +70,7 @@ enum protocols {
   DPI_PROTOCOL_NTP,
   DPI_PROTOCOL_SIP,
   DPI_PROTOCOL_RTP,
+  DPI_PROTOCOL_SSH,
   DPI_PROTOCOL_SKYPE,
   DPI_PROTOCOL_HTTP,
   DPI_PROTOCOL_BGP,
@@ -186,6 +187,7 @@ enum protocol_check_statuses {
 };
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
+#define port_ssh 0x1600      /** 22 **/
 #define port_smtp_1 0x1900   /** 25 **/
 #define port_dns 0x3500      /** 53 **/
 #define port_dhcp_1 0x4300   /** 67 **/
@@ -215,6 +217,7 @@ enum protocol_check_statuses {
 #define port_dropbox 0x5C44 /** 17500 **/
 #define port_spotify 0x15E1 /** 57621 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
+#define port_ssh 0x0016      /* 22 **/
 #define port_smtp_1 0x0019   /** 25 **/
 #define port_dns 0x0035      /** 53 **/
 #define port_dhcp_1 0x0043   /** 67 **/

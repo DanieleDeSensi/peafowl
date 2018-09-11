@@ -75,6 +75,12 @@ typedef struct dpi_tracking_informations {
   /************************************/
 
   /*********************************/
+  /** SSH Tracking informations. **/
+  /*********************************/
+  uint8_t ssh_stage : 2;
+  char *ssh_client_signature, *ssh_server_signature;
+
+  /*********************************/
   /** HTTP Tracking informations. **/
   /*********************************/
   /** One HTTP parser per direction. **/
