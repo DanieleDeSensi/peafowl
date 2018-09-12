@@ -2,7 +2,7 @@
  * dns.c
  *
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *  Copyright (C) 2012-2018, Daniele De Sensi (d.desensi.software@gmail.com)
  *
  *  This file is part of Peafowl.
  *
@@ -40,86 +40,118 @@ struct dns_header {
 /**
    return n bit from position p of number x 
 **/
-static inline uint8_t getbits(uint16_t x, int p, int n)
+static inline uint8_t getBits(uint16_t x, int p, int n)
 {
   return (x >> (p+1-n)) & ~(~0 << n);
+}
+
+/**
+   Check if pkt is QUERY
+ **/
+static inline uint8_t isQuery(struct dns_header *dns_header)
+{
+  /* QDCOUNT = 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
+  if(dns_header->quest_count == 1 &&
+     dns_header->answ_count == 0 &&
+     dns_header->auth_rrs == 0 &&
+     dns_header->add_rrs == 0)
+    return 0;
+  return -1;
+}
+
+/**
+   Check if pkt is ANSWER
+ **/
+static inline uint8_t isAnswer(struct dns_header *dns_header, uint8_t *is_name_server, uint8_t *is_auth_server)
+
+{
+  uint8_t rcode, ret = -1;
+  /* Check the RCODE value */
+  rcode = getBits(dns_header->flags, 3, 4);
+  switch(rcode) {
+    /* TODO */
+  case 0: break;
+  case 1: break;
+  case 2: break;
+  case 3: break;
+  case 4: break;
+  case 5: break;
+  }
+  /** QDCOUNT = 1 **/
+  if(dns_header->quest_count == 1) {
+    /* ANCOUNT = 0 && NSCOUNT = 0 */
+    if(dns_header->answ_count == 0 && dns_header->auth_rrs == 0) {
+      *is_name_server = 1;
+      ret = 0;
+    }
+    /* ANCOUNT = 0 && NSCOUNT = 1 */
+    else if(dns_header->answ_count == 0 && dns_header->auth_rrs >= 1) {
+      *is_auth_server = 1;
+      ret = 0;
+    }
+    /* ANCOUNT = 1 && NSCOUNT = 0 */
+    else if(dns_header->answ_count >= 1 && dns_header->auth_rrs == 0) {
+      *is_name_server = 1;
+      ret = 0;
+    }
+    /* ANCOUNT = 1 && NSCOUNT = 1 */
+    else {
+      *is_name_server = 1;
+      *is_auth_server = 1;
+      ret = 0;
+    }
+  }
+  return ret;
 }
 
 
 uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t) {
-  /* Check standard DNS port (53) */
-  if ((pkt->dstport == port_dns || pkt->srcport == port_dns) &&
-      data_length >= 12) {
+                  dpi_tracking_informations_t* t)
+{
+  // check param
+  if(!state || !app_data | !t)
+    return -1;
+  
+  /* DNS port (53) */
+  if((pkt->dstport == port_dns || pkt->srcport == port_dns) &&
+     data_length >= 12) {
 
-    int is_name_server = 0, is_auth_server = 0;
-    uint8_t rcode;
+    uint8_t *is_name_server = 0, *is_auth_server = 0;
     struct dns_header *dns_header = (struct dns_header*)(app_data);    
     
     /**
        QR == 0 is a QUERY
     **/
     if((dns_header->flags & FMASK) == 0) {
-      /* QDCOUNT = 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
-      if(dns_header->quest_count == 1 &&
-	 dns_header->answ_count == 0 &&
-	 dns_header->auth_rrs == 0 &&
-	 dns_header->add_rrs == 0) {
-	  is_name_server = 1;
-	  /* TODO: extract name server */
-	  ++t->dns_stage;
-      }
+      if(isQuery(dns_header) == 0)
+	++t->dns_stage;
       else
 	return DPI_PROTOCOL_NO_MATCHES;
+      
+      /* TODO callback:
+	 extract name server */
     }
     /**
-       QR == 1 is a RESPONSE 
+       QR == 1 is an ANSWER
     **/
     if((dns_header->flags & FMASK) == 1) {
-      /* Check the RCODE value */
-      rcode = getbits(dns_header->flags, 3, 4);
-      switch(rcode) {
-      case 0: break;
-      case 1: break;
-      case 2: break;
-      case 3: break;
-      case 4: break;
-      case 5: break;
+      if(isAnswer(dns_header, is_name_server, is_auth_server) == 0)
+	++t->dns_stage;
+      else
+	return DPI_PROTOCOL_NO_MATCHES;
+
+      /** TODO callbacks:
+	  check is_name_server and is_auth_server to extract name server(s) **/
+      
+      if(t->dns_stage >= 2) {
+	return DPI_PROTOCOL_MATCHES;
+      } else {
+	return DPI_PROTOCOL_MORE_DATA_NEEDED;
       }
-      /** QDCOUNT = 1 **/
-      if(dns_header->quest_count == 1) {
-	/* TODO: extract name server from Queries */
-	if(dns_header->answ_count == 0 && dns_header->auth_rrs == 0) {
-	  ++t->dns_stage;
-	}
-	else if(dns_header->answ_count == 0 && dns_header->auth_rrs >= 1) {
-	  /* TODO: extract name server and primary name server from Authority server */
-	  is_auth_server = 1;
-	  ++t->dns_stage;
-	}
-	else if(dns_header->answ_count >= 1 && dns_header->auth_rrs == 0) {
-	  /* TODO: extract name server from Answer server */
-	  /* TODO check TYPE to extract IP address or CNAME of Answer server */
-	  is_name_server = 1;
-	  ++t->dns_stage;
-	}
-	else {
-	  /* TODO: extract name server from Answer server */
-	  /* TODO check TYPE to extract IP address or CNAME of Answer server */
-	  /* TODO: extract name server and primary name server from Authority server */
-	  is_name_server = 1; is_auth_server = 1;
-	  ++t->dns_stage;
-	}
-	if (t->dns_stage >= 2) {
-	  return DPI_PROTOCOL_MATCHES;
-	} else {
-	  return DPI_PROTOCOL_MORE_DATA_NEEDED;
-	}
-      }
-      /** QDCOUNT cannot be 0 for DNS **/
-      return DPI_PROTOCOL_NO_MATCHES;
     }
+    /** QDCOUNT cannot be 0 for DNS **/
     return DPI_PROTOCOL_NO_MATCHES;
   }
+  return DPI_PROTOCOL_NO_MATCHES;
 }
