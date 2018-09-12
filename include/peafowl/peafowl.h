@@ -75,6 +75,7 @@ extern "C" {
 
 #include <peafowl/inspectors/http_parser_joyent.h>
 #include <peafowl/inspectors/protocols_identifiers.h>
+#include <peafowl/inspectors/fields.h>
 #include <peafowl/utils.h>
 #include <peafowl/external/utils/uthash.h>
 
@@ -334,108 +335,6 @@ typedef struct dpi_ssl_internal_information {
   uint8_t ssl_detected;
 } dpi_ssl_internal_information_t;
 
-typedef struct dpi_sip_miprtcpstatic {
-  char media_ip_s[30];
-  int media_ip_len;
-  int media_port;
-  char rtcp_ip_s[30];
-  int rtcp_ip_len;
-  int rtcp_port;
-  int prio_codec;
-} dpi_sip_miprtcpstatic_t;
-
-typedef struct {
-  const char* s;
-  size_t len;
-} pfwl_field_t;
-
-typedef struct dpi_sip_miprtcp {
-  pfwl_field_t media_ip;
-  int media_port;
-  pfwl_field_t rtcp_ip;
-  int rtcp_port;
-  int prio_codec;
-} dpi_sip_miprtcp_t;
-
-struct dip_sip_codecmap;
-
-typedef struct dip_sip_codecmap {
-  char name[120];
-  int id;
-  int rate;
-  struct dip_sip_codecmap* next;
-} dpi_sip_codecmap_t;
-
-typedef enum {
-  UNKNOWN = 0,
-  CANCEL = 1,
-  ACK = 2,
-  INVITE = 3,
-  BYE = 4,
-  INFO = 5,
-  REGISTER = 6,
-  SUBSCRIBE = 7,
-  NOTIFY = 8,
-  MESSAGE = 9,
-  OPTIONS = 10,
-  PRACK = 11,
-  UPDATE = 12,
-  REFER = 13,
-  PUBLISH = 14,
-  RESPONSE = 15,
-  SERVICE = 16
-} dpi_sip_method_t;
-
-#define DPI_SIP_MAX_MEDIA_HOSTS 20
-
-typedef struct {
-  const char* name;
-  pfwl_field_t value;
-  UT_hash_handle hh;         /* makes this structure hashable */
-} pfwl_sip_indexed_field_t;
-
-typedef struct dpi_sip_internal_information {
-  unsigned int responseCode;
-  pfwl_sip_indexed_field_t* indexed_fields;
-  uint8_t isRequest;
-  uint8_t validMessage;
-  dpi_sip_method_t methodType;
-  uint8_t hasSdp;
-  dpi_sip_codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
-  dpi_sip_miprtcpstatic_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
-  int cdm_count;
-  unsigned int mrp_size;
-  unsigned int contentLength;
-  unsigned int len;
-  unsigned int cSeqNumber;
-  uint8_t hasVqRtcpXR;
-  dpi_sip_method_t cSeqMethod;
-
-  pfwl_field_t methodString;
-  pfwl_field_t callId;
-  pfwl_field_t reason;
-  pfwl_field_t rtcpxr_callid;
-  pfwl_field_t cSeqMethodString;
-  pfwl_field_t cSeq;
-  pfwl_field_t via;
-  pfwl_field_t contactURI;
-  /* extra */
-  pfwl_field_t ruriUser;
-  pfwl_field_t ruriDomain;
-  pfwl_field_t fromUser;
-  pfwl_field_t fromDomain;
-  pfwl_field_t toUser;
-  pfwl_field_t toDomain;
-  pfwl_field_t paiUser;
-  pfwl_field_t paiDomain;
-  pfwl_field_t pidURI;
-  pfwl_field_t fromURI;
-  pfwl_field_t toURI;
-  pfwl_field_t ruriURI;
-  pfwl_field_t toTag;
-  pfwl_field_t fromTag;
-} dpi_sip_internal_information_t;
-
 typedef void(sip_requestURI_callback)(const char* requestURI,
                                       size_t requestURI_len);
 
@@ -476,13 +375,12 @@ typedef enum {
   DPI_INSPECTOR_ACCURACY_HIGH,
 } dpi_inspector_accuracy;
 
-struct library_state;
-
 typedef struct {
-    char* name;
-    pfwl_field_callback* callback;
-    UT_hash_handle hh;         /* makes this structure hashable */
+    pfwl_field_callback** callbacks;
+    uint8_t callbacks_num;
 } pfwl_callbacks_field_entry_t;
+
+struct library_state;
 
 struct library_state {
   /********************************************************************/
@@ -519,7 +417,7 @@ struct library_state {
   void* sip_callbacks_user_data;
 
   /** Field callbacks. **/
-  pfwl_callbacks_field_entry_t* callbacks_fields_entries[DPI_NUM_PROTOCOLS];
+  pfwl_callbacks_field_entry_t callbacks_fields[DPI_NUM_PROTOCOLS];
 
   uint8_t tcp_reordering_enabled : 1;
 
@@ -1196,10 +1094,14 @@ uint8_t dpi_sip_activate_callbacks(dpi_library_state_t* state,
  */
 uint8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
 
-
-typedef struct{
-
-}pfwl_proto_callbacks_t;
+/**
+ * Returns the number of fields extracted for a specific protocol.
+ * @param state    A pointer to the state of the library.
+ * @param protocol The protocol.
+ * @return The number of fields extracted for a specific protocol.
+ */
+size_t pfwl_callbacks_fields_get_num(dpi_library_state_t* state,
+                                     dpi_l7_prot_id protocol);
 
 /**
  * Set a field callback for a given protocol.
@@ -1222,7 +1124,7 @@ typedef struct{
  *
  * @param state        A pointer to the state of the library.
  * @param protocol     The protocol.
- * @param field_name   The name of the field (must be '\0' terminated).
+ * @param field_type   The field (check the enum for that specific protocol).
  * @param callback     The callback.
  *
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
@@ -1231,21 +1133,21 @@ typedef struct{
  **/
 uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
                                 dpi_l7_prot_id protocol,
-                                const char* field_name,
+                                int field_type,
                                 pfwl_field_callback* callback);
 
 /**
  * Disable the a protocol field callback. udata is not freed/modified.
  * @param state       A pointer to the state of the library.
  * @param protocol     The protocol.
- * @param field_name   The name of the field
+ * @param field_type   The field (check the enum for that specific protocol).
  *
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
-                                   dpi_l7_prot_id protocol,
-                                   const char* field_name);
+                                    dpi_l7_prot_id protocol,
+                                    int field_type);
 
 /**
  * Adds a pointer to some data which will be passed as parameter to all

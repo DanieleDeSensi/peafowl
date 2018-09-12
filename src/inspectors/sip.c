@@ -866,25 +866,10 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
   }
 }
 
-static pfwl_field_t* get_or_create_indexed_field(dpi_sip_internal_information_t* sip_info,
-                                 const char* field_name){
-
-    pfwl_sip_indexed_field_t* s;
-    HASH_FIND_STR(sip_info->indexed_fields, field_name, s);
-    if(s){
-       return &(s->value);
-    } else {
-        s = (pfwl_sip_indexed_field_t *) malloc (sizeof(pfwl_sip_indexed_field_t));
-        s->name = field_name;
-        s->value.len = 0;
-        HASH_ADD_STR(sip_info->indexed_fields, name, s);
-        return &(s->value);
-    }
-}
-
 uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       dpi_sip_internal_information_t *sip_info,
-                      dpi_inspector_accuracy type) {
+                      dpi_inspector_accuracy type,
+                      pfwl_field_t* extracted_fields_sip) {
   int header_offset = 0;
   const char *pch, *ped;
   // uint8_t allowRequest = 0;
@@ -976,12 +961,12 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
     }
 
     if ((pch = strchr(tmp + 1, ' ')) != NULL) {
-      sip_info->methodString.s = tmp;
-      sip_info->methodString.len = (pch - tmp);
+      pfwl_field_t* methodString = &(extracted_fields_sip[DPI_FIELDS_SIP_METHOD]);
+      methodString->s = tmp;
+      methodString->len = (pch - tmp);
 
       if ((ped = strchr(pch + 1, ' ')) != NULL) {
-        pfwl_field_t* requestURI = get_or_create_indexed_field(sip_info, "requestURI");
-
+        pfwl_field_t* requestURI = &(extracted_fields_sip[DPI_FIELDS_SIP_REQUESTURI]);
         requestURI->s = pch + 1;
         requestURI->len = (ped - pch - 1);
         /* extract user */
@@ -1159,12 +1144,13 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
 
 uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
                      dpi_sip_internal_information_t *sip_info,
-                     dpi_inspector_accuracy type) {
+                     dpi_inspector_accuracy type,
+                     pfwl_field_t* extracted_fields_sip) {
   uint8_t r = 0;
   if (type == DPI_INSPECTOR_ACCURACY_LOW) {
     r = light_parse_message(app_data, data_length, sip_info);
   } else {
-    r = parse_message(app_data, data_length, sip_info, type);
+    r = parse_message(app_data, data_length, sip_info, type, extracted_fields_sip);
   }
   /* TODO: To be ported
   if(r == DPI_PROTOCOL_MATCHES && sip_info->hasVqRtcpXR) {
@@ -1193,7 +1179,8 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
   if (!data_length) {
     return DPI_PROTOCOL_MORE_DATA_NEEDED;
   }
-  memset(&(t->sip_informations), 0, sizeof(t->sip_informations)); //TODO PAY ATTENTION TO INDEXED FIELDS
+  memset(&(t->sip_informations), 0, sizeof(t->sip_informations));
+  memset(&(t->extracted_fields_sip), 0, sizeof(t->extracted_fields_sip));
   /* check if this is real SIP */
   if (!isalpha(app_data[0])) {
     return DPI_PROTOCOL_NO_MATCHES;
@@ -1203,20 +1190,19 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
   // msg->rcinfo.proto_type = PROTO_SIP;
 
   uint8_t r = parse_packet(app_data, data_length, &t->sip_informations,
-                           state->inspectors_accuracy[DPI_PROTOCOL_SIP]);
+                           state->inspectors_accuracy[DPI_PROTOCOL_SIP],
+                           t->extracted_fields_sip);
   // Callbacks
   if (r == DPI_PROTOCOL_MATCHES &&
-      HASH_COUNT(state->callbacks_fields_entries[DPI_PROTOCOL_SIP])) {
-    pfwl_callbacks_field_entry_t* searched;
-    pfwl_field_t* requestURI = get_or_create_indexed_field(&t->sip_informations, "requestURI");
-    if(requestURI->len){
-        HASH_FIND_STR(state->callbacks_fields_entries[DPI_PROTOCOL_SIP], "requestURI", searched);
-        if(searched){
-          (*(searched->callback))(requestURI->s,
-                                  requestURI->len,
-                                  1, state->callbacks_udata,
-                                  NULL, pkt); // TODO: FIX UDATA_FLOW
-        }
+      state->callbacks_fields[DPI_PROTOCOL_SIP].callbacks_num) {
+    for(size_t i = 0; i < DPI_FIELDS_SIP_NUM; i++){
+      pfwl_field_callback* cb = state->callbacks_fields[DPI_PROTOCOL_SIP].callbacks[i];
+      pfwl_field_t* field = &(t->extracted_fields_sip[i]);
+      if(cb && field->len){
+        (*cb)(field->s, field->len,
+              1, state->callbacks_udata,
+              NULL, pkt); // TODO: FIX UDATA_FLOW
+      }
     }
   }
 

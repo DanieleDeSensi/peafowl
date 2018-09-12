@@ -207,7 +207,12 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
   state->l7_skip = NULL;
 
   for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
-    state->callbacks_fields_entries[i] = NULL;
+    size_t num_callbacks = pfwl_callbacks_fields_get_num(state, i);
+    state->callbacks_fields[i].callbacks = (pfwl_field_callback**) malloc(sizeof(pfwl_field_callback*)*num_callbacks);
+    state->callbacks_fields[i].callbacks_num = 0;
+    for(size_t j = 0; j < num_callbacks; j++){
+      state->callbacks_fields[i].callbacks[j] = NULL;
+    }
   }
 
   return state;
@@ -601,6 +606,9 @@ void dpi_terminate(dpi_library_state_t* state) {
 #ifdef WITH_PROMETHEUS
     dpi_prometheus_terminate(state);
 #endif
+    for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+      free(state->callbacks_fields[i].callbacks);
+    }
     free(state);
   }
 }
@@ -1286,7 +1294,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
             pkt_infos, &(flow->tracking));
       }
 
-      if ((BITTEST(state->active_callbacks, flow->l7prot) || HASH_COUNT(state->callbacks_fields_entries[flow->l7prot]))
+      if ((BITTEST(state->active_callbacks, flow->l7prot) || state->callbacks_fields[flow->l7prot].callbacks_num)
           && data_length != 0) {
         (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
                                              data_length, &(flow->tracking));
@@ -1297,7 +1305,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
       }
 
     } else if (pkt_infos->l4prot == IPPROTO_UDP &&
-               (BITTEST(state->active_callbacks, flow->l7prot) || HASH_COUNT(state->callbacks_fields_entries[flow->l7prot]))) {
+               (BITTEST(state->active_callbacks, flow->l7prot) || state->callbacks_fields[flow->l7prot].callbacks_num)) {
       (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
                                            data_length, &(flow->tracking));
     }
@@ -1577,37 +1585,40 @@ uint8_t dpi_set_flow_cleaner_callback(dpi_library_state_t* state,
   return DPI_STATE_UPDATE_SUCCESS;
 }
 
+size_t pfwl_callbacks_fields_get_num(dpi_library_state_t* state,
+                                     dpi_l7_prot_id protocol){
+  switch(protocol){
+    case DPI_PROTOCOL_SIP:{
+      return DPI_FIELDS_SIP_NUM;
+    }break;
+  }
+  return 0;
+}
+
 uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
-                                dpi_l7_prot_id protocol,
-                                const char* field_name,
-                                pfwl_field_callback* callback){
-    if(state){
-        pfwl_callbacks_field_entry_t* to_add = (pfwl_callbacks_field_entry_t*) malloc(sizeof(pfwl_callbacks_field_entry_t));
-        to_add->name = malloc(sizeof(char)*(strlen(field_name) + 1));
-        strcpy(to_add->name, field_name);
-        to_add->callback = callback;
-        HASH_ADD_STR(state->callbacks_fields_entries[protocol], name, to_add);
-        dpi_set_protocol_accuracy(state, protocol, DPI_INSPECTOR_ACCURACY_HIGH);  // TODO: mmm, the problem is that we do not set back the original accuracy when doing field_remove
-        return DPI_STATE_UPDATE_SUCCESS;
-    }else{
-        return DPI_STATE_UPDATE_FAILURE;
-    }
+                                 dpi_l7_prot_id protocol,
+                                 int field_type,
+                                 pfwl_field_callback* callback){
+  if(state){
+    state->callbacks_fields[protocol].callbacks[field_type] = callback;
+    state->callbacks_fields[protocol].callbacks_num++;
+    dpi_set_protocol_accuracy(state, protocol, DPI_INSPECTOR_ACCURACY_HIGH);  // TODO: mmm, the problem is that we do not set back the original accuracy when doing field_remove
+    return DPI_STATE_UPDATE_SUCCESS;
+  }else{
+    return DPI_STATE_UPDATE_FAILURE;
+  }
 }
 
 uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
-                                   dpi_l7_prot_id protocol,
-                                   const char* field_name){
-    if(state){
-        pfwl_callbacks_field_entry_t* searched;
-        HASH_FIND_STR(state->callbacks_fields_entries[protocol], field_name, searched);
-        if(searched){
-            free(searched->name);
-            free(searched);
-        }
-        return DPI_STATE_UPDATE_SUCCESS;
-    }else{
-        return DPI_STATE_UPDATE_FAILURE;
-    }
+                                    dpi_l7_prot_id protocol,
+                                    int field_type){
+  if(state){
+    state->callbacks_fields[protocol].callbacks[field_type] = NULL;
+    state->callbacks_fields[protocol].callbacks_num--;
+    return DPI_STATE_UPDATE_SUCCESS;
+  }else{
+    return DPI_STATE_UPDATE_FAILURE;
+  }
 }
 
 /**

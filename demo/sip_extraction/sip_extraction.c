@@ -91,8 +91,10 @@ int main(int argc, char** argv){
 	struct pcap_pkthdr header;
 
 	uint virtual_offset = 0;
-    pfwl_callbacks_field_add(state, DPI_PROTOCOL_SIP,
-                             "requestURI", &processRequestURI);
+  pfwl_callbacks_field_add(state,
+                           DPI_PROTOCOL_SIP,
+                           DPI_FIELDS_SIP_REQUESTURI,
+                           &processRequestURI);
 
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
