@@ -260,28 +260,6 @@ static
 static
 #endif
     int
-    on_header_complete(http_parser* parser) {
-  dpi_http_internal_informations_t* infos =
-      (dpi_http_internal_informations_t*)parser->data;
-  dpi_http_message_informations_t dpi_http_informations;
-  dpi_http_informations.http_version_major = parser->http_major;
-  dpi_http_informations.http_version_minor = parser->http_minor;
-  dpi_http_informations.request_or_response = parser->type;
-  if (parser->type == HTTP_REQUEST)
-    dpi_http_informations.method_or_code = parser->method;
-  else
-    dpi_http_informations.method_or_code = parser->status_code;
-
-  (*(infos->callbacks->header_completion_callback))(
-      &dpi_http_informations, infos->pkt_informations,
-      infos->flow_specific_user_data, infos->user_data);
-  return 0;
-}
-
-#ifndef DPI_DEBUG
-static
-#endif
-    int
     on_body(http_parser* parser, const char* at, size_t length) {
   dpi_http_internal_informations_t* infos =
       (dpi_http_internal_informations_t*)parser->data;
@@ -383,11 +361,7 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
       x.on_header_value = 0;
     }
 
-    if (((dpi_http_callbacks_t*)state->http_callbacks)
-            ->header_completion_callback != NULL)
-      x.on_headers_complete = on_header_complete;
-    else
-      x.on_headers_complete = 0;
+    x.on_headers_complete = 0;
     x.on_message_begin = 0;
     x.on_message_complete = 0;
   } else {

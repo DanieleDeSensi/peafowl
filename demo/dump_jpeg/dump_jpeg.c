@@ -103,7 +103,7 @@ int main(int argc, char** argv){
 	dpi_http_header_field_callback* single_cb[1]={&contentype_cb};
 	const char* ct[1]={"Content-Type"};
 
-	dpi_http_callbacks_t callback={.header_url_callback=0, .header_names=ct, .num_header_types=1, .header_types_callbacks=single_cb, .header_completion_callback=0, .http_body_callback=&body_cb};
+	dpi_http_callbacks_t callback={.header_url_callback=0, .header_names=ct, .num_header_types=1, .header_types_callbacks=single_cb, .http_body_callback=&body_cb};
 
 
 	dpi_library_state_t *state=dpi_init_stateful(32767,32767,1000000,1000000);

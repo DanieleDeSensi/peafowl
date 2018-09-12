@@ -34,6 +34,107 @@
 extern "C" {
 #endif
 
+typedef struct dpi_sip_miprtcpstatic {
+  char media_ip_s[30];
+  int media_ip_len;
+  int media_port;
+  char rtcp_ip_s[30];
+  int rtcp_ip_len;
+  int rtcp_port;
+  int prio_codec;
+} dpi_sip_miprtcpstatic_t;
+
+typedef struct {
+  const char* s;
+  size_t len;
+} pfwl_field_t;
+
+typedef struct dpi_sip_miprtcp {
+  pfwl_field_t media_ip;
+  int media_port;
+  pfwl_field_t rtcp_ip;
+  int rtcp_port;
+  int prio_codec;
+} dpi_sip_miprtcp_t;
+
+struct dip_sip_codecmap;
+
+typedef struct dip_sip_codecmap {
+  char name[120];
+  int id;
+  int rate;
+  struct dip_sip_codecmap* next;
+} dpi_sip_codecmap_t;
+
+typedef enum {
+  UNKNOWN = 0,
+  CANCEL = 1,
+  ACK = 2,
+  INVITE = 3,
+  BYE = 4,
+  INFO = 5,
+  REGISTER = 6,
+  SUBSCRIBE = 7,
+  NOTIFY = 8,
+  MESSAGE = 9,
+  OPTIONS = 10,
+  PRACK = 11,
+  UPDATE = 12,
+  REFER = 13,
+  PUBLISH = 14,
+  RESPONSE = 15,
+  SERVICE = 16
+} dpi_sip_method_t;
+
+#define DPI_SIP_MAX_MEDIA_HOSTS 20
+
+typedef struct {
+  const char* name;
+  pfwl_field_t value;
+  UT_hash_handle hh;         /* makes this structure hashable */
+} pfwl_sip_indexed_field_t;
+
+typedef struct dpi_sip_internal_information {
+  unsigned int responseCode;
+  pfwl_sip_indexed_field_t* indexed_fields;
+  uint8_t isRequest;
+  uint8_t validMessage;
+  dpi_sip_method_t methodType;
+  uint8_t hasSdp;
+  dpi_sip_codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
+  dpi_sip_miprtcpstatic_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
+  int cdm_count;
+  unsigned int mrp_size;
+  unsigned int contentLength;
+  unsigned int len;
+  unsigned int cSeqNumber;
+  uint8_t hasVqRtcpXR;
+  dpi_sip_method_t cSeqMethod;
+
+  pfwl_field_t callId;
+  pfwl_field_t reason;
+  pfwl_field_t rtcpxr_callid;
+  pfwl_field_t cSeqMethodString;
+  pfwl_field_t cSeq;
+  pfwl_field_t via;
+  pfwl_field_t contactURI;
+  /* extra */
+  pfwl_field_t ruriUser;
+  pfwl_field_t ruriDomain;
+  pfwl_field_t fromUser;
+  pfwl_field_t fromDomain;
+  pfwl_field_t toUser;
+  pfwl_field_t toDomain;
+  pfwl_field_t paiUser;
+  pfwl_field_t paiDomain;
+  pfwl_field_t pidURI;
+  pfwl_field_t fromURI;
+  pfwl_field_t toURI;
+  pfwl_field_t ruriURI;
+  pfwl_field_t toTag;
+  pfwl_field_t fromTag;
+} dpi_sip_internal_information_t;
+
 /** This must be initialized to zero before use. **/
 typedef struct dpi_tracking_informations {
   /**
@@ -123,6 +224,11 @@ typedef struct dpi_tracking_informations {
   /** WhatsApp Tracking informations.  **/
   /**************************************/
   size_t whatsapp_matched_sequence;
+
+  /**********************************/
+  /** Protocols extracted fields.  **/
+  /**********************************/
+  pfwl_field_t extracted_fields_sip[DPI_FIELDS_SIP_NUM];
 } dpi_tracking_informations_t;
 
 /**

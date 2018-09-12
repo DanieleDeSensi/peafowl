@@ -201,7 +201,7 @@ int main(int argc, char **argv){
 
 		dpi_library_state_t* state=dpi_init_stateful(32767, 32767, 1000000, 1000000);
 		dpi_set_flow_cleaner_callback(state, &flow_cleaner);
-		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
+		dpi_http_callbacks_t callback={0, 0, 0, 0, &body_cb};
 		dpi_http_activate_callbacks(state, &callback, (void*)(&t));
 
 		uint i,j;

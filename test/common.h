@@ -40,4 +40,9 @@ void getProtocolsOld(const char* pcapName,
 void getProtocols(const char* pcapName,
                   std::vector<uint>& protocols);
 
+void getProtocolsWithState(const char* pcapName,
+                           std::vector<uint>& protocols,
+                           dpi_library_state_t* state);
+
+
 #endif // PEAFOWL_TEST_COMMON
