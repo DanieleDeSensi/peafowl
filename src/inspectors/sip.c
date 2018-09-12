@@ -168,7 +168,7 @@ uint8_t dpi_sip_disable_callbacks(dpi_library_state_t *state) {
   }
 }
 
-uint8_t getUser(dpi_sip_str_t *user, dpi_sip_str_t *domain, const char *s,
+uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain, const char *s,
                 int len) {
   enum state {
     URI_BEGIN,
@@ -290,7 +290,7 @@ uint8_t getUser(dpi_sip_str_t *user, dpi_sip_str_t *domain, const char *s,
   return 1;
 }
 
-uint8_t set_hname(dpi_sip_str_t *hname, int len, const char *s) {
+uint8_t set_hname(pfwl_field_t *hname, int len, const char *s) {
   const char *end;
 
   if (hname->len > 0) {
@@ -311,7 +311,7 @@ uint8_t set_hname(dpi_sip_str_t *hname, int len, const char *s) {
   return 1;
 }
 
-uint8_t getTag(dpi_sip_str_t *hname, const char *uri, int len) {
+uint8_t getTag(pfwl_field_t *hname, const char *uri, int len) {
   enum state { ST_TAG, ST_END, ST_OFF };
 
   enum state st;
@@ -350,7 +350,7 @@ uint8_t getTag(dpi_sip_str_t *hname, const char *uri, int len) {
   return 1;
 }
 
-int isValidIp4Address(dpi_sip_str_t *mip) {
+int isValidIp4Address(pfwl_field_t *mip) {
   int result = 0;
   char ipAddress[17];
   struct sockaddr_in sa;
@@ -551,8 +551,8 @@ int parseSdpARtpMapLine(dpi_sip_codecmap_t *cp, const unsigned char *data,
   return 1;
 }
 
-int addMediaObject(dpi_sip_miprtcpstatic_t *mp, dpi_sip_str_t *mediaIp,
-                   int mediaPort, dpi_sip_str_t *rtcpIp, int rtcpPort) {
+int addMediaObject(dpi_sip_miprtcpstatic_t *mp, pfwl_field_t *mediaIp,
+                   int mediaPort, pfwl_field_t *rtcpIp, int rtcpPort) {
   mp->media_ip_len =
       snprintf(mp->media_ip_s, 30, "%.*s", (int)mediaIp->len, mediaIp->s);
   mp->rtcp_ip_len =
@@ -866,6 +866,22 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
   }
 }
 
+static pfwl_field_t* get_or_create_indexed_field(dpi_sip_internal_information_t* sip_info,
+                                 const char* field_name){
+
+    pfwl_sip_indexed_field_t* s;
+    HASH_FIND_STR(sip_info->indexed_fields, field_name, s);
+    if(s){
+       return &(s->value);
+    } else {
+        s = (pfwl_sip_indexed_field_t *) malloc (sizeof(pfwl_sip_indexed_field_t));
+        s->name = field_name;
+        s->value.len = 0;
+        HASH_ADD_STR(sip_info->indexed_fields, name, s);
+        return &(s->value);
+    }
+}
+
 uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       dpi_sip_internal_information_t *sip_info,
                       dpi_inspector_accuracy type) {
@@ -964,11 +980,13 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       sip_info->methodString.len = (pch - tmp);
 
       if ((ped = strchr(pch + 1, ' ')) != NULL) {
-        sip_info->requestURI.s = pch + 1;
-        sip_info->requestURI.len = (ped - pch - 1);
+        pfwl_field_t* requestURI = get_or_create_indexed_field(sip_info, "requestURI");
+
+        requestURI->s = pch + 1;
+        requestURI->len = (ped - pch - 1);
         /* extract user */
         getUser(&sip_info->ruriUser, &sip_info->ruriDomain,
-                sip_info->requestURI.s, sip_info->requestURI.len);
+                requestURI->s, requestURI->len);
       }
     }
   }
@@ -1075,12 +1093,10 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           header_offset = FROM_LEN;
         set_hname(&sip_info->fromURI, (offset - last_offset - FROM_LEN),
                   tmp + FROM_LEN);
-        sip_info->hasFrom = 1;
 
         if (!sip_info->fromURI.len == 0 &&
             getTag(&sip_info->fromTag, sip_info->fromURI.s,
                    sip_info->fromURI.len)) {
-          sip_info->hasFromTag = 1;
         }
         /* extract user */
         getUser(&sip_info->fromUser, &sip_info->fromDomain, sip_info->fromURI.s,
@@ -1096,11 +1112,9 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
 
         if (set_hname(&sip_info->toURI, (offset - last_offset - header_offset),
                       tmp + header_offset)) {
-          sip_info->hasTo = 1;
           if (!sip_info->toURI.len == 0 &&
               getTag(&sip_info->toTag, sip_info->toURI.s,
                      sip_info->toURI.len)) {
-            sip_info->hasToTag = 1;
           }
           /* extract user */
           getUser(&sip_info->toUser, &sip_info->toDomain, sip_info->toURI.s,
@@ -1117,7 +1131,6 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           set_hname(&sip_info->pidURI,
                     (offset - last_offset - PPREFERREDIDENTITY_LEN),
                     tmp + PPREFERREDIDENTITY_LEN);
-          sip_info->hasPid = 1;
 
           /* extract user */
           getUser(&sip_info->paiUser, &sip_info->paiDomain, sip_info->pidURI.s,
@@ -1131,7 +1144,6 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           set_hname(&sip_info->pidURI,
                     (offset - last_offset - PASSERTEDIDENTITY_LEN),
                     tmp + PASSERTEDIDENTITY_LEN);
-          sip_info->hasPid = 1;
 
           /* extract user */
           getUser(&sip_info->paiUser, &sip_info->paiDomain, sip_info->pidURI.s,
@@ -1181,7 +1193,7 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
   if (!data_length) {
     return DPI_PROTOCOL_MORE_DATA_NEEDED;
   }
-  memset(&(t->sip_informations), 0, sizeof(t->sip_informations));
+  memset(&(t->sip_informations), 0, sizeof(t->sip_informations)); //TODO PAY ATTENTION TO INDEXED FIELDS
   /* check if this is real SIP */
   if (!isalpha(app_data[0])) {
     return DPI_PROTOCOL_NO_MATCHES;
@@ -1192,16 +1204,19 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
 
   uint8_t r = parse_packet(app_data, data_length, &t->sip_informations,
                            state->inspectors_accuracy[DPI_PROTOCOL_SIP]);
-
   // Callbacks
-  if ((dpi_sip_callbacks_t *)state->sip_callbacks &&
-      r == DPI_PROTOCOL_MATCHES) {
-    if (t->sip_informations.requestURI.len) {
-      if (((dpi_sip_callbacks_t *)state->sip_callbacks)->requestURI_cb) {
-        (((dpi_sip_callbacks_t *)state->sip_callbacks)->requestURI_cb)(
-            t->sip_informations.requestURI.s,
-            t->sip_informations.requestURI.len);
-      }
+  if (r == DPI_PROTOCOL_MATCHES &&
+      HASH_COUNT(state->callbacks_fields_entries[DPI_PROTOCOL_SIP])) {
+    pfwl_callbacks_field_entry_t* searched;
+    pfwl_field_t* requestURI = get_or_create_indexed_field(&t->sip_informations, "requestURI");
+    if(requestURI->len){
+        HASH_FIND_STR(state->callbacks_fields_entries[DPI_PROTOCOL_SIP], "requestURI", searched);
+        if(searched){
+          (*(searched->callback))(requestURI->s,
+                                  requestURI->len,
+                                  1, state->callbacks_udata,
+                                  NULL, pkt); // TODO: FIX UDATA_FLOW
+        }
     }
   }
 

@@ -46,8 +46,6 @@
 #include <strings.h>
 #include <time.h>
 
-#include "external/utils/uthash.h"
-
 #ifdef WITH_PROMETHEUS
 #include "prometheus.h"
 #endif
@@ -207,6 +205,10 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
   dpi_tcp_reordering_enable(state);
 
   state->l7_skip = NULL;
+
+  for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+    state->callbacks_fields_entries[i] = NULL;
+  }
 
   return state;
 }
@@ -1284,7 +1286,8 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
             pkt_infos, &(flow->tracking));
       }
 
-      if (BITTEST(state->active_callbacks, flow->l7prot) && data_length != 0) {
+      if ((BITTEST(state->active_callbacks, flow->l7prot) || HASH_COUNT(state->callbacks_fields_entries[flow->l7prot]))
+          && data_length != 0) {
         (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
                                              data_length, &(flow->tracking));
       }
@@ -1294,7 +1297,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
       }
 
     } else if (pkt_infos->l4prot == IPPROTO_UDP &&
-               BITTEST(state->active_callbacks, flow->l7prot)) {
+               (BITTEST(state->active_callbacks, flow->l7prot) || HASH_COUNT(state->callbacks_fields_entries[flow->l7prot]))) {
       (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
                                            data_length, &(flow->tracking));
     }
@@ -1572,4 +1575,54 @@ uint8_t dpi_set_flow_cleaner_callback(dpi_library_state_t* state,
                                       dpi_flow_cleaner_callback* cleaner) {
   state->flow_cleaner_callback = cleaner;
   return DPI_STATE_UPDATE_SUCCESS;
+}
+
+uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
+                                dpi_l7_prot_id protocol,
+                                const char* field_name,
+                                pfwl_field_callback* callback){
+    if(state){
+        pfwl_callbacks_field_entry_t* to_add = (pfwl_callbacks_field_entry_t*) malloc(sizeof(pfwl_callbacks_field_entry_t));
+        to_add->name = malloc(sizeof(char)*(strlen(field_name) + 1));
+        strcpy(to_add->name, field_name);
+        to_add->callback = callback;
+        HASH_ADD_STR(state->callbacks_fields_entries[protocol], name, to_add);
+        dpi_set_protocol_accuracy(state, protocol, DPI_INSPECTOR_ACCURACY_HIGH);  // TODO: mmm, the problem is that we do not set back the original accuracy when doing field_remove
+        return DPI_STATE_UPDATE_SUCCESS;
+    }else{
+        return DPI_STATE_UPDATE_FAILURE;
+    }
+}
+
+uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
+                                   dpi_l7_prot_id protocol,
+                                   const char* field_name){
+    if(state){
+        pfwl_callbacks_field_entry_t* searched;
+        HASH_FIND_STR(state->callbacks_fields_entries[protocol], field_name, searched);
+        if(searched){
+            free(searched->name);
+            free(searched);
+        }
+        return DPI_STATE_UPDATE_SUCCESS;
+    }else{
+        return DPI_STATE_UPDATE_FAILURE;
+    }
+}
+
+/**
+ * Adds a pointer to some data which will be passed as parameter to all
+ * the fields callbacks.
+ * @param state A pointer to the state of the library.
+ * @param udata
+ * @return
+ */
+uint8_t pfwl_callbacks_fields_set_udata(dpi_library_state_t* state,
+                                        void* udata){
+    if(state){
+        state->callbacks_udata = udata;
+        return DPI_STATE_UPDATE_SUCCESS;
+    }else{
+        return DPI_STATE_UPDATE_FAILURE;
+    }
 }

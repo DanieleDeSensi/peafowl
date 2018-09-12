@@ -3,6 +3,20 @@
  **/
 #include "common.h"
 
+static const char* expectedRequestURIs[47] = {"sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:97239287044@voip.brujula.net", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:0097239287044@sip.cybercity.dk", "sip:35104724@sip.cybercity.dk", "sip:35104724@sip.cybercity.dk", "sip:35104724@sip.cybercity.dk", "sip:35104724@sip.cybercity.dk", "sip:sip.cybercity.dk", "sip:sip.cybercity.dk"};
+static size_t nextExpectedURI = 0;
+
+void processRequestURI(const char* field_value,
+                       size_t field_len,
+                       uint8_t field_complete,
+                       void* udata_global,
+                       void** udata_flow,
+                       dpi_pkt_infos_t* pkt_info){
+    EXPECT_TRUE(!strncmp(field_value, expectedRequestURIs[nextExpectedURI], field_len));
+    ++nextExpectedURI;
+}
+
+
 TEST(SIPTest, DeprecatedCalls) {
     std::vector<uint> tcpProtocols;
     std::vector<uint> udpProtocols;
@@ -18,4 +32,12 @@ TEST(SIPTest, Generic) {
     EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 6);
     getProtocols("./pcaps/dropbox.pcap", protocols);
     EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 140);
+}
+
+TEST(SIPTest, CallbackRequestURI){
+    std::vector<uint> protocols;
+    dpi_library_state_t* state = dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+    pfwl_callbacks_field_add(state, DPI_PROTOCOL_SIP, "requestURI", &processRequestURI);
+    getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
+    EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 102);
 }

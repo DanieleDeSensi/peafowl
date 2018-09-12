@@ -46,8 +46,13 @@
 #define MAX_IPv4_ACTIVE_FLOWS 500000
 #define MAX_IPv6_ACTIVE_FLOWS 500000
 
-void processRequestURI(const char* request, size_t len){
-    printf("Request URI detected: %.*s\n", (int) len, request);
+void processRequestURI(const char* field_value,
+                       size_t field_len,
+                       uint8_t field_complete,
+                       void* udata_global,
+                       void** udata_flow,
+                       dpi_pkt_infos_t* pkt_info){
+    printf("Request URI detected: %.*s\n", (int) field_len, field_value);
 }
 
 int main(int argc, char** argv){
@@ -82,15 +87,13 @@ int main(int argc, char** argv){
 		exit(-1);
 	}
 
-
-
 	const u_char* packet;
 	struct pcap_pkthdr header;
 
 	uint virtual_offset = 0;
-    dpi_sip_callbacks_t sc;
-    sc.requestURI_cb = &processRequestURI;
-    dpi_sip_activate_callbacks(state, &sc, NULL);
+    pfwl_callbacks_field_add(state, DPI_PROTOCOL_SIP,
+                             "requestURI", &processRequestURI);
+
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
             if(header.caplen < ip_offset){
@@ -107,7 +110,6 @@ int main(int argc, char** argv){
         }
 
         dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
-
 	}
 	return 0;
 }

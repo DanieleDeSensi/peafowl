@@ -76,6 +76,7 @@ extern "C" {
 #include <peafowl/inspectors/http_parser_joyent.h>
 #include <peafowl/inspectors/protocols_identifiers.h>
 #include <peafowl/utils.h>
+#include <peafowl/external/utils/uthash.h>
 
 #include <sys/types.h>
 
@@ -183,6 +184,26 @@ typedef struct dpi_http_message_informations {
  */
 typedef void(dpi_flow_cleaner_callback)(void* flow_specific_user_data);
 
+
+/**
+ * Callback for processing a field of a given protocol.
+ * @param field_value    The value of the field.
+ * @param field_len      The length of the field.
+ * @param field_complete 1 if the field is complete, 0 if another chunk is to
+ *                       be expected.
+ * @param udata_global   A pointer to the global user data (set with the
+ *                       pfwl_callbacks_fields_set_udata call).
+ * @param udata_flow     A pointer to the user data specific
+ *                       to this flow.
+ * @param pkt_info       A pointer to the parsed packet.
+ **/
+typedef void(pfwl_field_callback)(const char* field_value,
+                                  size_t field_len,
+                                  uint8_t field_complete,
+                                  void* udata_global,
+                                  void** udata_flow,
+                                  dpi_pkt_infos_t* pkt_info);
+
 /**
  * Called when ssl inspector seen certificate
 **/
@@ -243,27 +264,6 @@ typedef void(dpi_http_header_field_callback)(
     void* user_data);
 
 /**
- * This callback is called when the HTTP header processing is finished.
- * This can be useful to distinguish the case in which a callback has
- * not been invoked because the corresponding header field is not present
- * or if it has not been invoked because the field is not yet been
- * received.
- *
- * @param http_message_informations   A pointer to the struct containing
- *                                    the message informations (method,
- *                                    http version, etc..). The pointer is
- *                                    valid only for the callback lifetime.
- * @param pkt_informations            A pointer to the parsed packet.
- * @param flow_specific_user_data     A pointer to the user data specific to
- *                                    this flow.
- * @param user_data                   A pointer to the global HTTP user data.
- */
-typedef void(dpi_http_header_completion_callback)(
-    dpi_http_message_informations_t* http_message_informations,
-    dpi_pkt_infos_t* pkt_informations, void** flow_specific_user_data,
-    void* user_data);
-
-/**
  * This callback is called when an HTTP body is found. If the body is
  * divided in multiple TCP segments, then for each segment this callback
  * is called with the content of that specific segment. When the last
@@ -309,9 +309,6 @@ typedef struct dpi_http_callbacks {
    */
   dpi_http_header_field_callback** header_types_callbacks;
 
-  /** Called when the header has been completely processed. **/
-  dpi_http_header_completion_callback* header_completion_callback;
-
   /** Called on the entire HTTP body. **/
   dpi_http_body_callback* http_body_callback;
 } dpi_http_callbacks_t;
@@ -350,12 +347,12 @@ typedef struct dpi_sip_miprtcpstatic {
 typedef struct {
   const char* s;
   size_t len;
-} dpi_sip_str_t;
+} pfwl_field_t;
 
 typedef struct dpi_sip_miprtcp {
-  dpi_sip_str_t media_ip;
+  pfwl_field_t media_ip;
   int media_port;
-  dpi_sip_str_t rtcp_ip;
+  pfwl_field_t rtcp_ip;
   int rtcp_port;
   int prio_codec;
 } dpi_sip_miprtcp_t;
@@ -391,15 +388,18 @@ typedef enum {
 
 #define DPI_SIP_MAX_MEDIA_HOSTS 20
 
+typedef struct {
+  const char* name;
+  pfwl_field_t value;
+  UT_hash_handle hh;         /* makes this structure hashable */
+} pfwl_sip_indexed_field_t;
+
 typedef struct dpi_sip_internal_information {
   unsigned int responseCode;
+  pfwl_sip_indexed_field_t* indexed_fields;
   uint8_t isRequest;
   uint8_t validMessage;
   dpi_sip_method_t methodType;
-  dpi_sip_str_t methodString;
-  int method_len;
-  dpi_sip_str_t callId;
-  dpi_sip_str_t reason;
   uint8_t hasSdp;
   dpi_sip_codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
   dpi_sip_miprtcpstatic_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
@@ -409,41 +409,31 @@ typedef struct dpi_sip_internal_information {
   unsigned int len;
   unsigned int cSeqNumber;
   uint8_t hasVqRtcpXR;
-  dpi_sip_str_t rtcpxr_callid;
-  dpi_sip_str_t cSeqMethodString;
   dpi_sip_method_t cSeqMethod;
 
-  dpi_sip_str_t cSeq;
-  dpi_sip_str_t via;
-  dpi_sip_str_t contactURI;
+  pfwl_field_t methodString;
+  pfwl_field_t callId;
+  pfwl_field_t reason;
+  pfwl_field_t rtcpxr_callid;
+  pfwl_field_t cSeqMethodString;
+  pfwl_field_t cSeq;
+  pfwl_field_t via;
+  pfwl_field_t contactURI;
   /* extra */
-  dpi_sip_str_t ruriUser;
-  dpi_sip_str_t ruriDomain;
-  dpi_sip_str_t fromUser;
-  dpi_sip_str_t fromDomain;
-  dpi_sip_str_t toUser;
-  dpi_sip_str_t toDomain;
-  dpi_sip_str_t paiUser;
-  dpi_sip_str_t paiDomain;
-  dpi_sip_str_t requestURI;
-
-  dpi_sip_str_t pidURI;
-  uint8_t hasPid;
-
-  dpi_sip_str_t fromURI;
-  uint8_t hasFrom;
-
-  dpi_sip_str_t toURI;
-  uint8_t hasTo;
-
-  dpi_sip_str_t ruriURI;
-  uint8_t hasRuri;
-
-  dpi_sip_str_t toTag;
-  uint8_t hasToTag;
-
-  dpi_sip_str_t fromTag;
-  uint8_t hasFromTag;
+  pfwl_field_t ruriUser;
+  pfwl_field_t ruriDomain;
+  pfwl_field_t fromUser;
+  pfwl_field_t fromDomain;
+  pfwl_field_t toUser;
+  pfwl_field_t toDomain;
+  pfwl_field_t paiUser;
+  pfwl_field_t paiDomain;
+  pfwl_field_t pidURI;
+  pfwl_field_t fromURI;
+  pfwl_field_t toURI;
+  pfwl_field_t ruriURI;
+  pfwl_field_t toTag;
+  pfwl_field_t fromTag;
 } dpi_sip_internal_information_t;
 
 typedef void(sip_requestURI_callback)(const char* requestURI,
@@ -488,6 +478,12 @@ typedef enum {
 
 struct library_state;
 
+typedef struct {
+    char* name;
+    pfwl_field_callback* callback;
+    UT_hash_handle hh;         /* makes this structure hashable */
+} pfwl_callbacks_field_entry_t;
+
 struct library_state {
   /********************************************************************/
   /** Created by dpi_init_state and never modified                   **/
@@ -500,13 +496,16 @@ struct library_state {
   /** update functions. They are never modified in other places      **/
   /********************************************************************/
   char protocols_to_inspect[BITNSLOTS(DPI_NUM_PROTOCOLS)];
-  char active_callbacks[BITNSLOTS(DPI_NUM_PROTOCOLS)];
+  char active_callbacks[BITNSLOTS(DPI_NUM_PROTOCOLS)]; // TODO: Remove, replaced with field_callbacks_lengths
 
   dpi_l7_prot_id active_protocols;
 
   uint16_t max_trials;
 
   dpi_flow_cleaner_callback* flow_cleaner_callback;
+
+  void* callbacks_udata;
+
   /** HTTP callbacks. **/
   void* http_callbacks;
   void* http_callbacks_user_data;
@@ -518,6 +517,9 @@ struct library_state {
   /** SIP callbacks **/
   void* sip_callbacks;
   void* sip_callbacks_user_data;
+
+  /** Field callbacks. **/
+  pfwl_callbacks_field_entry_t* callbacks_fields_entries[DPI_NUM_PROTOCOLS];
 
   uint8_t tcp_reordering_enabled : 1;
 
@@ -1193,6 +1195,68 @@ uint8_t dpi_sip_activate_callbacks(dpi_library_state_t* state,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
+
+
+typedef struct{
+
+}pfwl_proto_callbacks_t;
+
+/**
+ * Set a field callback for a given protocol.
+ * When a protocol is identified the default
+ * behavior is to not inspect the packets belonging to that flow anymore
+ * and keep simply returning the same protocol identifier.
+ *
+ * If a callback is enabled for a certain protocol, then we keep
+ * inspecting all the new packets of that flow in order to invoke
+ * the callbacks specified by the user on the various parts of the
+ * message. Moreover, if the application protocol uses TCP, then we have
+ * the additional cost of TCP reordering for all the segments. Is highly
+ * recommended to enable TCP reordering if it is not already enabled
+ * (remember that is enabled by default). Otherwise the informations
+ * extracted could be erroneous/incomplete.
+ *
+ * The pointers to the data passed to the callbacks are valid only for the
+ * duration of the callback. If the user needs to preserve the data, a copy
+ * needs to be done.
+ *
+ * @param state        A pointer to the state of the library.
+ * @param protocol     The protocol.
+ * @param field_name   The name of the field (must be '\0' terminated).
+ * @param callback     The callback.
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ *
+ **/
+uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
+                                dpi_l7_prot_id protocol,
+                                const char* field_name,
+                                pfwl_field_callback* callback);
+
+/**
+ * Disable the a protocol field callback. udata is not freed/modified.
+ * @param state       A pointer to the state of the library.
+ * @param protocol     The protocol.
+ * @param field_name   The name of the field
+ *
+ * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
+ *         DPI_STATE_UPDATE_FAILURE otherwise.
+ */
+uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
+                                   dpi_l7_prot_id protocol,
+                                   const char* field_name);
+
+/**
+ * Adds a pointer to some data which will be passed as parameter to all
+ * the fields callbacks.
+ * @param state A pointer to the state of the library.
+ * @param udata
+ * @return
+ */
+uint8_t pfwl_callbacks_fields_set_udata(dpi_library_state_t* state,
+                                 void* udata);
+
 
 /**
  * Some protocols inspector (e.g. SIP) can be applied with a different

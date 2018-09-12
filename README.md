@@ -111,6 +111,9 @@ The supported protocols are:
   <tr>
     <td>Spotify</td><td>5/5</td>
   </tr>
+  <tr>
+    <td>SSH</td><td>5/5</td>
+  </tr>
 </table>
 
 At the moment, data and metadata extraction is supported for the following protocols:
@@ -121,6 +124,12 @@ At the moment, data and metadata extraction is supported for the following proto
   </tr>
   <tr>
     <td>HTTP</td><td>Any kind of HTTP header, HTTP body</td>
+  </tr>
+  <tr>
+    <td>SSL</td><td>Certificate</td>
+  </tr>
+  <tr>
+    <td>SIP</td><td>Request URI</td>
   </tr>
 <table>
 
