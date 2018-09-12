@@ -53,7 +53,8 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
   if ((pkt->dstport == port_dns || pkt->srcport == port_dns) &&
       data_length >= 12) {
 
-    int is_name_server = 0, is_auth_server = 0, uint8_t rcode;
+    int is_name_server = 0, is_auth_server = 0;
+    uint8_t rcode;
     struct dns_header *dns_header = (struct dns_header*)(app_data);    
     
     /**
