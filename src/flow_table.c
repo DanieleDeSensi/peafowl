@@ -586,11 +586,14 @@ void mc_dpi_flow_table_delete_flow_v4(
 
   if (flow_cleaner_callback)
     (*(flow_cleaner_callback))(
-        to_delete->infos.tracking.flow_specific_user_data);
+        to_delete->infos.tracking.udata);
   --db->partitions[partition_id].partition.informations.active_flows;
   free(to_delete->infos.tracking.http_informations[0].temp_buffer);
   free(to_delete->infos.tracking.http_informations[1].temp_buffer);
   dpi_reordering_tcp_delete_all_fragments(&(to_delete->infos.tracking));
+  if(to_delete->infos.last_rebuilt_tcp_data){
+    free((void*) to_delete->infos.last_rebuilt_tcp_data);
+  }
 
 #if DPI_FLOW_TABLE_USE_MEMORY_POOL
   if (likely(
@@ -625,7 +628,7 @@ void mc_dpi_flow_table_delete_flow_v6(
 
   if (flow_cleaner_callback)
     (*(flow_cleaner_callback))(
-        to_delete->infos.tracking.flow_specific_user_data);
+        to_delete->infos.tracking.udata);
   --db->partitions[partition_id].partition.informations.active_flows;
   free(to_delete->infos.tracking.http_informations[0].temp_buffer);
   free(to_delete->infos.tracking.http_informations[1].temp_buffer);

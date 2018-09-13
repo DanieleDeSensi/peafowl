@@ -332,7 +332,7 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
     tracking->http_informations[pkt->direction].user_data =
         state->http_callbacks_user_data;
     tracking->http_informations[pkt->direction].flow_specific_user_data =
-        &(tracking->flow_specific_user_data);
+        &(tracking->udata);
 
     parser->data = &(tracking->http_informations[pkt->direction]);
   }

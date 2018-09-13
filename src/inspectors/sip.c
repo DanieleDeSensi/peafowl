@@ -143,31 +143,6 @@
 #define REGISTRATION_5XX_TERMINATION 4
 #define REGISTRATION_6XX_TERMINATION 5
 
-uint8_t dpi_sip_activate_callbacks(dpi_library_state_t *state,
-                                   dpi_sip_callbacks_t *callbacks,
-                                   void *user_data) {
-  if (state) {
-    BITSET(state->protocols_to_inspect, DPI_PROTOCOL_SIP);
-    BITSET(state->active_callbacks, DPI_PROTOCOL_SIP);
-    state->sip_callbacks_user_data = user_data;
-    state->sip_callbacks = callbacks;
-    return DPI_STATE_UPDATE_SUCCESS;
-  } else {
-    return DPI_STATE_UPDATE_FAILURE;
-  }
-}
-
-uint8_t dpi_sip_disable_callbacks(dpi_library_state_t *state) {
-  if (state) {
-    BITCLEAR(state->active_callbacks, DPI_PROTOCOL_SIP);
-    state->sip_callbacks = NULL;
-    state->sip_callbacks_user_data = NULL;
-    return DPI_STATE_UPDATE_SUCCESS;
-  } else {
-    return DPI_STATE_UPDATE_FAILURE;
-  }
-}
-
 uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain, const char *s,
                 int len) {
   enum state {
@@ -1161,18 +1136,6 @@ uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
   return r;
 }
 
-uint8_t invoke_callbacks_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
-                             const unsigned char *app_data,
-                             uint32_t data_length,
-                             dpi_tracking_informations_t *tracking) {
-  uint8_t ret = check_sip(state, pkt, app_data, data_length, tracking);
-  if (ret == DPI_PROTOCOL_NO_MATCHES) {
-    return DPI_PROTOCOL_ERROR;
-  } else {
-    return DPI_PROTOCOL_MATCHES;
-  }
-}
-
 uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
                   const unsigned char *app_data, uint32_t data_length,
                   dpi_tracking_informations_t *t) {
@@ -1180,7 +1143,6 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
     return DPI_PROTOCOL_MORE_DATA_NEEDED;
   }
   memset(&(t->sip_informations), 0, sizeof(t->sip_informations));
-  memset(&(t->extracted_fields_sip), 0, sizeof(t->extracted_fields_sip));
   /* check if this is real SIP */
   if (!isalpha(app_data[0])) {
     return DPI_PROTOCOL_NO_MATCHES;
@@ -1192,19 +1154,9 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
   uint8_t r = parse_packet(app_data, data_length, &t->sip_informations,
                            state->inspectors_accuracy[DPI_PROTOCOL_SIP],
                            t->extracted_fields_sip);
-  // Callbacks
-  if (r == DPI_PROTOCOL_MATCHES &&
-      state->callbacks_fields[DPI_PROTOCOL_SIP].callbacks_num) {
-    for(size_t i = 0; i < DPI_FIELDS_SIP_NUM; i++){
-      pfwl_field_callback* cb = state->callbacks_fields[DPI_PROTOCOL_SIP].callbacks[i];
-      pfwl_field_t* field = &(t->extracted_fields_sip[i]);
-      if(cb && field->len){
-        (*cb)(field->s, field->len,
-              1, state->callbacks_udata,
-              NULL, pkt); // TODO: FIX UDATA_FLOW
-      }
-    }
-  }
-
   return r;
+}
+
+pfwl_field_t* get_extracted_fields_sip(dpi_tracking_informations_t* t){
+  return t->extracted_fields_sip;
 }

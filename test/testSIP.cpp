@@ -10,7 +10,6 @@ static size_t nextExpectedMethod = 0;
 
 void processRequestURI(const char* field_value,
                        size_t field_len,
-                       uint8_t field_complete,
                        void* udata_global,
                        void** udata_flow,
                        dpi_pkt_infos_t* pkt_info){
@@ -20,7 +19,6 @@ void processRequestURI(const char* field_value,
 
 void processMethod(const char* field_value,
                        size_t field_len,
-                       uint8_t field_complete,
                        void* udata_global,
                        void** udata_flow,
                        dpi_pkt_infos_t* pkt_info){

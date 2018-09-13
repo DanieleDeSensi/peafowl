@@ -15,16 +15,12 @@ enum protocols{
 	DPI_PROTOCOL_BGP,
 	DPI_PROTOCOL_SMTP,
 	DPI_PROTOCOL_POP3,
-	DPI_PROTOCOL_TELNET, // <--- Insert this line right befor 'DPI_NUM_PROTOCOLS' to assign an identifier to the new protocol
+	DPI_PROTOCOL_TELNET, // <--- Insert this line right before 'DPI_NUM_PROTOCOLS' to assign an identifier to the new protocol
 	DPI_NUM_PROTOCOLS
 };
 ```
-2) In file ```src/peafowl.c```, add a string representation for the protocol, by adding the string
-```"TELNET"``` to the ```protocols_strings``` array.
-The position of the string in the array must be equal to the corresponding enum value,
-such that ```protocols_strings[DPI_PROTOCOL_TELNET] == "TELNET"```.
 
-3) Create a new inspector, by implementing a C function with the following signature and semantic:
+2) Create a new inspector, by implementing a C function with the following signature and semantic:
 
 ```C
 uint8_t check_telnet(dpi_library_state_t* state,    // The state of the library
@@ -36,8 +32,8 @@ uint8_t check_telnet(dpi_library_state_t* state,    // The state of the library
                                                      // connection to which the packet belongs to
                       );
 ```
-The function declaration must be put in includ/peafowl/inspectors/inspectors.h, while its definition can be put 
-in a new source file in inspectors folder (e.g. src/inspectors/telnet.c).
+The function declaration must be put in ```include/peafowl/inspectors/inspectors.h```, while its definition can be put 
+in a new source file in inspectors folder (e.g. ```src/inspectors/telnet.c```).
 
 This function, after analyzing "app_data" and using the knowledge about the current state of the flow
 can return one of four different values:
@@ -51,50 +47,44 @@ You can look at one of the existing inspectors to see some examples. An inspecto
 and UDP packets, so it may be a good idea, as a first thing, to return DPI_PROTOCOL_NO_MATCHES when 
 the inspectors is called on UDP packets for a protocol which only works over TCP (e.g. HTTP).
 
-Then, add the inspector to the set of inspectors which will be called by the framework. This can be done by 
-inserting a pointer to the corresponding function into an appropriate array (```src/peafowl.c```).
-
-```C
-static const dpi_inspector_callback const
-    inspectors[DPI_NUM_PROTOCOLS]=
-        {[DPI_PROTOCOL_BGP]=check_bgp
-        ,[DPI_PROTOCOL_HTTP]=check_http
-        ,[DPI_PROTOCOL_SMTP]=check_smtp
-        ,[DPI_PROTOCOL_POP3]=check_pop3
-        ,[DPI_PROTOCOL_TELNET]=check_telnet};
-```
-
-4) If the inspector needs to store information about the application flow, add an appropriate structure in the 
-flow data description (```include/peafowl/flow_table.h```, ```struct dpi_tracking_informations```). These data can be then used by the inspector
-by accessing the last parameter of the call described in point 3).
+If the inspector needs to store information about the application flow, add an appropriate structure in the 
+flow data description (```include/peafowl/flow_table.h```, ```struct dpi_tracking_informations```). 
 
 ```C
 typedef struct dpi_tracking_informations{
-	[...]
-	/************************************/
-	/* Protocol inspectors support data */
-	/************************************/
-	[...]
-	/***********************************/
-	/** Telnet Tracking informations. **/
-	/***********************************/
-	void* telnet_state;
+    [...]
+    /************************************/
+    /* Protocol inspectors support data */
+    /************************************/
+    [...]
+    /***********************************/
+    /** Telnet Tracking informations. **/
+    /***********************************/
+    void* telnet_state;
 }dpi_tracking_informations_t;
 ```
 
-5) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
+These data can be then used by the inspector by accessing the parameter ```t```.
+
+3) In file ```src/peafowl.c```, create a descriptor for the new protocol, by adding a descriptor struct to the ```protocols_descriptors``` array. The descriptor has the following fields:
+* name: A string representation for the protocol (e.g. ```"TELNET"```).
+* dissector: The function to detect the if the packet is carrying data for the given protocol. (Described in point 2)
+* get_extracted_fields: A function to get the fields extracted by the dissector (Will be described when talking about data extraction)
+* extracted_fields_num: The number of fields extracted by the dissector (Will be described when talking about data extraction)
+
+4) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
 the protocol identifier (```src/peafowl.c```).
 
 ```C
 static const dpi_l7_prot_id const
-	dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16+1]=
-		{[0 ... DPI_MAX_UINT_16]=DPI_PROTOCOL_UNKNOWN
-		,[port_http]=DPI_PROTOCOL_HTTP
-		,[port_bgp]=DPI_PROTOCOL_BGP
-		,[port_smtp_1]=DPI_PROTOCOL_SMTP
-		,[port_smtp_2]=DPI_PROTOCOL_SMTP
-		,[port_pop3]=DPI_PROTOCOL_POP3
-		,[port_telnet]=DPI_PROTOCOL_TELNET};
+	dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16+1] =
+		{[0 ... DPI_MAX_UINT_16] = DPI_PROTOCOL_UNKNOWN
+		,[port_http] = DPI_PROTOCOL_HTTP
+		,[port_bgp] = DPI_PROTOCOL_BGP
+		,[port_smtp_1] = DPI_PROTOCOL_SMTP
+		,[port_smtp_2] = DPI_PROTOCOL_SMTP
+		,[port_pop3] = DPI_PROTOCOL_POP3
+		,[port_telnet] = DPI_PROTOCOL_TELNET};
 ```
 
 In this way, when the framework receives a protocol on the telnet port, it will first check if the carried
@@ -102,7 +92,9 @@ protocol is telnet and, if this is not the case, it will check the other protoco
 In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to 
 ```dpi_well_known_ports_association_udp``` array.
 
-6) Add unit tests for the protocol. Suppose you are adding the support for the ```TELNET``` protocol. 
+```port_telnet``` must be specified in network byte order. See the definitions in ```include/peafowl/inspectors/protocols_identifiers.h``` for some examples.
+
+5) Add unit tests for the protocol. Suppose you are adding the support for the ```TELNET``` protocol. 
 First, you need to add a ```testTelnet.cpp``` file under ```./test/```. This file will be automatically compiled and
 executed when the tests are run. In this file you should put the code for checking that the protocol ```TELNET```
 is correctly identified. You can check correctness in the way you prefer.
@@ -128,7 +120,7 @@ TEST(TELNETTest, Generic) {
 Where ```42``` is the number of ```TELNET``` packets you expect to be identified by the protocol inspector.
 Of course, you can check the correctness of the protocol in any other way.
 
-7) Recompile the framework with testing option enabled and run the tests to check that the unit tests succeed:
+6) Recompile the framework with testing option enabled and run the tests to check that the unit tests succeed:
 
 ```
 $ cd build

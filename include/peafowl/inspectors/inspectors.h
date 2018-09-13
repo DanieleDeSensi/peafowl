@@ -105,10 +105,6 @@ uint8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                              const unsigned char* app_data,
                              uint32_t data_length,
                              dpi_tracking_informations_t* tracking);
-uint8_t invoke_callbacks_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
-                             const unsigned char* app_data,
-                             uint32_t data_length,
-                             dpi_tracking_informations_t* tracking);
 
 
 #endif /* INSPECTORS_H_ */

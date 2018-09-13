@@ -44,11 +44,6 @@ typedef struct dpi_sip_miprtcpstatic {
   int prio_codec;
 } dpi_sip_miprtcpstatic_t;
 
-typedef struct {
-  const char* s;
-  size_t len;
-} pfwl_field_t;
-
 typedef struct dpi_sip_miprtcp {
   pfwl_field_t media_ip;
   int media_port;
@@ -144,7 +139,7 @@ typedef struct dpi_tracking_informations {
    *  (E.g. subprotocols informations). It is returned to the user when
    *  dpi_state*_identify_application_protocol() is invoked.
    **/
-  void* flow_specific_user_data;
+  void* udata;
 
   size_t num_packets; // Number of packets received for the flow
 
@@ -258,6 +253,7 @@ typedef struct dpi_flow_infos {
    */
   uint8_t tcp_reordering_enabled : 1;
   dpi_tracking_informations_t tracking;
+  const unsigned char* last_rebuilt_tcp_data; // For internal use only.
 #ifdef WITH_PROMETHEUS
   void* prometheus_counter_packets;
   void* prometheus_counter_bytes;

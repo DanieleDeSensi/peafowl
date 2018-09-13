@@ -113,6 +113,8 @@ typedef struct dpi_identification_result {
   int8_t status;
   dpi_protocol_t protocol;
   void* user_flow_data;
+  pfwl_field_t* protocol_fields;
+  size_t protocol_fields_num;
 } dpi_identification_result_t;
 
 typedef struct dpi_pkt_infos {
@@ -189,9 +191,11 @@ typedef void(dpi_flow_cleaner_callback)(void* flow_specific_user_data);
 /**
  * Callback for processing a field of a given protocol.
  * @param field_value    The value of the field.
+ *                       ATTENTION: It may not be '\0' terminated. Moreover,
+ *                       it is guaranteed to be valid only for the duration of
+ *                       the callback. If you need it for a longer time, you need
+ *                       to copy it in another buffer.
  * @param field_len      The length of the field.
- * @param field_complete 1 if the field is complete, 0 if another chunk is to
- *                       be expected.
  * @param udata_global   A pointer to the global user data (set with the
  *                       pfwl_callbacks_fields_set_udata call).
  * @param udata_flow     A pointer to the user data specific
@@ -200,7 +204,6 @@ typedef void(dpi_flow_cleaner_callback)(void* flow_specific_user_data);
  **/
 typedef void(pfwl_field_callback)(const char* field_value,
                                   size_t field_len,
-                                  uint8_t field_complete,
                                   void* udata_global,
                                   void** udata_flow,
                                   dpi_pkt_infos_t* pkt_info);
@@ -334,17 +337,6 @@ typedef struct dpi_ssl_internal_information {
   int pkt_size;
   uint8_t ssl_detected;
 } dpi_ssl_internal_information_t;
-
-typedef void(sip_requestURI_callback)(const char* requestURI,
-                                      size_t requestURI_len);
-
-typedef struct dpi_sip_callbacks {
-  /**
-   * The callbacks that will be invoked when the specified messages are found.
-   **/
-  sip_requestURI_callback*
-      requestURI_cb;  // Invoked by the framework when a requestURI is found
-} dpi_sip_callbacks_t;
 
 typedef struct library_state dpi_library_state_t;
 
@@ -1052,58 +1044,6 @@ uint8_t dpi_ssl_activate_callbacks(dpi_library_state_t* state,
 uint8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
 
 /**
- * SIP callbacks.
- **/
-/**
- * Activate SIP callbacks. When a protocol is identified the default
- * behavior is to not inspect the packets belonging to that flow anymore
- * and keep simply returning the same protocol identifier.
- *
- * If a callback is enabled for a certain protocol, then we keep
- * inspecting all the new flows with that protocol in order to invoke
- * the callbacks specified by the user on the various parts of the
- * message. Moreover, if the application protocol uses TCP, then we have
- * the additional cost of TCP reordering for all the segments. Is highly
- * recommended to enable TCP reordering if it is not already enabled
- * (remember that is enabled by default). Otherwise the informations
- * extracted could be erroneous/incomplete.
- *
- * The pointers to the data passed to the callbacks are valid only for the
- * duration of the callback.
- *
- * @param state       A pointer to the state of the library.
- * @param callbacks   A pointer to SIP callbacks.
- * @param user_data   A pointer to global user SIP data. This pointer
- *                    will be passed to any SIP callback when it is
- *                    invoked.
- *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
- *         DPI_STATE_UPDATE_FAILURE otherwise.
- *
- **/
-uint8_t dpi_sip_activate_callbacks(dpi_library_state_t* state,
-                                   dpi_sip_callbacks_t* callbacks,
-                                   void* user_data);
-
-/**
- * Disable the SIP callbacks. user_data is not freed/modified.
- * @param state       A pointer to the state of the library.
- *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
- *         DPI_STATE_UPDATE_FAILURE otherwise.
- */
-uint8_t dpi_sip_disable_callbacks(dpi_library_state_t* state);
-
-/**
- * Returns the number of fields extracted for a specific protocol.
- * @param state    A pointer to the state of the library.
- * @param protocol The protocol.
- * @return The number of fields extracted for a specific protocol.
- */
-size_t pfwl_callbacks_fields_get_num(dpi_library_state_t* state,
-                                     dpi_l7_prot_id protocol);
-
-/**
  * Set a field callback for a given protocol.
  * When a protocol is identified the default
  * behavior is to not inspect the packets belonging to that flow anymore
@@ -1138,7 +1078,7 @@ uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
 
 /**
  * Disable the a protocol field callback. udata is not freed/modified.
- * @param state       A pointer to the state of the library.
+ * @param state        A pointer to the state of the library.
  * @param protocol     The protocol.
  * @param field_type   The field (check the enum for that specific protocol).
  *
@@ -1149,6 +1089,17 @@ uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
                                     dpi_l7_prot_id protocol,
                                     int field_type);
 
+/**
+ * Checks if the extraction of a specific field for a given protocol has been
+ * required.
+ * @param state        A pointer to the state of the library.
+ * @param protocol     The protocol.
+ * @param field_type   The field (check the enum for that specific protocol).
+ * @return A number different from 0 if the field has been required, 0 otherwise.
+ */
+uint8_t pfwl_callbacks_field_required(dpi_library_state_t* state,
+                                      dpi_l7_prot_id protocol,
+                                      int field_type);
 /**
  * Adds a pointer to some data which will be passed as parameter to all
  * the fields callbacks.

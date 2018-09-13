@@ -98,46 +98,40 @@ static const dpi_l7_prot_id const
          [port_dropbox] = DPI_PROTOCOL_DROPBOX,
          [port_spotify] = DPI_PROTOCOL_SPOTIFY,};
 
-static const dpi_inspector_callback const inspectors[DPI_NUM_PROTOCOLS] =
-    {[DPI_PROTOCOL_DHCP] = check_dhcp,   [DPI_PROTOCOL_DHCPv6] = check_dhcpv6,
-     [DPI_PROTOCOL_DNS] = check_dns,     [DPI_PROTOCOL_MDNS] = check_mdns,
-     [DPI_PROTOCOL_SIP] = check_sip,     [DPI_PROTOCOL_RTP] = check_rtp,
-     [DPI_PROTOCOL_SSH] = check_ssh,
-     [DPI_PROTOCOL_SKYPE] = check_skype, [DPI_PROTOCOL_NTP] = check_ntp,
-     [DPI_PROTOCOL_BGP] = check_bgp,     [DPI_PROTOCOL_HTTP] = check_http,
-     [DPI_PROTOCOL_SMTP] = check_smtp,   [DPI_PROTOCOL_POP3] = check_pop3,
-     [DPI_PROTOCOL_IMAP] = check_imap,
-     [DPI_PROTOCOL_SSL] = check_ssl,     [DPI_PROTOCOL_HANGOUT] = check_hangout,
-     [DPI_PROTOCOL_WHATSAPP] = check_whatsapp, [DPI_PROTOCOL_TELEGRAM] = check_telegram,
-     [DPI_PROTOCOL_DROPBOX] = check_dropbox, [DPI_PROTOCOL_SPOTIFY] = check_spotify,};
+typedef struct{
+  const char* name;
+  dpi_inspector_callback dissector;
+  pfwl_get_extracted_fields_callback get_extracted_fields;
+  int extracted_fields_num;
+}pfwl_protocol_descriptor_t;
+
+static const pfwl_protocol_descriptor_t const protocols_descriptors[DPI_NUM_PROTOCOLS] =
+  {
+    [DPI_PROTOCOL_DHCP]     = {"DHCP"    , check_dhcp    , NULL, 0},
+    [DPI_PROTOCOL_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  , NULL, 0},
+    [DPI_PROTOCOL_DNS]      = {"DNS"     , check_dns     , NULL, 0},
+    [DPI_PROTOCOL_MDNS]     = {"MDNS"    , check_mdns    , NULL, 0},
+    [DPI_PROTOCOL_SIP]      = {"SIP"     , check_sip     , get_extracted_fields_sip, DPI_FIELDS_SIP_NUM},
+    [DPI_PROTOCOL_RTP]      = {"RTP"     , check_rtp     , NULL, 0},
+    [DPI_PROTOCOL_SSH]      = {"SSH"     , check_ssh     , NULL, 0},
+    [DPI_PROTOCOL_SKYPE]    = {"Skype"   , check_skype   , NULL, 0},
+    [DPI_PROTOCOL_NTP]      = {"NTP"     , check_ntp     , NULL, 0},
+    [DPI_PROTOCOL_BGP]      = {"BGP"     , check_bgp     , NULL, 0},
+    [DPI_PROTOCOL_HTTP]     = {"HTTP"    , check_http    , NULL, 0},
+    [DPI_PROTOCOL_SMTP]     = {"SMTP"    , check_smtp    , NULL, 0},
+    [DPI_PROTOCOL_POP3]     = {"POP3"    , check_pop3    , NULL, 0},
+    [DPI_PROTOCOL_IMAP]     = {"IMAP"    , check_imap    , NULL, 0},
+    [DPI_PROTOCOL_SSL]      = {"SSL"     , check_ssl     , NULL, 0},
+    [DPI_PROTOCOL_HANGOUT]  = {"Hangout" , check_hangout , NULL, 0},
+    [DPI_PROTOCOL_WHATSAPP] = {"WhatsApp", check_whatsapp, NULL, 0},
+    [DPI_PROTOCOL_TELEGRAM] = {"Telegram", check_telegram, NULL, 0},
+    [DPI_PROTOCOL_DROPBOX]  = {"Dropbox" , check_dropbox , NULL, 0},
+    [DPI_PROTOCOL_SPOTIFY]  = {"Spotify" , check_spotify , NULL, 0},
+};
 
 static const dpi_inspector_callback const callbacks_manager[DPI_NUM_PROTOCOLS] = {
     [DPI_PROTOCOL_HTTP] = invoke_callbacks_http,
     [DPI_PROTOCOL_SSL] = invoke_callbacks_ssl,
-    [DPI_PROTOCOL_SIP] = invoke_callbacks_sip,
-};
-
-static const char* protocols_strings[DPI_NUM_PROTOCOLS] = {
-    [DPI_PROTOCOL_DNS] = "DNS",   
-    [DPI_PROTOCOL_MDNS] = "MDNS", 
-    [DPI_PROTOCOL_DHCP] = "DHCP", 
-    [DPI_PROTOCOL_DHCPv6] = "DHCPv6",
-    [DPI_PROTOCOL_NTP] = "NTP",  
-    [DPI_PROTOCOL_SIP] = "SIP", 
-    [DPI_PROTOCOL_RTP] = "RTP",
-    [DPI_PROTOCOL_SSH] = "SSH",
-    [DPI_PROTOCOL_SKYPE] = "Skype", 
-    [DPI_PROTOCOL_HTTP] = "HTTP", 
-    [DPI_PROTOCOL_BGP] = "BGP",  
-    [DPI_PROTOCOL_SMTP] = "SMTP",
-    [DPI_PROTOCOL_POP3] = "POP3", 
-    [DPI_PROTOCOL_IMAP] = "IMAP",
-    [DPI_PROTOCOL_SSL] = "SSL", 
-    [DPI_PROTOCOL_HANGOUT] = "Hangout",
-    [DPI_PROTOCOL_WHATSAPP] = "WhatsApp",
-    [DPI_PROTOCOL_TELEGRAM] = "Telegram",
-    [DPI_PROTOCOL_DROPBOX] = "Dropbox",
-    [DPI_PROTOCOL_SPOTIFY] = "Spotify",
 };
 
 typedef struct dpi_l7_skipping_infos_key {
@@ -207,7 +201,7 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
   state->l7_skip = NULL;
 
   for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
-    size_t num_callbacks = pfwl_callbacks_fields_get_num(state, i);
+    size_t num_callbacks = protocols_descriptors[i].extracted_fields_num;
     state->callbacks_fields[i].callbacks = (pfwl_field_callback**) malloc(sizeof(pfwl_field_callback*)*num_callbacks);
     state->callbacks_fields[i].callbacks_num = 0;
     for(size_t j = 0; j < num_callbacks; j++){
@@ -1215,7 +1209,36 @@ void dpi_init_flow_infos(dpi_library_state_t* state,
   flow_infos->l7prot = DPI_PROTOCOL_NOT_DETERMINED;
   flow_infos->trials = 0;
   flow_infos->tcp_reordering_enabled = state->tcp_reordering_enabled;
+  flow_infos->last_rebuilt_tcp_data = NULL;
   bzero(&(flow_infos->tracking), sizeof(dpi_tracking_informations_t));
+}
+
+
+static void pfwl_invoke_callbacks(dpi_library_state_t* state,
+                                  dpi_flow_infos_t* flow,
+                                  dpi_pkt_infos_t* pkt_infos,
+                                  const unsigned char* app_data,
+                                  uint32_t data_length){
+  dpi_tracking_informations_t* t = &(flow->tracking);
+  // New callbacks management
+  if (flow->l7prot < DPI_NUM_PROTOCOLS &&
+      state->callbacks_fields[flow->l7prot].callbacks_num) {
+    pfwl_protocol_descriptor_t descr = protocols_descriptors[flow->l7prot];
+    (*(descr.dissector))(state, pkt_infos, app_data, data_length, t);
+    pfwl_field_t* fields = (*descr.get_extracted_fields)(t);
+    for(size_t i = 0; i < descr.extracted_fields_num; i++){
+      pfwl_field_t field = fields[i];
+      if(field.len &&
+         pfwl_callbacks_field_required(state, flow->l7prot, i)){
+        pfwl_field_callback* cb;
+        cb = state->callbacks_fields[flow->l7prot].callbacks[i];
+        (*cb)(field.s, field.len,
+              state->callbacks_udata,
+              &(t->udata), pkt_infos);
+      }
+    }
+    memset(fields, 0, sizeof(pfwl_field_t)*protocols_descriptors[flow->l7prot].extracted_fields_num);
+  }
 }
 
 /*
@@ -1260,7 +1283,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
   dpi_identification_result_t r;
   r.status = DPI_STATUS_OK;
   r.protocol.l4prot = pkt_infos->l4prot;
-  r.user_flow_data = (flow->tracking.flow_specific_user_data);
+  r.user_flow_data = (flow->tracking.udata);
   dpi_l7_prot_id i;
 
   uint8_t check_result = DPI_PROTOCOL_NO_MATCHES;
@@ -1288,27 +1311,28 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
         } else if (seg.status == DPI_TCP_REORDERING_STATUS_REBUILT) {
           app_data = seg.data;
           data_length = seg.data_length;
+          if(flow->last_rebuilt_tcp_data){
+            free((void*) flow->last_rebuilt_tcp_data);
+          }
+          flow->last_rebuilt_tcp_data = app_data;
         }
       } else {
         seg.connection_terminated = dpi_reordering_tcp_track_connection_light(
             pkt_infos, &(flow->tracking));
       }
 
-      if ((BITTEST(state->active_callbacks, flow->l7prot) || state->callbacks_fields[flow->l7prot].callbacks_num)
+      if ((BITTEST(state->active_callbacks, flow->l7prot))
           && data_length != 0) {
         (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
                                              data_length, &(flow->tracking));
       }
-
-      if (seg.status == DPI_TCP_REORDERING_STATUS_REBUILT) {
-        free(seg.data);
-      }
-
     } else if (pkt_infos->l4prot == IPPROTO_UDP &&
-               (BITTEST(state->active_callbacks, flow->l7prot) || state->callbacks_fields[flow->l7prot].callbacks_num)) {
+               BITTEST(state->active_callbacks, flow->l7prot)) {
       (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
                                            data_length, &(flow->tracking));
     }
+
+    pfwl_invoke_callbacks(state, flow, pkt_infos, app_data, data_length);
 
     if (seg.connection_terminated) {
       r.status = DPI_STATUS_TCP_CONNECTION_TERMINATED;
@@ -1327,6 +1351,10 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
         } else if (seg.status == DPI_TCP_REORDERING_STATUS_REBUILT) {
           app_data = seg.data;
           data_length = seg.data_length;
+          if(flow->last_rebuilt_tcp_data){
+            free((void*) flow->last_rebuilt_tcp_data);
+          }
+          flow->last_rebuilt_tcp_data = app_data;
         }
       } else {
         if (dpi_reordering_tcp_track_connection_light(pkt_infos,
@@ -1362,15 +1390,13 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
     for (i = first_protocol_to_check; checked_protocols < DPI_NUM_PROTOCOLS;
          i = (i + 1) % DPI_NUM_PROTOCOLS, ++checked_protocols) {
       if (BITTEST(flow->possible_matching_protocols, i)) {
-        check_result = (*(inspectors[i]))(state, pkt_infos, app_data,
+        check_result = (*(protocols_descriptors[i].dissector))(state, pkt_infos, app_data,
                                           data_length, &(flow->tracking));
         if (check_result == DPI_PROTOCOL_MATCHES) {
           flow->l7prot = i;
           r.protocol.l7prot = flow->l7prot;
 
-          if (seg.status == DPI_TCP_REORDERING_STATUS_REBUILT) {
-            free(seg.data);
-          }
+          pfwl_invoke_callbacks(state, flow, pkt_infos, app_data, data_length);
 
           if (seg.connection_terminated) {
             r.status = DPI_STATUS_TCP_CONNECTION_TERMINATED;
@@ -1403,8 +1429,9 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 
   r.protocol.l7prot = flow->l7prot;
 
-  if (seg.status == DPI_TCP_REORDERING_STATUS_REBUILT) {
-    free(seg.data);
+  if(flow->last_rebuilt_tcp_data){
+    free((void*) flow->last_rebuilt_tcp_data);
+    flow->last_rebuilt_tcp_data = NULL;
   }
 
   if (seg.connection_terminated) {
@@ -1551,7 +1578,7 @@ const char* const dpi_get_protocol_name(dpi_protocol_t protocol) {
 
 const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol) {
   if (protocol < DPI_NUM_PROTOCOLS) {
-    return protocols_strings[protocol];
+    return protocols_descriptors[protocol].name;
   } else {
     return "Unknown";
   }
@@ -1560,7 +1587,7 @@ const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol) {
 dpi_l7_prot_id dpi_get_protocol_id(const char* const string) {
   size_t i;
   for (i = 0; i < (size_t)DPI_NUM_PROTOCOLS; i++) {
-    if (strcasecmp(string, protocols_strings[i]) == 0) {
+    if (strcasecmp(string, protocols_descriptors[i].name) == 0) {
       return (dpi_l7_prot_id)i;
       ;
     }
@@ -1568,7 +1595,15 @@ dpi_l7_prot_id dpi_get_protocol_id(const char* const string) {
   return DPI_NUM_PROTOCOLS;
 }
 
-const char** const dpi_get_protocols_strings() { return protocols_strings; }
+static const char* protocols_strings[DPI_NUM_PROTOCOLS];
+
+const char** const dpi_get_protocols_strings() {
+  size_t i;
+  for (i = 0; i < (size_t)DPI_NUM_PROTOCOLS; i++) {
+    protocols_strings[i] = protocols_descriptors[i].name;
+  }
+  return protocols_strings;
+}
 
 /**
  * Sets the callback that will be called when a flow expires.
@@ -1583,16 +1618,6 @@ uint8_t dpi_set_flow_cleaner_callback(dpi_library_state_t* state,
                                       dpi_flow_cleaner_callback* cleaner) {
   state->flow_cleaner_callback = cleaner;
   return DPI_STATE_UPDATE_SUCCESS;
-}
-
-size_t pfwl_callbacks_fields_get_num(dpi_library_state_t* state,
-                                     dpi_l7_prot_id protocol){
-  switch(protocol){
-    case DPI_PROTOCOL_SIP:{
-      return DPI_FIELDS_SIP_NUM;
-    }break;
-  }
-  return 0;
 }
 
 uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
@@ -1618,6 +1643,16 @@ uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
     return DPI_STATE_UPDATE_SUCCESS;
   }else{
     return DPI_STATE_UPDATE_FAILURE;
+  }
+}
+
+uint8_t pfwl_callbacks_field_required(dpi_library_state_t* state,
+                                      dpi_l7_prot_id protocol,
+                                      int field_type){
+  if(state){
+    return (state->callbacks_fields[protocol].callbacks[field_type] != NULL);
+  }else{
+    return 0;
   }
 }
 

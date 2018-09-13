@@ -28,10 +28,20 @@
 #ifndef FIELDS_H_
 #define FIELDS_H_
 
+typedef struct {
+  const char* s;
+  size_t len;
+} pfwl_field_t;
+
 typedef enum{
   DPI_FIELDS_SIP_REQUESTURI = 0,
   DPI_FIELDS_SIP_METHOD,
   DPI_FIELDS_SIP_NUM, // This must be the last
 }pfwl_fields_sip;
+
+typedef struct dpi_tracking_informations dpi_tracking_informations_t;
+typedef pfwl_field_t* (*pfwl_get_extracted_fields_callback)(dpi_tracking_informations_t*);
+
+pfwl_field_t* get_extracted_fields_sip(dpi_tracking_informations_t*);
 
 #endif /* FIELDS_H_ */
