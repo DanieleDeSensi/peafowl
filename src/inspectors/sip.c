@@ -1153,10 +1153,10 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
 
   uint8_t r = parse_packet(app_data, data_length, &t->sip_informations,
                            state->inspectors_accuracy[DPI_PROTOCOL_SIP],
-                           t->extracted_fields_sip);
+                           t->extracted_fields.sip);
   return r;
 }
 
 pfwl_field_t* get_extracted_fields_sip(dpi_tracking_informations_t* t){
-  return t->extracted_fields_sip;
+  return t->extracted_fields.sip;
 }

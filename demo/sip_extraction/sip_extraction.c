@@ -46,14 +46,6 @@
 #define MAX_IPv4_ACTIVE_FLOWS 500000
 #define MAX_IPv6_ACTIVE_FLOWS 500000
 
-void processRequestURI(const char* field_value,
-                       size_t field_len,
-                       void* udata_global,
-                       void** udata_flow,
-                       dpi_pkt_infos_t* pkt_info){
-    printf("Request URI detected: %.*s\n", (int) field_len, field_value);
-}
-
 int main(int argc, char** argv){
 	if(argc!=2){
 		fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
@@ -90,10 +82,8 @@ int main(int argc, char** argv){
 	struct pcap_pkthdr header;
 
 	uint virtual_offset = 0;
-  pfwl_callbacks_field_add(state,
-                           DPI_PROTOCOL_SIP,
-                           DPI_FIELDS_SIP_REQUESTURI,
-                           &processRequestURI);
+
+  pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUESTURI);
 
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
@@ -110,7 +100,14 @@ int main(int argc, char** argv){
             }
         }
 
-        dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+        dpi_identification_result_t r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+
+        if(r.protocol.l7prot == DPI_PROTOCOL_SIP &&
+           r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len){
+          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].s;
+          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len;
+          printf("Request URI detected: %.*s\n", (int) field_len, field_value);
+        }
 	}
 	return 0;
 }

@@ -202,10 +202,10 @@ dpi_library_state_t* dpi_init_stateful_num_partitions(
 
   for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
     size_t num_callbacks = protocols_descriptors[i].extracted_fields_num;
-    state->callbacks_fields[i].callbacks = (pfwl_field_callback**) malloc(sizeof(pfwl_field_callback*)*num_callbacks);
-    state->callbacks_fields[i].callbacks_num = 0;
+    state->fields_extraction[i].fields = (uint8_t*) malloc(sizeof(uint8_t)*num_callbacks);
+    state->fields_extraction[i].fields_num = 0;
     for(size_t j = 0; j < num_callbacks; j++){
-      state->callbacks_fields[i].callbacks[j] = NULL;
+      state->fields_extraction[i].fields[j] = 0;
     }
   }
 
@@ -601,7 +601,7 @@ void dpi_terminate(dpi_library_state_t* state) {
     dpi_prometheus_terminate(state);
 #endif
     for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
-      free(state->callbacks_fields[i].callbacks);
+      free(state->fields_extraction[i].fields);
     }
     free(state);
   }
@@ -1213,34 +1213,6 @@ void dpi_init_flow_infos(dpi_library_state_t* state,
   bzero(&(flow_infos->tracking), sizeof(dpi_tracking_informations_t));
 }
 
-
-static void pfwl_invoke_callbacks(dpi_library_state_t* state,
-                                  dpi_flow_infos_t* flow,
-                                  dpi_pkt_infos_t* pkt_infos,
-                                  const unsigned char* app_data,
-                                  uint32_t data_length){
-  dpi_tracking_informations_t* t = &(flow->tracking);
-  // New callbacks management
-  if (flow->l7prot < DPI_NUM_PROTOCOLS &&
-      state->callbacks_fields[flow->l7prot].callbacks_num) {
-    pfwl_protocol_descriptor_t descr = protocols_descriptors[flow->l7prot];
-    (*(descr.dissector))(state, pkt_infos, app_data, data_length, t);
-    pfwl_field_t* fields = (*descr.get_extracted_fields)(t);
-    for(size_t i = 0; i < descr.extracted_fields_num; i++){
-      pfwl_field_t field = fields[i];
-      if(field.len &&
-         pfwl_callbacks_field_required(state, flow->l7prot, i)){
-        pfwl_field_callback* cb;
-        cb = state->callbacks_fields[flow->l7prot].callbacks[i];
-        (*cb)(field.s, field.len,
-              state->callbacks_udata,
-              &(t->udata), pkt_infos);
-      }
-    }
-    memset(fields, 0, sizeof(pfwl_field_t)*protocols_descriptors[flow->l7prot].extracted_fields_num);
-  }
-}
-
 /*
  * Try to detect the application protocol. Before calling it, a check on
  * L4 protocol should be done and the function should be called only if
@@ -1332,7 +1304,16 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
                                            data_length, &(flow->tracking));
     }
 
-    pfwl_invoke_callbacks(state, flow, pkt_infos, app_data, data_length);
+    dpi_tracking_informations_t* t = &(flow->tracking);
+    if (flow->l7prot < DPI_NUM_PROTOCOLS &&
+        state->fields_extraction[flow->l7prot].fields_num) {
+      pfwl_protocol_descriptor_t descr = protocols_descriptors[flow->l7prot];
+      size_t fields_num = descr.extracted_fields_num;
+      r.protocol_fields = (*descr.get_extracted_fields)(t);
+      memset(r.protocol_fields, 0, sizeof(pfwl_field_t)*fields_num);
+      (*(descr.dissector))(state, pkt_infos, app_data, data_length, t);
+      r.protocol_fields_num = fields_num;
+    }
 
     if (seg.connection_terminated) {
       r.status = DPI_STATUS_TCP_CONNECTION_TERMINATED;
@@ -1390,13 +1371,23 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
     for (i = first_protocol_to_check; checked_protocols < DPI_NUM_PROTOCOLS;
          i = (i + 1) % DPI_NUM_PROTOCOLS, ++checked_protocols) {
       if (BITTEST(flow->possible_matching_protocols, i)) {
-        check_result = (*(protocols_descriptors[i].dissector))(state, pkt_infos, app_data,
-                                          data_length, &(flow->tracking));
+        pfwl_protocol_descriptor_t descr = protocols_descriptors[i];
+        dpi_tracking_informations_t* t = &(flow->tracking);
+        size_t fields_num = descr.extracted_fields_num;
+        if(descr.get_extracted_fields){
+          memset((*descr.get_extracted_fields)(t), 0, sizeof(pfwl_field_t)*fields_num);
+        }
+        check_result = (*(descr.dissector))(state, pkt_infos, app_data,
+                                          data_length, t);
         if (check_result == DPI_PROTOCOL_MATCHES) {
           flow->l7prot = i;
           r.protocol.l7prot = flow->l7prot;
 
-          pfwl_invoke_callbacks(state, flow, pkt_infos, app_data, data_length);
+          if (flow->l7prot < DPI_NUM_PROTOCOLS &&
+              state->fields_extraction[flow->l7prot].fields_num) {
+            r.protocol_fields = (*descr.get_extracted_fields)(t);
+            r.protocol_fields_num = fields_num;
+          }
 
           if (seg.connection_terminated) {
             r.status = DPI_STATUS_TCP_CONNECTION_TERMINATED;
@@ -1620,13 +1611,12 @@ uint8_t dpi_set_flow_cleaner_callback(dpi_library_state_t* state,
   return DPI_STATE_UPDATE_SUCCESS;
 }
 
-uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
+uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
                                  dpi_l7_prot_id protocol,
-                                 int field_type,
-                                 pfwl_field_callback* callback){
+                                 int field_type){
   if(state){
-    state->callbacks_fields[protocol].callbacks[field_type] = callback;
-    state->callbacks_fields[protocol].callbacks_num++;
+    state->fields_extraction[protocol].fields[field_type] = 1;
+    state->fields_extraction[protocol].fields_num++;
     dpi_set_protocol_accuracy(state, protocol, DPI_INSPECTOR_ACCURACY_HIGH);  // TODO: mmm, the problem is that we do not set back the original accuracy when doing field_remove
     return DPI_STATE_UPDATE_SUCCESS;
   }else{
@@ -1634,23 +1624,23 @@ uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
   }
 }
 
-uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
+uint8_t pfwl_protocol_field_remove(dpi_library_state_t* state,
                                     dpi_l7_prot_id protocol,
                                     int field_type){
   if(state){
-    state->callbacks_fields[protocol].callbacks[field_type] = NULL;
-    state->callbacks_fields[protocol].callbacks_num--;
+    state->fields_extraction[protocol].fields[field_type] = 0;
+    state->fields_extraction[protocol].fields_num--;
     return DPI_STATE_UPDATE_SUCCESS;
   }else{
     return DPI_STATE_UPDATE_FAILURE;
   }
 }
 
-uint8_t pfwl_callbacks_field_required(dpi_library_state_t* state,
+uint8_t pfwl_protocol_field_required(dpi_library_state_t* state,
                                       dpi_l7_prot_id protocol,
                                       int field_type){
   if(state){
-    return (state->callbacks_fields[protocol].callbacks[field_type] != NULL);
+    return state->fields_extraction[protocol].fields[field_type];
   }else{
     return 0;
   }

@@ -37,10 +37,10 @@ void getProtocolsOld(const char* pcapName,
                   std::vector<uint>& tcpProtocols,
                   std::vector<uint>& udpProtocols);
 
-void getProtocols(const char* pcapName,
+std::vector<dpi_identification_result_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols);
 
-void getProtocolsWithState(const char* pcapName,
+std::vector<dpi_identification_result_t> getProtocolsWithState(const char* pcapName,
                            std::vector<uint>& protocols,
                            dpi_library_state_t* state);
 

@@ -139,59 +139,70 @@ by the protocols to the application that uses the framework. In this way, the ap
 needs and which callback the framework has to invoke when this data is found. To add this capability to existing 
 inspector you need to follow some simple steps. For example, to add it to POP3 you need to:
 
-1) Create a struct that will be used by the application to indicate to the framework the functions to be used to process specific application data in the packet, and define it in peafowl.h. 
-E.g.:
+1) Define in the ```include/peafowl/inspectors/fields.h``` header an enumeration with the identifiers of the fields you want to extract,
+for example
 
 ```C
-typedef struct dpi_pop3_callbacks{
-	/**
-	 * The callbacks that will be invoked when the specified messages are found.
-	 **/
-	pop3_user_callback *user_cb; //Invoked by the framework when a POP3 "USER" message is found
-	pop3_pass_callback *pass_cb; //Invoked by the framework when a POP3 "PASS" message is found
-	pop3_list_callback *list_cb; //Invoked by the framework when a POP3 "LIST" message is found
-	pop3_retr_callback *retr_cb; //Invoked by the framework when a POP3 "RETR" message is found
-	[...]
-}dpi_pop3_callbacks_t;
+typedef enum{
+  DPI_FIELDS_POP3_SRC_ADDR = 0, // Source mail address
+  DPI_FIELDS_POP3_DST_ADDR,     // Destination mail address
+  DPI_FIELDS_POP3_NUM,          // This is not a field, must be the last to indicate the number of possible fields
+}pfwl_fields_pop3;
 ```
 
-2) Define the signature of the callbacks used in the struct described in point 1). For example,
+2) Add to the ```extracted_fields``` union in the ```dpi_tracking_informations_t``` struct in the ```include/peafowl/flow_table.h``` header the array of fields, e.g.:
+```C
+pfwl_field_t pop3[DPI_FIELDS_POP3_NUM];
+```
+
+3) Define in ```include/peafowl/inspectors/fields.h``` a function to get the pointer to the fields given a ```dpi_tracking_informations_t```
+struct. For the POP3 case, the function would have a signature such as:
 
 ```C
-typedef void(pop3_user_callback)(
-	char* user;   // Content of the "USER" message
-	uint length;  // Length of the "USER" message
-	);
+pfwl_field_t* get_extracted_fields_pop3(dpi_tracking_informations_t*);
+
 ```
-3) Add to the library_state struct in peafowl.h, the memebers for the callbacks and for the user data, for example:
+
+Its implementation (which can be place in the ```.c``` file containing the implementation of the dissector), would look like:
 ```C
-    ...
-    void *pop3_callbacks;
-    void *pop3_callbacks_user_data;
-    ...
+pfwl_field_t* get_extracted_fields_pop3(dpi_tracking_informations_t* t){
+  return t->extracted_fields.pop3;
+}
+
 ```
-4) Define in peafowl.h two functions to enable/disable these callbacks:
+
+4) Update the ```protocols_descriptors``` array in ```src/peafowl.c``` file, by setting the ```get_extracted_fields``` and ```extracted_fields_num``` fields.
+The modified entry would look like:
 ```C
-u_int8_t dpi_pop3_activate_callbacks(dpi_library_state_t* state, dpi_pop3_callbacks_t* callbacks, void* user_data);
+    [DPI_PROTOCOL_POP3]     = {"POP3"    , check_pop3    , get_extracted_fields_pop3, DPI_FIELDS_POP3_NUM},
 
-u_int8_t dpi_pop3_disable_callbacks(dpi_library_state_t* state);
 ```
 
-These two functions must then be implemented in inspectors/pop3.c and they should simply copy the content
-of "callbacks" into a sub-structure of "state".
+5) In the protocol dissector, set the fields once you find them in the packet. 
+You need to set both the content of the field and its length. To avoid copying and allocating new data, you can directly set the pointer to the packet payload. 
+Indeed, Peafowl guarantees that the fields are valid only until the next packet for the same flow is received. 
+Moreover, you could inspect and process some parts of the packet only if the user required that field.
 
-5) To implement the extraction of these information you have to define the following function and add it to 
-inspectors/pop3.c
+E.g. suppose you want to set a field corresponding to the source mail address:
 
 ```C
-u_int8_t invoke_callbacks_pop3(dpi_library_state_t* state, dpi_pkt_infos_t* pkt, const unsigned char* app_data, 
-                               u_int32_t data_length, dpi_tracking_informations_t* tracking);
+if(pfwl_protocol_field_required(state, DPI_PROTOCOL_POP3, DPI_FIELDS_POP3_SRC_ADDR)){
+    pfwl_field_t* src_address = &(t->extracted_fields.pop3[DPI_FIELDS_POP3_SRC_ADDR]);
+    src_address->s = app_data[....];
+    src_address->len = ....;
+}
 ```
 
-The parameters are the same we described before for the creation of a new protocol inspector.
-Accessing a sub-structure of "state" (filled with the functions described in 4) when the data extraction
-capability is enabled), this function will have the knowledge of which data the application needs and how it
-want them to be processed.
+6) Now inside your application you can check the fields that have been extracted. A field has been extracted only if its lenght is greater than zero.
+For example:
+
+```C
+if(r.protocol.l7prot == DPI_PROTOCOL_POP3 &&
+   r.protocol_fields[DPI_FIELDS_POP3_SRC_ADDR].len){
+    // Address is stored inside r.protocol_fields[DPI_FIELDS_POP3_SRC_ADDR].s; 
+}
+```
+
 
 Configuration
 ================================================================================================================

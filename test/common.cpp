@@ -83,16 +83,17 @@ void getProtocolsOld(const char* pcapName,
     dpi_terminate(state);
 }
 
-void getProtocols(const char* pcapName,
+std::vector<dpi_identification_result_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols){
-    getProtocolsWithState(pcapName,
+    return getProtocolsWithState(pcapName,
                           protocols,
                           dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS));
 }
 
-void getProtocolsWithState(const char* pcapName,
+std::vector<dpi_identification_result_t> getProtocolsWithState(const char* pcapName,
                            std::vector<uint>& protocols,
                            dpi_library_state_t* state){
+    std::vector<dpi_identification_result_t> results;
     protocols.clear();
     protocols.resize(DPI_NUM_PROTOCOLS + 1); // +1 to store unknown protocols
 
@@ -103,6 +104,7 @@ void getProtocolsWithState(const char* pcapName,
 
     while((pkt = pcap.getNextPacket()).first != NULL){
         r = dpi_get_protocol(state, pkt.first, pkt.second, time(NULL));
+        results.push_back(r);
         if(r.protocol.l4prot == IPPROTO_TCP ||
            r.protocol.l4prot == IPPROTO_UDP){
             if(r.protocol.l7prot > DPI_NUM_PROTOCOLS){r.protocol.l7prot = DPI_NUM_PROTOCOLS;}
@@ -111,4 +113,5 @@ void getProtocolsWithState(const char* pcapName,
     }
 
     dpi_terminate(state);
+    return results;
 }

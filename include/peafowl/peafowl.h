@@ -150,6 +150,14 @@ typedef struct dpi_pkt_infos {
   } dst_addr_t;
   /** Time when the library started the processing (in seconds). **/
   uint32_t processing_time;
+
+  /** Protocol specific info. **/
+  union {
+    struct {
+      pfwl_field_t request_uri;
+      pfwl_field_t method;
+    }sip;
+  } extracted_info;
 } dpi_pkt_infos_t;
 
 enum dpi_http_message_type {
@@ -186,27 +194,6 @@ typedef struct dpi_http_message_informations {
  * flow.
  */
 typedef void(dpi_flow_cleaner_callback)(void* flow_specific_user_data);
-
-
-/**
- * Callback for processing a field of a given protocol.
- * @param field_value    The value of the field.
- *                       ATTENTION: It may not be '\0' terminated. Moreover,
- *                       it is guaranteed to be valid only for the duration of
- *                       the callback. If you need it for a longer time, you need
- *                       to copy it in another buffer.
- * @param field_len      The length of the field.
- * @param udata_global   A pointer to the global user data (set with the
- *                       pfwl_callbacks_fields_set_udata call).
- * @param udata_flow     A pointer to the user data specific
- *                       to this flow.
- * @param pkt_info       A pointer to the parsed packet.
- **/
-typedef void(pfwl_field_callback)(const char* field_value,
-                                  size_t field_len,
-                                  void* udata_global,
-                                  void** udata_flow,
-                                  dpi_pkt_infos_t* pkt_info);
 
 /**
  * Called when ssl inspector seen certificate
@@ -368,9 +355,9 @@ typedef enum {
 } dpi_inspector_accuracy;
 
 typedef struct {
-    pfwl_field_callback** callbacks;
-    uint8_t callbacks_num;
-} pfwl_callbacks_field_entry_t;
+    uint8_t* fields;
+    uint8_t fields_num;
+} pfwl_fields_extraction_t;
 
 struct library_state;
 
@@ -409,7 +396,7 @@ struct library_state {
   void* sip_callbacks_user_data;
 
   /** Field callbacks. **/
-  pfwl_callbacks_field_entry_t callbacks_fields[DPI_NUM_PROTOCOLS];
+  pfwl_fields_extraction_t fields_extraction[DPI_NUM_PROTOCOLS];
 
   uint8_t tcp_reordering_enabled : 1;
 
@@ -1071,10 +1058,9 @@ uint8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  *
  **/
-uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
+uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
                                 dpi_l7_prot_id protocol,
-                                int field_type,
-                                pfwl_field_callback* callback);
+                                int field_type);
 
 /**
  * Disable the a protocol field callback. udata is not freed/modified.
@@ -1085,7 +1071,7 @@ uint8_t pfwl_callbacks_field_add(dpi_library_state_t* state,
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
+uint8_t pfwl_protocol_field_remove(dpi_library_state_t* state,
                                     dpi_l7_prot_id protocol,
                                     int field_type);
 
@@ -1095,9 +1081,9 @@ uint8_t pfwl_callbacks_field_remove(dpi_library_state_t* state,
  * @param state        A pointer to the state of the library.
  * @param protocol     The protocol.
  * @param field_type   The field (check the enum for that specific protocol).
- * @return A number different from 0 if the field has been required, 0 otherwise.
+ * @return 1 if the field has been required, 0 otherwise.
  */
-uint8_t pfwl_callbacks_field_required(dpi_library_state_t* state,
+uint8_t pfwl_protocol_field_required(dpi_library_state_t* state,
                                       dpi_l7_prot_id protocol,
                                       int field_type);
 /**

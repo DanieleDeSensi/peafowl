@@ -217,7 +217,9 @@ typedef struct dpi_tracking_informations {
   /**********************************/
   /** Protocols extracted fields.  **/
   /**********************************/
-  pfwl_field_t extracted_fields_sip[DPI_FIELDS_SIP_NUM];
+  union{
+    pfwl_field_t sip[DPI_FIELDS_SIP_NUM];
+  }extracted_fields;
 } dpi_tracking_informations_t;
 
 /**
