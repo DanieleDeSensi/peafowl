@@ -32,7 +32,11 @@ static uint8_t whatsapp_sequence[] = {
     0x0, 0x57, 0x41, 0x02, 0x0, 0x0, 0x0
  };
 
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define MIN(x, y) ({	       \
+      __typeof__ (x) _x = (x); \
+      __typeof__ (y) _y = (y); \
+      _x < _y ? _x : _y;       \
+})
 
 uint8_t check_whatsapp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                       const unsigned char* app_data, uint32_t data_length,

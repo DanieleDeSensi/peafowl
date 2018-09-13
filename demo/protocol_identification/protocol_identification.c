@@ -84,8 +84,8 @@ int main(int argc, char** argv){
 	struct pcap_pkthdr header;
 
 	dpi_identification_result_t r;
-    u_int32_t protocols[DPI_NUM_PROTOCOLS];
-    memset(protocols, 0, sizeof(protocols));
+	u_int32_t protocols[DPI_NUM_PROTOCOLS];
+	memset(protocols, 0, sizeof(protocols));
 	u_int32_t unknown=0;
 
 	uint virtual_offset = 0;
