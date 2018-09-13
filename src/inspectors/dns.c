@@ -48,7 +48,7 @@ static inline uint8_t getBits(uint16_t x, int p, int n)
 /**
    Check if pkt is QUERY
  **/
-static inline uint8_t isQuery(struct dns_header *dns_header)
+static uint8_t isQuery(struct dns_header *dns_header)
 {
   /* QDCOUNT >= 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
   if(dns_header->quest_count >= 1 &&
@@ -62,7 +62,7 @@ static inline uint8_t isQuery(struct dns_header *dns_header)
 /**
    Check if pkt is ANSWER
  **/
-static inline uint8_t isAnswer(struct dns_header *dns_header, uint8_t *is_name_server, uint8_t *is_auth_server)
+static uint8_t isAnswer(struct dns_header *dns_header, uint8_t *is_name_server, uint8_t *is_auth_server)
 
 {
   uint8_t rcode, ret = -1;
