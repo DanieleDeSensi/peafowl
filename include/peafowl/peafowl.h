@@ -395,6 +395,9 @@ struct library_state {
   void* sip_callbacks;
   void* sip_callbacks_user_data;
 
+  /** DNS callbacks **/
+  /* ## TODO ## */
+
   /** Field callbacks. **/
   pfwl_fields_extraction_t fields_extraction[DPI_NUM_PROTOCOLS];
 

@@ -171,6 +171,11 @@ typedef struct dpi_tracking_informations {
   /************************************/
 
   /*********************************/
+  /** DNS Tracking informations. **/
+  /*********************************/
+  /* TODO dns infos */
+
+  /*********************************/
   /** SSH Tracking informations. **/
   /*********************************/
   uint8_t ssh_stage : 2;
