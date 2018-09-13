@@ -50,13 +50,14 @@ static inline uint8_t getBits(uint16_t x, int p, int n)
  **/
 static inline uint8_t isQuery(struct dns_header *dns_header)
 {
-  /* QDCOUNT = 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
-  if(dns_header->quest_count == 1 &&
+  /* QDCOUNT >= 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
+  if(dns_header->quest_count >= 1 &&
      dns_header->answ_count == 0 &&
      dns_header->auth_rrs == 0 &&
      dns_header->add_rrs == 0)
     return 0;
-  return -1;
+  else
+    return -1;
 }
 
 /**
@@ -110,23 +111,29 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                   dpi_tracking_informations_t* t)
 {
   // check param
-  if(!state || !app_data | !t)
+  if(!state || !app_data || !pkt || !t || data_length == 0)
     return -1;
   
   /* DNS port (53) */
   if((pkt->dstport == port_dns || pkt->srcport == port_dns) &&
      data_length >= 12) {
 
-    uint8_t *is_name_server = 0, *is_auth_server = 0;
-    struct dns_header *dns_header = (struct dns_header*)(app_data);    
+    uint8_t is_name_server = 0, is_auth_server = 0;
+    struct dns_header *dns_header = (struct dns_header*)(app_data);
+
+    // set to host byte order
+    dns_header->tr_id = ntohs(dns_header->tr_id);
+    dns_header->flags = ntohs(dns_header->flags);
+    dns_header->quest_count = ntohs(dns_header->quest_count);
+    dns_header->answ_count = ntohs(dns_header->answ_count);
+    dns_header->auth_rrs = ntohs(dns_header->auth_rrs);
+    dns_header->add_rrs = ntohs(dns_header->add_rrs);
     
     /**
        QR == 0 is a QUERY
     **/
-    if((dns_header->flags & FMASK) == 0) {
-      if(isQuery(dns_header) == 0)
-	++t->dns_stage;
-      else
+    if((dns_header->flags & FMASK) == 0x0000) {
+      if(isQuery(dns_header) != 0)
 	return DPI_PROTOCOL_NO_MATCHES;
       
       /* TODO callback:
@@ -135,23 +142,14 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
     /**
        QR == 1 is an ANSWER
     **/
-    if((dns_header->flags & FMASK) == 1) {
-      if(isAnswer(dns_header, is_name_server, is_auth_server) == 0)
-	++t->dns_stage;
-      else
+    if((dns_header->flags & FMASK) == 0x8000) {
+      if(isAnswer(dns_header, &is_name_server, &is_auth_server) != 0)
 	return DPI_PROTOCOL_NO_MATCHES;
 
       /** TODO callbacks:
 	  check is_name_server and is_auth_server to extract name server(s) **/
-      
-      if(t->dns_stage >= 2) {
-	return DPI_PROTOCOL_MATCHES;
-      } else {
-	return DPI_PROTOCOL_MORE_DATA_NEEDED;
-      }
     }
-    /** QDCOUNT cannot be 0 for DNS **/
-    return DPI_PROTOCOL_NO_MATCHES;
+    return DPI_PROTOCOL_MATCHES;
   }
   return DPI_PROTOCOL_NO_MATCHES;
 }
