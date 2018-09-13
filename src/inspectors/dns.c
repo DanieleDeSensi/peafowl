@@ -53,8 +53,7 @@ static inline uint8_t isQuery(struct dns_header *dns_header)
   /* QDCOUNT >= 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
   if(dns_header->quest_count >= 1 &&
      dns_header->answ_count == 0 &&
-     dns_header->auth_rrs == 0 &&
-     dns_header->add_rrs == 0)
+     dns_header->auth_rrs == 0)
     return 0;
   else
     return -1;
