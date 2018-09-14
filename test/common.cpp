@@ -55,34 +55,6 @@ std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
     }
 }
 
-void getProtocolsOld(const char* pcapName,
-                  std::vector<uint>& tcpProtocols,
-                  std::vector<uint>& udpProtocols){
-    tcpProtocols.clear();
-    udpProtocols.clear();
-    tcpProtocols.resize(DPI_NUM_TCP_PROTOCOLS + 1); // +1 to store unknown protocols
-    udpProtocols.resize(DPI_NUM_UDP_PROTOCOLS + 1); // +1 to store unknown protocols
-    Pcap pcap(pcapName);
-
-    dpi_identification_result_t r;
-    std::pair<const u_char*, unsigned long> pkt;
-    dpi_library_state_t* state = dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
-
-    while((pkt = pcap.getNextPacket()).first != NULL){
-        r = dpi_stateful_identify_application_protocol(state, pkt.first, pkt.second, time(NULL));
-        dpi_l7_prot_id proto = r.protocol.l7prot;
-        if(r.protocol.l4prot == IPPROTO_TCP){
-            if(proto > DPI_NUM_TCP_PROTOCOLS){proto = DPI_NUM_TCP_PROTOCOLS;}
-            ++tcpProtocols[proto];
-        }else if(r.protocol.l4prot == IPPROTO_UDP){
-            if(proto > DPI_NUM_UDP_PROTOCOLS){proto = DPI_NUM_UDP_PROTOCOLS;}
-            ++udpProtocols[proto];
-        }
-    }
-
-    dpi_terminate(state);
-}
-
 std::vector<dpi_identification_result_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols){
     return getProtocolsWithState(pcapName,
@@ -105,10 +77,10 @@ std::vector<dpi_identification_result_t> getProtocolsWithState(const char* pcapN
     while((pkt = pcap.getNextPacket()).first != NULL){
         r = dpi_get_protocol(state, pkt.first, pkt.second, time(NULL));
         results.push_back(r);
-        if(r.protocol.l4prot == IPPROTO_TCP ||
-           r.protocol.l4prot == IPPROTO_UDP){
-            if(r.protocol.l7prot > DPI_NUM_PROTOCOLS){r.protocol.l7prot = DPI_NUM_PROTOCOLS;}
-            ++protocols[r.protocol.l7prot];
+        if(r.protocol_l4 == IPPROTO_TCP ||
+           r.protocol_l4 == IPPROTO_UDP){
+            if(r.protocol_l7 > DPI_NUM_PROTOCOLS){r.protocol_l7 = DPI_NUM_PROTOCOLS;}
+            ++protocols[r.protocol_l7];
         }
     }
 

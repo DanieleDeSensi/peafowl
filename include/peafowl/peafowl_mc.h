@@ -139,24 +139,6 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
     mc_dpi_parallelism_details_t parallelism_details);
 
 /**
- * --- DEPRECATED, replaced by mc_dpi_set_core_callbacks ---
- * Sets the reading and processing callbacks. It can be done only after
- * that the state has been initialized and before calling run().
- *
- * @param state                 A pointer to the state of the library.
- * @param reading_callback      A pointer to the reading callback. It must
- *                              be different from NULL.
- * @param processing_callback   A pointer to the processing callback. It
- *                              must be different from NULL.
- * @param user_data             A pointer to the user data to be passed to
- *                              the callbacks.
- */
-void mc_dpi_set_read_and_process_callbacks(
-    mc_dpi_library_state_t* state,
-    mc_dpi_packet_reading_callback* reading_callback,
-    mc_dpi_processing_result_callback* processing_callback, void* user_data);
-
-/**
  * Sets the reading and processing callbacks. It can be done only after
  * that the state has been initialized and before calling run().
  *
@@ -390,32 +372,6 @@ uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state);
  *         been changed because a problem happened.
  */
 uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state);
-
-/**
- * --- DEPRECATED, replaced by mc_dpi_enable_protocol ---
- * Enable a protocol inspector.
- * @param state         A pointer to the state of the library.
- * @param protocol      The protocol to enable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
- *         been changed because a problem happened.
- */
-uint8_t mc_dpi_set_protocol(mc_dpi_library_state_t* state,
-                            dpi_protocol_t protocol);
-
-/**
- * --- DEPRECATED, replaced by mc_dpi_disable_protocol ---
- * Disable a protocol inspector.
- * @param state       A pointer to the state of the library.
- * @param protocol    The protocol to disable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
- *         been changed because a problem happened.
- */
-uint8_t mc_dpi_delete_protocol(mc_dpi_library_state_t* state,
-                               dpi_protocol_t protocol);
 
 /**
  * Enable a protocol inspector.

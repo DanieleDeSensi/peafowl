@@ -107,10 +107,10 @@ int main(int argc, char** argv){
 
         r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
-        if(r.protocol.l4prot == IPPROTO_TCP ||
-           r.protocol.l4prot == IPPROTO_UDP){
-            if(r.protocol.l7prot < DPI_NUM_PROTOCOLS){
-                ++protocols[r.protocol.l7prot];
+        if(r.protocol_l4 == IPPROTO_TCP ||
+           r.protocol_l4 == IPPROTO_UDP){
+            if(r.protocol_l7 < DPI_NUM_PROTOCOLS){
+                ++protocols[r.protocol_l7];
             }else{
                 ++unknown;
             }

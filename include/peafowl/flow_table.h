@@ -240,7 +240,7 @@ typedef struct dpi_flow_infos {
    * it is not been yet determined; DPI_PROTOCOL_UNKNOWN if it is unknown
    * or the matching protocol identifier.
    */
-  dpi_l7_prot_id l7prot;
+  pfwl_protocol_l7 l7prot;
 
   /** Number of times that the library tried to guess the protocol. **/
   uint16_t trials;

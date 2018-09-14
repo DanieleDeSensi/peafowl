@@ -8,13 +8,6 @@ static const char* expectedMethods[] = {"REGISTER", "REGISTER", "REGISTER", "REG
 static size_t nextExpectedURI = 0;
 static size_t nextExpectedMethod = 0;
 
-TEST(SIPTest, DeprecatedCalls) {
-    std::vector<uint> tcpProtocols;
-    std::vector<uint> udpProtocols;
-    getProtocolsOld("./pcaps/sip-rtp.pcap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_SIP], (uint) 102);
-}
-
 TEST(SIPTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/sip-rtp.pcap", protocols);
@@ -33,7 +26,7 @@ TEST(SIPTest, CallbackRequestURI){
     std::vector<dpi_identification_result_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
     EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 102);
     for(auto r : results){
-      if(r.protocol.l7prot == DPI_PROTOCOL_SIP){
+      if(r.protocol_l7 == DPI_PROTOCOL_SIP){
         if(r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len){
           const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].s;
           size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len;

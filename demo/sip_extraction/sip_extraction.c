@@ -102,7 +102,7 @@ int main(int argc, char** argv){
 
         dpi_identification_result_t r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
-        if(r.protocol.l7prot == DPI_PROTOCOL_SIP &&
+        if(r.protocol_l7 == DPI_PROTOCOL_SIP &&
            r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len){
           const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].s;
           size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len;

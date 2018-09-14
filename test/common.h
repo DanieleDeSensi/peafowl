@@ -32,11 +32,6 @@ public:
     std::pair<const u_char*, unsigned long> getNextPacket();
 };
 
-
-void getProtocolsOld(const char* pcapName,
-                  std::vector<uint>& tcpProtocols,
-                  std::vector<uint>& udpProtocols);
-
 std::vector<dpi_identification_result_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols);
 

@@ -58,7 +58,6 @@ typedef struct mc_dpi_library_state {
   mc_dpi_packet_reading_callback* reading_callback;
   mc_dpi_processing_result_callback* processing_callback;
   void* read_process_callbacks_user_data;
-  bool deprecated_callback;
 
   uint8_t terminating;
   uint8_t is_running;
@@ -211,8 +210,7 @@ static inline
 
   state->L7_collector = new (tmp) dpi::dpi_L7_collector(
       &(state->processing_callback), &(state->read_process_callbacks_user_data),
-      &(state->collector_proc_id), state->tasks_pool,
-      state->deprecated_callback);
+      &(state->collector_proc_id), state->tasks_pool);
   state->L7_farm->add_collector(state->L7_collector);
 
   /********************************/
@@ -264,8 +262,7 @@ static inline
   state->collector_proc_id = state->mapping[last_mapped];
   state->single_farm_collector = new dpi::dpi_L7_collector(
       &(state->processing_callback), &(state->read_process_callbacks_user_data),
-      &(state->collector_proc_id), state->tasks_pool,
-      state->deprecated_callback);
+      &(state->collector_proc_id), state->tasks_pool);
   assert(state->single_farm_collector);
   state->single_farm->add_collector(state->single_farm_collector);
   state->parallel_module_type = MC_DPI_PARALLELISM_FORM_ONE_FARM;
@@ -358,7 +355,6 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
   }
 
   state->terminating = 0;
-  state->deprecated_callback = 0;
 
   uint16_t hash_table_partitions;
 
@@ -490,27 +486,6 @@ void mc_dpi_terminate(mc_dpi_library_state_t* state) {
     delete[] state->mapping;
     free(state);
   }
-}
-
-/**
- * Sets the reading and processing callbacks. It can be done only after
- * that the state has been initialized and before calling run().
- *
- * @param state                 A pointer to the state of the library.
- * @param reading_callback      A pointer to the reading callback. It must
- *                              be different from NULL.
- * @param processing_callback   A pointer to the processing callback. It
- *                              must be different from NULL.
- * @param user_data             A pointer to the user data to be passed to
- *                              the callbacks.
- */
-void mc_dpi_set_read_and_process_callbacks(
-    mc_dpi_library_state_t* state,
-    mc_dpi_packet_reading_callback* reading_callback,
-    mc_dpi_processing_result_callback* processing_callback, void* user_data) {
-  mc_dpi_set_core_callbacks(state, reading_callback, processing_callback,
-                            user_data);
-  state->deprecated_callback = 1;
 }
 
 void mc_dpi_set_core_callbacks(
@@ -863,46 +838,6 @@ uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state) {
   }
   uint8_t r;
   r = dpi_tcp_reordering_disable(state->sequential_state);
-  return r;
-}
-
-/**
- * --- DEPRECATED ---
- * Enable a protocol inspector.
- * @param state         A pointer to the state of the library.
- * @param protocol      The protocol to enable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
- *         been changed because a problem happened.
- */
-uint8_t mc_dpi_set_protocol(mc_dpi_library_state_t* state,
-                            dpi_protocol_t protocol) {
-  if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
-  }
-  uint8_t r;
-  r = dpi_set_protocol(state->sequential_state, protocol);
-  return r;
-}
-
-/**
- * --- DEPRECATED ---
- * Disable a protocol inspector.
- * @param state       A pointer to the state of the library.
- * @param protocol    The protocol to disable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
- *         been changed because a problem happened.
- */
-uint8_t mc_dpi_delete_protocol(mc_dpi_library_state_t* state,
-                               dpi_protocol_t protocol) {
-  if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
-  }
-  uint8_t r;
-  r = dpi_delete_protocol(state->sequential_state, protocol);
   return r;
 }
 

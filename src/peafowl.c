@@ -55,7 +55,7 @@
     if (DPI_DEBUG) fprintf(stderr, fmt, __VA_ARGS__); \
   } while (0)
 
-static const dpi_l7_prot_id const
+static const pfwl_protocol_l7 const
     dpi_well_known_ports_association_tcp[DPI_MAX_UINT_16 + 1] =
         {[0 ... DPI_MAX_UINT_16] = DPI_PROTOCOL_UNKNOWN,
          [port_dns] = DPI_PROTOCOL_DNS,
@@ -76,7 +76,7 @@ static const dpi_l7_prot_id const
          [port_hangout_19309] = DPI_PROTOCOL_HANGOUT,
          [port_ssh] = DPI_PROTOCOL_SSH,};
 
-static const dpi_l7_prot_id const
+static const pfwl_protocol_l7 const
     dpi_well_known_ports_association_udp[DPI_MAX_UINT_16 + 1] =
         {[0 ... DPI_MAX_UINT_16] = DPI_PROTOCOL_UNKNOWN,
          [port_dns] = DPI_PROTOCOL_DNS,
@@ -141,7 +141,7 @@ typedef struct dpi_l7_skipping_infos_key {
 
 typedef struct dpi_l7_skipping_infos {
   dpi_l7_skipping_infos_key_t key;
-  dpi_l7_prot_id protocol;
+  pfwl_protocol_l7 protocol;
   UT_hash_handle hh; /* makes this structure hashable */
 } dpi_l7_skipping_infos_t;
 
@@ -493,35 +493,8 @@ uint8_t dpi_tcp_reordering_disable(dpi_library_state_t* state) {
   }
 }
 
-/**
- * --- DEPRECATED ---
- * Enable a protocol inspector.
- * @param state         A pointer to the state of the library.
- * @param protocol      The protocol to enable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
- *         DPI_STATE_UPDATE_FAILURE otherwise.
- */
-uint8_t dpi_set_protocol(dpi_library_state_t* state, dpi_protocol_t protocol) {
-  return dpi_enable_protocol(state, dpi_old_protocols_to_new(protocol));
-}
-
-/**
- * --- DEPRECATED ---
- * Disable a protocol inspector.
- * @param state       A pointer to the state of the library.
- * @param protocol    The protocol to disable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
- *         DPI_STATE_UPDATE_FAILURE otherwise.
- */
-uint8_t dpi_delete_protocol(dpi_library_state_t* state,
-                            dpi_protocol_t protocol) {
-  return dpi_disable_protocol(state, dpi_old_protocols_to_new(protocol));
-}
-
 uint8_t dpi_enable_protocol(dpi_library_state_t* state,
-                            dpi_l7_prot_id protocol) {
+                            pfwl_protocol_l7 protocol) {
   if (protocol < DPI_NUM_PROTOCOLS) {
     BITSET(state->protocols_to_inspect, protocol);
     ++state->active_protocols;
@@ -532,7 +505,7 @@ uint8_t dpi_enable_protocol(dpi_library_state_t* state,
 }
 
 uint8_t dpi_disable_protocol(dpi_library_state_t* state,
-                             dpi_l7_prot_id protocol) {
+                             pfwl_protocol_l7 protocol) {
   if (protocol < DPI_NUM_PROTOCOLS) {
     BITCLEAR(state->protocols_to_inspect, protocol);
     BITCLEAR(state->active_callbacks, protocol);
@@ -574,7 +547,7 @@ uint8_t dpi_inspect_nothing(dpi_library_state_t* state) {
 }
 
 uint8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state, uint8_t l4prot,
-                                    uint16_t port, dpi_l7_prot_id id) {
+                                    uint16_t port, pfwl_protocol_l7 id) {
   dpi_l7_skipping_infos_t* skinfos = malloc(sizeof(dpi_l7_skipping_infos_t));
   memset(skinfos, 0, sizeof(dpi_l7_skipping_infos_t));
   skinfos->key.l4prot = l4prot;
@@ -605,42 +578,6 @@ void dpi_terminate(dpi_library_state_t* state) {
     }
     free(state);
   }
-}
-
-/*
- * --- DEPRECATED ---
- * Try to detect the application protocol.
- * @param   state The state of the library.
- * @param   pkt The pointer to the beginning of IP header.
- * @param   data_length Length of the packet (from the beginning of the IP
- *          header, without L2 headers/trailers).
- * @param   current_time The current time in seconds.
- * @return  The status of the operation.  It gives additional informations
- *          about the processing of the request. If lesser than 0, an error
- *          occurred. dpi_get_error_msg() can be used to get a textual
- *          representation of the error. If greater or equal than 0 then
- *          it should not be interpreted as an error but simply gives
- *          additional informations (e.g. if the packet was IP fragmented,
- *          if it was out of order in the TCP stream, if is a segment of a
- *          larger application request, etc..). dpi_get_status_msg() can
- *          be used to get a textual representation of the status. Status
- *          and error codes are defined above in this header file. If an
- *          error occurred, the other returned fields are not meaningful.
- *
- *          The application protocol identifier plus the transport
- *          protocol identifier. The application protocol identifier is
- *          relative to the specific transport protocol.
- *
- * 			The flow specific user data (possibly manipulated by the
- * 			user callbacks).
- */
-dpi_identification_result_t dpi_stateful_identify_application_protocol(
-    dpi_library_state_t* state, const unsigned char* pkt, uint32_t length,
-    uint32_t current_time) {
-  dpi_identification_result_t r =
-      dpi_get_protocol(state, pkt, length, current_time);
-  r.protocol.l7prot = dpi_new_protocols_to_old(r.protocol.l7prot);
-  return r;
 }
 
 /*
@@ -697,14 +634,14 @@ dpi_identification_result_t dpi_get_protocol(dpi_library_state_t* state,
   HASH_FIND(hh, state->l7_skip, &key, sizeof(dpi_l7_skipping_infos_key_t), sk);
   if (sk) {
     skip_l7 = 1;
-    r.protocol.l7prot = sk->protocol;
+    r.protocol_l7 = sk->protocol;
   } else {
     key.port = srcport;
     HASH_FIND(hh, state->l7_skip, &key, sizeof(dpi_l7_skipping_infos_key_t),
               sk);
     if (sk) {
       skip_l7 = 1;
-      r.protocol.l7prot = sk->protocol;
+      r.protocol_l7 = sk->protocol;
     }
   }
 
@@ -723,7 +660,7 @@ dpi_identification_result_t dpi_get_protocol(dpi_library_state_t* state,
      */
     r = dpi_stateful_get_app_protocol(state, &infos);
   } else {
-    r.protocol.l4prot = infos.l4prot;
+    r.protocol_l4 = infos.l4prot;
   }
 
   if (l3_status == DPI_STATUS_IP_LAST_FRAGMENT) {
@@ -1199,7 +1136,7 @@ dpi_identification_result_t dpi_stateful_get_app_protocol(
  */
 void dpi_init_flow_infos(dpi_library_state_t* state,
                          dpi_flow_infos_t* flow_infos, uint8_t l4prot) {
-  dpi_l7_prot_id i;
+  pfwl_protocol_l7 i;
 
   for (i = 0; i < BITNSLOTS(DPI_NUM_PROTOCOLS); i++) {
     flow_infos->possible_matching_protocols[i] = state->protocols_to_inspect[i];
@@ -1254,12 +1191,12 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
     dpi_pkt_infos_t* pkt_infos) {
   dpi_identification_result_t r;
   r.status = DPI_STATUS_OK;
-  r.protocol.l4prot = pkt_infos->l4prot;
+  r.protocol_l4 = pkt_infos->l4prot;
   r.user_flow_data = (flow->tracking.udata);
-  dpi_l7_prot_id i;
+  pfwl_protocol_l7 i;
 
   uint8_t check_result = DPI_PROTOCOL_NO_MATCHES;
-  const dpi_l7_prot_id* well_known_ports;
+  const pfwl_protocol_l7* well_known_ports;
   const unsigned char* app_data = pkt_infos->pkt + pkt_infos->l7offset;
   uint32_t data_length = pkt_infos->data_length;
   dpi_tcp_reordering_reordered_segment_t seg;
@@ -1272,7 +1209,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
   }
 
   if (flow->l7prot < DPI_PROTOCOL_NOT_DETERMINED) {
-    r.protocol.l7prot = flow->l7prot;
+    r.protocol_l7 = flow->l7prot;
     if (pkt_infos->l4prot == IPPROTO_TCP) {
       if (flow->tcp_reordering_enabled) {
         seg = dpi_reordering_tcp_track_connection(pkt_infos, &(flow->tracking));
@@ -1327,7 +1264,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
 
         if (seg.status == DPI_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
           r.status = DPI_STATUS_TCP_OUT_OF_ORDER;
-          r.protocol.l7prot = DPI_PROTOCOL_UNKNOWN;
+          r.protocol_l7 = DPI_PROTOCOL_UNKNOWN;
           return r;
         } else if (seg.status == DPI_TCP_REORDERING_STATUS_REBUILT) {
           app_data = seg.data;
@@ -1354,12 +1291,12 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
      * invoked the TCP reordering to update the connection state.
      */
     if (data_length == 0) {
-      r.protocol.l7prot = flow->l7prot;
+      r.protocol_l7 = flow->l7prot;
       return r;
     }
 
-    dpi_l7_prot_id first_protocol_to_check;
-    dpi_l7_prot_id checked_protocols = 0;
+    pfwl_protocol_l7 first_protocol_to_check;
+    pfwl_protocol_l7 checked_protocols = 0;
 
     if ((first_protocol_to_check = well_known_ports[pkt_infos->srcport]) ==
             DPI_PROTOCOL_UNKNOWN &&
@@ -1381,7 +1318,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
                                           data_length, t);
         if (check_result == DPI_PROTOCOL_MATCHES) {
           flow->l7prot = i;
-          r.protocol.l7prot = flow->l7prot;
+          r.protocol_l7 = flow->l7prot;
 
           if (flow->l7prot < DPI_NUM_PROTOCOLS &&
               state->fields_extraction[flow->l7prot].fields_num) {
@@ -1418,7 +1355,7 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
     }
   }
 
-  r.protocol.l7prot = flow->l7prot;
+  r.protocol_l7 = flow->l7prot;
 
   if(flow->last_rebuilt_tcp_data){
     free((void*) flow->last_rebuilt_tcp_data);
@@ -1438,25 +1375,24 @@ dpi_identification_result_t dpi_stateless_get_app_protocol(
  * @param    pkt_infos The pointer to the packet infos.
  * @return   Returns the possible matching protocol.
  */
-dpi_protocol_t dpi_guess_protocol(dpi_pkt_infos_t* pkt_infos) {
-  dpi_protocol_t r;
-  r.l4prot = pkt_infos->l4prot;
+pfwl_protocol_l7 dpi_guess_protocol(dpi_pkt_infos_t* pkt_infos) {
+  pfwl_protocol_l7 r = DPI_PROTOCOL_UNKNOWN;
   if (pkt_infos->l4prot == IPPROTO_TCP) {
-    r.l7prot = dpi_well_known_ports_association_tcp[pkt_infos->srcport];
-    if (r.l7prot == DPI_PROTOCOL_UNKNOWN)
-      r.l7prot = dpi_well_known_ports_association_tcp[pkt_infos->dstport];
+    r = dpi_well_known_ports_association_tcp[pkt_infos->srcport];
+    if (r == DPI_PROTOCOL_UNKNOWN)
+      r = dpi_well_known_ports_association_tcp[pkt_infos->dstport];
   } else if (pkt_infos->l4prot == IPPROTO_UDP) {
-    r.l7prot = dpi_well_known_ports_association_udp[pkt_infos->srcport];
-    if (r.l7prot == DPI_PROTOCOL_UNKNOWN)
-      r.l7prot = dpi_well_known_ports_association_udp[pkt_infos->dstport];
+    r = dpi_well_known_ports_association_udp[pkt_infos->srcport];
+    if (r == DPI_PROTOCOL_UNKNOWN)
+      r = dpi_well_known_ports_association_udp[pkt_infos->dstport];
   } else {
-    r.l7prot = DPI_PROTOCOL_UNKNOWN;
+    r = DPI_PROTOCOL_UNKNOWN;
   }
   return r;
 }
 
 uint8_t dpi_set_protocol_accuracy(dpi_library_state_t *state,
-                                  dpi_l7_prot_id protocol,
+                                  pfwl_protocol_l7 protocol,
                                   dpi_inspector_accuracy accuracy) {
   if (state) {
     state->inspectors_accuracy[protocol] = accuracy;
@@ -1521,53 +1457,7 @@ const char* const dpi_get_status_msg(int8_t status_code) {
   }
 }
 
-/**
- * Returns a string corresponding to the given protocol.
- * @param   protocol The protocol identifier.
- * @return  A string representation of the given protocol.
- */
-const char* const dpi_get_protocol_name(dpi_protocol_t protocol) {
-  if (protocol.l4prot == IPPROTO_TCP) {
-    switch (protocol.l7prot) {
-      case DPI_PROTOCOL_TCP_BGP:
-        return "BGP";
-      case DPI_PROTOCOL_TCP_HTTP:
-        return "HTTP";
-      case DPI_PROTOCOL_TCP_SMTP:
-        return "SMTP";
-      case DPI_PROTOCOL_TCP_POP3:
-        return "POP3";
-      case DPI_PROTOCOL_TCP_SSL:
-        return "SSL";
-      default:
-        return "Unknown";
-    }
-  } else if (protocol.l4prot == IPPROTO_UDP) {
-    switch (protocol.l7prot) {
-      case DPI_PROTOCOL_UDP_DHCP:
-        return "DHCP";
-      case DPI_PROTOCOL_UDP_DHCPv6:
-        return "DHCPv6";
-      case DPI_PROTOCOL_UDP_DNS:
-        return "DNS";
-      case DPI_PROTOCOL_UDP_MDNS:
-        return "MDNS";
-      case DPI_PROTOCOL_UDP_NTP:
-        return "NTP";
-      case DPI_PROTOCOL_UDP_SIP:
-        return "SIP";
-      case DPI_PROTOCOL_UDP_RTP:
-        return "RTP";
-      case DPI_PROTOCOL_UDP_SKYPE:
-        return "SKYPE";
-      default:
-        return "Unknown";
-    }
-  } else
-    return "Unknown";
-}
-
-const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol) {
+const char* const dpi_get_protocol_string(pfwl_protocol_l7 protocol) {
   if (protocol < DPI_NUM_PROTOCOLS) {
     return protocols_descriptors[protocol].name;
   } else {
@@ -1575,11 +1465,11 @@ const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol) {
   }
 }
 
-dpi_l7_prot_id dpi_get_protocol_id(const char* const string) {
+pfwl_protocol_l7 dpi_get_protocol_id(const char* const string) {
   size_t i;
   for (i = 0; i < (size_t)DPI_NUM_PROTOCOLS; i++) {
     if (strcasecmp(string, protocols_descriptors[i].name) == 0) {
-      return (dpi_l7_prot_id)i;
+      return (pfwl_protocol_l7)i;
       ;
     }
   }
@@ -1612,7 +1502,7 @@ uint8_t dpi_set_flow_cleaner_callback(dpi_library_state_t* state,
 }
 
 uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
-                                 dpi_l7_prot_id protocol,
+                                 pfwl_protocol_l7 protocol,
                                  int field_type){
   if(state){
     state->fields_extraction[protocol].fields[field_type] = 1;
@@ -1625,7 +1515,7 @@ uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
 }
 
 uint8_t pfwl_protocol_field_remove(dpi_library_state_t* state,
-                                    dpi_l7_prot_id protocol,
+                                    pfwl_protocol_l7 protocol,
                                     int field_type){
   if(state){
     state->fields_extraction[protocol].fields[field_type] = 0;
@@ -1637,7 +1527,7 @@ uint8_t pfwl_protocol_field_remove(dpi_library_state_t* state,
 }
 
 uint8_t pfwl_protocol_field_required(dpi_library_state_t* state,
-                                      dpi_l7_prot_id protocol,
+                                      pfwl_protocol_l7 protocol,
                                       int field_type){
   if(state){
     return state->fields_extraction[protocol].fields[field_type];

@@ -3,22 +3,6 @@
  **/
 #include "common.h"
 
-TEST(DNSTest, DeprecatedCalls) {
-    std::vector<uint> tcpProtocols;
-    std::vector<uint> udpProtocols;
-    getProtocolsOld("./pcaps/http.cap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_DNS], (uint) 2);
-    getProtocolsOld("./pcaps/smtp.pcap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_DNS], (uint) 2);
-    getProtocolsOld("./pcaps/ntp.pcap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_DNS], (uint) 2);
-    getProtocolsOld("./pcaps/sip-rtp.pcap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_DNS], (uint) 357);
-    getProtocolsOld("./pcaps/skype-irc.cap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_DNS], (uint) 707);
-}
-
-
 TEST(DNSTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/http.cap", protocols);

@@ -111,10 +111,11 @@ enum dpi_state_update_status {
 
 typedef struct dpi_identification_result {
   int8_t status;
-  dpi_protocol_t protocol;
-  void* user_flow_data;
+  pfwl_protocol_l4 protocol_l4;
+  pfwl_protocol_l7 protocol_l7;
   pfwl_field_t* protocol_fields;
   size_t protocol_fields_num;
+  void* user_flow_data;  
 } dpi_identification_result_t;
 
 typedef struct dpi_pkt_infos {
@@ -375,7 +376,7 @@ struct library_state {
   char protocols_to_inspect[BITNSLOTS(DPI_NUM_PROTOCOLS)];
   char active_callbacks[BITNSLOTS(DPI_NUM_PROTOCOLS)]; // TODO: Remove, replaced with field_callbacks_lengths
 
-  dpi_l7_prot_id active_protocols;
+  pfwl_protocol_l7 active_protocols;
 
   uint16_t max_trials;
 
@@ -619,29 +620,6 @@ uint8_t dpi_tcp_reordering_enable(dpi_library_state_t* state);
 uint8_t dpi_tcp_reordering_disable(dpi_library_state_t* state);
 
 /**
- * ---- DEPRECATED, replaced by dpi_enable_protocol ----
- * Enable a protocol inspector.
- * @param state         A pointer to the state of the library.
- * @param protocol      The protocol to enable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
- *         DPI_STATE_UPDATE_FAILURE otherwise.
- */
-uint8_t dpi_set_protocol(dpi_library_state_t* state, dpi_protocol_t protocol);
-
-/**
- * ---- DEPRECATED, replaced by dpi_disable_protocol ----
- * Disable a protocol inspector.
- * @param state       A pointer to the state of the library.
- * @param protocol    The protocol to disable.
- *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
- *         DPI_STATE_UPDATE_FAILURE otherwise.
- */
-uint8_t dpi_delete_protocol(dpi_library_state_t* state,
-                            dpi_protocol_t protocol);
-
-/**
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
  * @param protocol      The protocol to enable.
@@ -650,7 +628,7 @@ uint8_t dpi_delete_protocol(dpi_library_state_t* state,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t dpi_enable_protocol(dpi_library_state_t* state,
-                            dpi_l7_prot_id protocol);
+                            pfwl_protocol_l7 protocol);
 
 /**
  * Disable a protocol inspector.
@@ -661,7 +639,7 @@ uint8_t dpi_enable_protocol(dpi_library_state_t* state,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t dpi_disable_protocol(dpi_library_state_t* state,
-                             dpi_l7_prot_id protocol);
+                             pfwl_protocol_l7 protocol);
 
 /**
  * Enable all the protocol inspector.
@@ -689,43 +667,12 @@ uint8_t dpi_inspect_nothing(dpi_library_state_t* state);
  * @param port The port.
  * @param id The protocol id that will be assigned to packets that matches with
  * this rule. If
- * id >= DPI_NUM_PROTOCOLS, it would be considered as a custom user protocol.
+ * id >= DPI_PROTOCOL_UNKNOWN, it would be considered as a custom user protocol.
  * @return DPI_STATE_UPDATE_SUCCESS if succeeded,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t dpi_skip_L7_parsing_by_port(dpi_library_state_t* state, uint8_t l4prot,
-                                    uint16_t port, dpi_l7_prot_id id);
-
-/*
- * --- DEPRECATED, replaced by dpi_get_protocol ---
- * Try to detect the application protocol.
- * @param   state The state of the library.
- * @param   pkt The pointer to the beginning of IP header.
- * @param   data_length Length of the packet (from the beginning of the IP
- *          header, without L2 headers/trailers).
- * @param   current_time The current time in seconds.
- * @return  The status of the operation.  It gives additional informations
- *          about the processing of the request. If lesser than 0, an error
- *          occurred. dpi_get_error_msg() can be used to get a textual
- *          representation of the error. If greater or equal than 0 then
- *          it should not be interpreted as an error but simply gives
- *          additional informations (e.g. if the packet was IP fragmented,
- *          if it was out of order in the TCP stream, if is a segment of a
- *          larger application request, etc..). dpi_get_status_msg() can
- *          be used to get a textual representation of the status. Status
- *          and error codes are defined above in this header file. If an
- *          error occurred, the other returned fields are not meaningful.
- *
- *          The application protocol identifier plus the transport
- *          protocol identifier. The application protocol identifier is
- *          relative to the specific transport protocol.
- *
- * 			The flow specific user data (possibly manipulated by the
- * 			user callbacks).
- */
-dpi_identification_result_t dpi_stateful_identify_application_protocol(
-    dpi_library_state_t* state, const unsigned char* pkt, uint32_t length,
-    uint32_t current_time);
+                                    uint16_t port, pfwl_protocol_l7 id);
 
 /*
  * Try to detect the application protocol.
@@ -892,7 +839,7 @@ void dpi_init_flow_infos(dpi_library_state_t* state,
  * @param    pkt_infos The pointer to the packet infos.
  * @return   Returns the possible matching protocol.
  */
-dpi_protocol_t dpi_guess_protocol(dpi_pkt_infos_t* pkt_infos);
+pfwl_protocol_l7 dpi_guess_protocol(dpi_pkt_infos_t* pkt_infos);
 
 /**
  * Get the string representing the error message associated to the
@@ -911,26 +858,18 @@ const char* const dpi_get_error_msg(int8_t error_code);
 const char* const dpi_get_status_msg(int8_t status_code);
 
 /**
- * --- DEPRECATED, replaced by dpi_get_protocol_string ---
- * Returns a string corresponding to the given protocol.
- * @param   protocol The protocol identifier.
- * @return  A string representation of the given protocol.
- */
-const char* const dpi_get_protocol_name(dpi_protocol_t protocol);
-
-/**
  * Returns the string represetation of a protocol.
  * @param   protocol The protocol identifier.
  * @return  The string representation of the protocol with id 'protocol'.
  */
-const char* const dpi_get_protocol_string(dpi_l7_prot_id protocol);
+const char* const dpi_get_protocol_string(pfwl_protocol_l7 protocol);
 
 /**
  * Returns the protocol id corresponding to a protocol string.
  * @param string The protocols tring.
  * @return The protocol id corresponding to a protocol string.
  */
-dpi_l7_prot_id dpi_get_protocol_id(const char* const string);
+pfwl_protocol_l7 dpi_get_protocol_id(const char* const string);
 
 /**
  * Returns the string represetations of the protocols.
@@ -1062,7 +1001,7 @@ uint8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state);
  *
  **/
 uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
-                                dpi_l7_prot_id protocol,
+                                pfwl_protocol_l7 protocol,
                                 int field_type);
 
 /**
@@ -1075,7 +1014,7 @@ uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_protocol_field_remove(dpi_library_state_t* state,
-                                    dpi_l7_prot_id protocol,
+                                    pfwl_protocol_l7 protocol,
                                     int field_type);
 
 /**
@@ -1087,7 +1026,7 @@ uint8_t pfwl_protocol_field_remove(dpi_library_state_t* state,
  * @return 1 if the field has been required, 0 otherwise.
  */
 uint8_t pfwl_protocol_field_required(dpi_library_state_t* state,
-                                      dpi_l7_prot_id protocol,
+                                      pfwl_protocol_l7 protocol,
                                       int field_type);
 /**
  * Adds a pointer to some data which will be passed as parameter to all
@@ -1112,7 +1051,7 @@ uint8_t pfwl_callbacks_fields_set_udata(dpi_library_state_t* state,
  *         DPI_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t dpi_set_protocol_accuracy(dpi_library_state_t* state,
-                                  dpi_l7_prot_id protocol,
+                                  pfwl_protocol_l7 protocol,
                                   dpi_inspector_accuracy accuracy);
 
 /**

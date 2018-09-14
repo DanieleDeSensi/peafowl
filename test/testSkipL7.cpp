@@ -6,10 +6,9 @@
 #define DUMMY_ID 100
 
 TEST(SkipL7Test, Generic) {
-    std::vector<dpi_l7_prot_id> identifiers = {DUMMY_ID, DPI_PROTOCOL_BGP, DPI_PROTOCOL_HTTP};
+    std::vector<pfwl_protocol_l7> identifiers = {DUMMY_ID, DPI_PROTOCOL_BGP, DPI_PROTOCOL_HTTP};
 
-
-    for(dpi_l7_prot_id id : identifiers){
+    for(pfwl_protocol_l7 id : identifiers){
         size_t count = 0;
         Pcap pcap("./pcaps/http.cap");
         dpi_identification_result_t r;
@@ -19,8 +18,8 @@ TEST(SkipL7Test, Generic) {
 
         while((pkt = pcap.getNextPacket()).first != NULL){
             r = dpi_get_protocol(state, pkt.first, pkt.second, time(NULL));
-            if(r.protocol.l4prot == IPPROTO_TCP &&
-               r.protocol.l7prot == id){
+            if(r.protocol_l4 == IPPROTO_TCP &&
+               r.protocol_l7 == id){
                 ++count;
             }
         }

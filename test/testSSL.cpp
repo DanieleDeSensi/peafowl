@@ -3,13 +3,6 @@
  **/
 #include "common.h"
 
-TEST(SSLTest, DeprecatedCalls) {
-    std::vector<uint> tcpProtocols;
-    std::vector<uint> udpProtocols;
-    getProtocolsOld("./pcaps/ssl.pcapng", tcpProtocols, udpProtocols);
-    EXPECT_EQ(tcpProtocols[DPI_PROTOCOL_TCP_SSL], (uint) 840);
-}
-
 TEST(SSLTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/ssl.pcapng", protocols);
