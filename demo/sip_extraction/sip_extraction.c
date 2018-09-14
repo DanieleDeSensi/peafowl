@@ -83,7 +83,7 @@ int main(int argc, char** argv){
 
 	uint virtual_offset = 0;
 
-  pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUESTURI);
+  pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI);
 
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
@@ -103,9 +103,9 @@ int main(int argc, char** argv){
         dpi_identification_result_t r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
         if(r.protocol_l7 == DPI_PROTOCOL_SIP &&
-           r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len){
-          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].s;
-          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len;
+           r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len){
+          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].s;
+          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len;
           printf("Request URI detected: %.*s\n", (int) field_len, field_value);
         }
 	}

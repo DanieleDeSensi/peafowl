@@ -618,6 +618,7 @@ dpi_identification_result_t dpi_get_protocol(dpi_library_state_t* state,
 
   r.status = dpi_parse_L3_L4_headers(state, pkt, length, &infos, current_time);
   l3_status = r.status;
+  r.protocol_l4 = infos.l4prot;
 
   if (unlikely(r.status == DPI_STATUS_IP_FRAGMENT || r.status < 0)) {
     return r;
@@ -647,7 +648,6 @@ dpi_identification_result_t dpi_get_protocol(dpi_library_state_t* state,
 
   if (!skip_l7) {
     if (infos.l4prot != IPPROTO_TCP && infos.l4prot != IPPROTO_UDP) {
-      r.status = DPI_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
       return r;
     }
 
@@ -659,8 +659,6 @@ dpi_identification_result_t dpi_get_protocol(dpi_library_state_t* state,
      * provides more informations.
      */
     r = dpi_stateful_get_app_protocol(state, &infos);
-  } else {
-    r.protocol_l4 = infos.l4prot;
   }
 
   if (l3_status == DPI_STATUS_IP_LAST_FRAGMENT) {

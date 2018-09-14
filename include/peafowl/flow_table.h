@@ -105,29 +105,6 @@ typedef struct dpi_sip_internal_information {
   unsigned int cSeqNumber;
   uint8_t hasVqRtcpXR;
   dpi_sip_method_t cSeqMethod;
-
-  pfwl_field_t callId;
-  pfwl_field_t reason;
-  pfwl_field_t rtcpxr_callid;
-  pfwl_field_t cSeqMethodString;
-  pfwl_field_t cSeq;
-  pfwl_field_t via;
-  pfwl_field_t contactURI;
-  /* extra */
-  pfwl_field_t ruriUser;
-  pfwl_field_t ruriDomain;
-  pfwl_field_t fromUser;
-  pfwl_field_t fromDomain;
-  pfwl_field_t toUser;
-  pfwl_field_t toDomain;
-  pfwl_field_t paiUser;
-  pfwl_field_t paiDomain;
-  pfwl_field_t pidURI;
-  pfwl_field_t fromURI;
-  pfwl_field_t toURI;
-  pfwl_field_t ruriURI;
-  pfwl_field_t toTag;
-  pfwl_field_t fromTag;
 } dpi_sip_internal_information_t;
 
 /** This must be initialized to zero before use. **/

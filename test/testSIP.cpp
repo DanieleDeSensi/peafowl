@@ -21,15 +21,15 @@ TEST(SIPTest, Generic) {
 TEST(SIPTest, CallbackRequestURI){
     std::vector<uint> protocols;
     dpi_library_state_t* state = dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
-    pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUESTURI);
+    pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI);
     pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_METHOD);
     std::vector<dpi_identification_result_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
     EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 102);
     for(auto r : results){
       if(r.protocol_l7 == DPI_PROTOCOL_SIP){
-        if(r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len){
-          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].s;
-          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUESTURI].len;
+        if(r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len){
+          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].s;
+          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len;
           EXPECT_TRUE(!strncmp(field_value, expectedRequestURIs[nextExpectedURI], field_len));
           ++nextExpectedURI;
         }else if(r.protocol_fields[DPI_FIELDS_SIP_METHOD].len){

@@ -672,7 +672,9 @@ int parseSdp(const unsigned char *body, dpi_sip_internal_information_t *psip,
 }
 
 int parseVQRtcpXR(const unsigned char *body,
-                  dpi_sip_internal_information_t *psip) {
+                  dpi_sip_internal_information_t *psip,
+                  dpi_library_state_t* state,
+                  pfwl_field_t* extracted_fields_sip) {
   const unsigned char *c, *tmp;
   int offset, last_offset;
 
@@ -691,12 +693,14 @@ int parseVQRtcpXR(const unsigned char *body,
       if (strlen((const char *)tmp) < 4) continue;
 
       /* CallID: */
-      if (*tmp == 'C' && *(tmp + 4) == 'I' &&
-          *(tmp + RTCPXR_CALLID_LEN) == ':') {
-        set_hname(&psip->rtcpxr_callid,
-                  (offset - last_offset - RTCPXR_CALLID_LEN),
-                  (const char *)tmp + RTCPXR_CALLID_LEN);
-        break;
+      if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_RTCPXR_CALLID)){
+        if (*tmp == 'C' && *(tmp + 4) == 'I' &&
+            *(tmp + RTCPXR_CALLID_LEN) == ':') {
+          set_hname(&(extracted_fields_sip[DPI_FIELDS_SIP_RTCPXR_CALLID]),
+                    (offset - last_offset - RTCPXR_CALLID_LEN),
+                    (const char *)tmp + RTCPXR_CALLID_LEN);
+          break;
+        }
       }
     }
   }
@@ -753,7 +757,7 @@ dpi_sip_method_t getMethodType(const char *s, size_t len) {
 }
 
 uint8_t splitCSeq(dpi_sip_internal_information_t *sipStruct, const char *s,
-                  size_t len) {
+                  size_t len, pfwl_field_t* extracted_fields_sip) {
   char *pch;
   int mylen;
 
@@ -761,8 +765,10 @@ uint8_t splitCSeq(dpi_sip_internal_information_t *sipStruct, const char *s,
     mylen = pch - s + 1;
 
     pch++;
-    sipStruct->cSeqMethodString.s = pch;
-    sipStruct->cSeqMethodString.len = (len - mylen);
+
+    pfwl_field_t* cSeqMethodString = &(extracted_fields_sip[DPI_FIELDS_SIP_CSEQ_METHOD_STRING]);
+    cSeqMethodString->s = pch;
+    cSeqMethodString->len = (len - mylen);
 
     sipStruct->cSeqMethod = getMethodType(pch++, (len - mylen));
     sipStruct->cSeqNumber = atoi(s);
@@ -773,7 +779,9 @@ uint8_t splitCSeq(dpi_sip_internal_information_t *sipStruct, const char *s,
 }
 
 int light_parse_message(const unsigned char *app_data, uint32_t data_length,
-                        dpi_sip_internal_information_t *psip) {
+                        dpi_sip_internal_information_t *psip,
+                        dpi_library_state_t* state,
+                        pfwl_field_t* extracted_fields_sip) {
   unsigned int new_len = data_length;
   int header_offset = 0;
 
@@ -817,8 +825,11 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
         else
           header_offset = CALLID_LEN;
 
-        set_hname(&psip->callId, (offset - last_offset - CALLID_LEN),
-                  (const char *)tmp + CALLID_LEN);
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_CALLID)){
+          pfwl_field_t* callId =  &(extracted_fields_sip[DPI_FIELDS_SIP_CALLID]);
+          set_hname(callId, (offset - last_offset - CALLID_LEN),
+                    (const char *)tmp + CALLID_LEN);
+        }
         continue;
       } else if ((*tmp == 'l' && *(tmp + 1) == ':') ||
                  ((*tmp == 'C' || *tmp == 'c') &&
@@ -844,7 +855,8 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
 uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       dpi_sip_internal_information_t *sip_info,
                       dpi_inspector_accuracy type,
-                      pfwl_field_t* extracted_fields_sip) {
+                      pfwl_field_t* extracted_fields_sip,
+                      dpi_library_state_t* state) {
   int header_offset = 0;
   const char *pch, *ped;
   // uint8_t allowRequest = 0;
@@ -889,8 +901,12 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
     // TODO: Check if reason/responsecode are valid!
     sip_info->responseCode = atoi((const char *)tmp + 8);
     sip_info->isRequest = 0;
-    sip_info->reason.s = tmp + 12;
-    sip_info->reason.len = reason - (tmp + 13);
+
+    if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REASON)){
+      pfwl_field_t* reasonField = &(extracted_fields_sip[DPI_FIELDS_SIP_REASON]);
+      reasonField->s = tmp + 12;
+      reasonField->len = reason - (tmp + 13);
+    }
   } else {
     sip_info->isRequest = 1;
 
@@ -935,18 +951,25 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       return DPI_PROTOCOL_NO_MATCHES;
     }
 
-    if ((pch = strchr(tmp + 1, ' ')) != NULL) {
-      pfwl_field_t* methodString = &(extracted_fields_sip[DPI_FIELDS_SIP_METHOD]);
-      methodString->s = tmp;
-      methodString->len = (pch - tmp);
+    if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_METHOD) ||
+       pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI) ||
+       pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_RURI_USER) ||
+       pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_RURI_DOMAIN)){
+      if ((pch = strchr(tmp + 1, ' ')) != NULL) {
+        pfwl_field_t* methodString = &(extracted_fields_sip[DPI_FIELDS_SIP_METHOD]);
+        methodString->s = tmp;
+        methodString->len = (pch - tmp);
 
-      if ((ped = strchr(pch + 1, ' ')) != NULL) {
-        pfwl_field_t* requestURI = &(extracted_fields_sip[DPI_FIELDS_SIP_REQUESTURI]);
-        requestURI->s = pch + 1;
-        requestURI->len = (ped - pch - 1);
-        /* extract user */
-        getUser(&sip_info->ruriUser, &sip_info->ruriDomain,
-                requestURI->s, requestURI->len);
+        if ((ped = strchr(pch + 1, ' ')) != NULL) {
+          pfwl_field_t* requestURI = &(extracted_fields_sip[DPI_FIELDS_SIP_REQUEST_URI]);
+          requestURI->s = pch + 1;
+          requestURI->len = (ped - pch - 1);
+          /* extract user */
+          pfwl_field_t* ruriUser = &(extracted_fields_sip[DPI_FIELDS_SIP_RURI_USER]);
+          pfwl_field_t* ruriDomain = &(extracted_fields_sip[DPI_FIELDS_SIP_RURI_DOMAIN]);
+          getUser(ruriUser, ruriDomain,
+                  requestURI->s, requestURI->len);
+        }
       }
     }
   }
@@ -968,7 +991,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
         if (sip_info->hasSdp) {
           parseSdp(c, sip_info, contentLength);
         } else if (sip_info->hasVqRtcpXR) {
-          parseVQRtcpXR(c, sip_info);
+          parseVQRtcpXR(c, sip_info, state, extracted_fields_sip);
         }
         break;
       }
@@ -981,8 +1004,11 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           header_offset = 1;
         else
           header_offset = CALLID_LEN;
-        set_hname(&sip_info->callId, (offset - last_offset - CALLID_LEN),
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_CALLID)){
+          pfwl_field_t* callId = &(extracted_fields_sip[DPI_FIELDS_SIP_CALLID]);
+          set_hname(callId, (offset - last_offset - CALLID_LEN),
                   tmp + CALLID_LEN);
+        }
         continue;
       }
       /* Content-Length */
@@ -999,10 +1025,14 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
         continue;
       } else if ((*tmp == 'C' || *tmp == 'c') &&
                  (*(tmp + 1) == 'S' || *(tmp + 1) == 's') &&
-                 *(tmp + CSEQ_LEN) == ':') {
-        set_hname(&sip_info->cSeq, (offset - last_offset - CSEQ_LEN),
-                  tmp + CSEQ_LEN);
-        splitCSeq(sip_info, sip_info->cSeq.s, sip_info->cSeq.len);
+                 *(tmp + CSEQ_LEN) == ':') {                    
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_CSEQ) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_CSEQ_METHOD_STRING)){
+          pfwl_field_t* cSeq = &(extracted_fields_sip[DPI_FIELDS_SIP_CSEQ]);
+          set_hname(cSeq, (offset - last_offset - CSEQ_LEN),
+                      tmp + CSEQ_LEN);
+          splitCSeq(sip_info, cSeq->s, cSeq->len, extracted_fields_sip);
+        }
       }
       /* content type  Content-Type: application/sdp  CONTENTTYPE_LEN */
       else if (((*tmp == 'C' || *tmp == 'c') && (*(tmp + 7) == '-') &&
@@ -1028,88 +1058,117 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       } else if (parseVIA && ((*tmp == 'V' || *tmp == 'v') &&
                               (*(tmp + 1) == 'i' || *(tmp + 1) == 'i') &&
                               *(tmp + VIA_LEN) == ':')) {
-        set_hname(&sip_info->via, (offset - last_offset - VIA_LEN),
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_VIA)){
+          pfwl_field_t* via = &(extracted_fields_sip[DPI_FIELDS_SIP_VIA]);
+          set_hname(via, (offset - last_offset - VIA_LEN),
                   tmp + VIA_LEN);
+        }
         continue;
       } else if (parseContact && ((*tmp == 'm' && *(tmp + 1) == ':') ||
                                   ((*tmp == 'C' || *tmp == 'c') &&
                                    (*(tmp + 5) == 'C' || *(tmp + 5) == 'c') &&
                                    *(tmp + CONTACT_LEN) == ':'))) {
-        if (*(tmp + 1) == ':')
-          header_offset = 1;
-        else
-          header_offset = CONTACT_LEN;
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_CONTACT_URI)){
+          pfwl_field_t* contactURI = &(extracted_fields_sip[DPI_FIELDS_SIP_CONTACT_URI]);
 
-        set_hname(&sip_info->contactURI, (offset - last_offset - header_offset),
-                  tmp + header_offset);
+          if (*(tmp + 1) == ':')
+            header_offset = 1;
+          else
+            header_offset = CONTACT_LEN;
+
+          set_hname(contactURI, (offset - last_offset - header_offset),
+                    tmp + header_offset);
+        }
         continue;
       } else if ((*tmp == 'f' && *(tmp + 1) == ':') ||
                  ((*tmp == 'F' || *tmp == 'f') &&
                   (*(tmp + 3) == 'M' || *(tmp + 3) == 'm') &&
                   *(tmp + FROM_LEN) == ':')) {
-        if (*(tmp + 1) == ':')
-          header_offset = 1;
-        else
-          header_offset = FROM_LEN;
-        set_hname(&sip_info->fromURI, (offset - last_offset - FROM_LEN),
-                  tmp + FROM_LEN);
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_FROM_URI) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_FROM_TAG) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_FROM_USER) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_FROM_DOMAIN)){
+          pfwl_field_t* fromURI = &(extracted_fields_sip[DPI_FIELDS_SIP_FROM_URI]);
+          pfwl_field_t* fromTag = &(extracted_fields_sip[DPI_FIELDS_SIP_FROM_TAG]);
+          pfwl_field_t* fromUser = &(extracted_fields_sip[DPI_FIELDS_SIP_FROM_USER]);
+          pfwl_field_t* fromDomain = &(extracted_fields_sip[DPI_FIELDS_SIP_FROM_DOMAIN]);
+          if (*(tmp + 1) == ':')
+            header_offset = 1;
+          else
+            header_offset = FROM_LEN;
+          set_hname(fromURI, (offset - last_offset - FROM_LEN),
+                    tmp + FROM_LEN);
 
-        if (!sip_info->fromURI.len == 0 &&
-            getTag(&sip_info->fromTag, sip_info->fromURI.s,
-                   sip_info->fromURI.len)) {
+          if (!fromURI->len == 0 &&
+              getTag(fromTag, fromURI->s,
+                     fromURI->len)) {
+          }
+          /* extract user */
+          getUser(fromUser, fromDomain, fromURI->s,
+                  fromURI->len);
         }
-        /* extract user */
-        getUser(&sip_info->fromUser, &sip_info->fromDomain, sip_info->fromURI.s,
-                sip_info->fromURI.len);
 
         continue;
       } else if ((*tmp == 't' && *(tmp + 1) == ':') ||
                  ((*tmp == 'T' || *tmp == 't') && *(tmp + TO_LEN) == ':')) {
-        if (*(tmp + 1) == ':')
-          header_offset = 1;
-        else
-          header_offset = TO_LEN;
 
-        if (set_hname(&sip_info->toURI, (offset - last_offset - header_offset),
-                      tmp + header_offset)) {
-          if (!sip_info->toURI.len == 0 &&
-              getTag(&sip_info->toTag, sip_info->toURI.s,
-                     sip_info->toURI.len)) {
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_TO_URI) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_TO_TAG) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_TO_USER) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_TO_DOMAIN)){
+          pfwl_field_t* toURI = &(extracted_fields_sip[DPI_FIELDS_SIP_TO_URI]);
+          pfwl_field_t* toTag = &(extracted_fields_sip[DPI_FIELDS_SIP_TO_TAG]);
+          pfwl_field_t* toUser = &(extracted_fields_sip[DPI_FIELDS_SIP_TO_USER]);
+          pfwl_field_t* toDomain = &(extracted_fields_sip[DPI_FIELDS_SIP_TO_DOMAIN]);
+          if (*(tmp + 1) == ':')
+            header_offset = 1;
+          else
+            header_offset = TO_LEN;
+
+          if (set_hname(toURI, (offset - last_offset - header_offset),
+                        tmp + header_offset)) {
+            if (!toURI->len == 0 &&
+                getTag(toTag, toURI->s, toURI->len)) {
+            }
+            /* extract user */
+            getUser(toUser, toDomain, toURI->s, toURI->len);
           }
-          /* extract user */
-          getUser(&sip_info->toUser, &sip_info->toDomain, sip_info->toURI.s,
-                  sip_info->toURI.len);
         }
         continue;
       }
 
       if (allowPai) {
-        if (((*tmp == 'P' || *tmp == 'p') &&
-             (*(tmp + 2) == 'P' || *(tmp + 2) == 'p') &&
-             (*(tmp + 13) == 'i' || *(tmp + 13) == 'I') &&
-             *(tmp + PPREFERREDIDENTITY_LEN) == ':')) {
-          set_hname(&sip_info->pidURI,
-                    (offset - last_offset - PPREFERREDIDENTITY_LEN),
-                    tmp + PPREFERREDIDENTITY_LEN);
+        if(pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_PID_URI) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_PAI_USER) ||
+           pfwl_protocol_field_required(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_PAI_DOMAIN)){
+          pfwl_field_t* pidURI = &(extracted_fields_sip[DPI_FIELDS_SIP_PID_URI]);
+          pfwl_field_t* paiUser = &(extracted_fields_sip[DPI_FIELDS_SIP_PAI_USER]);
+          pfwl_field_t* paiDomain = &(extracted_fields_sip[DPI_FIELDS_SIP_PAI_DOMAIN]);
+          if (((*tmp == 'P' || *tmp == 'p') &&
+               (*(tmp + 2) == 'P' || *(tmp + 2) == 'p') &&
+               (*(tmp + 13) == 'i' || *(tmp + 13) == 'I') &&
+               *(tmp + PPREFERREDIDENTITY_LEN) == ':')) {
+            set_hname(pidURI,
+                      (offset - last_offset - PPREFERREDIDENTITY_LEN),
+                      tmp + PPREFERREDIDENTITY_LEN);
 
-          /* extract user */
-          getUser(&sip_info->paiUser, &sip_info->paiDomain, sip_info->pidURI.s,
-                  sip_info->pidURI.len);
+            /* extract user */
+            getUser(paiUser, paiDomain, pidURI->s, pidURI->len);
 
-          continue;
-        } else if (((*tmp == 'P' || *tmp == 'p') &&
-                    (*(tmp + 2) == 'A' || *(tmp + 2) == 'a') &&
-                    (*(tmp + 13) == 'i' || *(tmp + 13) == 'I') &&
-                    *(tmp + PASSERTEDIDENTITY_LEN) == ':')) {
-          set_hname(&sip_info->pidURI,
-                    (offset - last_offset - PASSERTEDIDENTITY_LEN),
-                    tmp + PASSERTEDIDENTITY_LEN);
+            continue;
+          } else if (((*tmp == 'P' || *tmp == 'p') &&
+                      (*(tmp + 2) == 'A' || *(tmp + 2) == 'a') &&
+                      (*(tmp + 13) == 'i' || *(tmp + 13) == 'I') &&
+                      *(tmp + PASSERTEDIDENTITY_LEN) == ':')) {
+            set_hname(pidURI,
+                      (offset - last_offset - PASSERTEDIDENTITY_LEN),
+                      tmp + PASSERTEDIDENTITY_LEN);
 
-          /* extract user */
-          getUser(&sip_info->paiUser, &sip_info->paiDomain, sip_info->pidURI.s,
-                  sip_info->pidURI.len);
+            /* extract user */
+            getUser(paiUser, paiDomain, pidURI->s, pidURI->len);
 
-          continue;
+            continue;
+          }
         }
       }
     }
@@ -1120,12 +1179,13 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
 uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
                      dpi_sip_internal_information_t *sip_info,
                      dpi_inspector_accuracy type,
-                     pfwl_field_t* extracted_fields_sip) {
+                     pfwl_field_t* extracted_fields_sip,
+                     dpi_library_state_t *state) {
   uint8_t r = 0;
   if (type == DPI_INSPECTOR_ACCURACY_LOW) {
-    r = light_parse_message(app_data, data_length, sip_info);
+    r = light_parse_message(app_data, data_length, sip_info, state, extracted_fields_sip);
   } else {
-    r = parse_message(app_data, data_length, sip_info, type, extracted_fields_sip);
+    r = parse_message(app_data, data_length, sip_info, type, extracted_fields_sip, state);
   }
   /* TODO: To be ported
   if(r == DPI_PROTOCOL_MATCHES && sip_info->hasVqRtcpXR) {
@@ -1153,7 +1213,7 @@ uint8_t check_sip(dpi_library_state_t *state, dpi_pkt_infos_t *pkt,
 
   uint8_t r = parse_packet(app_data, data_length, &t->sip_informations,
                            state->inspectors_accuracy[DPI_PROTOCOL_SIP],
-                           t->extracted_fields.sip);
+                           t->extracted_fields.sip, state);
   return r;
 }
 
