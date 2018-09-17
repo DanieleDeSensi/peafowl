@@ -155,7 +155,7 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
        QR == 0 is a QUERY
     **/
     if((dns_header->flags & FMASK) == 0x0000) {
-      // check is Query
+      // check isQuery
       (isQuery(dns_header) != 0) ? (is_valid = 0) : (is_valid = 1);
       /** check accuracy type for fields parsing **/
       if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH) {
@@ -163,7 +163,7 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV)) {
 	  dns_info->name_server = &(extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV]);
 	  const char* temp = (const char*)(pq + 1);
-	  char * r = strchr((const char*)pq+1, '\0');
+	  char* r = strchr((const char*)pq + 1, '\0');
 	  dns_info->name_server->s = temp;
 	  dns_info->name_server->len = r - temp;
 	}
