@@ -26,7 +26,9 @@
 #include <peafowl/flow_table.h>
 #include <peafowl/inspectors/inspectors.h>
 
-#define FMASK 0x8000
+#define FMASK  0x8000
+#define QUERY  0
+#define ANSWER 1
 
 typedef enum{
   NO_ERR = 0, // No Error
@@ -72,20 +74,31 @@ static uint8_t isQuery(struct dns_header *dns_header)
 /**
    Check if pkt is ANSWER
  **/
-static uint8_t isAnswer(struct dns_header *dns_header, uint8_t *is_name_server, uint8_t *is_auth_server)
+static uint8_t isAnswer(struct dns_header* dns_header, uint8_t* is_name_server, uint8_t* is_auth_server, dpi_dns_internal_information_t* dns_info)
 
 {
   uint8_t rcode, ret = -1;
   /* Check the RCODE value */
   rcode = getBits(dns_header->flags, 3, 4);
   switch(rcode) {
-    /* TODO */
-  case 0: break;
-  case 1: break;
-  case 2: break;
-  case 3: break;
-  case 4: break;
-  case 5: break;
+   case 0:
+    dns_info->rCode = NO_ERR;
+    break;
+   case 1:
+    dns_info->rCode = FMT_ERR;
+    break;
+   case 2:
+    dns_info->rCode = SRV_FAIL;
+    break;
+   case 3:
+    dns_info->rCode = NAME_ERR;
+    break;
+   case 4:
+    dns_info->rCode = NOT_IMPL;
+    break;
+   case 5:
+    dns_info->rCode = REFUSED;
+    break;
   }
   /** QDCOUNT = 1 **/
   if(dns_header->quest_count == 1) {
@@ -157,15 +170,17 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
     if((dns_header->flags & FMASK) == 0x0000) {
       // check isQuery
       (isQuery(dns_header) != 0) ? (is_valid = 0) : (is_valid = 1);
+      // set QTYPE
+      if(is_valid) dns_info->qType = QUERY;
       /** check accuracy type for fields parsing **/
-      if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH) {
+      if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH && is_valid) {
 	// check name server field
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV)) {
-	  dns_info->name_server = &(extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV]);
+	  pfwl_field_t* name_srv = &(extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV]);
 	  const char* temp = (const char*)(pq + 1);
 	  char* r = strchr((const char*)pq + 1, '\0');
-	  dns_info->name_server->s = temp;
-	  dns_info->name_server->len = r - temp;
+	  name_srv->s = temp;
+	  name_srv->len = r - temp;
 	}
       }
     }
@@ -176,9 +191,12 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
       // check isAnswer
       (isAnswer(dns_header,
 		&is_name_server,
-		&is_auth_server) != 0) ? (is_valid = 0) : (is_valid = 1);
+		&is_auth_server,
+		dns_info) != 0) ? (is_valid = 0) : (is_valid = 1);
+      // set QTYPE
+      if(is_valid) dns_info->qType = ANSWER;
       /** check accuracy type for fields parsing **/
-      if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH) {	
+      if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH && is_valid){
 	// check name server
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV) && is_name_server) {
 	  /* TODO extraction fields */
