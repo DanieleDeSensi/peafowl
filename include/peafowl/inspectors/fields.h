@@ -33,6 +33,7 @@ typedef struct {
   size_t len;
 } pfwl_field_t;
 
+/* SIP field */
 typedef enum{
   DPI_FIELDS_SIP_REQUEST_URI = 0,
   DPI_FIELDS_SIP_METHOD,
@@ -60,9 +61,20 @@ typedef enum{
   DPI_FIELDS_SIP_NUM, // This must be the last
 }pfwl_fields_sip;
 
+/* DNS field */
+typedef enum{
+  DPI_FIELDS_DNS_NAME_SRV = 0, // Server name
+  DPI_FIELDS_DNS_AUTH_SRV,     // Authority name
+  DPI_FIELDS_DNS_RPLY_CODE,    // Reply Code (only for answer)
+  DPI_FIELDS_DNS_NUM, // This must be the last
+}pfwl_fields_dns;
+
 typedef struct dpi_tracking_informations dpi_tracking_informations_t;
 typedef pfwl_field_t* (*pfwl_get_extracted_fields_callback)(dpi_tracking_informations_t*);
 
+// SIP
 pfwl_field_t* get_extracted_fields_sip(dpi_tracking_informations_t*);
+// DNS
+pfwl_field_t* get_extracted_fields_dns(dpi_tracking_informations_t*);
 
 #endif /* FIELDS_H_ */

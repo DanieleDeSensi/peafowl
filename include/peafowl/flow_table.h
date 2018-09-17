@@ -34,6 +34,7 @@
 extern "C" {
 #endif
 
+/*************** SIP ****************/
 typedef struct dpi_sip_miprtcpstatic {
   char media_ip_s[30];
   int media_ip_len;
@@ -106,6 +107,17 @@ typedef struct dpi_sip_internal_information {
   uint8_t hasVqRtcpXR;
   dpi_sip_method_t cSeqMethod;
 } dpi_sip_internal_information_t;
+/************* SIP (end) **************/
+
+/************* DNS **************/
+typedef struct dpi_dns_internal_information {
+  pfwl_field_t* name_server;
+  pfwl_field_t* auth_server;
+  uint8_t qType; // query type (0 query 1 answer)
+  uint8_t rCode; // response type to the query (0-5)
+  
+} dpi_dns_internal_information_t;
+/************* DNS (end) **************/
 
 /** This must be initialized to zero before use. **/
 typedef struct dpi_tracking_informations {
@@ -150,7 +162,7 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   /** DNS Tracking informations. **/
   /*********************************/
-  /* TODO dns infos */
+  dpi_dns_internal_information_t dns_informations;
 
   /*********************************/
   /** SSH Tracking informations. **/
@@ -201,6 +213,7 @@ typedef struct dpi_tracking_informations {
   /**********************************/
   union{
     pfwl_field_t sip[DPI_FIELDS_SIP_NUM];
+    pfwl_field_t dns[DPI_FIELDS_DNS_NUM];
   }extracted_fields;
 } dpi_tracking_informations_t;
 
