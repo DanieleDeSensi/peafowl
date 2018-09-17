@@ -129,9 +129,15 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
   if((pkt->dstport == port_dns || pkt->srcport == port_dns) &&
      data_length >= 12) {
 
+    uint8_t is_valid = -1;
     uint8_t is_name_server = 0, is_auth_server = 0;
     dpi_inspector_accuracy accuracy_type;
-    struct dns_header *dns_header = (struct dns_header*)(app_data);
+    struct dns_header* dns_header = (struct dns_header*)(app_data);
+    dpi_dns_internal_information_t* dns_info = &t->dns_informations;
+    pfwl_field_t* extracted_fields_dns = t->extracted_fields.dns;
+
+    // pointer to beginning of queries section
+    const unsigned char* pq = app_data + sizeof(struct dns_header);
 
     // init
     memset(&(t->dns_informations), 0, sizeof(t->dns_informations));
@@ -149,14 +155,17 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
        QR == 0 is a QUERY
     **/
     if((dns_header->flags & FMASK) == 0x0000) {
-      if(isQuery(dns_header) != 0)
-	return DPI_PROTOCOL_NO_MATCHES;
-      
-      // check accuracy type for fields parsing
+      // check is Query
+      (isQuery(dns_header) != 0) ? (is_valid = 0) : (is_valid = 1);
+      /** check accuracy type for fields parsing **/
       if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH) {
 	// check name server field
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV)) {
-	  /* TODO extraction fields */
+	  dns_info->name_server = &(extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV]);
+	  const char* temp = (const char*)(pq + 1);
+	  char * r = strchr((const char*)pq+1, '\0');
+	  dns_info->name_server->s = temp;
+	  dns_info->name_server->len = r - temp;
 	}
       }
     }
@@ -164,11 +173,12 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
        QR == 1 is an ANSWER
     **/
     if((dns_header->flags & FMASK) == 0x8000) {
-      if(isAnswer(dns_header, &is_name_server, &is_auth_server) != 0)
-	return DPI_PROTOCOL_NO_MATCHES;
-      // check accuracy type for fields parsing
-      if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH) {
-	
+      // check isAnswer
+      (isAnswer(dns_header,
+		&is_name_server,
+		&is_auth_server) != 0) ? (is_valid = 0) : (is_valid = 1);
+      /** check accuracy type for fields parsing **/
+      if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH) {	
 	// check name server
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV) && is_name_server) {
 	  /* TODO extraction fields */
@@ -179,6 +189,8 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 	}
       }
     }
+    if(!is_valid)
+      return DPI_PROTOCOL_NO_MATCHES;
     return DPI_PROTOCOL_MATCHES;
   }
   return DPI_PROTOCOL_NO_MATCHES;
