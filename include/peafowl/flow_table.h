@@ -111,7 +111,8 @@ typedef struct dpi_sip_internal_information {
 
 /************* DNS **************/
 typedef struct dpi_dns_internal_information {
-  uint8_t qType; // query type (0 query 1 answer)
+  uint8_t Type; // query type (0 query 1 answer)
+  uint8_t aType; // host answer type
   uint8_t rCode; // response type to the query (0-5)
   
 } dpi_dns_internal_information_t;
