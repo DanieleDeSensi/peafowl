@@ -38,8 +38,11 @@ typedef enum{
   WKS = 11,
   PTR = 12,
   MX = 15,
+  TXT = 16,
   AAAA = 28,
   SVR = 33,
+  NAPRT = 35,
+  DNSKEY = 48,
 } dns_aType;
 
 typedef enum{
@@ -62,7 +65,10 @@ struct dns_header {
 
 
 /**
-   return n bit from position p of number x 
+   #param uint16_t
+   #param int
+   #param int
+   @return n bit from position p of number x 
 **/
 static inline uint8_t getBits(uint16_t x, int p, int n)
 {
@@ -70,9 +76,30 @@ static inline uint8_t getBits(uint16_t x, int p, int n)
 }
 
 /**
+   #param const unsigned char*
+   @return the length of the pointer name server
+**/
+uint16_t get_NS_len(const unsigned char* p)
+{
+  const unsigned char* q = p;
+  /**
+     Note:
+     In some cases we need a trick to determine the name server and its length
+     i.e. .a.ns.joker == [01] 61 [02] 6e 73 [05] 6a 6f 6b 65 72
+   **/
+  do {
+    q += (*q + 1); // move the pointer of *q value +1
+  } while((*q != 0xc0) && (*q != 0x00));
+  
+  return (uint16_t) (q - p);
+}
+
+/**
    Check if pkt is QUERY
- **/
-static uint8_t isQuery(struct dns_header *dns_header)
+   #param struct dns_header*
+   @return 0 if is query -1 else
+**/
+static uint8_t isQuery(struct dns_header* dns_header)
 {
   /* QDCOUNT >= 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
   if(dns_header->quest_count >= 1 &&
@@ -84,9 +111,14 @@ static uint8_t isQuery(struct dns_header *dns_header)
 }
 
 /**
-   Check if pkt is ANSWER
+   Check if pkt is RESPONSE
+   #param struct dns_header*
+   #param uint8_t *
+   #param uint8_t *
+   #param dpi_dns_internal_information_t*
+   @return 0 if is response -1 else
  **/
-static uint8_t isAnswer(struct dns_header* dns_header, uint8_t* is_name_server, uint8_t* is_auth_server, dpi_dns_internal_information_t* dns_info)
+static uint8_t isResponse(struct dns_header* dns_header, uint8_t* is_name_server, uint8_t* is_auth_server, dpi_dns_internal_information_t* dns_info)
 
 {
   uint8_t rcode, ret = -1;
@@ -157,7 +189,7 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 
     uint8_t is_valid = -1;
     uint8_t is_name_server = 0, is_auth_server = 0;
-    uint16_t data_len = 0;
+    uint16_t data_len = 0, type;
     dpi_inspector_accuracy accuracy_type;
     struct dns_header* dns_header = (struct dns_header*)(app_data);
     dpi_dns_internal_information_t* dns_info = &t->dns_informations;
@@ -186,6 +218,7 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
       (isQuery(dns_header) != 0) ? (is_valid = 0) : (is_valid = 1);
       // set QTYPE
       if(is_valid) dns_info->Type = QUERY;
+      
       /** check accuracy type for fields parsing **/
       if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH && is_valid) {
 	// check name server field
@@ -199,16 +232,17 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
       }
     }
     /**
-       QR == 1 is an ANSWER
+       QR == 1 is a RESPONSE
     **/
     if((dns_header->flags & FMASK) == 0x8000) {
       // check isAnswer
-      (isAnswer(dns_header,
-		&is_name_server,
-		&is_auth_server,
-		dns_info) != 0) ? (is_valid = 0) : (is_valid = 1);
+      (isResponse(dns_header,
+		  &is_name_server,
+		  &is_auth_server,
+		  dns_info) != 0) ? (is_valid = 0) : (is_valid = 1);
       // set QTYPE
       if(is_valid) dns_info->Type = ANSWER;
+
       /** check accuracy type for fields parsing **/
       if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH && is_valid){
 	// check name server IP
@@ -221,33 +255,27 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 	  
 	  /**
 	     Note:
-	     In case answer count > 1, We consider (for now) only the first two sections
+	     In case of answer count > 1, we consider (for now) only the first two sections
 	  **/
 
 	  do{
 	    pfwl_field_t* name_srv_IP = &(extracted_fields_dns[DPI_FIELDS_DNS_NS_IP_1 + i]);
 	    // Answer section
 	    if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
-	    if(*pq == 00) {
-	      pq++;
-	      switch(*pq){
-	      case 0x01: dns_info->aType = A;
-	      case 0x02: dns_info->aType = NS;
-	      case 0x05: dns_info->aType = CNAME;
-	      case 0x06: dns_info->aType = SOA;
-	      case 0x0B: dns_info->aType = WKS;
-	      case 0x0C: dns_info->aType = PTR;
-	      case 0x0F: dns_info->aType = MX;
-	      case 0x21: dns_info->aType = AAAA;
-	      case 0x1C: dns_info->aType = SVR;
-	      }
-	    }
-	    pq += 5; // shift 1 + TTL(4)
+
+	    // Answer Type
+	    type = pq[1] + (pq[0] << 8);
+	    dns_info->authType = type;
+	    
+	    pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
 	    data_len = pq[1] + (pq[0] << 8);
 	    pq += 2; // shift data length(2)
-	    // update IP and len for the field
-	    name_srv_IP->s = (const char*) pq;
-	    name_srv_IP->len = data_len;
+	    
+	    // update s and len for the field
+	    if(dns_info->aType != CNAME) {
+	      name_srv_IP->s = (const char*) pq;
+	      name_srv_IP->len = data_len;
+	    }
 	    // decrement number of answer sections found
 	    --dns_header->answ_count;
 	    i++;
@@ -256,7 +284,42 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 	}
 	// check auth server
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_AUTH_SRV) && is_auth_server) {
-	  /* TODO */
+	  pfwl_field_t* auth_srv = &(extracted_fields_dns[DPI_FIELDS_DNS_AUTH_SRV]);
+
+	  /** No Answer field(s) present: skip the query section and point to Authority fields **/
+	  if(!is_name_server) pq += (extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV].len + 4);
+
+	  /** Answer field(s) present: skip all these sections **/
+	  else {
+	    while(dns_header->answ_count) {
+	      pq += 10; // NPTR(2) + TYPE(2) + CLASS(2) + TTL(4)
+	      data_len = pq[1] + (pq[0] << 8);
+	      pq += 2; // Data LEN(2)
+	      pq += data_len;
+	      --dns_header->answ_count;
+	    }
+	  }
+	  /* PARSE AUTHORITY FIELDS */
+	  if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
+
+	  // Auth Type
+	  type = pq[1] + (pq[0] << 8);
+	  dns_info->authType = type;
+	  
+	  pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
+	  data_len = pq[1] + (pq[0] << 8);
+	  pq += 2; // Data LEN(2)
+	  
+	  if(type == SOA) {
+	    // update s and len for the field
+	    auth_srv->s = (const char*) (pq + 1);
+	    auth_srv->len = get_NS_len(pq);
+	  }
+	  else {
+	    // update s and len for the field
+	    auth_srv->s = (const char*) pq;
+	    auth_srv->len = data_len;
+	  }
 	}
       }
     }
