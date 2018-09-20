@@ -109,7 +109,7 @@ static const pfwl_protocol_descriptor_t const protocols_descriptors[DPI_NUM_PROT
   {
     [DPI_PROTOCOL_DHCP]     = {"DHCP"    , check_dhcp    , NULL, 0},
     [DPI_PROTOCOL_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  , NULL, 0},
-    [DPI_PROTOCOL_DNS]      = {"DNS"     , check_dns     , NULL, 0},
+    [DPI_PROTOCOL_DNS]      = {"DNS"     , check_dns     , get_extracted_fields_dns, DPI_FIELDS_DNS_NUM},
     [DPI_PROTOCOL_MDNS]     = {"MDNS"    , check_mdns    , NULL, 0},
     [DPI_PROTOCOL_SIP]      = {"SIP"     , check_sip     , get_extracted_fields_sip, DPI_FIELDS_SIP_NUM},
     [DPI_PROTOCOL_RTP]      = {"RTP"     , check_rtp     , NULL, 0},

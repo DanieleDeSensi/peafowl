@@ -1,0 +1,2 @@
+add_executable(dns_extraction dns_extraction.c)
+target_link_libraries(dns_extraction LINK_PUBLIC peafowl pcap)

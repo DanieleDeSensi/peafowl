@@ -1005,7 +1005,7 @@ uint8_t pfwl_protocol_field_add(dpi_library_state_t* state,
                                 int field_type);
 
 /**
- * Disable the a protocol field callback. udata is not freed/modified.
+ * Disable the protocol field callback. udata is not freed/modified.
  * @param state        A pointer to the state of the library.
  * @param protocol     The protocol.
  * @param field_type   The field (check the enum for that specific protocol).
