@@ -225,9 +225,9 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV)) {
 	  pfwl_field_t* name_srv = &(extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV]);
 	  const char* temp = (const char*)(pq + 1);
-	  char* r = strchr((const char*)pq + 1, '\0');
-	  name_srv->s = temp;
-	  name_srv->len = r - temp;
+	    char* r = strchr((const char*)pq + 1, '\0');
+	    name_srv->s = temp;
+	    name_srv->len = r - temp;
 	}
       }
     }
@@ -245,13 +245,14 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 
       /** check accuracy type for fields parsing **/
       if(accuracy_type == DPI_INSPECTOR_ACCURACY_HIGH && is_valid){
+	// sfhift of Query section
+	uint8_t i = 0;
+	const char* temp = (const char*)(pq);
+	char* r = strchr((const char*)pq, '\0');
+	pq += (r - temp + 1) + 4; // end of Name + Type(2) + Class(2)
+	
 	// check name server IP
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NS_IP_1) && is_name_server) {
-	  // sfhift of Query section
-	  uint8_t i = 0;
-	  const char* temp = (const char*)(pq);
-	  char* r = strchr((const char*)pq, '\0');
-	  pq += (r - temp) + 4; // end of Name + Type(2) + Class(2)
 	  
 	  /**
 	     Note:
@@ -265,7 +266,7 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 
 	    // Answer Type
 	    type = pq[1] + (pq[0] << 8);
-	    dns_info->authType = type;
+	    dns_info->aType = type;
 	    
 	    pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
 	    data_len = pq[1] + (pq[0] << 8);
@@ -286,11 +287,11 @@ uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 	if(pfwl_protocol_field_required(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_AUTH_SRV) && is_auth_server) {
 	  pfwl_field_t* auth_srv = &(extracted_fields_dns[DPI_FIELDS_DNS_AUTH_SRV]);
 
-	  /** No Answer field(s) present: skip the query section and point to Authority fields **/
-	  if(!is_name_server) pq += (extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV].len + 4);
+	  /* /\** No Answer field(s) present: skip the query section and point to Authority fields **\/ */
+	  /* if(!is_name_server) pq += (extracted_fields_dns[DPI_FIELDS_DNS_NAME_SRV].len + 4); */
 
 	  /** Answer field(s) present: skip all these sections **/
-	  else {
+	  if(is_name_server) {
 	    while(dns_header->answ_count) {
 	      pq += 10; // NPTR(2) + TYPE(2) + CLASS(2) + TTL(4)
 	      data_len = pq[1] + (pq[0] << 8);

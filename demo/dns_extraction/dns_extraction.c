@@ -87,8 +87,10 @@ int main(int argc, char** argv){
 
   // Server Name field
   pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV);
+  // IP address of Server Name field
+  /* pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NS_IP_1); */
   // Authoritative Server Name field
-  pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_AUTH_SRV);
+  /* pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_AUTH_SRV); */
 
   while((packet = pcap_next(handle, &header)) != NULL){
     if(datalink_type == DLT_EN10MB){
@@ -112,6 +114,12 @@ int main(int argc, char** argv){
       const char* field_value = r.protocol_fields[DPI_FIELDS_DNS_NAME_SRV].s;
       size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len;
       printf("Name Server detected: %.*s\n", (int) field_len, field_value);
+    }
+    if(r.protocol_l7 == DPI_PROTOCOL_DNS &&
+       r.protocol_fields[DPI_FIELDS_DNS_NS_IP_1].len){
+      const char* field_value = r.protocol_fields[DPI_FIELDS_DNS_NS_IP_1].s;
+      size_t field_len = r.protocol_fields[DPI_FIELDS_DNS_NS_IP_1].len;
+      printf("IP address of Name Server: %.*s\n", (int) field_len, field_value);
     }
     if(r.protocol_l7 == DPI_PROTOCOL_DNS &&
        r.protocol_fields[DPI_FIELDS_DNS_AUTH_SRV].len){
