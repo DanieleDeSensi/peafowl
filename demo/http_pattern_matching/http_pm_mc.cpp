@@ -273,7 +273,7 @@ int main(int argc, char **argv){
 		for(uint i=0; i<SCANNER_POOL_SIZE; i++){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
-        mc_dpi_set_core_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
+    mc_dpi_set_core_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
 		mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
 		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
 		mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));

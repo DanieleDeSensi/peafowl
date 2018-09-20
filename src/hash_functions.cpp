@@ -100,6 +100,44 @@ inline
   return hval;
 }
 
+static void get_v6_low_high_addr_port(const dpi_pkt_infos_t* const in,
+                                 struct in6_addr* low_addr, struct in6_addr* high_addr,
+                                 uint16_t* low_port, uint16_t* high_port){
+  uint8_t i = 0;
+  for (i = 0; i < 16; i++) {
+    if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] <
+        in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
+      *low_addr = in->src_addr_t.ipv6_srcaddr;
+      *high_addr = in->dst_addr_t.ipv6_dstaddr;
+      *low_port = in->srcport;
+      *high_port = in->dstport;
+      break;
+    } else if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] >
+               in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
+      *high_addr = in->src_addr_t.ipv6_srcaddr;
+      *low_addr = in->dst_addr_t.ipv6_dstaddr;
+      *high_port = in->srcport;
+      *low_port = in->dstport;
+      break;
+    }
+  }
+
+  /** If i==16 the addresses are equal. **/
+  if (i == 16) {
+    if (in->srcport <= in->dstport) {
+      *low_addr = in->src_addr_t.ipv6_srcaddr;
+      *high_addr = in->dst_addr_t.ipv6_dstaddr;
+      *low_port = in->srcport;
+      *high_port = in->dstport;
+    } else {
+      *high_addr = in->src_addr_t.ipv6_srcaddr;
+      *low_addr = in->dst_addr_t.ipv6_dstaddr;
+      *high_port = in->srcport;
+      *low_port = in->dstport;
+    }
+  }
+}
+
 #ifndef DPI_DEBUG
 #if DPI_USE_INLINING == 1
 inline
@@ -110,41 +148,8 @@ inline
     v6_fnv_hash_function(const dpi_pkt_infos_t* const in) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
-
+  get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
   uint8_t i = 0;
-  for (i = 0; i < 16; i++) {
-    if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] <
-        in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      low_addr = in->src_addr_t.ipv6_srcaddr;
-      high_addr = in->dst_addr_t.ipv6_dstaddr;
-      low_port = in->srcport;
-      high_port = in->dstport;
-      break;
-    } else if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] >
-               in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      high_addr = in->src_addr_t.ipv6_srcaddr;
-      low_addr = in->dst_addr_t.ipv6_dstaddr;
-      high_port = in->srcport;
-      low_port = in->dstport;
-      break;
-    }
-  }
-
-  /** If i==16 the addresses are equal. **/
-  if (i == 16) {
-    if (in->srcport <= in->dstport) {
-      low_addr = in->src_addr_t.ipv6_srcaddr;
-      high_addr = in->dst_addr_t.ipv6_dstaddr;
-      low_port = in->srcport;
-      high_port = in->dstport;
-    } else {
-      high_addr = in->src_addr_t.ipv6_srcaddr;
-      low_addr = in->dst_addr_t.ipv6_dstaddr;
-      high_port = in->srcport;
-      low_port = in->dstport;
-    }
-  }
-
   uint32_t hval = FNV1A_32_INIT;
   for (i = 0; i < 16; i++) {
     hval ^= low_addr.s6_addr[i];
@@ -318,8 +323,7 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
   *(uint32_t*)out = h1;
 }
 
-uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
-  char v4_key[13];
+static void get_v4_key(const dpi_pkt_infos_t* const in, char* v4_key) {
   uint32_t lower_addr = 0, higher_addr = 0;
   uint16_t lower_port = 0, higher_port = 0;
 
@@ -354,52 +358,21 @@ uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
 
   v4_key[11] = ((higher_port >> 8) & 0xFF);
   v4_key[12] = (higher_port & 0xFF);
+}
 
+uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
+  char v4_key[13];
+  get_v4_key(in, v4_key);
   uint32_t result;
   MurmurHash3_x86_32(v4_key, 13, seed, &result);
   return result;
 }
 
-uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
-  char v6_key[37];
-
+static void get_v6_key(const dpi_pkt_infos_t* const in, char* v6_key){
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
-
+  get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
   uint8_t i = 0;
-  for (i = 0; i < 16; i++) {
-    if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] <
-        in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      low_addr = in->src_addr_t.ipv6_srcaddr;
-      high_addr = in->dst_addr_t.ipv6_dstaddr;
-      low_port = in->srcport;
-      high_port = in->dstport;
-      break;
-    } else if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] >
-               in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      high_addr = in->src_addr_t.ipv6_srcaddr;
-      low_addr = in->dst_addr_t.ipv6_dstaddr;
-      high_port = in->srcport;
-      low_port = in->dstport;
-      break;
-    }
-  }
-
-  /** If i==16 the addresses are equal. **/
-  if (i == 16) {
-    if (in->srcport <= in->dstport) {
-      low_addr = in->src_addr_t.ipv6_srcaddr;
-      high_addr = in->dst_addr_t.ipv6_dstaddr;
-      low_port = in->srcport;
-      high_port = in->dstport;
-    } else {
-      high_addr = in->src_addr_t.ipv6_srcaddr;
-      low_addr = in->dst_addr_t.ipv6_dstaddr;
-      high_port = in->srcport;
-      low_port = in->dstport;
-    }
-  }
-
   for (i = 0; i < 16; i++) {
     v6_key[i] = low_addr.s6_addr[i];
   }
@@ -415,7 +388,11 @@ uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
 
   v6_key[35] = ((high_port >> 8) & 0xFF);
   v6_key[36] = (high_port & 0xFF);
+}
 
+uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
+  char v6_key[37];
+  get_v6_key(in, v6_key);
   uint32_t result;
   MurmurHash3_x86_32(v6_key, 37, seed, &result);
   return result;
@@ -447,41 +424,7 @@ uint32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
   char v4_key[13];
-  uint32_t lower_addr = 0, higher_addr = 0;
-  uint16_t lower_port = 0, higher_port = 0;
-
-  if (in->src_addr_t.ipv4_srcaddr < in->dst_addr_t.ipv4_dstaddr ||
-      (in->src_addr_t.ipv4_srcaddr == in->dst_addr_t.ipv4_dstaddr &&
-       in->srcport <= in->dstport)) {
-    lower_addr = in->src_addr_t.ipv4_srcaddr;
-    higher_addr = in->dst_addr_t.ipv4_dstaddr;
-    lower_port = in->srcport;
-    higher_port = in->dstport;
-  } else {
-    lower_addr = in->dst_addr_t.ipv4_dstaddr;
-    higher_addr = in->src_addr_t.ipv4_srcaddr;
-    lower_port = in->dstport;
-    higher_port = in->srcport;
-  }
-
-  v4_key[0] = ((lower_addr >> 24) & 0xFF);
-  v4_key[1] = ((lower_addr >> 16) & 0xFF);
-  v4_key[2] = ((lower_addr >> 8) & 0xFF);
-  v4_key[3] = (lower_addr & 0xFF);
-
-  v4_key[4] = ((higher_addr >> 24) & 0xFF);
-  v4_key[5] = ((higher_addr >> 16) & 0xFF);
-  v4_key[6] = ((higher_addr >> 8) & 0xFF);
-  v4_key[7] = (higher_addr & 0xFF);
-
-  v4_key[8] = in->l4prot;
-
-  v4_key[9] = ((lower_port >> 8) & 0xFF);
-  v4_key[10] = (lower_port & 0xFF);
-
-  v4_key[11] = ((higher_port >> 8) & 0xFF);
-  v4_key[12] = (higher_port & 0xFF);
-
+  get_v4_key(in, v4_key);
   for (int i = 0; i < 13; i++) {
     hash = (hash * seed) + v4_key[i];
   }
@@ -494,59 +437,7 @@ uint32_t v6_hash_function_bkdr(const dpi_pkt_infos_t* const in) {
   uint32_t hash = 0;
 
   char v6_key[37];
-  struct in6_addr low_addr, high_addr;
-  uint16_t low_port, high_port;
-
-  uint8_t i = 0;
-  for (i = 0; i < 16; i++) {
-    if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] <
-        in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      low_addr = in->src_addr_t.ipv6_srcaddr;
-      high_addr = in->dst_addr_t.ipv6_dstaddr;
-      low_port = in->srcport;
-      high_port = in->dstport;
-      break;
-    } else if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] >
-               in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      high_addr = in->src_addr_t.ipv6_srcaddr;
-      low_addr = in->dst_addr_t.ipv6_dstaddr;
-      high_port = in->srcport;
-      low_port = in->dstport;
-      break;
-    }
-  }
-
-  /** If i==16 the addresses are equal. **/
-  if (i == 16) {
-    if (in->srcport <= in->dstport) {
-      low_addr = in->src_addr_t.ipv6_srcaddr;
-      high_addr = in->dst_addr_t.ipv6_dstaddr;
-      low_port = in->srcport;
-      high_port = in->dstport;
-    } else {
-      high_addr = in->src_addr_t.ipv6_srcaddr;
-      low_addr = in->dst_addr_t.ipv6_dstaddr;
-      high_port = in->srcport;
-      low_port = in->dstport;
-    }
-  }
-
-  for (i = 0; i < 16; i++) {
-    v6_key[i] = low_addr.s6_addr[i];
-  }
-
-  for (i = 0; i < 16; i++) {
-    v6_key[i + 16] = high_addr.s6_addr[i];
-  }
-
-  v6_key[32] = in->l4prot;
-
-  v6_key[33] = ((low_port >> 8) & 0xFF);
-  v6_key[34] = (low_port & 0xFF);
-
-  v6_key[35] = ((high_port >> 8) & 0xFF);
-  v6_key[36] = (high_port & 0xFF);
-
+  get_v6_key(in, v6_key);
   for (int i = 0; i < 37; i++) {
     hash = (hash * seed) + v6_key[i];
   }

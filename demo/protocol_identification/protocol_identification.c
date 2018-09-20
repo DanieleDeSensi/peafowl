@@ -47,87 +47,87 @@
 #define MAX_IPv6_ACTIVE_FLOWS 500000
 
 int main(int argc, char** argv){
-	if(argc!=2){
-		fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
-		return -1;
-	}
-	char* pcap_filename=argv[1];
-	char errbuf[PCAP_ERRBUF_SIZE];
+  if(argc!=2){
+    fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
+    return -1;
+  }
+  char* pcap_filename=argv[1];
+  char errbuf[PCAP_ERRBUF_SIZE];
 
-	dpi_library_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
-	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
+  dpi_library_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+  pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
-	if(handle==NULL){
-		fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
-		return (2);
-	}
+  if(handle==NULL){
+    fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
+    return (2);
+  }
 
-	int datalink_type=pcap_datalink(handle);
-	uint ip_offset=0;
-	if(datalink_type==DLT_EN10MB){
-		printf("Datalink type: Ethernet\n");
-		ip_offset=sizeof(struct ether_header);
-	}else if(datalink_type==DLT_RAW){
-		printf("Datalink type: RAW\n");
-		ip_offset=0;
-	}else if(datalink_type==DLT_LINUX_SLL){
-		printf("Datalink type: Linux Cooked\n");
-		ip_offset=16;
-	}else{
-		fprintf(stderr, "Datalink type not supported\n");
-		exit(-1);
-	}
+  int datalink_type=pcap_datalink(handle);
+  uint ip_offset=0;
+  if(datalink_type==DLT_EN10MB){
+    printf("Datalink type: Ethernet\n");
+    ip_offset=sizeof(struct ether_header);
+  }else if(datalink_type==DLT_RAW){
+    printf("Datalink type: RAW\n");
+    ip_offset=0;
+  }else if(datalink_type==DLT_LINUX_SLL){
+    printf("Datalink type: Linux Cooked\n");
+    ip_offset=16;
+  }else{
+    fprintf(stderr, "Datalink type not supported\n");
+    exit(-1);
+  }
 
 
 
-	const u_char* packet;
-	struct pcap_pkthdr header;
+  const u_char* packet;
+  struct pcap_pkthdr header;
 
-	dpi_identification_result_t r;
-	u_int32_t protocols[DPI_NUM_PROTOCOLS];
-	memset(protocols, 0, sizeof(protocols));
-	u_int32_t unknown=0;
+  dpi_identification_result_t r;
+  u_int32_t protocols[DPI_NUM_PROTOCOLS];
+  memset(protocols, 0, sizeof(protocols));
+  u_int32_t unknown=0;
 
-	uint virtual_offset = 0;
+  uint virtual_offset = 0;
 
-	while((packet=pcap_next(handle, &header))!=NULL){
-        if(datalink_type == DLT_EN10MB){
-            if(header.caplen < ip_offset){
-                continue;
-            }
-            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
-            if(ether_type == htons(0x8100)){ // VLAN
-                virtual_offset = 4;
-            }
-            if(ether_type != htons(ETHERTYPE_IP) &&
-               ether_type != htons(ETHERTYPE_IPV6)){
-                continue;
-            }
-        }
-
-        r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
-
-        if(r.protocol_l4 == IPPROTO_TCP ||
-           r.protocol_l4 == IPPROTO_UDP){
-            if(r.protocol_l7 < DPI_NUM_PROTOCOLS){
-                ++protocols[r.protocol_l7];
-            }else{
-                ++unknown;
-            }
-		}else{
-			++unknown;
-		}
-	}
-
-	dpi_terminate(state);
-
-    if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
-    for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
-        if(protocols[i] > 0){
-            printf("%s packets: %"PRIu32"\n", dpi_get_protocol_string(i), protocols[i]);
-        }
+  while((packet=pcap_next(handle, &header))!=NULL){
+    if(datalink_type == DLT_EN10MB){
+      if(header.caplen < ip_offset){
+        continue;
+      }
+      uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
+      if(ether_type == htons(0x8100)){ // VLAN
+        virtual_offset = 4;
+      }
+      if(ether_type != htons(ETHERTYPE_IP) &&
+         ether_type != htons(ETHERTYPE_IPV6)){
+        continue;
+      }
     }
-	return 0;
+
+    r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+
+    if(r.protocol_l4 == IPPROTO_TCP ||
+       r.protocol_l4 == IPPROTO_UDP){
+      if(r.protocol_l7 < DPI_NUM_PROTOCOLS){
+        ++protocols[r.protocol_l7];
+      }else{
+        ++unknown;
+      }
+    }else{
+      ++unknown;
+    }
+  }
+
+  dpi_terminate(state);
+
+  if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+  for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+    if(protocols[i] > 0){
+      printf("%s packets: %"PRIu32"\n", dpi_get_protocol_string(i), protocols[i]);
+    }
+  }
+  return 0;
 }
 
 
