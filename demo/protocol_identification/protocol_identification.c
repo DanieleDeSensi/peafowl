@@ -62,6 +62,7 @@ int main(int argc, char** argv){
 		return (2);
 	}
 
+	////////
 	int datalink_type=pcap_datalink(handle);
 	uint ip_offset=0;
 	if(datalink_type==DLT_EN10MB){
@@ -77,7 +78,7 @@ int main(int argc, char** argv){
 		fprintf(stderr, "Datalink type not supported\n");
 		exit(-1);
 	}
-
+	////////
 
 
 	const u_char* packet;
@@ -87,10 +88,16 @@ int main(int argc, char** argv){
 	u_int32_t protocols[DPI_NUM_PROTOCOLS];
 	memset(protocols, 0, sizeof(protocols));
 	u_int32_t unknown=0;
-
+	
 	uint virtual_offset = 0;
 
 	while((packet=pcap_next(handle, &header))!=NULL){
+
+	  /* NEW FUNCTION HERE ### TODO
+	     take pkt, pkt, pkt_header -> return ip_offset
+	     all the datalink parsing is inside the function
+	  */
+	  ////////
         if(datalink_type == DLT_EN10MB){
             if(header.caplen < ip_offset){
                 continue;
@@ -103,7 +110,7 @@ int main(int argc, char** argv){
                ether_type != htons(ETHERTYPE_IPV6)){
                 continue;
             }
-        }
+        }///////
 
         r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 

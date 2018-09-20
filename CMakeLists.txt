@@ -69,11 +69,3 @@ endif (ENABLE_CODECOV)
 if (ENABLE_CLANGFORMAT)
   include(cmake/clang_format.cmake)
 endif (ENABLE_CLANGFORMAT)
-
-#####################################
-# compile without optimizations -O0 #
-#####################################
-# if (CMAKE_COMPILER_IS_GNUCC)
-#   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
-#   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
-# endif (CMAKE_COMPILER_IS_GNUCC)

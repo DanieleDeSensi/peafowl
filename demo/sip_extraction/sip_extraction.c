@@ -83,7 +83,7 @@ int main(int argc, char** argv){
 
 	uint virtual_offset = 0;
 
-  pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI);
+	pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI);
 
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
@@ -111,5 +111,3 @@ int main(int argc, char** argv){
 	}
 	return 0;
 }
-
-
