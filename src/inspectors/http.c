@@ -66,7 +66,7 @@
  *otherwise.
  *
  **/
-uint8_t pfwl_http_activate_callbacks(pfwl_library_state_t* state,
+uint8_t pfwl_http_activate_callbacks(pfwl_state_t* state,
                                     pfwl_http_callbacks_t* callbacks,
                                     void* user_data) {
   if (state && callbacks->num_header_types <= 128) {
@@ -87,7 +87,7 @@ uint8_t pfwl_http_activate_callbacks(pfwl_library_state_t* state,
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
  * otherwise.
  */
-uint8_t pfwl_http_disable_callbacks(pfwl_library_state_t* state) {
+uint8_t pfwl_http_disable_callbacks(pfwl_state_t* state) {
   if (state) {
     BITCLEAR(state->active_callbacks, PFWL_PROTOCOL_HTTP);
     state->http_callbacks = NULL;
@@ -285,7 +285,7 @@ static
   return 0;
 }
 
-uint8_t invoke_callbacks_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t invoke_callbacks_http(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                               const unsigned char* app_data,
                               uint32_t data_length,
                               pfwl_tracking_informations_t* tracking) {
@@ -306,7 +306,7 @@ uint8_t invoke_callbacks_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt
  * derived from host address so the user can include this identification
  * in its callback.
  */
-uint8_t check_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_http(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
                    pfwl_tracking_informations_t* tracking) {
   if (pkt->l4prot != IPPROTO_TCP) {

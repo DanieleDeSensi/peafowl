@@ -20,7 +20,7 @@ TEST(SIPTest, Generic) {
 
 TEST(SIPTest, CallbackRequestURI){
     std::vector<uint> protocols;
-    pfwl_library_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+    pfwl_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
     pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_REQUEST_URI);
     pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_METHOD);
     std::vector<pfwl_identification_result_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);

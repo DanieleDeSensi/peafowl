@@ -54,7 +54,7 @@ static const char* const requests[PFWL_SMTP_NUM_REQUESTS] = {
     "EHLO ", "EXPN ", "HELO ", "HELP ", "MAIL ", "DATA ",
     "RCPT ", "RSET ", "NOOP ", "QUIT ", "VRFY "};
 
-uint8_t check_smtp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_smtp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
                    pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_TCP) {

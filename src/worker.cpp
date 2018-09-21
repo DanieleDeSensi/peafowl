@@ -79,7 +79,7 @@ static inline
 /*****************************************************/
 /*                      L3_L4 nodes.                 */
 /*****************************************************/
-pfwl_L3_L4_emitter::pfwl_L3_L4_emitter(pfwl_library_state_t* state,
+pfwl_L3_L4_emitter::pfwl_L3_L4_emitter(pfwl_state_t* state,
                                      mc_pfwl_packet_reading_callback** cb,
                                      void** user_data, uint8_t* terminating,
                                      uint16_t proc_id,
@@ -165,7 +165,7 @@ void pfwl_L3_L4_emitter::notifyRethreading(size_t oldNumWorkers,
 }
 #endif
 
-pfwl_L3_L4_worker::pfwl_L3_L4_worker(pfwl_library_state_t* state,
+pfwl_L3_L4_worker::pfwl_L3_L4_worker(pfwl_state_t* state,
                                    uint16_t worker_id, uint16_t num_L7_workers,
                                    uint16_t proc_id, uint32_t v4_table_size,
                                    uint32_t v6_table_size)
@@ -385,7 +385,7 @@ void* pfwl_L7_emitter::svc(void* task) {
   return (void*)ff::FF_GO_ON;
 }
 
-pfwl_L7_worker::pfwl_L7_worker(pfwl_library_state_t* state, uint16_t worker_id,
+pfwl_L7_worker::pfwl_L7_worker(pfwl_state_t* state, uint16_t worker_id,
                              uint16_t proc_id)
     : state(state), worker_id(worker_id), proc_id(proc_id) {
   if(posix_memalign(
@@ -533,7 +533,7 @@ pfwl_L7_collector::~pfwl_L7_collector() {
 
 pfwl_collapsed_emitter::pfwl_collapsed_emitter(
     mc_pfwl_packet_reading_callback** cb, void** user_data, uint8_t* terminating,
-    ff::SWSR_Ptr_Buffer* tasks_pool, pfwl_library_state_t* state,
+    ff::SWSR_Ptr_Buffer* tasks_pool, pfwl_state_t* state,
     uint16_t num_L7_workers, uint32_t v4_table_size, uint32_t v6_table_size,
     pfwl_L7_scheduler* lb, uint16_t proc_id)
     : pfwl_L7_emitter(lb, num_L7_workers, proc_id), proc_id(proc_id) {

@@ -199,7 +199,7 @@ int main(int argc, char **argv){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
 
-		pfwl_library_state_t* state=pfwl_init_stateful(32767, 32767, 1000000, 1000000);
+		pfwl_state_t* state=pfwl_init_stateful(32767, 32767, 1000000, 1000000);
 		pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
 		pfwl_http_callbacks_t callback={0, 0, 0, 0, &body_cb};
 		pfwl_http_activate_callbacks(state, &callback, (void*)(&t));

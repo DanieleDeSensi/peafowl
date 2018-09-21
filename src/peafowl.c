@@ -165,15 +165,15 @@ typedef struct pfwl_l7_skipping_infos {
  * @param num_table_partitions The number of partitions of the hash table.
  * @return A pointer to the state of the library otherwise.
  */
-pfwl_library_state_t* pfwl_init_stateful_num_partitions(
+pfwl_state_t* pfwl_init_stateful_num_partitions(
     uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
     uint32_t max_active_v6_flows, uint16_t num_table_partitions) {
-  pfwl_library_state_t* state =
-      (pfwl_library_state_t*)malloc(sizeof(pfwl_library_state_t));
+  pfwl_state_t* state =
+      (pfwl_state_t*)malloc(sizeof(pfwl_state_t));
 
   assert(state);
 
-  bzero(state, sizeof(pfwl_library_state_t));
+  bzero(state, sizeof(pfwl_state_t));
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
   state->db4 = pfwl_flow_table_create_v4(
@@ -212,7 +212,7 @@ pfwl_library_state_t* pfwl_init_stateful_num_partitions(
   return state;
 }
 
-pfwl_library_state_t* pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
+pfwl_state_t* pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
                                        uint32_t max_active_v4_flows,
                                        uint32_t max_active_v6_flows) {
   return pfwl_init_stateful_num_partitions(size_v4, size_v6, max_active_v4_flows,
@@ -224,7 +224,7 @@ pfwl_library_state_t* pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
  * the initialization, the library will consider all the protocols active.
  * @return A pointer to the state of the library otherwise.
  */
-pfwl_library_state_t* pfwl_init_stateless(void) {
+pfwl_state_t* pfwl_init_stateless(void) {
   return pfwl_init_stateful(0, 0, 0, 0);
 }
 
@@ -241,7 +241,7 @@ pfwl_library_state_t* pfwl_init_stateless(void) {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-uint8_t pfwl_set_max_trials(pfwl_library_state_t* state, uint16_t max_trials) {
+uint8_t pfwl_set_max_trials(pfwl_state_t* state, uint16_t max_trials) {
   state->max_trials = max_trials;
   return PFWL_STATE_UPDATE_SUCCESS;
 }
@@ -255,7 +255,7 @@ uint8_t pfwl_set_max_trials(pfwl_library_state_t* state, uint16_t max_trials) {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-uint8_t pfwl_ipv4_fragmentation_enable(pfwl_library_state_t* state,
+uint8_t pfwl_ipv4_fragmentation_enable(pfwl_state_t* state,
                                       uint16_t table_size) {
   if (likely(state)) {
     state->ipv4_frag_state =
@@ -277,7 +277,7 @@ uint8_t pfwl_ipv4_fragmentation_enable(pfwl_library_state_t* state,
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
  *         otherwise.
  */
-uint8_t pfwl_ipv6_fragmentation_enable(pfwl_library_state_t* state,
+uint8_t pfwl_ipv6_fragmentation_enable(pfwl_state_t* state,
                                       uint16_t table_size) {
   if (likely(state)) {
     state->ipv6_frag_state =
@@ -302,7 +302,7 @@ uint8_t pfwl_ipv6_fragmentation_enable(pfwl_library_state_t* state,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_ipv4_fragmentation_set_per_host_memory_limit(
-    pfwl_library_state_t* state, uint32_t per_host_memory_limit) {
+    pfwl_state_t* state, uint32_t per_host_memory_limit) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_ipv4_fragmentation_set_per_host_memory_limit(
         state->ipv4_frag_state, per_host_memory_limit);
@@ -323,7 +323,7 @@ uint8_t pfwl_ipv4_fragmentation_set_per_host_memory_limit(
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_ipv6_fragmentation_set_per_host_memory_limit(
-    pfwl_library_state_t* state, uint32_t per_host_memory_limit) {
+    pfwl_state_t* state, uint32_t per_host_memory_limit) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_ipv6_fragmentation_set_per_host_memory_limit(
         state->ipv6_frag_state, per_host_memory_limit);
@@ -347,7 +347,7 @@ uint8_t pfwl_ipv6_fragmentation_set_per_host_memory_limit(
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_ipv4_fragmentation_set_total_memory_limit(
-    pfwl_library_state_t* state, uint32_t total_memory_limit) {
+    pfwl_state_t* state, uint32_t total_memory_limit) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_ipv4_fragmentation_set_total_memory_limit(
         state->ipv4_frag_state, total_memory_limit);
@@ -369,7 +369,7 @@ uint8_t pfwl_ipv4_fragmentation_set_total_memory_limit(
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_ipv6_fragmentation_set_total_memory_limit(
-    pfwl_library_state_t* state, uint32_t total_memory_limit) {
+    pfwl_state_t* state, uint32_t total_memory_limit) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_ipv6_fragmentation_set_total_memory_limit(
         state->ipv6_frag_state, total_memory_limit);
@@ -390,7 +390,7 @@ uint8_t pfwl_ipv6_fragmentation_set_total_memory_limit(
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_ipv4_fragmentation_set_reassembly_timeout(
-    pfwl_library_state_t* state, uint8_t timeout_seconds) {
+    pfwl_state_t* state, uint8_t timeout_seconds) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_ipv4_fragmentation_set_reassembly_timeout(
         state->ipv4_frag_state, timeout_seconds);
@@ -411,7 +411,7 @@ uint8_t pfwl_ipv4_fragmentation_set_reassembly_timeout(
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_ipv6_fragmentation_set_reassembly_timeout(
-    pfwl_library_state_t* state, uint8_t timeout_seconds) {
+    pfwl_state_t* state, uint8_t timeout_seconds) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_ipv6_fragmentation_set_reassembly_timeout(
         state->ipv6_frag_state, timeout_seconds);
@@ -428,7 +428,7 @@ uint8_t pfwl_ipv6_fragmentation_set_reassembly_timeout(
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv4_fragmentation_disable(pfwl_library_state_t* state) {
+uint8_t pfwl_ipv4_fragmentation_disable(pfwl_state_t* state) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_disable_ipv4_fragmentation(state->ipv4_frag_state);
     state->ipv4_frag_state = NULL;
@@ -445,7 +445,7 @@ uint8_t pfwl_ipv4_fragmentation_disable(pfwl_library_state_t* state) {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv6_fragmentation_disable(pfwl_library_state_t* state) {
+uint8_t pfwl_ipv6_fragmentation_disable(pfwl_state_t* state) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_disable_ipv6_fragmentation(state->ipv6_frag_state);
     state->ipv6_frag_state = NULL;
@@ -463,7 +463,7 @@ uint8_t pfwl_ipv6_fragmentation_disable(pfwl_library_state_t* state) {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_tcp_reordering_enable(pfwl_library_state_t* state) {
+uint8_t pfwl_tcp_reordering_enable(pfwl_state_t* state) {
   if (likely(state)) {
     state->tcp_reordering_enabled = 1;
     return PFWL_STATE_UPDATE_SUCCESS;
@@ -484,7 +484,7 @@ uint8_t pfwl_tcp_reordering_enable(pfwl_library_state_t* state) {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_tcp_reordering_disable(pfwl_library_state_t* state) {
+uint8_t pfwl_tcp_reordering_disable(pfwl_state_t* state) {
   if (likely(state)) {
     state->tcp_reordering_enabled = 0;
     return PFWL_STATE_UPDATE_SUCCESS;
@@ -493,7 +493,7 @@ uint8_t pfwl_tcp_reordering_disable(pfwl_library_state_t* state) {
   }
 }
 
-uint8_t pfwl_enable_protocol(pfwl_library_state_t* state,
+uint8_t pfwl_enable_protocol(pfwl_state_t* state,
                             pfwl_protocol_l7 protocol) {
   if (protocol < PFWL_NUM_PROTOCOLS) {
     BITSET(state->protocols_to_inspect, protocol);
@@ -504,7 +504,7 @@ uint8_t pfwl_enable_protocol(pfwl_library_state_t* state,
   }
 }
 
-uint8_t pfwl_disable_protocol(pfwl_library_state_t* state,
+uint8_t pfwl_disable_protocol(pfwl_state_t* state,
                              pfwl_protocol_l7 protocol) {
   if (protocol < PFWL_NUM_PROTOCOLS) {
     BITCLEAR(state->protocols_to_inspect, protocol);
@@ -523,7 +523,7 @@ uint8_t pfwl_disable_protocol(pfwl_library_state_t* state,
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_inspect_all(pfwl_library_state_t* state) {
+uint8_t pfwl_inspect_all(pfwl_state_t* state) {
   unsigned char nonzero = ~0;
   memset(state->protocols_to_inspect, nonzero, BITNSLOTS(PFWL_NUM_PROTOCOLS));
   state->active_protocols = PFWL_NUM_PROTOCOLS;
@@ -537,7 +537,7 @@ uint8_t pfwl_inspect_all(pfwl_library_state_t* state) {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_inspect_nothing(pfwl_library_state_t* state) {
+uint8_t pfwl_inspect_nothing(pfwl_state_t* state) {
   bzero(state->protocols_to_inspect, BITNSLOTS(PFWL_NUM_PROTOCOLS));
 
   state->active_protocols = 0;
@@ -546,7 +546,7 @@ uint8_t pfwl_inspect_nothing(pfwl_library_state_t* state) {
   return PFWL_STATE_UPDATE_SUCCESS;
 }
 
-uint8_t pfwl_skip_L7_parsing_by_port(pfwl_library_state_t* state, uint8_t l4prot,
+uint8_t pfwl_skip_L7_parsing_by_port(pfwl_state_t* state, uint8_t l4prot,
                                     uint16_t port, pfwl_protocol_l7 id) {
   pfwl_l7_skipping_infos_t* skinfos = malloc(sizeof(pfwl_l7_skipping_infos_t));
   memset(skinfos, 0, sizeof(pfwl_l7_skipping_infos_t));
@@ -561,7 +561,7 @@ uint8_t pfwl_skip_L7_parsing_by_port(pfwl_library_state_t* state, uint8_t l4prot
  * Terminates the library.
  * @param state A pointer to the state of the library.
  */
-void pfwl_terminate(pfwl_library_state_t* state) {
+void pfwl_terminate(pfwl_state_t* state) {
   if (likely(state)) {
     pfwl_http_disable_callbacks(state);
     pfwl_ipv4_fragmentation_disable(state);
@@ -606,7 +606,7 @@ void pfwl_terminate(pfwl_library_state_t* state) {
  * 			The flow specific user data (possibly manipulated by the
  * 			user callbacks).
  */
-pfwl_identification_result_t pfwl_get_protocol(pfwl_library_state_t* state,
+pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
                                              const unsigned char* pkt,
                                              uint32_t length,
                                              uint32_t current_time) {
@@ -707,7 +707,7 @@ pfwl_identification_result_t pfwl_get_protocol(pfwl_library_state_t* state,
  *          more needed (e.g. after calling
  *          pfwl_state*_get_app_protocol(..)).
  */
-int8_t mc_pfwl_extract_packet_infos(pfwl_library_state_t* state,
+int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
                                    const unsigned char* p_pkt,
                                    uint32_t p_length,
                                    pfwl_pkt_infos_t* pkt_infos,
@@ -1045,7 +1045,7 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_library_state_t* state,
   return to_return;
 }
 
-int8_t pfwl_parse_L3_L4_headers(pfwl_library_state_t* state,
+int8_t pfwl_parse_L3_L4_headers(pfwl_state_t* state,
                                const unsigned char* p_pkt, uint32_t p_length,
                                pfwl_pkt_infos_t* pkt_infos,
                                uint32_t current_time) {
@@ -1090,7 +1090,7 @@ int8_t pfwl_parse_L3_L4_headers(pfwl_library_state_t* state,
  *          pfwl_state*_get_app_protocol(..)).
  */
 pfwl_identification_result_t pfwl_stateful_get_app_protocol(
-    pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt_infos) {
+    pfwl_state_t* state, pfwl_pkt_infos_t* pkt_infos) {
   pfwl_identification_result_t r;
   r.status = PFWL_STATUS_OK;
 
@@ -1132,7 +1132,7 @@ pfwl_identification_result_t pfwl_stateful_get_app_protocol(
  *                    the library.
  * @param l4prot      The transport protocol identifier.
  */
-void pfwl_init_flow_infos(pfwl_library_state_t* state,
+void pfwl_init_flow_infos(pfwl_state_t* state,
                          pfwl_flow_infos_t* flow_infos, uint8_t l4prot) {
   pfwl_protocol_l7 i;
 
@@ -1185,7 +1185,7 @@ void pfwl_init_flow_infos(pfwl_library_state_t* state,
  *          pfwl_state*_get_app_protocol(..)).
  */
 pfwl_identification_result_t pfwl_stateless_get_app_protocol(
-    pfwl_library_state_t* state, pfwl_flow_infos_t* flow,
+    pfwl_state_t* state, pfwl_flow_infos_t* flow,
     pfwl_pkt_infos_t* pkt_infos) {
   pfwl_identification_result_t r;
   r.status = PFWL_STATUS_OK;
@@ -1389,7 +1389,7 @@ pfwl_protocol_l7 pfwl_guess_protocol(pfwl_pkt_infos_t* pkt_infos) {
   return r;
 }
 
-uint8_t pfwl_set_protocol_accuracy(pfwl_library_state_t *state,
+uint8_t pfwl_set_protocol_accuracy(pfwl_state_t *state,
                                   pfwl_protocol_l7 protocol,
                                   pfwl_inspector_accuracy accuracy) {
   if (state) {
@@ -1493,13 +1493,13 @@ const char** const pfwl_get_protocols_strings() {
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_set_flow_cleaner_callback(pfwl_library_state_t* state,
+uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t* state,
                                       pfwl_flow_cleaner_callback* cleaner) {
   state->flow_cleaner_callback = cleaner;
   return PFWL_STATE_UPDATE_SUCCESS;
 }
 
-uint8_t pfwl_protocol_field_add(pfwl_library_state_t* state,
+uint8_t pfwl_protocol_field_add(pfwl_state_t* state,
                                  pfwl_protocol_l7 protocol,
                                  int field_type){
   if(state){
@@ -1512,7 +1512,7 @@ uint8_t pfwl_protocol_field_add(pfwl_library_state_t* state,
   }
 }
 
-uint8_t pfwl_protocol_field_remove(pfwl_library_state_t* state,
+uint8_t pfwl_protocol_field_remove(pfwl_state_t* state,
                                     pfwl_protocol_l7 protocol,
                                     int field_type){
   if(state){
@@ -1524,7 +1524,7 @@ uint8_t pfwl_protocol_field_remove(pfwl_library_state_t* state,
   }
 }
 
-uint8_t pfwl_protocol_field_required(pfwl_library_state_t* state,
+uint8_t pfwl_protocol_field_required(pfwl_state_t* state,
                                       pfwl_protocol_l7 protocol,
                                       int field_type){
   if(state){
@@ -1541,7 +1541,7 @@ uint8_t pfwl_protocol_field_required(pfwl_library_state_t* state,
  * @param udata
  * @return
  */
-uint8_t pfwl_callbacks_fields_set_udata(pfwl_library_state_t* state,
+uint8_t pfwl_callbacks_fields_set_udata(pfwl_state_t* state,
                                         void* udata){
     if(state){
         state->callbacks_udata = udata;

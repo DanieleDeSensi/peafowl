@@ -673,7 +673,7 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
 
 int parseVQRtcpXR(const unsigned char *body,
                   pfwl_sip_internal_information_t *psip,
-                  pfwl_library_state_t* state,
+                  pfwl_state_t* state,
                   pfwl_field_t* extracted_fields_sip) {
   const unsigned char *c, *tmp;
   int offset, last_offset;
@@ -780,7 +780,7 @@ uint8_t splitCSeq(pfwl_sip_internal_information_t *sipStruct, const char *s,
 
 int light_parse_message(const unsigned char *app_data, uint32_t data_length,
                         pfwl_sip_internal_information_t *psip,
-                        pfwl_library_state_t* state,
+                        pfwl_state_t* state,
                         pfwl_field_t* extracted_fields_sip) {
   unsigned int new_len = data_length;
   int header_offset = 0;
@@ -856,7 +856,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       pfwl_sip_internal_information_t *sip_info,
                       pfwl_inspector_accuracy type,
                       pfwl_field_t* extracted_fields_sip,
-                      pfwl_library_state_t* state) {
+                      pfwl_state_t* state) {
   int header_offset = 0;
   const char *pch, *ped;
   // uint8_t allowRequest = 0;
@@ -1180,7 +1180,7 @@ uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
                      pfwl_sip_internal_information_t *sip_info,
                      pfwl_inspector_accuracy type,
                      pfwl_field_t* extracted_fields_sip,
-                     pfwl_library_state_t *state) {
+                     pfwl_state_t *state) {
   uint8_t r = 0;
   if (type == PFWL_INSPECTOR_ACCURACY_LOW) {
     r = light_parse_message(app_data, data_length, sip_info, state, extracted_fields_sip);
@@ -1196,7 +1196,7 @@ uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
   return r;
 }
 
-uint8_t check_sip(pfwl_library_state_t *state, pfwl_pkt_infos_t *pkt,
+uint8_t check_sip(pfwl_state_t *state, pfwl_pkt_infos_t *pkt,
                   const unsigned char *app_data, uint32_t data_length,
                   pfwl_tracking_informations_t *t) {
   if (!data_length) {

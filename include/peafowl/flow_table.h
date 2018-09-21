@@ -320,7 +320,7 @@ void pfwl_flow_table_delete_v6(pfwl_flow_DB_v6_t* db,
  * @param pkt_infos The L3 and L4 packet's parsed informations.
  * @return A pointer to the flow if it is present, NULL otherwise.
  */
-ipv4_flow_t* pfwl_flow_table_find_flow_v4(pfwl_library_state_t* state,
+ipv4_flow_t* pfwl_flow_table_find_flow_v4(pfwl_state_t* state,
                                          uint32_t index,
                                          pfwl_pkt_infos_t* pkt_infos);
 
@@ -331,7 +331,7 @@ ipv4_flow_t* pfwl_flow_table_find_flow_v4(pfwl_library_state_t* state,
  * @param pkt_infos The L3 and L4 packet's parsed informations.
  * @return A pointer to the flow if it is present, NULL otherwise.
  */
-ipv6_flow_t* pfwl_flow_table_find_flow_v6(pfwl_library_state_t* state,
+ipv6_flow_t* pfwl_flow_table_find_flow_v6(pfwl_state_t* state,
                                          uint32_t index,
                                          pfwl_pkt_infos_t* pkt_infos);
 
@@ -341,9 +341,9 @@ ipv6_flow_t* pfwl_flow_table_find_flow_v6(pfwl_library_state_t* state,
  * of the stored flow.
  * @return The informations about the flow.
  */
-ipv4_flow_t* pfwl_flow_table_find_or_create_flow_v4(pfwl_library_state_t* state,
+ipv4_flow_t* pfwl_flow_table_find_or_create_flow_v4(pfwl_state_t* state,
                                                    pfwl_pkt_infos_t* pkt_infos);
-ipv6_flow_t* pfwl_flow_table_find_or_create_flow_v6(pfwl_library_state_t* state,
+ipv6_flow_t* pfwl_flow_table_find_or_create_flow_v6(pfwl_state_t* state,
                                                    pfwl_pkt_infos_t* pkt_infos);
 
 void pfwl_flow_table_delete_flow_v4(
@@ -365,11 +365,11 @@ uint32_t pfwl_compute_v6_hash_function(pfwl_flow_DB_v6_t* db,
                                       const pfwl_pkt_infos_t* const pkt_infos);
 
 ipv4_flow_t* mc_pfwl_flow_table_find_or_create_flow_v4(
-    pfwl_library_state_t* state, uint16_t partition_id, uint32_t index,
+    pfwl_state_t* state, uint16_t partition_id, uint32_t index,
     pfwl_pkt_infos_t* pkt_infos);
 
 ipv6_flow_t* mc_pfwl_flow_table_find_or_create_flow_v6(
-    pfwl_library_state_t* state, uint16_t partition_id, uint32_t index,
+    pfwl_state_t* state, uint16_t partition_id, uint32_t index,
     pfwl_pkt_infos_t* pkt_infos);
 
 void pfwl_flow_table_setup_partitions_v4(pfwl_flow_DB_v4_t* table,

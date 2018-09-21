@@ -90,7 +90,7 @@ typedef struct mc_pfwl_task {
 class pfwl_L3_L4_emitter : public ffnode {
  private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_library_state_t* const state;
+  pfwl_state_t* const state;
   mc_pfwl_packet_reading_callback** const cb;
   void** user_data;
   uint8_t* terminating;
@@ -100,7 +100,7 @@ class pfwl_L3_L4_emitter : public ffnode {
   char padding2[PFWL_CACHE_LINE_SIZE];
 
  public:
-  pfwl_L3_L4_emitter(pfwl_library_state_t* state,
+  pfwl_L3_L4_emitter(pfwl_state_t* state,
                     mc_pfwl_packet_reading_callback** cb, void** user_data,
                     uint8_t* terminating, uint16_t proc_id,
                     ff::SWSR_Ptr_Buffer* tasks_pool);
@@ -115,7 +115,7 @@ class pfwl_L3_L4_emitter : public ffnode {
 class pfwl_L3_L4_worker : public ffnode {
  private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_library_state_t* const state;
+  pfwl_state_t* const state;
   L3_L4_input_task_struct* in;
   const uint32_t v4_table_size;
   const uint32_t v6_table_size;
@@ -126,7 +126,7 @@ class pfwl_L3_L4_worker : public ffnode {
   char padding2[PFWL_CACHE_LINE_SIZE];
 
  public:
-  pfwl_L3_L4_worker(pfwl_library_state_t* state, uint16_t worker_id,
+  pfwl_L3_L4_worker(pfwl_state_t* state, uint16_t worker_id,
                    uint16_t num_L7_workers, uint16_t proc_id,
                    uint32_t v4_table_size, uint32_t v6_table_size);
   ~pfwl_L3_L4_worker();
@@ -212,7 +212,7 @@ static inline unsigned long getns() {
 class pfwl_L7_worker : public ffnode {
  private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_library_state_t* const state;
+  pfwl_state_t* const state;
   L3_L4_output_task_struct* temp;
   const uint16_t worker_id;
   const uint16_t proc_id;
@@ -220,7 +220,7 @@ class pfwl_L7_worker : public ffnode {
   char padding2[PFWL_CACHE_LINE_SIZE];
 
  public:
-  pfwl_L7_worker(pfwl_library_state_t* state, uint16_t worker_id,
+  pfwl_L7_worker(pfwl_state_t* state, uint16_t worker_id,
                 uint16_t proc_id);
   ~pfwl_L7_worker();
 
@@ -257,7 +257,7 @@ class pfwl_collapsed_emitter : public dpi::pfwl_L7_emitter {
  public:
   pfwl_collapsed_emitter(mc_pfwl_packet_reading_callback** cb, void** user_data,
                         uint8_t* terminating, ff::SWSR_Ptr_Buffer* tasks_pool,
-                        pfwl_library_state_t* state, uint16_t num_L7_workers,
+                        pfwl_state_t* state, uint16_t num_L7_workers,
                         uint32_t v4_table_size, uint32_t v6_table_size,
                         pfwl_L7_scheduler* lb, uint16_t proc_id);
   ~pfwl_collapsed_emitter();

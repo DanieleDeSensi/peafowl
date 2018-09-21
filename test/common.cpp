@@ -64,7 +64,7 @@ std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName,
 
 std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName,
                            std::vector<uint>& protocols,
-                           pfwl_library_state_t* state){
+                           pfwl_state_t* state){
     std::vector<pfwl_identification_result_t> results;
     protocols.clear();
     protocols.resize(PFWL_NUM_PROTOCOLS + 1); // +1 to store unknown protocols

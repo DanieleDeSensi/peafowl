@@ -56,7 +56,7 @@ int main(int argc, char** argv){
   char* pcap_filename=argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
 
-  pfwl_library_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+  pfwl_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
   pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
 
   if(handle == NULL){

@@ -31,7 +31,7 @@
 #define PFWL_NTP_MAX_VERSION 0x04
 #define PFWL_NTP_VERSION_MASK 0x38
 
-uint8_t check_ntp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_ntp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
                   pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_UDP) {

@@ -1,0 +1,4 @@
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_SOURCE_DIR@/docs
+INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/include/peafowl/peafowl.h 
+OPTIMIZE_OUTPUT_FOR_C  = YES
+PROJECT_NAME           = Peafowl

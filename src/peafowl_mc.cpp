@@ -48,7 +48,7 @@
 #define PFWL_MULTICORE_STATUS_UPDATER_TID 1
 
 typedef struct mc_pfwl_library_state {
-  pfwl_library_state_t* sequential_state;
+  pfwl_state_t* sequential_state;
   ff::SWSR_Ptr_Buffer* tasks_pool;
 
   uint8_t parallel_module_type;

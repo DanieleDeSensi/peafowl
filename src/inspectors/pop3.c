@@ -49,7 +49,7 @@ static const char* const length_4_msgs[PFWL_POP3_NUM_LEN4_MSGS] = {
     "USER", "PASS", "QUIT", "STAT", "LIST", "RETR", "DELE",
     "NOOP", "RSET", "QUIT", "APOP", "UIDL", "-ERR"};
 
-uint8_t check_pop3(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_pop3(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
                    pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_TCP) {

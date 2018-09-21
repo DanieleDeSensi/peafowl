@@ -25,7 +25,7 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_dhcpv6(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_dhcpv6(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                      const unsigned char* app_data, uint32_t data_length,
                      pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_UDP) {

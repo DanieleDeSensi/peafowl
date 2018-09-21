@@ -41,7 +41,7 @@ static void ssh_zap_cr(char *str, int len) {
 }
 */
 
-uint8_t check_ssh(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_ssh(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
                   pfwl_tracking_informations_t* t) {
     if (pkt->direction == 0) {

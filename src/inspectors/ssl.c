@@ -52,7 +52,7 @@
   (((ch) >= '!' && (ch) <= '/') || ((ch) >= ':' && (ch) <= '@') || \
    ((ch) >= '[' && (ch) <= '`') || ((ch) >= '{' && (ch) <= '~'))
 
-uint8_t pfwl_ssl_activate_callbacks(pfwl_library_state_t* state,
+uint8_t pfwl_ssl_activate_callbacks(pfwl_state_t* state,
                                    pfwl_ssl_callbacks_t* callbacks,
                                    void* user_data) {
   if (state) {
@@ -66,7 +66,7 @@ uint8_t pfwl_ssl_activate_callbacks(pfwl_library_state_t* state,
   }
 }
 
-uint8_t pfwl_ssl_disable_callbacks(pfwl_library_state_t* state) {
+uint8_t pfwl_ssl_disable_callbacks(pfwl_state_t* state) {
   if (state) {
     BITCLEAR(state->active_callbacks, PFWL_PROTOCOL_SSL);
     state->ssl_callbacks = NULL;
@@ -228,7 +228,7 @@ static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
   return 0;
 }
 
-uint8_t invoke_callbacks_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t invoke_callbacks_ssl(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                              const unsigned char* app_data,
                              uint32_t data_length,
                              pfwl_tracking_informations_t* tracking) {
@@ -244,7 +244,7 @@ uint8_t invoke_callbacks_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
   }
 }
 
-uint8_t check_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_ssl(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* payload, uint32_t data_length,
                   pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_TCP) {

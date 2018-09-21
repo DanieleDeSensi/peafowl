@@ -13,7 +13,7 @@ TEST(SkipL7Test, Generic) {
         Pcap pcap("./pcaps/http.cap");
         pfwl_identification_result_t r;
         std::pair<const u_char*, unsigned long> pkt;
-        pfwl_library_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+        pfwl_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
         EXPECT_EQ(pfwl_skip_L7_parsing_by_port(state, IPPROTO_TCP, 80, id) , PFWL_STATE_UPDATE_SUCCESS);
 
         while((pkt = pcap.getNextPacket()).first != NULL){

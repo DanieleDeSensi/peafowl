@@ -38,7 +38,7 @@ static uint8_t whatsapp_sequence[] = {
       _x < _y ? _x : _y;       \
 })
 
-uint8_t check_whatsapp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_whatsapp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                       const unsigned char* app_data, uint32_t data_length,
                       pfwl_tracking_informations_t* t){
   if(t->whatsapp_matched_sequence < sizeof(whatsapp_sequence)) {

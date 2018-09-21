@@ -60,7 +60,7 @@ static inline uint8_t hasDropboxFields(const char* app_data, pfwl_inspector_accu
   }
 }
 
-uint8_t check_dropbox(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
+uint8_t check_dropbox(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
                    pfwl_tracking_informations_t* t){
   if(pkt->l4prot == IPPROTO_UDP &&

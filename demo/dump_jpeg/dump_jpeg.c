@@ -106,7 +106,7 @@ int main(int argc, char** argv){
 	pfwl_http_callbacks_t callback={.header_url_callback=0, .header_names=ct, .num_header_types=1, .header_types_callbacks=single_cb, .http_body_callback=&body_cb};
 
 
-	pfwl_library_state_t *state=pfwl_init_stateful(32767,32767,1000000,1000000);
+	pfwl_state_t *state=pfwl_init_stateful(32767,32767,1000000,1000000);
 	pfwl_set_flow_cleaner_callback(state, &flow_delete_cb);
 
 
