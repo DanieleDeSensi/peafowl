@@ -21,7 +21,7 @@
 #ifndef http_parser_h
 #define http_parser_h
 
-#define DPI_EXTENSION 1
+#define PFWL_EXTENSION 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -302,7 +302,7 @@ struct http_parser {
 
   /** PUBLIC **/
   void *data; /* A pointer to get hook to the "connection" or "socket" object */
-#ifdef DPI_EXTENSION
+#ifdef PFWL_EXTENSION
   uint8_t parse_header_field : 1;
   uint8_t header_type : 7; /** Header field name index. **/
   uint8_t copy; /** If 1, indicates to the callback to copy the content passed

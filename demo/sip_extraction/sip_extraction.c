@@ -54,7 +54,7 @@ int main(int argc, char** argv){
 	char* pcap_filename=argv[1];
 	char errbuf[PCAP_ERRBUF_SIZE];
 
-	dpi_library_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+	pfwl_library_state_t* state=pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
 	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
 	if(handle==NULL){
@@ -83,7 +83,7 @@ int main(int argc, char** argv){
 
 	uint virtual_offset = 0;
 
-	pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI);
+	pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_REQUEST_URI);
 
 	while((packet=pcap_next(handle, &header))!=NULL){
         if(datalink_type == DLT_EN10MB){
@@ -100,12 +100,12 @@ int main(int argc, char** argv){
             }
         }
 
-        dpi_identification_result_t r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+        pfwl_identification_result_t r = pfwl_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
-        if(r.protocol_l7 == DPI_PROTOCOL_SIP &&
-           r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len){
-          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].s;
-          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len;
+        if(r.protocol_l7 == PFWL_PROTOCOL_SIP &&
+           r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].len){
+          const char* field_value = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].s;
+          size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].len;
           printf("Request URI detected: %.*s\n", (int) field_len, field_value);
         }
 	}

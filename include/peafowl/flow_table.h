@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 /******************* SIP ********************/
-typedef struct dpi_sip_miprtcpstatic {
+typedef struct pfwl_sip_miprtcpstatic {
   char media_ip_s[30];
   int media_ip_len;
   int media_port;
@@ -43,15 +43,15 @@ typedef struct dpi_sip_miprtcpstatic {
   int rtcp_ip_len;
   int rtcp_port;
   int prio_codec;
-} dpi_sip_miprtcpstatic_t;
+} pfwl_sip_miprtcpstatic_t;
 
-typedef struct dpi_sip_miprtcp {
+typedef struct pfwl_sip_miprtcp {
   pfwl_field_t media_ip;
   int media_port;
   pfwl_field_t rtcp_ip;
   int rtcp_port;
   int prio_codec;
-} dpi_sip_miprtcp_t;
+} pfwl_sip_miprtcp_t;
 
 struct dip_sip_codecmap;
 
@@ -60,7 +60,7 @@ typedef struct dip_sip_codecmap {
   int id;
   int rate;
   struct dip_sip_codecmap* next;
-} dpi_sip_codecmap_t;
+} pfwl_sip_codecmap_t;
 
 typedef enum {
   UNKNOWN = 0,
@@ -80,9 +80,9 @@ typedef enum {
   PUBLISH = 14,
   RESPONSE = 15,
   SERVICE = 16
-} dpi_sip_method_t;
+} pfwl_sip_method_t;
 
-#define DPI_SIP_MAX_MEDIA_HOSTS 20
+#define PFWL_SIP_MAX_MEDIA_HOSTS 20
 
 typedef struct {
   const char* name;
@@ -90,43 +90,43 @@ typedef struct {
   UT_hash_handle hh;         /* makes this structure hashable */
 } pfwl_sip_indexed_field_t;
 
-typedef struct dpi_sip_internal_information {
+typedef struct pfwl_sip_internal_information {
   unsigned int responseCode;
   pfwl_sip_indexed_field_t* indexed_fields;
   uint8_t isRequest;
   uint8_t validMessage;
-  dpi_sip_method_t methodType;
+  pfwl_sip_method_t methodType;
   uint8_t hasSdp;
-  dpi_sip_codecmap_t cdm[DPI_SIP_MAX_MEDIA_HOSTS];
-  dpi_sip_miprtcpstatic_t mrp[DPI_SIP_MAX_MEDIA_HOSTS];
+  pfwl_sip_codecmap_t cdm[PFWL_SIP_MAX_MEDIA_HOSTS];
+  pfwl_sip_miprtcpstatic_t mrp[PFWL_SIP_MAX_MEDIA_HOSTS];
   int cdm_count;
   unsigned int mrp_size;
   unsigned int contentLength;
   unsigned int len;
   unsigned int cSeqNumber;
   uint8_t hasVqRtcpXR;
-  dpi_sip_method_t cSeqMethod;
-} dpi_sip_internal_information_t;
+  pfwl_sip_method_t cSeqMethod;
+} pfwl_sip_internal_information_t;
 /***************** SIP (end) ******************/
 
 /********************** DNS ************************/
-typedef struct dpi_dns_internal_information {
+typedef struct pfwl_dns_internal_information {
   uint8_t Type;     // query type (0 query 1 answer)
   uint8_t aType;    // host answer type
   uint8_t authType; // authoritative answer type
   uint8_t rCode;    // response type to the query (0-5)
   
-} dpi_dns_internal_information_t;
+} pfwl_dns_internal_information_t;
   /******************** DNS (end) ******************/
 
 /** This must be initialized to zero before use. **/
-typedef struct dpi_tracking_informations {
+typedef struct pfwl_tracking_informations {
   /**
    *  This data is passed to the user when a callback is invoked. It can
    *  be used by the user to read/write flow specific informations or
    *  informations which must be passed from one callback to another
    *  (E.g. subprotocols informations). It is returned to the user when
-   *  dpi_state*_identify_application_protocol() is invoked.
+   *  pfwl_state*_identify_application_protocol() is invoked.
    **/
   void* udata;
 
@@ -141,7 +141,7 @@ typedef struct dpi_tracking_informations {
    **/
   uint32_t expected_seq_num[2];
   /** A pointer to out of order segments. **/
-  dpi_reassembly_fragment_t* segments[2];
+  pfwl_reassembly_fragment_t* segments[2];
 
   /** Three-way handshake tracking informations. **/
   uint8_t seen_syn : 1;
@@ -162,7 +162,7 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   /** DNS Tracking informations. **/
   /*********************************/
-  dpi_dns_internal_information_t dns_informations;
+  pfwl_dns_internal_information_t dns_informations;
 
   /*********************************/
   /** SSH Tracking informations. **/
@@ -175,7 +175,7 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   /** One HTTP parser per direction. **/
   http_parser http[2];
-  dpi_http_internal_informations_t http_informations[2];
+  pfwl_http_internal_informations_t http_informations[2];
 
   /*********************************/
   /** SMTP Tracking informations. **/
@@ -185,7 +185,7 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   /** SIP Tracking informations.  **/
   /*********************************/
-  dpi_sip_internal_information_t sip_informations;
+  pfwl_sip_internal_information_t sip_informations;
 
   /*********************************/
   /** POP3 Tracking informations. **/
@@ -201,7 +201,7 @@ typedef struct dpi_tracking_informations {
   /*********************************/
   /** SSL Tracking informations. **/
   /*********************************/
-  dpi_ssl_internal_information_t ssl_information[2];
+  pfwl_ssl_internal_information_t ssl_information[2];
 
   /**************************************/
   /** WhatsApp Tracking informations.  **/
@@ -212,22 +212,22 @@ typedef struct dpi_tracking_informations {
   /** Protocols extracted fields.  **/
   /**********************************/
   union{
-    pfwl_field_t sip[DPI_FIELDS_SIP_NUM];
-    pfwl_field_t dns[DPI_FIELDS_DNS_NUM];
+    pfwl_field_t sip[PFWL_FIELDS_SIP_NUM];
+    pfwl_field_t dns[PFWL_FIELDS_DNS_NUM];
   }extracted_fields;
-} dpi_tracking_informations_t;
+} pfwl_tracking_informations_t;
 
 /**
  * If stateless version is used, this structure the first time must be
- * initialized with 'dpi_init_flow_infos'.
+ * initialized with 'pfwl_init_flow_infos'.
  **/
-typedef struct dpi_flow_infos {
+typedef struct pfwl_flow_infos {
   /** The possible number of l7 protocols that match with this flow. **/
   uint8_t possible_protocols;
 
   /**
-   * The protocol of this flow. It can be DPI_PROTOCOL_NOT_DETERMINED if
-   * it is not been yet determined; DPI_PROTOCOL_UNKNOWN if it is unknown
+   * The protocol of this flow. It can be PFWL_PROTOCOL_NOT_DETERMINED if
+   * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
    * or the matching protocol identifier.
    */
   pfwl_protocol_l7 l7prot;
@@ -240,7 +240,7 @@ typedef struct dpi_flow_infos {
    * successive iterations we remove from the mask the protocols which
    * surely don't match).
    **/
-  char possible_matching_protocols[BITNSLOTS(DPI_NUM_PROTOCOLS)];
+  char possible_matching_protocols[BITNSLOTS(PFWL_NUM_PROTOCOLS)];
 
   /**
    * In this way if a flow was created when TCP reordering was enabled,
@@ -249,13 +249,13 @@ typedef struct dpi_flow_infos {
    * will be applied only to new flows.
    */
   uint8_t tcp_reordering_enabled : 1;
-  dpi_tracking_informations_t tracking;
+  pfwl_tracking_informations_t tracking;
   const unsigned char* last_rebuilt_tcp_data; // For internal use only.
 #ifdef WITH_PROMETHEUS
   void* prometheus_counter_packets;
   void* prometheus_counter_bytes;
 #endif
-} dpi_flow_infos_t;
+} pfwl_flow_infos_t;
 
 typedef struct ipv4_flow ipv4_flow_t;
 typedef struct ipv6_flow ipv6_flow_t;
@@ -269,7 +269,7 @@ struct ipv4_flow {
 
   ipv4_flow_t* prev;
   ipv4_flow_t* next;
-  dpi_flow_infos_t infos;
+  pfwl_flow_infos_t infos;
   uint32_t last_timestamp;
 };
 
@@ -282,36 +282,36 @@ struct ipv6_flow {
 
   ipv6_flow_t* prev;
   ipv6_flow_t* next;
-  dpi_flow_infos_t infos;
+  pfwl_flow_infos_t infos;
   uint32_t last_timestamp;
 };
 
-typedef struct dpi_flow_DB_v4 dpi_flow_DB_v4_t;
-typedef struct dpi_flow_DB_v6 dpi_flow_DB_v6_t;
+typedef struct pfwl_flow_DB_v4 pfwl_flow_DB_v4_t;
+typedef struct pfwl_flow_DB_v6 pfwl_flow_DB_v6_t;
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-dpi_flow_DB_v4_t* dpi_flow_table_create_v4(uint32_t size,
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
+pfwl_flow_DB_v4_t* pfwl_flow_table_create_v4(uint32_t size,
                                            uint32_t max_active_v4_flows,
                                            uint16_t num_partitions,
                                            uint32_t start_pool_size);
-dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
+pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
                                            uint32_t max_active_v6_flows,
                                            uint16_t num_partitions,
                                            uint32_t start_pool_size);
 
 #else
-dpi_flow_DB_v4_t* dpi_flow_table_create_v4(uint32_t size,
+pfwl_flow_DB_v4_t* pfwl_flow_table_create_v4(uint32_t size,
                                            uint32_t max_active_v4_flows,
                                            uint16_t num_partitions);
-dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
+pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
                                            uint32_t max_active_v6_flows,
                                            uint16_t num_partitions);
 #endif
 
-void dpi_flow_table_delete_v4(dpi_flow_DB_v4_t* db,
-                              dpi_flow_cleaner_callback* flow_cleaner_callback);
-void dpi_flow_table_delete_v6(dpi_flow_DB_v6_t* db,
-                              dpi_flow_cleaner_callback* flow_cleaner_callback);
+void pfwl_flow_table_delete_v4(pfwl_flow_DB_v4_t* db,
+                              pfwl_flow_cleaner_callback* flow_cleaner_callback);
+void pfwl_flow_table_delete_v6(pfwl_flow_DB_v6_t* db,
+                              pfwl_flow_cleaner_callback* flow_cleaner_callback);
 
 /**
  * Search for a flow in the table.
@@ -320,9 +320,9 @@ void dpi_flow_table_delete_v6(dpi_flow_DB_v6_t* db,
  * @param pkt_infos The L3 and L4 packet's parsed informations.
  * @return A pointer to the flow if it is present, NULL otherwise.
  */
-ipv4_flow_t* dpi_flow_table_find_flow_v4(dpi_library_state_t* state,
+ipv4_flow_t* pfwl_flow_table_find_flow_v4(pfwl_library_state_t* state,
                                          uint32_t index,
-                                         dpi_pkt_infos_t* pkt_infos);
+                                         pfwl_pkt_infos_t* pkt_infos);
 
 /**
  * Search for a flow in the table.
@@ -331,9 +331,9 @@ ipv4_flow_t* dpi_flow_table_find_flow_v4(dpi_library_state_t* state,
  * @param pkt_infos The L3 and L4 packet's parsed informations.
  * @return A pointer to the flow if it is present, NULL otherwise.
  */
-ipv6_flow_t* dpi_flow_table_find_flow_v6(dpi_library_state_t* state,
+ipv6_flow_t* pfwl_flow_table_find_flow_v6(pfwl_library_state_t* state,
                                          uint32_t index,
-                                         dpi_pkt_infos_t* pkt_infos);
+                                         pfwl_pkt_infos_t* pkt_infos);
 
 /**
  * Find the flow to which pkt_infos belongs or creates it if doesn't
@@ -341,49 +341,49 @@ ipv6_flow_t* dpi_flow_table_find_flow_v6(dpi_library_state_t* state,
  * of the stored flow.
  * @return The informations about the flow.
  */
-ipv4_flow_t* dpi_flow_table_find_or_create_flow_v4(dpi_library_state_t* state,
-                                                   dpi_pkt_infos_t* pkt_infos);
-ipv6_flow_t* dpi_flow_table_find_or_create_flow_v6(dpi_library_state_t* state,
-                                                   dpi_pkt_infos_t* pkt_infos);
+ipv4_flow_t* pfwl_flow_table_find_or_create_flow_v4(pfwl_library_state_t* state,
+                                                   pfwl_pkt_infos_t* pkt_infos);
+ipv6_flow_t* pfwl_flow_table_find_or_create_flow_v6(pfwl_library_state_t* state,
+                                                   pfwl_pkt_infos_t* pkt_infos);
 
-void dpi_flow_table_delete_flow_v4(
-    dpi_flow_DB_v4_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void pfwl_flow_table_delete_flow_v4(
+    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     ipv4_flow_t* to_delete);
 
-void dpi_flow_table_delete_flow_v6(
-    dpi_flow_DB_v6_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void pfwl_flow_table_delete_flow_v6(
+    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     ipv6_flow_t* to_delete);
 
 /**
  * They are used directly only in mc_dpi. Should never be used directly
  * by the user.
  **/
-uint32_t dpi_compute_v4_hash_function(dpi_flow_DB_v4_t* db,
-                                      const dpi_pkt_infos_t* const pkt_infos);
+uint32_t pfwl_compute_v4_hash_function(pfwl_flow_DB_v4_t* db,
+                                      const pfwl_pkt_infos_t* const pkt_infos);
 
-uint32_t dpi_compute_v6_hash_function(dpi_flow_DB_v6_t* db,
-                                      const dpi_pkt_infos_t* const pkt_infos);
+uint32_t pfwl_compute_v6_hash_function(pfwl_flow_DB_v6_t* db,
+                                      const pfwl_pkt_infos_t* const pkt_infos);
 
-ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
-    dpi_library_state_t* state, uint16_t partition_id, uint32_t index,
-    dpi_pkt_infos_t* pkt_infos);
+ipv4_flow_t* mc_pfwl_flow_table_find_or_create_flow_v4(
+    pfwl_library_state_t* state, uint16_t partition_id, uint32_t index,
+    pfwl_pkt_infos_t* pkt_infos);
 
-ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
-    dpi_library_state_t* state, uint16_t partition_id, uint32_t index,
-    dpi_pkt_infos_t* pkt_infos);
+ipv6_flow_t* mc_pfwl_flow_table_find_or_create_flow_v6(
+    pfwl_library_state_t* state, uint16_t partition_id, uint32_t index,
+    pfwl_pkt_infos_t* pkt_infos);
 
-void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table,
+void pfwl_flow_table_setup_partitions_v4(pfwl_flow_DB_v4_t* table,
                                         uint16_t num_partitions);
 
-void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table,
+void pfwl_flow_table_setup_partitions_v6(pfwl_flow_DB_v6_t* table,
                                         uint16_t num_partitions);
 
-void mc_dpi_flow_table_delete_flow_v4(
-    dpi_flow_DB_v4_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void mc_pfwl_flow_table_delete_flow_v4(
+    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     uint16_t partition_id, ipv4_flow_t* to_delete);
 
-void mc_dpi_flow_table_delete_flow_v6(
-    dpi_flow_DB_v6_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void mc_pfwl_flow_table_delete_flow_v6(
+    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     uint16_t partition_id, ipv6_flow_t* to_delete);
 
 #ifdef __cplusplus

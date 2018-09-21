@@ -41,19 +41,19 @@
 extern "C" {
 #endif
 
-typedef struct dpi_reassembly_timer dpi_reassembly_timer_t;
-typedef struct dpi_reassembly_fragment dpi_reassembly_fragment_t;
+typedef struct pfwl_reassembly_timer pfwl_reassembly_timer_t;
+typedef struct pfwl_reassembly_fragment pfwl_reassembly_fragment_t;
 
 /**If tail insertion, then the head will be the first to expire. **/
-struct dpi_reassembly_timer {
-  dpi_reassembly_timer_t* prev;
-  dpi_reassembly_timer_t* next;
+struct pfwl_reassembly_timer {
+  pfwl_reassembly_timer_t* prev;
+  pfwl_reassembly_timer_t* next;
   void* data;
   uint32_t expiration_time;
 };
 
 /* Describe an IP fragment (or TCP segment). */
-struct dpi_reassembly_fragment {
+struct pfwl_reassembly_fragment {
   /* Offset of fragment. */
   uint32_t offset;
   /* Last byte of data in fragment. */
@@ -67,8 +67,8 @@ struct dpi_reassembly_fragment {
   /* Pointer into real fragment data. */
   unsigned char* ptr;
   /* Linked list pointers to the other fragments. */
-  dpi_reassembly_fragment_t* next;
-  dpi_reassembly_fragment_t* prev;
+  pfwl_reassembly_fragment_t* next;
+  pfwl_reassembly_fragment_t* prev;
 };
 
 /**
@@ -77,7 +77,7 @@ struct dpi_reassembly_fragment {
  * @param y Second sequence number.
  * @return 1 if x is before y, 0 otherwise.
  */
-uint8_t dpi_reassembly_before(uint32_t x, uint32_t y);
+uint8_t pfwl_reassembly_before(uint32_t x, uint32_t y);
 
 /**
  * Returns 1 if the sequence number x is before or equal y, 0 otherwise.
@@ -85,7 +85,7 @@ uint8_t dpi_reassembly_before(uint32_t x, uint32_t y);
  * @param y Second sequence number.
  * @return 1 if x is before or equal y, 0 otherwise.
  */
-uint8_t dpi_reassembly_before_or_equal(uint32_t x, uint32_t y);
+uint8_t pfwl_reassembly_before_or_equal(uint32_t x, uint32_t y);
 
 /**
  * Returns 1 if the sequence number x is after y, 0 otherwise.
@@ -93,7 +93,7 @@ uint8_t dpi_reassembly_before_or_equal(uint32_t x, uint32_t y);
  * @param y Second sequence number.
  * @return 1 if x is after y, 0 otherwise.
  */
-uint8_t dpi_reassembly_after(uint32_t x, uint32_t y);
+uint8_t pfwl_reassembly_after(uint32_t x, uint32_t y);
 
 /**
  * Returns 1 if the sequence number x is after or equal y, 0 otherwise.
@@ -101,7 +101,7 @@ uint8_t dpi_reassembly_after(uint32_t x, uint32_t y);
  * @param y Second sequence number.
  * @return 1 if x is after or equal y, 0 otherwise.
  */
-uint8_t dpi_reassembly_after_or_equal(uint32_t x, uint32_t y);
+uint8_t pfwl_reassembly_after_or_equal(uint32_t x, uint32_t y);
 
 /**
  * Returns the length of a TCP segment (or IP fragment).
@@ -109,7 +109,7 @@ uint8_t dpi_reassembly_after_or_equal(uint32_t x, uint32_t y);
  * @param end The last byte of the segment.
  * @return The length of the TCP segment (or IP fragment).
  */
-uint32_t dpi_reassembly_fragment_length(uint32_t offset, uint32_t end);
+uint32_t pfwl_reassembly_fragment_length(uint32_t offset, uint32_t end);
 
 /**
  * Add a new timer to the list of IP reassembly timers.
@@ -117,9 +117,9 @@ uint32_t dpi_reassembly_fragment_length(uint32_t offset, uint32_t end);
  * @param tail A pointer to the tail of the timers list.
  * @param timer The timer to insert.
  */
-void dpi_reassembly_add_timer(dpi_reassembly_timer_t** head,
-                              dpi_reassembly_timer_t** tail,
-                              dpi_reassembly_timer_t* timer);
+void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
+                              pfwl_reassembly_timer_t** tail,
+                              pfwl_reassembly_timer_t* timer);
 
 /**
  * Remove a timer to the list of IP reassembly timers.
@@ -127,9 +127,9 @@ void dpi_reassembly_add_timer(dpi_reassembly_timer_t** head,
  * @param tail A pointer to the tail of the timers list.
  * @param timer The timer to remove.
  */
-void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
-                                 dpi_reassembly_timer_t** tail,
-                                 dpi_reassembly_timer_t* timer);
+void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t** head,
+                                 pfwl_reassembly_timer_t** tail,
+                                 pfwl_reassembly_timer_t* timer);
 
 /**
  * Insert a fragment in the correct position in the list of fragments,
@@ -145,8 +145,8 @@ void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
  *
  * @return The created fragment.
  */
-dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
-    dpi_reassembly_fragment_t** head, const unsigned char* data,
+pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
+    pfwl_reassembly_fragment_t** head, const unsigned char* data,
     uint32_t offset, uint32_t end, uint32_t* bytes_removed,
     uint32_t* bytes_inserted);
 
@@ -155,8 +155,8 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
  * @param head The pointer to the head of the list of fragments.
  * @return 0 if there are missing fragments, 1 otherwise.
  */
-uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
-    dpi_reassembly_fragment_t* head);
+uint8_t pfwl_reassembly_ip_check_train_of_contiguous_fragments(
+    pfwl_reassembly_fragment_t* head);
 
 /**
  * Compacts a train of contiguous fragments and returns it.
@@ -166,7 +166,7 @@ uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
  * @return The data_length of the recompacted data. If an error
  * occurred (e.g. misbehaving packet), -1 is returned.
  */
-int32_t dpi_reassembly_ip_compact_fragments(dpi_reassembly_fragment_t* head,
+int32_t pfwl_reassembly_ip_compact_fragments(pfwl_reassembly_fragment_t* head,
                                             unsigned char** where,
                                             uint32_t len);
 

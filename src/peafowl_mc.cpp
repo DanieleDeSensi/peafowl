@@ -39,24 +39,24 @@
 #include <iostream>
 #include <vector>
 
-#define DPI_DEBUG_MC_API 1
+#define PFWL_DEBUG_MC_API 1
 #define debug_print(fmt, ...)                                \
   do {                                                       \
-    if (DPI_DEBUG_MC_API) fprintf(stdout, fmt, __VA_ARGS__); \
+    if (PFWL_DEBUG_MC_API) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
-#define DPI_MULTICORE_STATUS_UPDATER_TID 1
+#define PFWL_MULTICORE_STATUS_UPDATER_TID 1
 
-typedef struct mc_dpi_library_state {
-  dpi_library_state_t* sequential_state;
+typedef struct mc_pfwl_library_state {
+  pfwl_library_state_t* sequential_state;
   ff::SWSR_Ptr_Buffer* tasks_pool;
 
   uint8_t parallel_module_type;
   /******************************************************/
   /*                     Callbacks                      */
   /******************************************************/
-  mc_dpi_packet_reading_callback* reading_callback;
-  mc_dpi_processing_result_callback* processing_callback;
+  mc_pfwl_packet_reading_callback* reading_callback;
+  mc_pfwl_processing_result_callback* processing_callback;
   void* read_process_callbacks_user_data;
 
   uint8_t terminating;
@@ -67,34 +67,34 @@ typedef struct mc_dpi_library_state {
   /******************************************************/
   /*                 Nodes for single farm.             */
   /******************************************************/
-  ff::ff_farm<dpi::dpi_L7_scheduler>* single_farm;
+  ff::ff_farm<dpi::pfwl_L7_scheduler>* single_farm;
   std::vector<ff::ff_node*>* single_farm_workers;
-  dpi::dpi_collapsed_emitter* single_farm_emitter;
-  dpi::dpi_L7_collector* single_farm_collector;
+  dpi::pfwl_collapsed_emitter* single_farm_emitter;
+  dpi::pfwl_L7_collector* single_farm_collector;
   uint16_t collector_proc_id;
 
   uint16_t single_farm_active_workers;
 #ifdef ENABLE_RECONFIGURATION
-  nornir::ManagerFarm<dpi::dpi_L7_scheduler>* mf;
+  nornir::ManagerFarm<dpi::pfwl_L7_scheduler>* mf;
   nornir::Parameters* adp_params;
 #endif
 
   /******************************************************/
   /*                 Nodes for double farm.             */
   /******************************************************/
-  dpi::dpi_L3_L4_emitter* L3_L4_emitter;
-#if DPI_MULTICORE_L3_L4_FARM_TYPE == DPI_MULTICORE_L3_L4_ORDERED_FARM
+  dpi::pfwl_L3_L4_emitter* L3_L4_emitter;
+#if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ORDERED_FARM
   ff::ff_ofarm* L3_L4_farm;
 #else
   ff::ff_farm<>* L3_L4_farm;
 #endif
   std::vector<ff::ff_node*>* L3_L4_workers;
-  dpi::dpi_L3_L4_collector* L3_L4_collector;
+  dpi::pfwl_L3_L4_collector* L3_L4_collector;
 
-  dpi::dpi_L7_emitter* L7_emitter;
-  ff::ff_farm<dpi::dpi_L7_scheduler>* L7_farm;
+  dpi::pfwl_L7_emitter* L7_emitter;
+  ff::ff_farm<dpi::pfwl_L7_scheduler>* L7_farm;
   std::vector<ff::ff_node*>* L7_workers;
-  dpi::dpi_L7_collector* L7_collector;
+  dpi::pfwl_L7_collector* L7_collector;
   ff::ff_pipeline* pipeline;
   uint16_t double_farm_L3_L4_active_workers;
   uint16_t double_farm_L7_active_workers;
@@ -103,29 +103,29 @@ typedef struct mc_dpi_library_state {
   /******************************************************/
   struct timeval start_time;
   struct timeval stop_time;
-} mc_dpi_library_state_t;
+} mc_pfwl_library_state_t;
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static inline
 #endif
     void
-    mc_dpi_create_double_farm(mc_dpi_library_state_t* state, uint32_t size_v4,
+    mc_pfwl_create_double_farm(mc_pfwl_library_state_t* state, uint32_t size_v4,
                               uint32_t size_v6) {
   uint16_t last_mapped = 0;
   /******************************************/
   /*         Create the first farm.         */
   /******************************************/
   void* tmp;
-#if DPI_MULTICORE_L3_L4_FARM_TYPE == DPI_MULTICORE_L3_L4_ORDERED_FARM
+#if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ORDERED_FARM
   tmp = malloc(sizeof(ff::ff_ofarm));
   assert(tmp);
   state->L3_L4_farm =
-      new (tmp) ff::ff_ofarm(false, DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
-                             DPI_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE, false,
+      new (tmp) ff::ff_ofarm(false, PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
+                             PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE, false,
                              state->available_processors, true);
-  tmp = malloc(sizeof(dpi::dpi_L3_L4_emitter));
+  tmp = malloc(sizeof(dpi::pfwl_L3_L4_emitter));
   assert(tmp);
-  state->L3_L4_emitter = new (tmp) dpi::dpi_L3_L4_emitter(
+  state->L3_L4_emitter = new (tmp) dpi::pfwl_L3_L4_emitter(
       state->sequential_state, &(state->reading_callback),
       &(state->read_process_callbacks_user_data), &(state->terminating),
       state->mapping[last_mapped], state->tasks_pool);
@@ -135,27 +135,27 @@ static inline
   tmp = malloc(sizeof(ff::ff_farm<>));
   assert(tmp);
   state->L3_L4_farm =
-      new (tmp) ff::ff_farm<>(false, DPI_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
-                              DPI_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
+      new (tmp) ff::ff_farm<>(false, PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
+                              PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
                               false, state->available_processors, true);
-  tmp = malloc(sizeof(dpi::dpi_L3_L4_emitter));
+  tmp = malloc(sizeof(dpi::pfwl_L3_L4_emitter));
   assert(tmp);
-  state->L3_L4_emitter = new (tmp) dpi::dpi_L3_L4_emitter(
+  state->L3_L4_emitter = new (tmp) dpi::pfwl_L3_L4_emitter(
       state->sequential_state, &(state->reading_callback),
       &(state->read_process_callbacks_user_data), &(state->terminating),
       state->mapping[last_mapped], state->tasks_pool);
   last_mapped = (last_mapped + 1) % state->available_processors;
   state->L3_L4_farm->add_emitter(state->L3_L4_emitter);
-#if DPI_MULTICORE_L3_L4_FARM_TYPE == DPI_MULTICORE_L3_L4_ON_DEMAND
+#if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ON_DEMAND
   state->L3_L4_farm->set_scheduling_ondemand(1024);
 #endif
 #endif
 
   state->L3_L4_workers = new std::vector<ff::ff_node*>;
   for (uint i = 0; i < state->double_farm_L3_L4_active_workers; i++) {
-    tmp = malloc(sizeof(dpi::dpi_L3_L4_worker));
+    tmp = malloc(sizeof(dpi::pfwl_L3_L4_worker));
     assert(tmp);
-    dpi::dpi_L3_L4_worker* w1 = new (tmp) dpi::dpi_L3_L4_worker(
+    dpi::pfwl_L3_L4_worker* w1 = new (tmp) dpi::pfwl_L3_L4_worker(
         state->sequential_state, i, (state->double_farm_L7_active_workers),
         state->mapping[last_mapped], size_v4, size_v6);
     state->L3_L4_workers->push_back(w1);
@@ -163,13 +163,13 @@ static inline
   }
   state->L3_L4_farm->add_workers(*(state->L3_L4_workers));
 
-  tmp = malloc(sizeof(dpi::dpi_L3_L4_collector));
+  tmp = malloc(sizeof(dpi::pfwl_L3_L4_collector));
   assert(tmp);
   state->L3_L4_collector =
-      new (tmp) dpi::dpi_L3_L4_collector(state->mapping[last_mapped]);
+      new (tmp) dpi::pfwl_L3_L4_collector(state->mapping[last_mapped]);
   assert(state->L3_L4_collector);
   last_mapped = (last_mapped + 1) % state->available_processors;
-#if DPI_MULTICORE_L3_L4_FARM_TYPE == DPI_MULTICORE_L3_L4_ORDERED_FARM
+#if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ORDERED_FARM
   state->L3_L4_farm->setCollectorF(state->L3_L4_collector);
 #else
   state->L3_L4_farm->add_collector(state->L3_L4_collector);
@@ -178,16 +178,16 @@ static inline
   /**************************************/
   /*      Create the second farm.       */
   /**************************************/
-  tmp = malloc(sizeof(ff::ff_farm<dpi::dpi_L7_scheduler>));
+  tmp = malloc(sizeof(ff::ff_farm<dpi::pfwl_L7_scheduler>));
   assert(tmp);
-  state->L7_farm = new (tmp) ff::ff_farm<dpi::dpi_L7_scheduler>(
-      false, DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
-      DPI_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE, false,
+  state->L7_farm = new (tmp) ff::ff_farm<dpi::pfwl_L7_scheduler>(
+      false, PFWL_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
+      PFWL_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE, false,
       state->available_processors, true);
 
-  tmp = malloc(sizeof(dpi::dpi_L7_emitter));
+  tmp = malloc(sizeof(dpi::pfwl_L7_emitter));
   assert(tmp);
-  state->L7_emitter = new (tmp) dpi::dpi_L7_emitter(
+  state->L7_emitter = new (tmp) dpi::pfwl_L7_emitter(
       state->L7_farm->getlb(), state->double_farm_L7_active_workers,
       state->mapping[last_mapped]);
   last_mapped = (last_mapped + 1) % state->available_processors;
@@ -195,20 +195,20 @@ static inline
 
   state->L7_workers = new std::vector<ff::ff_node*>;
   for (uint i = 0; i < state->double_farm_L7_active_workers; i++) {
-    tmp = malloc(sizeof(dpi::dpi_L7_worker));
+    tmp = malloc(sizeof(dpi::pfwl_L7_worker));
     assert(tmp);
-    dpi::dpi_L7_worker* w2 = new (tmp) dpi::dpi_L7_worker(
+    dpi::pfwl_L7_worker* w2 = new (tmp) dpi::pfwl_L7_worker(
         state->sequential_state, i, state->mapping[last_mapped]);
     state->L7_workers->push_back(w2);
     last_mapped = (last_mapped + 1) % state->available_processors;
   }
   state->L7_farm->add_workers(*(state->L7_workers));
 
-  tmp = malloc(sizeof(dpi::dpi_L7_collector));
+  tmp = malloc(sizeof(dpi::pfwl_L7_collector));
   assert(tmp);
   state->collector_proc_id = state->mapping[last_mapped];
 
-  state->L7_collector = new (tmp) dpi::dpi_L7_collector(
+  state->L7_collector = new (tmp) dpi::pfwl_L7_collector(
       &(state->processing_callback), &(state->read_process_callbacks_user_data),
       &(state->collector_proc_id), state->tasks_pool);
   state->L7_farm->add_collector(state->L7_collector);
@@ -219,28 +219,28 @@ static inline
   tmp = malloc(sizeof(ff::ff_pipeline));
   assert(tmp);
   state->pipeline = new (tmp)
-      ff::ff_pipeline(false, DPI_MULTICORE_PIPELINE_INPUT_BUFFER_SIZE,
-                      DPI_MULTICORE_PIPELINE_OUTPUT_BUFFER_SIZE, true);
+      ff::ff_pipeline(false, PFWL_MULTICORE_PIPELINE_INPUT_BUFFER_SIZE,
+                      PFWL_MULTICORE_PIPELINE_OUTPUT_BUFFER_SIZE, true);
 
   state->pipeline->add_stage(state->L3_L4_farm);
   state->pipeline->add_stage(state->L7_farm);
-  state->parallel_module_type = MC_DPI_PARALLELISM_FORM_DOUBLE_FARM;
+  state->parallel_module_type = MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static inline
 #endif
     void
-    mc_dpi_create_single_farm(mc_dpi_library_state_t* state, uint32_t size_v4,
+    mc_pfwl_create_single_farm(mc_pfwl_library_state_t* state, uint32_t size_v4,
                               uint32_t size_v6) {
   uint16_t last_mapped = 0;
-  state->single_farm = new ff::ff_farm<dpi::dpi_L7_scheduler>(
-      false, DPI_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
-      DPI_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE, false,
+  state->single_farm = new ff::ff_farm<dpi::pfwl_L7_scheduler>(
+      false, PFWL_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
+      PFWL_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE, false,
       state->available_processors, true);
   assert(state->single_farm);
 
-  state->single_farm_emitter = new dpi::dpi_collapsed_emitter(
+  state->single_farm_emitter = new dpi::pfwl_collapsed_emitter(
       &(state->reading_callback), &(state->read_process_callbacks_user_data),
       &(state->terminating), state->tasks_pool, state->sequential_state,
       (state->single_farm_active_workers), size_v4, size_v6,
@@ -251,7 +251,7 @@ static inline
 
   state->single_farm_workers = new std::vector<ff::ff_node*>;
   for (uint16_t i = 0; i < state->single_farm_active_workers; i++) {
-    dpi::dpi_L7_worker* w = new dpi::dpi_L7_worker(state->sequential_state, i,
+    dpi::pfwl_L7_worker* w = new dpi::pfwl_L7_worker(state->sequential_state, i,
                                                    state->mapping[last_mapped]);
     assert(w);
     state->single_farm_workers->push_back(w);
@@ -260,12 +260,12 @@ static inline
 
   state->single_farm->add_workers(*(state->single_farm_workers));
   state->collector_proc_id = state->mapping[last_mapped];
-  state->single_farm_collector = new dpi::dpi_L7_collector(
+  state->single_farm_collector = new dpi::pfwl_L7_collector(
       &(state->processing_callback), &(state->read_process_callbacks_user_data),
       &(state->collector_proc_id), state->tasks_pool);
   assert(state->single_farm_collector);
   state->single_farm->add_collector(state->single_farm_collector);
-  state->parallel_module_type = MC_DPI_PARALLELISM_FORM_ONE_FARM;
+  state->parallel_module_type = MC_PFWL_PARALLELISM_FORM_ONE_FARM;
 }
 
 static inline ssize_t get_num_cores() {
@@ -318,16 +318,16 @@ static inline ssize_t get_num_cores() {
  *                            zeroed and then filled by the user.
  * @return A pointer to the state of the library.
  */
-mc_dpi_library_state_t* mc_dpi_init_stateful(
+mc_pfwl_library_state_t* mc_pfwl_init_stateful(
     uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
     uint32_t max_active_v6_flows,
-    mc_dpi_parallelism_details_t parallelism_details) {
-  mc_dpi_library_state_t* state = NULL;
-  if(posix_memalign((void**)&state, DPI_CACHE_LINE_SIZE,
-                 sizeof(mc_dpi_library_state_t) + DPI_CACHE_LINE_SIZE)){
+    mc_pfwl_parallelism_details_t parallelism_details) {
+  mc_pfwl_library_state_t* state = NULL;
+  if(posix_memalign((void**)&state, PFWL_CACHE_LINE_SIZE,
+                 sizeof(mc_pfwl_library_state_t) + PFWL_CACHE_LINE_SIZE)){
     throw std::runtime_error("posix_memalign failed.");
   }
-  bzero(state, sizeof(mc_dpi_library_state_t));
+  bzero(state, sizeof(mc_pfwl_library_state_t));
 
   uint8_t parallelism_form = parallelism_details.parallelism_form;
 
@@ -337,7 +337,7 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
     state->available_processors = get_num_cores();
   }
 
-  if (parallelism_form == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
+  if (parallelism_form == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
     assert(state->available_processors >= 4 + 2);
   } else {
     assert(state->available_processors >= 2 + 1);
@@ -363,43 +363,43 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
   state->double_farm_L7_active_workers =
       parallelism_details.double_farm_num_L7_workers;
   state->single_farm_active_workers = state->available_processors - 2;
-  if (parallelism_form == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
+  if (parallelism_form == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
     assert(state->double_farm_L3_L4_active_workers > 0 &&
            state->double_farm_L7_active_workers > 0);
     debug_print("%s\n",
-                "[mc_dpi_peafowl.cpp]: A pipeline of two "
+                "[mc_pfwl_peafowl.cpp]: A pipeline of two "
                 "farms will be activated.");
     hash_table_partitions = state->double_farm_L7_active_workers;
   } else {
     assert(state->single_farm_active_workers > 0);
     debug_print("%s\n",
-                "[mc_dpi_peafowl.cpp]: Only one farm will "
+                "[mc_pfwl_peafowl.cpp]: Only one farm will "
                 "be activated.");
     hash_table_partitions = state->single_farm_active_workers;
   }
 
-  state->sequential_state = dpi_init_stateful_num_partitions(
+  state->sequential_state = pfwl_init_stateful_num_partitions(
       size_v4, size_v6, max_active_v4_flows, max_active_v6_flows,
       hash_table_partitions);
 
 /******************************/
 /*   Create the tasks pool.   */
 /******************************/
-#if DPI_MULTICORE_USE_TASKS_POOL
+#if PFWL_MULTICORE_USE_TASKS_POOL
   void* tmp = NULL;
-  if(posix_memalign((void**)&tmp, DPI_CACHE_LINE_SIZE,
-                 sizeof(ff::SWSR_Ptr_Buffer) + DPI_CACHE_LINE_SIZE)){
+  if(posix_memalign((void**)&tmp, PFWL_CACHE_LINE_SIZE,
+                 sizeof(ff::SWSR_Ptr_Buffer) + PFWL_CACHE_LINE_SIZE)){
     throw std::runtime_error("posix_memalign failed.");
   }
   state->tasks_pool =
-      new (tmp) ff::SWSR_Ptr_Buffer(DPI_MULTICORE_TASKS_POOL_SIZE);
+      new (tmp) ff::SWSR_Ptr_Buffer(PFWL_MULTICORE_TASKS_POOL_SIZE);
   state->tasks_pool->init();
 #endif
 
-  if (parallelism_form == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
-    mc_dpi_create_double_farm(state, size_v4, size_v6);
+  if (parallelism_form == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
+    mc_pfwl_create_double_farm(state, size_v4, size_v6);
   } else {
-    mc_dpi_create_single_farm(state, size_v4, size_v6);
+    mc_pfwl_create_single_farm(state, size_v4, size_v6);
   }
 
   state->is_running = 0;
@@ -412,9 +412,9 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
  * Prints execution's statistics.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_print_stats(mc_dpi_library_state_t* state) {
+void mc_pfwl_print_stats(mc_pfwl_library_state_t* state) {
   if (state) {
-    if (state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
+    if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
       state->pipeline->ffStats(std::cout);
     } else {
       state->single_farm->ffStats(std::cout);
@@ -431,12 +431,12 @@ void mc_dpi_print_stats(mc_dpi_library_state_t* state) {
  * Terminates the library.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_terminate(mc_dpi_library_state_t* state) {
+void mc_pfwl_terminate(mc_pfwl_library_state_t* state) {
   if (likely(state)) {
-    if (state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
-      state->L3_L4_emitter->~dpi_L3_L4_emitter();
+    if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
+      state->L3_L4_emitter->~pfwl_L3_L4_emitter();
       free(state->L3_L4_emitter);
-#if DPI_MULTICORE_L3_L4_FARM_TYPE == DPI_MULTICORE_L3_L4_ORDERED_FARM
+#if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ORDERED_FARM
       state->L3_L4_farm->~ff_ofarm();
 #else
       state->L3_L4_farm->~ff_farm();
@@ -445,22 +445,22 @@ void mc_dpi_terminate(mc_dpi_library_state_t* state) {
       free(state->L3_L4_collector);
 
       while (!state->L3_L4_workers->empty()) {
-        ((dpi::dpi_L3_L4_worker*)state->L3_L4_workers->back())
-            ->~dpi_L3_L4_worker();
-        free((dpi::dpi_L3_L4_worker*)state->L3_L4_workers->back());
+        ((dpi::pfwl_L3_L4_worker*)state->L3_L4_workers->back())
+            ->~pfwl_L3_L4_worker();
+        free((dpi::pfwl_L3_L4_worker*)state->L3_L4_workers->back());
         state->L3_L4_workers->pop_back();
       }
       delete state->L3_L4_workers;
 
-      state->L7_emitter->~dpi_L7_emitter();
+      state->L7_emitter->~pfwl_L7_emitter();
       free(state->L7_emitter);
       state->L7_farm->~ff_farm();
       free(state->L7_farm);
       free(state->L7_collector);
 
       while (!state->L7_workers->empty()) {
-        ((dpi::dpi_L7_worker*)state->L7_workers->back())->~dpi_L7_worker();
-        free((dpi::dpi_L7_worker*)state->L7_workers->back());
+        ((dpi::pfwl_L7_worker*)state->L7_workers->back())->~pfwl_L7_worker();
+        free((dpi::pfwl_L7_worker*)state->L7_workers->back());
         state->L7_workers->pop_back();
       }
       delete state->L7_workers;
@@ -472,14 +472,14 @@ void mc_dpi_terminate(mc_dpi_library_state_t* state) {
       delete state->single_farm;
       delete state->single_farm_collector;
       while (!state->single_farm_workers->empty()) {
-        delete (dpi::dpi_L7_worker*)state->single_farm_workers->back();
+        delete (dpi::pfwl_L7_worker*)state->single_farm_workers->back();
         state->single_farm_workers->pop_back();
       }
       delete state->single_farm_workers;
     }
-    dpi_terminate(state->sequential_state);
+    pfwl_terminate(state->sequential_state);
 
-#if DPI_MULTICORE_USE_TASKS_POOL
+#if PFWL_MULTICORE_USE_TASKS_POOL
     state->tasks_pool->~SWSR_Ptr_Buffer();
     free(state->tasks_pool);
 #endif
@@ -488,10 +488,10 @@ void mc_dpi_terminate(mc_dpi_library_state_t* state) {
   }
 }
 
-void mc_dpi_set_core_callbacks(
-    mc_dpi_library_state_t* state,
-    mc_dpi_packet_reading_callback* reading_callback,
-    mc_dpi_processing_result_callback* processing_callback, void* user_data) {
+void mc_pfwl_set_core_callbacks(
+    mc_pfwl_library_state_t* state,
+    mc_pfwl_packet_reading_callback* reading_callback,
+    mc_pfwl_processing_result_callback* processing_callback, void* user_data) {
   state->reading_callback = reading_callback;
   state->processing_callback = processing_callback;
   state->read_process_callbacks_user_data = user_data;
@@ -502,7 +502,7 @@ void mc_dpi_set_core_callbacks(
 /***************************************/
 
 #ifdef ENABLE_RECONFIGURATION
-void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state,
+void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t* state,
                                   nornir::Parameters* p) {
   state->adp_params = p;
 }
@@ -512,18 +512,18 @@ void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state,
  * Starts the library.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_run(mc_dpi_library_state_t* state) {
+void mc_pfwl_run(mc_pfwl_library_state_t* state) {
   // Real start
-  debug_print("%s\n", "[mc_dpi_peafowl.cpp]: Run preparation...");
+  debug_print("%s\n", "[mc_pfwl_peafowl.cpp]: Run preparation...");
   state->is_running = 1;
-  if (state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
+  if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
     // Warm-up
     state->pipeline->run_then_freeze();
   } else {
 // Warm-up
 #ifdef ENABLE_RECONFIGURATION
     try {
-      state->mf = new nornir::ManagerFarm<dpi::dpi_L7_scheduler>(
+      state->mf = new nornir::ManagerFarm<dpi::pfwl_L7_scheduler>(
           state->single_farm, *(state->adp_params));
       state->mf->start();
     } catch (std::exception& e) {
@@ -534,15 +534,15 @@ void mc_dpi_run(mc_dpi_library_state_t* state) {
 #endif
   }
   gettimeofday(&state->start_time, NULL);
-  debug_print("%s\n", "[mc_dpi_peafowl.cpp]: Running...");
+  debug_print("%s\n", "[mc_pfwl_peafowl.cpp]: Running...");
 }
 
 /**
  * Wait the end of the data processing.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_wait_end(mc_dpi_library_state_t* state) {
-  if (state->parallel_module_type == MC_DPI_PARALLELISM_FORM_DOUBLE_FARM) {
+void mc_pfwl_wait_end(mc_pfwl_library_state_t* state) {
+  if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
     state->pipeline->wait();
   } else {
 #ifdef ENABLE_RECONFIGURATION
@@ -568,22 +568,22 @@ void mc_dpi_wait_end(mc_dpi_library_state_t* state) {
  * Sets the maximum number of times that the library tries to guess the
  * protocol. During the flow protocol identification, after this number
  * of trials, in the case in which it cannot decide between two or more
- * protocols, one of them will be chosen, otherwise DPI_PROTOCOL_UNKNOWN
+ * protocols, one of them will be chosen, otherwise PFWL_PROTOCOL_UNKNOWN
  * will be returned.
  * @param state       A pointer to the state of the library.
  * @param max_trials  The maximum number of trials.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t* state,
+uint8_t mc_pfwl_set_max_trials(mc_pfwl_library_state_t* state,
                               uint16_t max_trials) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_set_max_trials(state->sequential_state, max_trials);
+  r = pfwl_set_max_trials(state->sequential_state, max_trials);
   return r;
 }
 
@@ -593,17 +593,17 @@ uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t* state,
  * @param table_size   The size of the table to be used to store IPv4
  *                     fragments informations.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *          updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *          updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t* state,
+uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_library_state_t* state,
                                          uint16_t table_size) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv4_fragmentation_enable(state->sequential_state, table_size);
+  r = pfwl_ipv4_fragmentation_enable(state->sequential_state, table_size);
   return r;
 }
 
@@ -613,17 +613,17 @@ uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t* state,
  * @param table_size   The size of the table to be used to store IPv6
  *                     fragments informations.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t* state,
+uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_library_state_t* state,
                                          uint16_t table_size) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv6_fragmentation_enable(state->sequential_state, table_size);
+  r = pfwl_ipv6_fragmentation_enable(state->sequential_state, table_size);
   return r;
 }
 
@@ -634,17 +634,17 @@ uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t* state,
  * @param per_host_memory_limit   The maximum amount of memory that
  *                                 any IPv4 host can use.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t per_host_memory_limit) {
+uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t per_host_memory_limit) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv4_fragmentation_set_per_host_memory_limit(state->sequential_state,
+  r = pfwl_ipv4_fragmentation_set_per_host_memory_limit(state->sequential_state,
                                                        per_host_memory_limit);
   return r;
 }
@@ -656,17 +656,17 @@ uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
  * @param per_host_memory_limit   The maximum amount of memory that
  *                                any IPv6 host can use.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t per_host_memory_limit) {
+uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t per_host_memory_limit) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv6_fragmentation_set_per_host_memory_limit(state->sequential_state,
+  r = pfwl_ipv6_fragmentation_set_per_host_memory_limit(state->sequential_state,
                                                        per_host_memory_limit);
   return r;
 }
@@ -681,17 +681,17 @@ uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
  * @param totel_memory_limit  The maximum amount of memory that can
  *                             be used for IPv4 defragmentation.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t total_memory_limit) {
+uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t total_memory_limit) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv4_fragmentation_set_total_memory_limit(state->sequential_state,
+  r = pfwl_ipv4_fragmentation_set_total_memory_limit(state->sequential_state,
                                                     total_memory_limit);
   return r;
 }
@@ -706,17 +706,17 @@ uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
  * @param totel_memory_limit  The maximum amount of memory that can
  *                            be used for IPv6 defragmentation.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t total_memory_limit) {
+uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t total_memory_limit) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv6_fragmentation_set_total_memory_limit(state->sequential_state,
+  r = pfwl_ipv6_fragmentation_set_total_memory_limit(state->sequential_state,
                                                     total_memory_limit);
   return r;
 }
@@ -729,17 +729,17 @@ uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
  * @param state            A pointer to the state of the library.
  * @param timeout_seconds  The reassembly timeout.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
-    mc_dpi_library_state_t* state, uint8_t timeout_seconds) {
+uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
+    mc_pfwl_library_state_t* state, uint8_t timeout_seconds) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv4_fragmentation_set_reassembly_timeout(state->sequential_state,
+  r = pfwl_ipv4_fragmentation_set_reassembly_timeout(state->sequential_state,
                                                     timeout_seconds);
   return r;
 }
@@ -752,17 +752,17 @@ uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
  * @param state            A pointer to the state of the library.
  * @param timeout_seconds  The reassembly timeout.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
-    mc_dpi_library_state_t* state, uint8_t timeout_seconds) {
+uint8_t mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(
+    mc_pfwl_library_state_t* state, uint8_t timeout_seconds) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv6_fragmentation_set_reassembly_timeout(state->sequential_state,
+  r = pfwl_ipv6_fragmentation_set_reassembly_timeout(state->sequential_state,
                                                     timeout_seconds);
   return r;
 }
@@ -771,16 +771,16 @@ uint8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
  * Disable IPv4 defragmentation.
  * @param state A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv4_fragmentation_disable(state->sequential_state);
+  r = pfwl_ipv4_fragmentation_disable(state->sequential_state);
   return r;
 }
 
@@ -788,16 +788,16 @@ uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t* state) {
  * Disable IPv6 defragmentation.
  * @param state A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_ipv6_fragmentation_disable(state->sequential_state);
+  r = pfwl_ipv6_fragmentation_disable(state->sequential_state);
   return r;
 }
 
@@ -806,16 +806,16 @@ uint8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t* state) {
  * (enabled by default).
  * @param state  A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if the state
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the state
  *         has not been changed because a problem happened.
  */
-uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_tcp_reordering_enable(state->sequential_state);
+  r = pfwl_tcp_reordering_enable(state->sequential_state);
   return r;
 }
 
@@ -828,49 +828,49 @@ uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state) {
  * extracted informations could be erroneous or incomplete.
  * @param state A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_tcp_reordering_disable(state->sequential_state);
+  r = pfwl_tcp_reordering_disable(state->sequential_state);
   return r;
 }
 
-uint8_t mc_dpi_enable_protocol(mc_dpi_library_state_t* state,
-                               dpi_l7_prot_id protocol) {
+uint8_t mc_pfwl_enable_protocol(mc_pfwl_library_state_t* state,
+                               pfwl_l7_prot_id protocol) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
-  return dpi_enable_protocol(state->sequential_state, protocol);
+  return pfwl_enable_protocol(state->sequential_state, protocol);
 }
 
-uint8_t mc_dpi_disable_protocol(mc_dpi_library_state_t* state,
-                                dpi_l7_prot_id protocol) {
+uint8_t mc_pfwl_disable_protocol(mc_pfwl_library_state_t* state,
+                                pfwl_l7_prot_id protocol) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
-  return dpi_disable_protocol(state->sequential_state, protocol);
+  return pfwl_disable_protocol(state->sequential_state, protocol);
 }
 
 /**
  * Enable all the protocol inspector.
  * @param state      A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_inspect_all(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_inspect_all(state->sequential_state);
+  r = pfwl_inspect_all(state->sequential_state);
   return r;
 }
 
@@ -878,16 +878,16 @@ uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t* state) {
  * Disable all the protocol inspector.
  * @param state      A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_inspect_nothing(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_inspect_nothing(state->sequential_state);
+  r = pfwl_inspect_nothing(state->sequential_state);
   return r;
 }
 
@@ -896,16 +896,16 @@ uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t* state) {
  * @return  An array A of string, such that A[i] is the
  * string representation of the protocol with id 'i'.
  */
-const char** const mc_dpi_get_protocol_strings() {
-  return dpi_get_protocols_strings();
+const char** const mc_pfwl_get_protocol_strings() {
+  return pfwl_get_protocols_strings();
 }
 
-const char* const mc_dpi_get_protocol_string(dpi_l7_prot_id protocol) {
-  return dpi_get_protocol_string(protocol);
+const char* const mc_pfwl_get_protocol_string(pfwl_l7_prot_id protocol) {
+  return pfwl_get_protocol_string(protocol);
 }
 
-dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string) {
-  return dpi_get_protocol_id(string);
+pfwl_l7_prot_id mc_pfwl_get_protocol_id(const char* const string) {
+  return pfwl_get_protocol_id(string);
 }
 
 /**
@@ -914,18 +914,18 @@ dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string) {
  * @param state     A pointer to the state of the library.
  * @param cleaner   The callback used to clear the user state.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if
  *         the state has not been changed because a problem
  *         happened.
  */
-uint8_t mc_dpi_set_flow_cleaner_callback(mc_dpi_library_state_t* state,
-                                         dpi_flow_cleaner_callback* cleaner) {
+uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_library_state_t* state,
+                                         pfwl_flow_cleaner_callback* cleaner) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_set_flow_cleaner_callback(state->sequential_state, cleaner);
+  r = pfwl_set_flow_cleaner_callback(state->sequential_state, cleaner);
   return r;
 }
 
@@ -952,19 +952,19 @@ uint8_t mc_dpi_set_flow_cleaner_callback(mc_dpi_library_state_t* state,
  *                    will be passed to any HTTP callback when it is
  *                    invoked.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  *
  **/
-uint8_t mc_dpi_http_activate_callbacks(mc_dpi_library_state_t* state,
-                                       dpi_http_callbacks_t* callbacks,
+uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_library_state_t* state,
+                                       pfwl_http_callbacks_t* callbacks,
                                        void* user_data) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_http_activate_callbacks(state->sequential_state, callbacks,
+  r = pfwl_http_activate_callbacks(state->sequential_state, callbacks,
                                   user_data);
   return r;
 }
@@ -974,15 +974,15 @@ uint8_t mc_dpi_http_activate_callbacks(mc_dpi_library_state_t* state,
  * user_data is not freed/modified.
  * @param state       A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state) {
+uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_library_state_t* state) {
   if (state->is_running) {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
   uint8_t r;
-  r = dpi_http_disable_callbacks(state->sequential_state);
+  r = pfwl_http_disable_callbacks(state->sequential_state);
   return r;
 }

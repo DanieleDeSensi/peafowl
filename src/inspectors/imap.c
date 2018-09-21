@@ -28,20 +28,20 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_imap(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_imap(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t){
+                   pfwl_tracking_informations_t* t){
   uint16_t i = 0;
   uint16_t space_pos = 0;
   uint16_t command_start = 0;
   uint8_t saw_command = 0;
 
   if(pkt->l4prot != IPPROTO_TCP){
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
   
   if (t->imap_starttls == 2) {
-    return DPI_PROTOCOL_MATCHES;
+    return PFWL_PROTOCOL_MATCHES;
   }
 
   if (data_length >= 4 && ntohs(get_u16(app_data, data_length - 2)) == 0x0d0a) {
@@ -266,14 +266,14 @@ uint8_t check_imap(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 
     if (saw_command == 1) {
       if (t->imap_stage == 3 || t->imap_stage == 5) {
-        return DPI_PROTOCOL_MATCHES;
+        return PFWL_PROTOCOL_MATCHES;
       }
     }
   }
 
   if (data_length > 1 && app_data[data_length - 1] == ' ') {
     t->imap_stage = 4;
-    return DPI_PROTOCOL_MORE_DATA_NEEDED;
+    return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
 
 imap_excluded:
@@ -282,8 +282,8 @@ imap_excluded:
   // if the packet count is low enough and at least one command or response was seen before
   if ((data_length >= 2 && ntohs(get_u16(app_data, data_length - 2)) == 0x0d0a)
       && t->num_packets < 6 && t->imap_stage >= 1) {
-    return DPI_PROTOCOL_MORE_DATA_NEEDED;
+    return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
 
-  return DPI_PROTOCOL_NO_MATCHES;
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

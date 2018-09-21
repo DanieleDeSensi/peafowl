@@ -65,7 +65,7 @@ static void match_found(string::size_type position, trie::value_type const &matc
 	cout << "Matched '" << match.second << "' at " << position << endl;
 }
 
-void body_cb(dpi_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, dpi_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
+void body_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
 	if(*flow_specific_user_data==NULL){
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
             *flow_specific_user_data=new byte_scanner(*(static_cast<trie*>(user_data)), match_found);
@@ -180,7 +180,7 @@ int main(int argc, char **argv){
 
 			assert(header.caplen>sizeof(struct ether_header));
 
-			if(posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.caplen-sizeof(struct ether_header)))){
+			if(posix_memalign((void**) &(packets[num_packets]), PFWL_CACHE_LINE_SIZE, sizeof(unsigned char)*(header.caplen-sizeof(struct ether_header)))){
 				throw std::runtime_error("posix_memalign failure.");
 			}
 			assert(packets[num_packets]);
@@ -199,15 +199,15 @@ int main(int argc, char **argv){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
 
-		dpi_library_state_t* state=dpi_init_stateful(32767, 32767, 1000000, 1000000);
-		dpi_set_flow_cleaner_callback(state, &flow_cleaner);
-		dpi_http_callbacks_t callback={0, 0, 0, 0, &body_cb};
-		dpi_http_activate_callbacks(state, &callback, (void*)(&t));
+		pfwl_library_state_t* state=pfwl_init_stateful(32767, 32767, 1000000, 1000000);
+		pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
+		pfwl_http_callbacks_t callback={0, 0, 0, 0, &body_cb};
+		pfwl_http_activate_callbacks(state, &callback, (void*)(&t));
 
 		uint i,j;
 		for(j=0; j<num_iterations; j++){
 			for(i=0; i<num_packets; i++){
-                dpi_get_protocol(state, packets[i], sizes[i], 0);
+                pfwl_get_protocol(state, packets[i], sizes[i], 0);
 			}
 		}
 
@@ -217,7 +217,7 @@ int main(int argc, char **argv){
 			delete bs;
 		}
 		/* And close the session */
-		dpi_terminate(state);
+		pfwl_terminate(state);
 		delete scanner_pool;
 
 		full_timer.stop();

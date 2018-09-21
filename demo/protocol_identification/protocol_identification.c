@@ -54,7 +54,7 @@ int main(int argc, char** argv){
     char* pcap_filename=argv[1];
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    dpi_library_state_t* state=dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+    pfwl_library_state_t* state=pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
     pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
     if(handle==NULL){
@@ -84,8 +84,8 @@ int main(int argc, char** argv){
     const u_char* packet;
     struct pcap_pkthdr header;
 
-    dpi_identification_result_t r;
-    u_int32_t protocols[DPI_NUM_PROTOCOLS];
+    pfwl_identification_result_t r;
+    u_int32_t protocols[PFWL_NUM_PROTOCOLS];
     memset(protocols, 0, sizeof(protocols));
     u_int32_t unknown=0;
     
@@ -112,11 +112,11 @@ int main(int argc, char** argv){
             }
         }///////
 
-        r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+        r = pfwl_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
         if(r.protocol_l4 == IPPROTO_TCP ||
            r.protocol_l4 == IPPROTO_UDP){
-            if(r.protocol_l7 < DPI_NUM_PROTOCOLS){
+            if(r.protocol_l7 < PFWL_NUM_PROTOCOLS){
                 ++protocols[r.protocol_l7];
             }else{
                 ++unknown;
@@ -126,12 +126,12 @@ int main(int argc, char** argv){
         }
     }
 
-    dpi_terminate(state);
+    pfwl_terminate(state);
 
     if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
-    for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
+    for(size_t i = 0; i < PFWL_NUM_PROTOCOLS; i++){
         if(protocols[i] > 0){
-            printf("%s packets: %"PRIu32"\n", dpi_get_protocol_string(i), protocols[i]);
+            printf("%s packets: %"PRIu32"\n", pfwl_get_protocol_string(i), protocols[i]);
         }
     }
     return 0;

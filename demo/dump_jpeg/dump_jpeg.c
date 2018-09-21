@@ -49,7 +49,7 @@
 #define MAX_FILENAME_SIZE 128
 
 
-void contentype_cb(dpi_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, dpi_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data){
+void contentype_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data){
 	if((*flow_specific_user_data==NULL) && (strncmp((char*)app_data, "image/jpeg", data_length)==0)){
 		struct in_addr src, dst;
 		src.s_addr=pkt->src_addr_t.ipv4_srcaddr;
@@ -73,7 +73,7 @@ void contentype_cb(dpi_http_message_informations_t* http_informations, const u_c
 	}
 }
 
-void body_cb(dpi_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, dpi_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last_chunk){
+void body_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last_chunk){
 	if(*flow_specific_user_data){
 		u_int32_t i;
 		for(i=0; i<data_length; ++i)
@@ -100,14 +100,14 @@ int main(int argc, char** argv){
 		return -1;
 	}
 
-	dpi_http_header_field_callback* single_cb[1]={&contentype_cb};
+	pfwl_http_header_field_callback* single_cb[1]={&contentype_cb};
 	const char* ct[1]={"Content-Type"};
 
-	dpi_http_callbacks_t callback={.header_url_callback=0, .header_names=ct, .num_header_types=1, .header_types_callbacks=single_cb, .http_body_callback=&body_cb};
+	pfwl_http_callbacks_t callback={.header_url_callback=0, .header_names=ct, .num_header_types=1, .header_types_callbacks=single_cb, .http_body_callback=&body_cb};
 
 
-	dpi_library_state_t *state=dpi_init_stateful(32767,32767,1000000,1000000);
-	dpi_set_flow_cleaner_callback(state, &flow_delete_cb);
+	pfwl_library_state_t *state=pfwl_init_stateful(32767,32767,1000000,1000000);
+	pfwl_set_flow_cleaner_callback(state, &flow_delete_cb);
 
 
 	pcap_t *handle; /* Session handle */
@@ -115,7 +115,7 @@ int main(int argc, char** argv){
 	const u_char *packet; /* The actual packet */
 
 	u_int32_t packet_index=0;
-	dpi_http_activate_callbacks(state, &callback, &packet_index);
+	pfwl_http_activate_callbacks(state, &callback, &packet_index);
 
 
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -142,13 +142,13 @@ int main(int argc, char** argv){
 		if(ethhdr->ether_type!=htons(ETHERTYPE_IP) && ethhdr->ether_type!=htons(ETHERTYPE_IPV6)){
 			continue;
 		}
-        dpi_get_protocol(state,(const u_char*) packet + sizeof(struct ether_header), header.caplen-sizeof(struct ether_header), time(NULL));
+        pfwl_get_protocol(state,(const u_char*) packet + sizeof(struct ether_header), header.caplen-sizeof(struct ether_header), time(NULL));
 
 	}
 	printf("Finished.\n");
 	/* And close the session */
 	pcap_close(handle);
 
-	dpi_terminate(state);
+	pfwl_terminate(state);
 	return 0;
 }

@@ -50,17 +50,17 @@ static uint8_t is_hangout_tcp_port(uint16_t port) {
     return 0;
 }
 
-uint8_t check_hangout(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_hangout(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                       const unsigned char* app_data, uint32_t data_length,
-                      dpi_tracking_informations_t* t){
+                      pfwl_tracking_informations_t* t){
   if((data_length > 24)) {
     if(
        ((pkt->l4prot == IPPROTO_UDP) && (is_hangout_udp_port(pkt->srcport) || is_hangout_udp_port(pkt->dstport)))
        ||
        ((pkt->l4prot == IPPROTO_TCP) && (is_hangout_tcp_port(pkt->srcport) || is_hangout_tcp_port(pkt->dstport)))) {
-      return DPI_PROTOCOL_MATCHES;
+      return PFWL_PROTOCOL_MATCHES;
     }
   }
   
-  return DPI_PROTOCOL_NO_MATCHES;
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

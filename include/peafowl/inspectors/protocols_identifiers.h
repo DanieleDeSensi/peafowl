@@ -33,33 +33,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DPI_IP_VERSION_4 0x4
-#define DPI_IP_VERSION_6 0x6
+#define PFWL_IP_VERSION_4 0x4
+#define PFWL_IP_VERSION_6 0x6
 
 enum protocols {
-  DPI_PROTOCOL_DNS = 0,
-  DPI_PROTOCOL_MDNS,
-  DPI_PROTOCOL_DHCP,
-  DPI_PROTOCOL_DHCPv6,
-  DPI_PROTOCOL_NTP,
-  DPI_PROTOCOL_SIP,
-  DPI_PROTOCOL_RTP,
-  DPI_PROTOCOL_SSH,
-  DPI_PROTOCOL_SKYPE,
-  DPI_PROTOCOL_HTTP,
-  DPI_PROTOCOL_BGP,
-  DPI_PROTOCOL_SMTP,
-  DPI_PROTOCOL_POP3,
-  DPI_PROTOCOL_IMAP,
-  DPI_PROTOCOL_SSL,
-  DPI_PROTOCOL_HANGOUT,
-  DPI_PROTOCOL_WHATSAPP,
-  DPI_PROTOCOL_TELEGRAM,
-  DPI_PROTOCOL_DROPBOX,
-  DPI_PROTOCOL_SPOTIFY,
-  DPI_NUM_PROTOCOLS,
-  DPI_PROTOCOL_NOT_DETERMINED,
-  DPI_PROTOCOL_UNKNOWN
+  PFWL_PROTOCOL_DNS = 0,
+  PFWL_PROTOCOL_MDNS,
+  PFWL_PROTOCOL_DHCP,
+  PFWL_PROTOCOL_DHCPv6,
+  PFWL_PROTOCOL_NTP,
+  PFWL_PROTOCOL_SIP,
+  PFWL_PROTOCOL_RTP,
+  PFWL_PROTOCOL_SSH,
+  PFWL_PROTOCOL_SKYPE,
+  PFWL_PROTOCOL_HTTP,
+  PFWL_PROTOCOL_BGP,
+  PFWL_PROTOCOL_SMTP,
+  PFWL_PROTOCOL_POP3,
+  PFWL_PROTOCOL_IMAP,
+  PFWL_PROTOCOL_SSL,
+  PFWL_PROTOCOL_HANGOUT,
+  PFWL_PROTOCOL_WHATSAPP,
+  PFWL_PROTOCOL_TELEGRAM,
+  PFWL_PROTOCOL_DROPBOX,
+  PFWL_PROTOCOL_SPOTIFY,
+  PFWL_NUM_PROTOCOLS,
+  PFWL_PROTOCOL_NOT_DETERMINED,
+  PFWL_PROTOCOL_UNKNOWN
 };
 
 typedef uint8_t pfwl_protocol_l7;
@@ -73,17 +73,17 @@ typedef uint8_t pfwl_protocol_l4;
  *
  *	MUST never happen that two protocols match over the same packet. Is
  *preferable to have an inspector that 'take time' and
- *	returns DPI_PROTOCOL_MORE_DATA_NEEDED (to check more packets) up to the
+ *	returns PFWL_PROTOCOL_MORE_DATA_NEEDED (to check more packets) up to the
  *point in which it is not sure that the protocol matches.
  */
 
 enum protocol_check_statuses {
-  DPI_PROTOCOL_MATCHES = 0, /** If the protocol matches for sure. */
-  DPI_PROTOCOL_NO_MATCHES,  /** If the protocol doesn't matches for sure. */
-  DPI_PROTOCOL_MORE_DATA_NEEDED, /** The inspector needs more data to be sure
+  PFWL_PROTOCOL_MATCHES = 0, /** If the protocol matches for sure. */
+  PFWL_PROTOCOL_NO_MATCHES,  /** If the protocol doesn't matches for sure. */
+  PFWL_PROTOCOL_MORE_DATA_NEEDED, /** The inspector needs more data to be sure
                                     that the protocol matches or to invoke the
                                     callback on the complete data. **/
-  DPI_PROTOCOL_ERROR
+  PFWL_PROTOCOL_ERROR
 };
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN

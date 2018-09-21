@@ -1,5 +1,5 @@
 /*
- * mc_dpi_peafowl.h
+ * mc_pfwl_peafowl.h
  *
  * Created on: 12/11/2012
  * =========================================================================
@@ -24,8 +24,8 @@
  * ====================================================================
  */
 
-#ifndef MP_DPI_API_H_
-#define MP_DPI_API_H_
+#ifndef MP_PFWL_API_H_
+#define MP_PFWL_API_H_
 
 #include <peafowl/peafowl.h>
 
@@ -33,28 +33,28 @@
 #include <src/manager.hpp>
 #endif
 
-typedef struct mc_dpi_library_state mc_dpi_library_state_t;
+typedef struct mc_pfwl_library_state mc_pfwl_library_state_t;
 
-typedef struct mc_dpi_processing_result {
+typedef struct mc_pfwl_processing_result {
   void* user_pointer;
-  dpi_identification_result_t result;
-} mc_dpi_processing_result_t;
+  pfwl_identification_result_t result;
+} mc_pfwl_processing_result_t;
 
-typedef struct mc_dpi_packet_reading_result {
+typedef struct mc_pfwl_packet_reading_result {
   const unsigned char* pkt;
   uint32_t length;
   uint32_t current_time;
   void* user_pointer;
-} mc_dpi_packet_reading_result_t;
+} mc_pfwl_packet_reading_result_t;
 
 typedef enum analysis_results {
-  MC_DPI_PARALLELISM_FORM_ONE_FARM = 0,
-  MC_DPI_PARALLELISM_FORM_DOUBLE_FARM,
-  MC_DPI_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
+  MC_PFWL_PARALLELISM_FORM_ONE_FARM = 0,
+  MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM,
+  MC_PFWL_PARALLELISM_FORM_POSSIBLE_L3_L4_BOTTLENECK
 } analysis_results;
 
 /**
- * @struct mc_dpi_parallelism_details_t
+ * @struct mc_pfwl_parallelism_details_t
  * @brief Represents some details that can be specified by the user
  * during initializations.
  *
@@ -63,21 +63,21 @@ typedef enum analysis_results {
  * @var mapping An array of cores identifiers on which the framework
  *              can be mapped. If NULL, a linear mapping will be
  *              applied (i.e. [0,1,2,...]).
- * @var parallelism_form MC_DPI_PARELLELISM_FORM_DOUBLE_FARM or
- *                       MC_DPI_PARALLELISM_FORM_ONE_FARM. By default it
- *                       is equal to MC_DPI_PARALLELISM_FORM_ONE_FARM.
+ * @var parallelism_form MC_PFWL_PARELLELISM_FORM_DOUBLE_FARM or
+ *                       MC_PFWL_PARALLELISM_FORM_ONE_FARM. By default it
+ *                       is equal to MC_PFWL_PARALLELISM_FORM_ONE_FARM.
  * @var double_farm_num_L3_workers   If parallelism_form==
- *                                   MC_DPI_PARELLELISM_FORM_DOUBLE_FARM,
+ *                                   MC_PFWL_PARELLELISM_FORM_DOUBLE_FARM,
  *                                   it represents the number of workers
  *                                   to activate for the first farm. It
  *                                   must be different from 0.
  * @var double_farm_num_L7_workers   If parallelism_form==
- *                                   MC_DPI_PARELLELISM_FORM_DOUBLE_FARM,
+ *                                   MC_PFWL_PARELLELISM_FORM_DOUBLE_FARM,
  *                                   it represents the number of workers
  *                                   to activate for the second farm. It
  *                                   must be different from 0.
  */
-typedef struct mc_dpi_parallelism_details {
+typedef struct mc_pfwl_parallelism_details {
   /** Mapping informations. **/
   uint16_t available_processors;
   uint16_t* mapping;
@@ -85,7 +85,7 @@ typedef struct mc_dpi_parallelism_details {
   analysis_results parallelism_form;
   uint16_t double_farm_num_L3_workers;
   uint16_t double_farm_num_L7_workers;
-} mc_dpi_parallelism_details_t;
+} mc_pfwl_parallelism_details_t;
 
 /**
  * This function will be called by the library (active mode only) to read
@@ -99,7 +99,7 @@ typedef struct mc_dpi_parallelism_details {
  *                        pkt=NULL, otherwise the behaviour is not
  *                        defined.
  */
-typedef mc_dpi_packet_reading_result_t(mc_dpi_packet_reading_callback)(
+typedef mc_pfwl_packet_reading_result_t(mc_pfwl_packet_reading_callback)(
     void* callback_data);
 
 /**
@@ -110,8 +110,8 @@ typedef mc_dpi_packet_reading_result_t(mc_dpi_packet_reading_callback)(
  * @param callback_data       A pointer to user specified data (e.g.
  *                            network socket).
  */
-typedef void(mc_dpi_processing_result_callback)(
-    mc_dpi_processing_result_t* processing_result, void* callback_data);
+typedef void(mc_pfwl_processing_result_callback)(
+    mc_pfwl_processing_result_t* processing_result, void* callback_data);
 
 /**
  * Initializes the library and sets the parallelism degree according to
@@ -133,10 +133,10 @@ typedef void(mc_dpi_processing_result_callback)(
  *                            zeroed and then filled by the user.
  * @return A pointer to the state of the library.
  */
-mc_dpi_library_state_t* mc_dpi_init_stateful(
+mc_pfwl_library_state_t* mc_pfwl_init_stateful(
     uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
     uint32_t max_active_v6_flows,
-    mc_dpi_parallelism_details_t parallelism_details);
+    mc_pfwl_parallelism_details_t parallelism_details);
 
 /**
  * Sets the reading and processing callbacks. It can be done only after
@@ -150,10 +150,10 @@ mc_dpi_library_state_t* mc_dpi_init_stateful(
  * @param user_data             A pointer to the user data to be passed to
  *                              the callbacks.
  */
-void mc_dpi_set_core_callbacks(
-    mc_dpi_library_state_t* state,
-    mc_dpi_packet_reading_callback* reading_callback,
-    mc_dpi_processing_result_callback* processing_callback, void* user_data);
+void mc_pfwl_set_core_callbacks(
+    mc_pfwl_library_state_t* state,
+    mc_pfwl_packet_reading_callback* reading_callback,
+    mc_pfwl_processing_result_callback* processing_callback, void* user_data);
 
 #ifdef ENABLE_RECONFIGURATION
 /**
@@ -161,7 +161,7 @@ void mc_dpi_set_core_callbacks(
  * @param state A pointer to the state of the library.
  * @param p The reconfiguration parameters.
  */
-void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state,
+void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t* state,
                                   nornir::Parameters* p);
 #endif
 
@@ -169,25 +169,25 @@ void mc_dpi_set_reconf_parameters(mc_dpi_library_state_t* state,
  * Starts the library.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_run(mc_dpi_library_state_t* state);
+void mc_pfwl_run(mc_pfwl_library_state_t* state);
 
 /**
  * Wait the end of the data processing.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_wait_end(mc_dpi_library_state_t* state);
+void mc_pfwl_wait_end(mc_pfwl_library_state_t* state);
 
 /**
  * Prints execution's statistics.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_print_stats(mc_dpi_library_state_t* state);
+void mc_pfwl_print_stats(mc_pfwl_library_state_t* state);
 
 /**
  * Terminates the library.
  * @param state A pointer to the state of the library.
  */
-void mc_dpi_terminate(mc_dpi_library_state_t* state);
+void mc_pfwl_terminate(mc_pfwl_library_state_t* state);
 
 /*************************************************/
 /*          Status change API calls              */
@@ -197,16 +197,16 @@ void mc_dpi_terminate(mc_dpi_library_state_t* state);
  * Sets the maximum number of times that the library tries to guess the
  * protocol. During the flow protocol identification, after this number
  * of trials, in the case in which it cannot decide between two or more
- * protocols, one of them will be chosen, otherwise DPI_PROTOCOL_UNKNOWN
+ * protocols, one of them will be chosen, otherwise PFWL_PROTOCOL_UNKNOWN
  * will be returned.
  * @param state       A pointer to the state of the library.
  * @param max_trials  The maximum number of trials.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t* state,
+uint8_t mc_pfwl_set_max_trials(mc_pfwl_library_state_t* state,
                               uint16_t max_trials);
 
 /**
@@ -215,11 +215,11 @@ uint8_t mc_dpi_set_max_trials(mc_dpi_library_state_t* state,
  * @param table_size   The size of the table to be used to store IPv4
  *                     fragments informations.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *          updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *          updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t* state,
+uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_library_state_t* state,
                                          uint16_t table_size);
 
 /**
@@ -228,11 +228,11 @@ uint8_t mc_dpi_ipv4_fragmentation_enable(mc_dpi_library_state_t* state,
  * @param table_size   The size of the table to be used to store IPv6
  *                     fragments informations.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t* state,
+uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_library_state_t* state,
                                          uint16_t table_size);
 
 /**
@@ -242,12 +242,12 @@ uint8_t mc_dpi_ipv6_fragmentation_enable(mc_dpi_library_state_t* state,
  * @param per_host_memory_limit   The maximum amount of memory that
  *                                 any IPv4 host can use.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t per_host_memory_limit);
+uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the amount of memory that a single host can use for IPv6
@@ -256,12 +256,12 @@ uint8_t mc_dpi_ipv4_fragmentation_set_per_host_memory_limit(
  * @param per_host_memory_limit   The maximum amount of memory that
  *                                any IPv6 host can use.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t per_host_memory_limit);
+uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for IPv4
@@ -273,12 +273,12 @@ uint8_t mc_dpi_ipv6_fragmentation_set_per_host_memory_limit(
  * @param totel_memory_limit  The maximum amount of memory that can
  *                             be used for IPv4 defragmentation.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t total_memory_limit);
+uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t total_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for
@@ -290,12 +290,12 @@ uint8_t mc_dpi_ipv4_fragmentation_set_total_memory_limit(
  * @param totel_memory_limit  The maximum amount of memory that can
  *                            be used for IPv6 defragmentation.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
-    mc_dpi_library_state_t* state, uint32_t total_memory_limit);
+uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
+    mc_pfwl_library_state_t* state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to
@@ -305,12 +305,12 @@ uint8_t mc_dpi_ipv6_fragmentation_set_total_memory_limit(
  * @param state            A pointer to the state of the library.
  * @param timeout_seconds  The reassembly timeout.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
-    mc_dpi_library_state_t* state, uint8_t timeout_seconds);
+uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
+    mc_pfwl_library_state_t* state, uint8_t timeout_seconds);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly
@@ -320,43 +320,43 @@ uint8_t mc_dpi_ipv4_fragmentation_set_reassembly_timeout(
  * @param state            A pointer to the state of the library.
  * @param timeout_seconds  The reassembly timeout.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_set_reassembly_timeout(
-    mc_dpi_library_state_t* state, uint8_t timeout_seconds);
+uint8_t mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(
+    mc_pfwl_library_state_t* state, uint8_t timeout_seconds);
 
 /**
  * Disable IPv4 defragmentation.
  * @param state A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if the
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the
  *         state has not been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv4_fragmentation_disable(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_library_state_t* state);
 
 /**
  * Disable IPv6 defragmentation.
  * @param state A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_ipv6_fragmentation_disable(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_library_state_t* state);
 
 /**
  * If enabled, the library will reorder out of order TCP packets
  * (enabled by default).
  * @param state  A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if the state
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the state
  *         has not been changed because a problem happened.
  */
-uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_library_state_t* state);
 
 /**
  * If it is called, the library will not reorder out of order TCP packets.
@@ -367,55 +367,55 @@ uint8_t mc_dpi_tcp_reordering_enable(mc_dpi_library_state_t* state);
  * extracted informations could be erroneous or incomplete.
  * @param state A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_tcp_reordering_disable(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_library_state_t* state);
 
 /**
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
  * @param protocol      The protocol to enable.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_enable_protocol(mc_dpi_library_state_t* state,
-                               dpi_l7_prot_id protocol);
+uint8_t mc_pfwl_enable_protocol(mc_pfwl_library_state_t* state,
+                               pfwl_l7_prot_id protocol);
 
 /**
  * Disable a protocol inspector.
  * @param state       A pointer to the state of the library.
  * @param protocol    The protocol to disable.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_disable_protocol(mc_dpi_library_state_t* state,
-                                dpi_l7_prot_id protocol);
+uint8_t mc_pfwl_disable_protocol(mc_pfwl_library_state_t* state,
+                                pfwl_l7_prot_id protocol);
 
 /**
  * Enable all the protocol inspector.
  * @param state      A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_inspect_all(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_inspect_all(mc_pfwl_library_state_t* state);
 
 /**
  * Disable all the protocol inspector.
  * @param state      A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_inspect_nothing(mc_pfwl_library_state_t* state);
 
 /**
  * Returns the string represetations of the protocols.
@@ -423,21 +423,21 @@ uint8_t mc_dpi_inspect_nothing(mc_dpi_library_state_t* state);
  * @return  An array A of string, such that A[i] is the
  * string representation of the protocol with id 'i'.
  */
-const char** const mc_dpi_get_protocol_strings();
+const char** const mc_pfwl_get_protocol_strings();
 
 /**
  * Returns the string represetation of a protocol.
  * @param   protocol The protocol identifier.
  * @return  The string representation of the protocol with id 'protocol'.
  */
-const char* const mc_dpi_get_protocol_string(dpi_l7_prot_id protocol);
+const char* const mc_pfwl_get_protocol_string(pfwl_l7_prot_id protocol);
 
 /**
  * Returns the protocol id corresponding to a protocol string.
  * @param string The protocols tring.
  * @return The protocol id corresponding to a protocol string.
  */
-dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string);
+pfwl_l7_prot_id mc_pfwl_get_protocol_id(const char* const string);
 
 /**
  * Sets the callback that will be called when a flow expires.
@@ -445,13 +445,13 @@ dpi_l7_prot_id mc_dpi_get_protocol_id(const char* const string);
  * @param state     A pointer to the state of the library.
  * @param cleaner   The callback used to clear the user state.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. DPI_STATE_UPDATE_FAILURE if
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
+ *         successfully updated. PFWL_STATE_UPDATE_FAILURE if
  *         the state has not been changed because a problem
  *         happened.
  */
-uint8_t mc_dpi_set_flow_cleaner_callback(mc_dpi_library_state_t* state,
-                                         dpi_flow_cleaner_callback* cleaner);
+uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_library_state_t* state,
+                                         pfwl_flow_cleaner_callback* cleaner);
 
 /**
  * Sets callbacks informations. When a protocol is identified the
@@ -476,13 +476,13 @@ uint8_t mc_dpi_set_flow_cleaner_callback(mc_dpi_library_state_t* state,
  *                    will be passed to any HTTP callback when it is
  *                    invoked.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  *
  **/
-uint8_t mc_dpi_http_activate_callbacks(mc_dpi_library_state_t* state,
-                                       dpi_http_callbacks_t* callbacks,
+uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_library_state_t* state,
+                                       pfwl_http_callbacks_t* callbacks,
                                        void* user_data);
 
 /**
@@ -490,10 +490,10 @@ uint8_t mc_dpi_http_activate_callbacks(mc_dpi_library_state_t* state,
  * user_data is not freed/modified.
  * @param state       A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. DPI_STATE_UPDATE_FAILURE if the state has not
+ * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
+ *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_dpi_http_disable_callbacks(mc_dpi_library_state_t* state);
+uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_library_state_t* state);
 
-#endif /* MP_DPI_API_H_ */
+#endif /* MP_PFWL_API_H_ */

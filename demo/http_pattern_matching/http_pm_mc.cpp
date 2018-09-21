@@ -70,8 +70,8 @@ typedef struct pcap_packets_memory{
 	u_int32_t next_packet_to_sent;
 }pcap_packets_memory_t;
 
-mc_dpi_packet_reading_result_t reading_cb(void* user_data){
-	mc_dpi_packet_reading_result_t r;
+mc_pfwl_packet_reading_result_t reading_cb(void* user_data){
+	mc_pfwl_packet_reading_result_t r;
 
 	pcap_packets_memory_t* packets=(pcap_packets_memory_t*) user_data;
 
@@ -89,7 +89,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	return r;
 }
 
-void processing_cb(mc_dpi_processing_result_t* processing_result, void* user_data){
+void processing_cb(mc_pfwl_processing_result_t* processing_result, void* user_data){
 	;
 }
 
@@ -98,7 +98,7 @@ static void match_found(string::size_type position, trie::value_type const &matc
 	cout << "Matched '" << match.second << "' at " << position << endl;
 }
 
-void body_cb(dpi_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, dpi_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
+void body_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
 	if(*flow_specific_user_data==NULL){
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
             *flow_specific_user_data=new byte_scanner(*(static_cast<trie*>(user_data)), match_found);
@@ -172,12 +172,12 @@ int main(int argc, char **argv){
 		pcap_t *handle;
 		char errbuf[PCAP_ERRBUF_SIZE];
 
-		mc_dpi_parallelism_details_t details;
-		bzero(&details, sizeof(mc_dpi_parallelism_details_t));
+		mc_pfwl_parallelism_details_t details;
+		bzero(&details, sizeof(mc_pfwl_parallelism_details_t));
 		details.available_processors=num_workers;
 		details.mapping=mapping;
 
-		mc_dpi_library_state_t* state=mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
+		mc_pfwl_library_state_t* state=mc_pfwl_init_stateful(32767, 32767, 1000000, 1000000, details);
 
 		printf("Open offline.\n");
 		handle=pcap_open_offline(input_file_name, errbuf);
@@ -251,7 +251,7 @@ int main(int argc, char **argv){
 
 
 	        size_t len = header.caplen - ip_offset - virtual_offset;
-			if(posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*len)){
+			if(posix_memalign((void**) &(packets[num_packets]), PFWL_CACHE_LINE_SIZE, sizeof(unsigned char)*len)){
 				throw std::runtime_error("posix_memalign failure.");
 			}
 			assert(packets[num_packets]);
@@ -273,18 +273,18 @@ int main(int argc, char **argv){
 		for(uint i=0; i<SCANNER_POOL_SIZE; i++){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
-    mc_dpi_set_core_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
-		mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
-		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
-		mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
+    mc_pfwl_set_core_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
+		mc_pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
+		pfwl_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
+		mc_pfwl_http_activate_callbacks(state, &callback, (void*)(&t));
 		timer scan_timer;
 		scan_timer.start();
-		mc_dpi_run(state);
+		mc_pfwl_run(state);
 
 
-		mc_dpi_wait_end(state);
+		mc_pfwl_wait_end(state);
 		std::cout << "++++Ended" << std::endl;
-		mc_dpi_print_stats(state);
+		mc_pfwl_print_stats(state);
 		scan_timer.stop();
 
 		byte_scanner* bs;
@@ -293,7 +293,7 @@ int main(int argc, char **argv){
 			delete bs;
 		}
 		/* And close the session */
-		mc_dpi_terminate(state);
+		mc_pfwl_terminate(state);
 		delete scanner_pool;
 
 		full_timer.stop();

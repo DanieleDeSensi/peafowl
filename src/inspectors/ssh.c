@@ -41,15 +41,15 @@ static void ssh_zap_cr(char *str, int len) {
 }
 */
 
-uint8_t check_ssh(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_ssh(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t) {
+                  pfwl_tracking_informations_t* t) {
     if (pkt->direction == 0) {
         // Client -> Server)
         if (data_length > 7 && data_length < 100 &&
             memcmp(app_data, "SSH-", 4) == 0) {
             /*
-            if (dpi_metadata_extraction(DPI_PROTOCOL_SSH)) {
+            if (pfwl_metadata_extraction(PFWL_PROTOCOL_SSH)) {
                 t->ssh_client_signature = malloc(sizeof(char)*(data_length + 1));
                 strncpy(t->ssh_client_signature, (const char *) app_data, data_length);
                 t->ssh_client_signature[data_length] = '\0';
@@ -63,7 +63,7 @@ uint8_t check_ssh(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
         if (data_length > 7 && data_length < 500 &&
             memcmp(app_data, "SSH-", 4) == 0) {
             /*
-            if (dpi_metadata_extraction(DPI_PROTOCOL_SSH)) {
+            if (pfwl_metadata_extraction(PFWL_PROTOCOL_SSH)) {
                 t->ssh_server_signature = malloc(sizeof(char)*(data_length + 1));
                 strncpy(t->ssh_server_signature, (const char *) app_data, data_length);
                 t->ssh_server_signature[data_length] = '\0';
@@ -75,10 +75,10 @@ uint8_t check_ssh(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
     }
 
     if (t->ssh_stage >= 2) {
-        return DPI_PROTOCOL_MATCHES;
+        return PFWL_PROTOCOL_MATCHES;
     } else {
-        return DPI_PROTOCOL_MORE_DATA_NEEDED;
+        return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     }
 
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
 }

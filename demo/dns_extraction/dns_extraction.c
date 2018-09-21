@@ -56,7 +56,7 @@ int main(int argc, char** argv){
   char* pcap_filename=argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
 
-  dpi_library_state_t* state = dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+  pfwl_library_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
   pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
 
   if(handle == NULL){
@@ -86,11 +86,11 @@ int main(int argc, char** argv){
   uint virtual_offset = 0;
 
   // Server Name field
-  pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NAME_SRV);
+  pfwl_protocol_field_add(state, PFWL_PROTOCOL_DNS, PFWL_FIELDS_DNS_NAME_SRV);
   // IP address of Server Name field
-  /* pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_NS_IP_1); */
+  /* pfwl_protocol_field_add(state, PFWL_PROTOCOL_DNS, PFWL_FIELDS_DNS_NS_IP_1); */
   // Authoritative Server Name field
-  /* pfwl_protocol_field_add(state, DPI_PROTOCOL_DNS, DPI_FIELDS_DNS_AUTH_SRV); */
+  /* pfwl_protocol_field_add(state, PFWL_PROTOCOL_DNS, PFWL_FIELDS_DNS_AUTH_SRV); */
 
   while((packet = pcap_next(handle, &header)) != NULL){
     if(datalink_type == DLT_EN10MB){
@@ -107,24 +107,24 @@ int main(int argc, char** argv){
       }
     }
 
-    dpi_identification_result_t r = dpi_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+    pfwl_identification_result_t r = pfwl_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
 
-    if(r.protocol_l7 == DPI_PROTOCOL_DNS &&
-       r.protocol_fields[DPI_FIELDS_DNS_NAME_SRV].len){
-      const char* field_value = r.protocol_fields[DPI_FIELDS_DNS_NAME_SRV].s;
-      size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len;
+    if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
+       r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].len){
+      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].s;
+      size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].len;
       printf("Name Server detected: %.*s\n", (int) field_len, field_value);
     }
-    if(r.protocol_l7 == DPI_PROTOCOL_DNS &&
-       r.protocol_fields[DPI_FIELDS_DNS_NS_IP_1].len){
-      const char* field_value = r.protocol_fields[DPI_FIELDS_DNS_NS_IP_1].s;
-      size_t field_len = r.protocol_fields[DPI_FIELDS_DNS_NS_IP_1].len;
+    if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
+       r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].len){
+      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].s;
+      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].len;
       printf("IP address of Name Server: %.*s\n", (int) field_len, field_value);
     }
-    if(r.protocol_l7 == DPI_PROTOCOL_DNS &&
-       r.protocol_fields[DPI_FIELDS_DNS_AUTH_SRV].len){
-      const char* field_value = r.protocol_fields[DPI_FIELDS_DNS_AUTH_SRV].s;
-      size_t field_len = r.protocol_fields[DPI_FIELDS_DNS_AUTH_SRV].len;
+    if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
+       r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].len){
+      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].s;
+      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].len;
       printf("Authoritative Server detected: %.*s\n", (int) field_len, field_value);
     }
   }

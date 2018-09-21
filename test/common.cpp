@@ -55,35 +55,35 @@ std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
     }
 }
 
-std::vector<dpi_identification_result_t> getProtocols(const char* pcapName,
+std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols){
     return getProtocolsWithState(pcapName,
                           protocols,
-                          dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS));
+                          pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS));
 }
 
-std::vector<dpi_identification_result_t> getProtocolsWithState(const char* pcapName,
+std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName,
                            std::vector<uint>& protocols,
-                           dpi_library_state_t* state){
-    std::vector<dpi_identification_result_t> results;
+                           pfwl_library_state_t* state){
+    std::vector<pfwl_identification_result_t> results;
     protocols.clear();
-    protocols.resize(DPI_NUM_PROTOCOLS + 1); // +1 to store unknown protocols
+    protocols.resize(PFWL_NUM_PROTOCOLS + 1); // +1 to store unknown protocols
 
     Pcap pcap(pcapName);
 
-    dpi_identification_result_t r;
+    pfwl_identification_result_t r;
     std::pair<const u_char*, unsigned long> pkt;
 
     while((pkt = pcap.getNextPacket()).first != NULL){
-        r = dpi_get_protocol(state, pkt.first, pkt.second, time(NULL));
+        r = pfwl_get_protocol(state, pkt.first, pkt.second, time(NULL));
         results.push_back(r);
         if(r.protocol_l4 == IPPROTO_TCP ||
            r.protocol_l4 == IPPROTO_UDP){
-            if(r.protocol_l7 > DPI_NUM_PROTOCOLS){r.protocol_l7 = DPI_NUM_PROTOCOLS;}
+            if(r.protocol_l7 > PFWL_NUM_PROTOCOLS){r.protocol_l7 = PFWL_NUM_PROTOCOLS;}
             ++protocols[r.protocol_l7];
         }
     }
 
-    dpi_terminate(state);
+    pfwl_terminate(state);
     return results;
 }

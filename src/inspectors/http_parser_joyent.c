@@ -636,7 +636,7 @@ size_t http_parser_execute(http_parser *parser,
   enum state p_state = (enum state)parser->state;
   const unsigned int lenient = parser->lenient_http_headers;
 
-#ifdef DPI_EXTENSION
+#ifdef PFWL_EXTENSION
   parser->copy = 0;
 #endif
 
@@ -1978,7 +1978,7 @@ size_t http_parser_execute(http_parser *parser,
     }
   }
 
-#ifdef DPI_EXTENSION
+#ifdef PFWL_EXTENSION
   if (parser->state != start_state && parser->state != s_dead) parser->copy = 1;
 #endif
 

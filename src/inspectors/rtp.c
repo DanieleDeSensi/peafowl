@@ -32,10 +32,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DPI_DEBUG_RTP 0
+#define PFWL_DEBUG_RTP 0
 #define debug_print(fmt, ...)                             \
   do {                                                    \
-    if (DPI_DEBUG_RTP) fprintf(stdout, fmt, __VA_ARGS__); \
+    if (PFWL_DEBUG_RTP) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
 static uint8_t isValidMSRTPType(uint8_t payloadType) {
@@ -79,14 +79,14 @@ static uint8_t isValidMSRTPType(uint8_t payloadType) {
   }
 }
 
-uint8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_rtp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t) {
+                  pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_UDP) {
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
   if (data_length < 2 || pkt->dstport <= 1024 || pkt->srcport <= 1024) {
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
 
   uint8_t data_type = app_data[1] & 0x7F;
@@ -102,17 +102,17 @@ uint8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
       if (((data_type < 72) || (data_type > 76)) &&
           ((data_type <= 34) || ((data_type >= 96) && (data_type <= 127))) &&
           (*ssid != 0)) {
-        return DPI_PROTOCOL_MATCHES;
+        return PFWL_PROTOCOL_MATCHES;
       }
 
       else if ((payloadType = isValidMSRTPType(app_data[1] & 0xFF)) &&
                (payloadType == 1)) {
-        return DPI_PROTOCOL_MATCHES;
+        return PFWL_PROTOCOL_MATCHES;
       }
     } else {
-      return DPI_PROTOCOL_MORE_DATA_NEEDED;
+      return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     }
   }
 
-  return DPI_PROTOCOL_NO_MATCHES;
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

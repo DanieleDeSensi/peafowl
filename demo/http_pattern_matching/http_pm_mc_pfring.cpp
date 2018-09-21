@@ -96,7 +96,7 @@ unsigned long num_pkt_buffers = 128000;
 
 static ff::uSWSR_Ptr_Buffer* scanner_pool;
 
-mc_dpi_packet_reading_result_t reading_cb(void* user_data){
+mc_pfwl_packet_reading_result_t reading_cb(void* user_data){
 	static unsigned long last_ts=getticks();
 	static u_int32_t last_sec=0;
 #ifdef USE_PF_RING_CLUSTER
@@ -135,7 +135,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 		} else if(rc == 0) {
 			continue;
 		} else {
-			mc_dpi_packet_reading_result_t r;
+			mc_pfwl_packet_reading_result_t r;
 			const unsigned char *p = (const unsigned char*)pkt_handle;
 
 			r.pkt = &p[14];
@@ -155,7 +155,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 }
 
 
-void processing_cb(mc_dpi_processing_result_t* processing_result, void* user_data){
+void processing_cb(mc_pfwl_processing_result_t* processing_result, void* user_data){
 	pkt_buff->push((void*)processing_result->user_pointer);
 	if(verbose) printf("pkt_buff->push()\n");
 }
@@ -167,9 +167,9 @@ static void match_found(string::size_type position,
 	cout << "Matched '" << match.second << "' at " << position << endl;
 }
 
-void body_cb(dpi_http_message_informations_t* http_informations,
+void body_cb(pfwl_http_message_informations_t* http_informations,
 		const u_char* app_data, u_int32_t data_length,
-		dpi_pkt_infos_t* pkt,
+		pfwl_pkt_infos_t* pkt,
 		void** flow_specific_user_data, void* user_data,
 		u_int8_t last){
   
@@ -342,12 +342,12 @@ int main(int argc, char **argv){
 		/*             Start scanning the files.              */
 		/******************************************************/
 
-		mc_dpi_parallelism_details_t details;
-		bzero(&details, sizeof(mc_dpi_parallelism_details_t));
+		mc_pfwl_parallelism_details_t details;
+		bzero(&details, sizeof(mc_pfwl_parallelism_details_t));
 		details.available_processors=num_workers;
 		details.mapping=mapping;
 
-		mc_dpi_library_state_t* state=mc_dpi_init_stateful(
+		mc_pfwl_library_state_t* state=mc_pfwl_init_stateful(
 				32767, 32767, 1000000, 1000000, details);
 
 		int snaplen = SNAPLEN;
@@ -366,12 +366,12 @@ int main(int argc, char **argv){
 		for(uint i=0; i<SCANNER_POOL_SIZE; i++){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
-		//		mc_dpi_tcp_reordering_disable(state);
-        mc_dpi_set_core_callbacks(
+		//		mc_pfwl_tcp_reordering_disable(state);
+        mc_pfwl_set_core_callbacks(
 				state, &reading_cb, &processing_cb, (void*) NULL);
-		mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
-		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
-				assert(mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t))==DPI_STATE_UPDATE_SUCCESS);
+		mc_pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
+		pfwl_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
+				assert(mc_pfwl_http_activate_callbacks(state, &callback, (void*)(&t))==PFWL_STATE_UPDATE_SUCCESS);
 
 
 		pkt_buff = new ff::SWSR_Ptr_Buffer(num_pkt_buffers);
@@ -404,11 +404,11 @@ int main(int argc, char **argv){
 
 		timer scan_timer;
 		scan_timer.start();
-		mc_dpi_run(state);
+		mc_pfwl_run(state);
 
 
-		mc_dpi_wait_end(state);
-		mc_dpi_print_stats(state);
+		mc_pfwl_wait_end(state);
+		mc_pfwl_print_stats(state);
 		scan_timer.stop();
 
 		byte_scanner* bs;
@@ -417,7 +417,7 @@ int main(int argc, char **argv){
 			delete bs;
 		}
 		/* And close the session */
-		mc_dpi_terminate(state);
+		mc_pfwl_terminate(state);
 		delete scanner_pool;
 
 		full_timer.stop();

@@ -40,7 +40,7 @@
 #include <strings.h>
 #include <time.h>
 
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
 #include <numa.h>
 #endif
 
@@ -48,29 +48,29 @@
 #include "prometheus.h"
 #endif
 
-#define DPI_CACHE_LINES_PADDING_REQUIRED(size)                 \
-  (size % DPI_CACHE_LINE_SIZE == 0 ? 0 : DPI_CACHE_LINE_SIZE - \
-                                             (size % DPI_CACHE_LINE_SIZE))
+#define PFWL_CACHE_LINES_PADDING_REQUIRED(size)                 \
+  (size % PFWL_CACHE_LINE_SIZE == 0 ? 0 : PFWL_CACHE_LINE_SIZE - \
+                                             (size % PFWL_CACHE_LINE_SIZE))
 
-#define DPI_DEBUG_FLOW_TABLE 0
+#define PFWL_DEBUG_FLOW_TABLE 0
 #define debug_print(fmt, ...)                                    \
   do {                                                           \
-    if (DPI_DEBUG_FLOW_TABLE) fprintf(stdout, fmt, __VA_ARGS__); \
+    if (PFWL_DEBUG_FLOW_TABLE) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
-#define DPI_FLOW_TABLE_MAX_IDLE_TIME 30 /** In seconds. **/
+#define PFWL_FLOW_TABLE_MAX_IDLE_TIME 30 /** In seconds. **/
 
-#define DPI_FLOW_TABLE_WALK_TIME 1 /** In seconds. **/
+#define PFWL_FLOW_TABLE_WALK_TIME 1 /** In seconds. **/
 
 static inline ipv4_flow_t* v4_flow_alloc() {
   void* r;
-#if DPI_NUMA_AWARE
-  r = numa_alloc_onnode(sizeof(ipv4_flow_t), DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+#if PFWL_NUMA_AWARE
+  r = numa_alloc_onnode(sizeof(ipv4_flow_t), PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
   assert(r);
 #else
-#if DPI_FLOW_TABLE_ALIGN_FLOWS
+#if PFWL_FLOW_TABLE_ALIGN_FLOWS
   int tmp =
-      posix_memalign((void**)&r, DPI_CACHE_LINE_SIZE, sizeof(ipv4_flow_t));
+      posix_memalign((void**)&r, PFWL_CACHE_LINE_SIZE, sizeof(ipv4_flow_t));
   if (tmp) {
     assert("Failure on posix_memalign" == 0);
   }
@@ -84,13 +84,13 @@ static inline ipv4_flow_t* v4_flow_alloc() {
 
 static inline ipv6_flow_t* v6_flow_alloc() {
   void* r;
-#if DPI_NUMA_AWARE
-  r = numa_alloc_onnode(sizeof(ipv6_flow_t), DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+#if PFWL_NUMA_AWARE
+  r = numa_alloc_onnode(sizeof(ipv6_flow_t), PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
   assert(r);
 #else
-#if DPI_FLOW_TABLE_ALIGN_FLOWS
+#if PFWL_FLOW_TABLE_ALIGN_FLOWS
   int tmp =
-      posix_memalign((void**)&r, DPI_CACHE_LINE_SIZE, sizeof(ipv6_flow_t));
+      posix_memalign((void**)&r, PFWL_CACHE_LINE_SIZE, sizeof(ipv6_flow_t));
   if (tmp) {
     assert("Failure on posix_memalign" == 0);
   }
@@ -103,7 +103,7 @@ static inline ipv6_flow_t* v6_flow_alloc() {
 }
 
 static inline void v4_flow_free(ipv4_flow_t* flow) {
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
   numa_free(flow, sizeof(ipv4_flow_t));
 #else
   free(flow);
@@ -111,28 +111,28 @@ static inline void v4_flow_free(ipv4_flow_t* flow) {
 }
 
 static inline void v6_flow_free(ipv6_flow_t* flow) {
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
   numa_free(flow, sizeof(ipv6_flow_t));
 #else
   free(flow);
 #endif
 }
 
-typedef uint32_t(dpi_fnv_hash_function)(dpi_pkt_infos_t* in, uint8_t log);
+typedef uint32_t(pfwl_fnv_hash_function)(pfwl_pkt_infos_t* in, uint8_t log);
 
-typedef struct dpi_flow_DB_partition_specific_informations {
+typedef struct pfwl_flow_DB_partition_specific_informations {
   /** This table part is in the range [lowest_index, highest_index]. **/
   uint32_t lowest_index;
   uint32_t highest_index;
   uint32_t last_walk;
   uint32_t active_flows;
   uint32_t max_active_flows;
-} dpi_flow_DB_partition_specific_informations_t;
+} pfwl_flow_DB_partition_specific_informations_t;
 
-typedef struct dpi_flow_DB_v4_partition {
-  struct dpi_flow_DB_v4_real_partition {
-    dpi_flow_DB_partition_specific_informations_t informations;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+typedef struct pfwl_flow_DB_v4_partition {
+  struct pfwl_flow_DB_v4_real_partition {
+    pfwl_flow_DB_partition_specific_informations_t informations;
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     /**
      * If an integer x is contained in this array, then
      * memory_chunk_lower_bound[i] can be used.
@@ -148,14 +148,14 @@ typedef struct dpi_flow_DB_v4_partition {
    * avoiding false sharing between threads working on different
    * partitions.
    **/
-  char padding[DPI_CACHE_LINES_PADDING_REQUIRED(
-      sizeof(struct dpi_flow_DB_v4_real_partition))];
-} dpi_flow_DB_v4_partition_t;
+  char padding[PFWL_CACHE_LINES_PADDING_REQUIRED(
+      sizeof(struct pfwl_flow_DB_v4_real_partition))];
+} pfwl_flow_DB_v4_partition_t;
 
-typedef struct dpi_flow_DB_v6_partition {
-  struct dpi_flow_DB_v6_real_partition {
-    dpi_flow_DB_partition_specific_informations_t informations;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+typedef struct pfwl_flow_DB_v6_partition {
+  struct pfwl_flow_DB_v6_real_partition {
+    pfwl_flow_DB_partition_specific_informations_t informations;
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     /**
      * If an integer x is contained in this array, then
      * memory_chunk_lower_bound[i] can be used.
@@ -171,57 +171,57 @@ typedef struct dpi_flow_DB_v6_partition {
    * avoiding false sharing between threads working on different
    * partitions.
    **/
-  char padding[DPI_CACHE_LINES_PADDING_REQUIRED(
-      sizeof(struct dpi_flow_DB_v6_real_partition))];
-} dpi_flow_DB_v6_partition_t;
+  char padding[PFWL_CACHE_LINES_PADDING_REQUIRED(
+      sizeof(struct pfwl_flow_DB_v6_real_partition))];
+} pfwl_flow_DB_v6_partition_t;
 
-struct dpi_flow_DB_v4 {
+struct pfwl_flow_DB_v4 {
   /**
    *  The flow table may be shared among multiple threads. In this
    *  case each thread will access to a different part of 'table'.
-   *  We also have one dpi_flow_DB_v*_partition_t per thread containing
+   *  We also have one pfwl_flow_DB_v*_partition_t per thread containing
    *  the thread's partition specific informations.
    */
   ipv4_flow_t* table;
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
   uint32_t seed;
 #endif
   uint32_t total_size;
-  dpi_flow_DB_v4_partition_t* partitions;
+  pfwl_flow_DB_v4_partition_t* partitions;
   uint16_t num_partitions;
   uint32_t max_active_flows;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
   uint32_t individual_pool_size;
   uint32_t start_pool_size;
 #endif
 };
 
-struct dpi_flow_DB_v6 {
+struct pfwl_flow_DB_v6 {
   /**
    *  The flow table may be shared among multiple threads. In this
    *  case each thread will access to a different part of 'table'.
-   *  We also have one dpi_flow_DB_v*_partition_t per thread containing
+   *  We also have one pfwl_flow_DB_v*_partition_t per thread containing
    *  the thread's partition specific informations.
    */
   ipv6_flow_t* table;
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
   uint32_t seed;
 #endif
   uint32_t total_size;
-  dpi_flow_DB_v6_partition_t* partitions;
+  pfwl_flow_DB_v6_partition_t* partitions;
   uint16_t num_partitions;
   uint32_t max_active_flows;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
   uint32_t individual_pool_size;
   uint32_t start_pool_size;
 #endif
 };
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     uint8_t
-    v4_equals(ipv4_flow_t* flow, dpi_pkt_infos_t* pkt_infos) {
+    v4_equals(ipv4_flow_t* flow, pfwl_pkt_infos_t* pkt_infos) {
   return ((flow->srcaddr == pkt_infos->src_addr_t.ipv4_srcaddr &&
            flow->dstaddr == pkt_infos->dst_addr_t.ipv4_dstaddr &&
            flow->srcport == pkt_infos->srcport &&
@@ -233,11 +233,11 @@ static
          flow->l4prot == pkt_infos->l4prot;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     uint8_t
-    v6_equals(ipv6_flow_t* flow, dpi_pkt_infos_t* pkt_infos) {
+    v6_equals(ipv6_flow_t* flow, pfwl_pkt_infos_t* pkt_infos) {
   uint8_t i;
 
   /*1: src=src and dst=dst. 2: src=dst and dst=src. */
@@ -272,12 +272,12 @@ static
     return 0;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     void
-    dpi_flow_table_initialize_informations(
-        dpi_flow_DB_partition_specific_informations_t* table_informations,
+    pfwl_flow_table_initialize_informations(
+        pfwl_flow_DB_partition_specific_informations_t* table_informations,
         uint32_t lowest_index, uint32_t highest_index,
         uint32_t max_active_flows) {
   table_informations->lowest_index = lowest_index;
@@ -288,7 +288,7 @@ static
   table_informations->active_flows = 0;
 }
 
-static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db) {
+static void pfwl_flow_table_update_flow_count_v4(pfwl_flow_DB_v4_t* db) {
   ipv4_flow_t* cur;
   if (db != NULL) {
     if (db->table != NULL) {
@@ -307,7 +307,7 @@ static void dpi_flow_table_update_flow_count_v4(dpi_flow_DB_v4_t* db) {
   }
 }
 
-static void dpi_flow_table_update_flow_count_v6(dpi_flow_DB_v6_t* db) {
+static void pfwl_flow_table_update_flow_count_v6(pfwl_flow_DB_v6_t* db) {
   ipv6_flow_t* cur;
   if (db != NULL) {
     if (db->table != NULL) {
@@ -326,27 +326,27 @@ static void dpi_flow_table_update_flow_count_v6(dpi_flow_DB_v6_t* db) {
   }
 }
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-dpi_flow_DB_v4_t* dpi_flow_table_create_v4(uint32_t size,
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
+pfwl_flow_DB_v4_t* pfwl_flow_table_create_v4(uint32_t size,
                                            uint32_t max_active_v4_flows,
                                            uint16_t num_partitions,
                                            uint32_t start_pool_size) {
 #else
-dpi_flow_DB_v4_t* dpi_flow_table_create_v4(uint32_t size,
+pfwl_flow_DB_v4_t* pfwl_flow_table_create_v4(uint32_t size,
                                            uint32_t max_active_v4_flows,
                                            uint16_t num_partitions) {
 #endif
-  dpi_flow_DB_v4_t* table = NULL;
+  pfwl_flow_DB_v4_t* table = NULL;
 
   if (size != 0) {
-    table = (dpi_flow_DB_v4_t*)malloc(sizeof(dpi_flow_DB_v4_t));
+    table = (pfwl_flow_DB_v4_t*)malloc(sizeof(pfwl_flow_DB_v4_t));
     assert(table);
     table->table = (ipv4_flow_t*)malloc(sizeof(ipv4_flow_t) * size);
     assert(table->table);
     table->total_size = size;
     table->num_partitions = num_partitions;
     table->max_active_flows = max_active_v4_flows;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     table->start_pool_size = start_pool_size;
 #endif
 
@@ -356,32 +356,32 @@ dpi_flow_DB_v4_t* dpi_flow_table_create_v4(uint32_t size,
       table->table[i].prev = &(table->table[i]);
     }
 
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
     table->partitions = numa_alloc_onnode(
-        sizeof(dpi_flow_DB_v4_partition_t) * table->num_partitions,
-        DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+        sizeof(pfwl_flow_DB_v4_partition_t) * table->num_partitions,
+        PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
     assert(table->partitions);
 #else
     int tmp = posix_memalign(
-        (void**)&(table->partitions), DPI_CACHE_LINE_SIZE,
-        sizeof(dpi_flow_DB_v4_partition_t) * table->num_partitions);
+        (void**)&(table->partitions), PFWL_CACHE_LINE_SIZE,
+        sizeof(pfwl_flow_DB_v4_partition_t) * table->num_partitions);
     if (tmp) {
       assert("Failure on posix_memalign" == 0);
     }
 #endif
 
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
     srand((unsigned int)time(NULL));
     table->seed = rand();
 #endif
 
-    dpi_flow_table_setup_partitions_v4(table, table->num_partitions);
+    pfwl_flow_table_setup_partitions_v4(table, table->num_partitions);
   } else
     table = NULL;
   return table;
 }
 
-void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table,
+void pfwl_flow_table_setup_partitions_v4(pfwl_flow_DB_v4_t* table,
                                         uint16_t num_partitions) {
   table->num_partitions = num_partitions;
   /** Partitions management. **/
@@ -398,7 +398,7 @@ void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table,
         "[flow_table.c]: Created partition "
         "[%" PRIu32 ", %" PRIu32 "]\n",
         lowest_index, highest_index);
-    dpi_flow_table_initialize_informations(
+    pfwl_flow_table_initialize_informations(
         &(table->partitions[j].partition.informations), lowest_index,
         highest_index, partition_max_active_v4_flows);
     lowest_index = highest_index + 1;
@@ -412,31 +412,31 @@ void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table,
     else
       highest_index += partition_size;
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     ipv4_flow_t* flow_pool;
     uint32_t i;
     table->individual_pool_size =
         table->start_pool_size / table->num_partitions;
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
     flow_pool =
         numa_alloc_onnode(sizeof(ipv4_flow_t) * table->individual_pool_size,
-                          DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+                          PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
     assert(flow_pool);
     table->partitions[j].partition.pool =
         numa_alloc_onnode(sizeof(uint32_t) * table->individual_pool_size,
-                          DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+                          PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
     assert(table->partitions[j].partition.pool);
 #else
     int tmp =
-        posix_memalign((void**)&flow_pool, DPI_CACHE_LINE_SIZE,
+        posix_memalign((void**)&flow_pool, PFWL_CACHE_LINE_SIZE,
                        (sizeof(ipv4_flow_t) * table->individual_pool_size) +
-                           DPI_CACHE_LINE_SIZE);
+                           PFWL_CACHE_LINE_SIZE);
     if (tmp) {
       assert("Failure on posix_memalign" == 0);
     }
     tmp = posix_memalign(
-        (void**)&(table->partitions[j].partition.pool), DPI_CACHE_LINE_SIZE,
-        (sizeof(uint32_t) * table->individual_pool_size) + DPI_CACHE_LINE_SIZE);
+        (void**)&(table->partitions[j].partition.pool), PFWL_CACHE_LINE_SIZE,
+        (sizeof(uint32_t) * table->individual_pool_size) + PFWL_CACHE_LINE_SIZE);
     if (tmp) {
       assert("Failure on posix_memalign" == 0);
     }
@@ -451,30 +451,30 @@ void dpi_flow_table_setup_partitions_v4(dpi_flow_DB_v4_t* table,
 #endif
   }
   debug_print("%s\n", "[flow_table.c]: Computing active v4 flows.");
-  dpi_flow_table_update_flow_count_v4(table);
+  pfwl_flow_table_update_flow_count_v4(table);
   debug_print("%s\n", "[flow_table.c]: Active v4 flows computation finished.");
 }
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
+pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
                                            uint32_t max_active_v6_flows,
                                            uint16_t num_partitions,
                                            uint32_t start_pool_size) {
 #else
-dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
+pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
                                            uint32_t max_active_v6_flows,
                                            uint16_t num_partitions) {
 #endif
-  dpi_flow_DB_v6_t* table = NULL;
+  pfwl_flow_DB_v6_t* table = NULL;
   if (size != 0) {
-    table = (dpi_flow_DB_v6_t*)malloc(sizeof(dpi_flow_DB_v6_t));
+    table = (pfwl_flow_DB_v6_t*)malloc(sizeof(pfwl_flow_DB_v6_t));
     assert(table);
     table->table = (ipv6_flow_t*)malloc(sizeof(ipv6_flow_t) * size);
     assert(table->table);
     table->total_size = size;
     table->num_partitions = num_partitions;
     table->max_active_flows = max_active_v6_flows;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     table->start_pool_size = start_pool_size;
 #endif
 
@@ -484,31 +484,31 @@ dpi_flow_DB_v6_t* dpi_flow_table_create_v6(uint32_t size,
       table->table[i].prev = &(table->table[i]);
     }
 
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
     table->partitions = numa_alloc_onnode(
-        sizeof(dpi_flow_DB_v6_partition_t) * table->num_partitions,
-        DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+        sizeof(pfwl_flow_DB_v6_partition_t) * table->num_partitions,
+        PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
     assert(table->partitions);
 #else
     int tmp = posix_memalign(
-        (void**)&(table->partitions), DPI_CACHE_LINE_SIZE,
-        sizeof(dpi_flow_DB_v6_partition_t) * table->num_partitions);
+        (void**)&(table->partitions), PFWL_CACHE_LINE_SIZE,
+        sizeof(pfwl_flow_DB_v6_partition_t) * table->num_partitions);
     if (tmp) {
       assert("Failure on posix_memalign" == 0);
     }
 #endif
 
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
     srand((unsigned int)time(NULL));
     table->seed = rand();
 #endif
-    dpi_flow_table_setup_partitions_v6(table, table->num_partitions);
+    pfwl_flow_table_setup_partitions_v6(table, table->num_partitions);
   } else
     table = NULL;
   return table;
 }
 
-void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table,
+void pfwl_flow_table_setup_partitions_v6(pfwl_flow_DB_v6_t* table,
                                         uint16_t num_partitions) {
   /** Partitions management. **/
   uint32_t partition_size =
@@ -520,7 +520,7 @@ void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table,
   uint32_t lowest_index = 0;
   uint32_t highest_index = lowest_index + partition_size - 1;
   for (j = 0; j < table->num_partitions; ++j) {
-    dpi_flow_table_initialize_informations(
+    pfwl_flow_table_initialize_informations(
         &(table->partitions[j].partition.informations), lowest_index,
         highest_index, partition_max_active_v6_flows);
     lowest_index = highest_index + 1;
@@ -535,31 +535,31 @@ void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table,
     else
       highest_index += partition_size;
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     ipv6_flow_t* flow_pool;
     uint32_t i = 0;
     table->individual_pool_size =
         table->start_pool_size / table->num_partitions;
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
     flow_pool =
         numa_alloc_onnode(sizeof(ipv6_flow_t) * table->individual_pool_size,
-                          DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+                          PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
     assert(flow_pool);
     table->partitions[j].partition.pool =
         numa_alloc_onnode(sizeof(uint32_t) * table->individual_pool_size,
-                          DPI_NUMA_AWARE_FLOW_TABLE_NODE);
+                          PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
     assert(table->partitions[j].partition.pool);
 #else
     int tmp =
-        posix_memalign((void**)&flow_pool, DPI_CACHE_LINE_SIZE,
+        posix_memalign((void**)&flow_pool, PFWL_CACHE_LINE_SIZE,
                        (sizeof(ipv6_flow_t) * table->individual_pool_size) +
-                           DPI_CACHE_LINE_SIZE);
+                           PFWL_CACHE_LINE_SIZE);
     if (tmp) {
       assert("Failure on posix_memalign" == 0);
     }
     tmp = posix_memalign(
-        (void**)&(table->partitions[j].partition.pool), DPI_CACHE_LINE_SIZE,
-        (sizeof(uint32_t) * table->individual_pool_size) + DPI_CACHE_LINE_SIZE);
+        (void**)&(table->partitions[j].partition.pool), PFWL_CACHE_LINE_SIZE,
+        (sizeof(uint32_t) * table->individual_pool_size) + PFWL_CACHE_LINE_SIZE);
     if (tmp) {
       assert("Failure on posix_memalign" == 0);
     }
@@ -574,12 +574,12 @@ void dpi_flow_table_setup_partitions_v6(dpi_flow_DB_v6_t* table,
 #endif
   }
   debug_print("%s\n", "[flow_table.c]: Computing active v6 flows.");
-  dpi_flow_table_update_flow_count_v6(table);
+  pfwl_flow_table_update_flow_count_v6(table);
   debug_print("%s\n", "[flow_table.c]: Active v6 flows computation finished.");
 }
 
-void mc_dpi_flow_table_delete_flow_v4(
-    dpi_flow_DB_v4_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void mc_pfwl_flow_table_delete_flow_v4(
+    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     uint16_t partition_id, ipv4_flow_t* to_delete) {
   to_delete->prev->next = to_delete->next;
   to_delete->next->prev = to_delete->prev;
@@ -590,12 +590,12 @@ void mc_dpi_flow_table_delete_flow_v4(
   --db->partitions[partition_id].partition.informations.active_flows;
   free(to_delete->infos.tracking.http_informations[0].temp_buffer);
   free(to_delete->infos.tracking.http_informations[1].temp_buffer);
-  dpi_reordering_tcp_delete_all_fragments(&(to_delete->infos.tracking));
+  pfwl_reordering_tcp_delete_all_fragments(&(to_delete->infos.tracking));
   if(to_delete->infos.last_rebuilt_tcp_data){
     free((void*) to_delete->infos.last_rebuilt_tcp_data);
   }
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
   if (likely(
           to_delete >=
               db->partitions[partition_id].partition.memory_chunk_lower_bound &&
@@ -620,8 +620,8 @@ void mc_dpi_flow_table_delete_flow_v4(
 #endif
 }
 
-void mc_dpi_flow_table_delete_flow_v6(
-    dpi_flow_DB_v6_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void mc_pfwl_flow_table_delete_flow_v6(
+    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     uint16_t partition_id, ipv6_flow_t* to_delete) {
   to_delete->prev->next = to_delete->next;
   to_delete->next->prev = to_delete->prev;
@@ -632,9 +632,9 @@ void mc_dpi_flow_table_delete_flow_v6(
   --db->partitions[partition_id].partition.informations.active_flows;
   free(to_delete->infos.tracking.http_informations[0].temp_buffer);
   free(to_delete->infos.tracking.http_informations[1].temp_buffer);
-  dpi_reordering_tcp_delete_all_fragments(&(to_delete->infos.tracking));
+  pfwl_reordering_tcp_delete_all_fragments(&(to_delete->infos.tracking));
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
   if (likely(
           to_delete >=
               db->partitions[partition_id].partition.memory_chunk_lower_bound &&
@@ -659,27 +659,27 @@ void mc_dpi_flow_table_delete_flow_v6(
 #endif
 }
 
-void dpi_flow_table_delete_flow_v4(
-    dpi_flow_DB_v4_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void pfwl_flow_table_delete_flow_v4(
+    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     ipv4_flow_t* to_delete) {
-  mc_dpi_flow_table_delete_flow_v4(db, flow_cleaner_callback, 0, to_delete);
+  mc_pfwl_flow_table_delete_flow_v4(db, flow_cleaner_callback, 0, to_delete);
 }
 
-void dpi_flow_table_delete_flow_v6(
-    dpi_flow_DB_v6_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+void pfwl_flow_table_delete_flow_v6(
+    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
     ipv6_flow_t* to_delete) {
-  mc_dpi_flow_table_delete_flow_v6(db, flow_cleaner_callback, 0, to_delete);
+  mc_pfwl_flow_table_delete_flow_v6(db, flow_cleaner_callback, 0, to_delete);
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     void
-    dpi_flow_table_check_expiration_v4(
-        dpi_flow_DB_v4_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+    pfwl_flow_table_check_expiration_v4(
+        pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
         uint16_t partition_id, uint32_t current_time) {
   uint32_t i;
-#if !DPI_USE_MTF
+#if !PFWL_USE_MTF
   ipv4_flow_t* current;
 #endif
   for (i = db->partitions[partition_id].partition.informations.lowest_index;
@@ -690,18 +690,18 @@ static
      * a way that we simplify the loop over the list.
      **/
     db->table[i].last_timestamp = current_time;
-#if DPI_USE_MTF
+#if PFWL_USE_MTF
     while (current_time - db->table[i].prev->last_timestamp >
-           DPI_FLOW_TABLE_MAX_IDLE_TIME) {
-      mc_dpi_flow_table_delete_flow_v4(db, flow_cleaner_callback, partition_id,
+           PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
+      mc_pfwl_flow_table_delete_flow_v4(db, flow_cleaner_callback, partition_id,
                                        db->table[i].prev);
     }
 #else
     current = db->table[i].prev;
     while (current != &(db->table[i])) {
       if (current_time - db->table[i].prev->last_timestamp >
-          DPI_FLOW_TABLE_MAX_IDLE_TIME) {
-        mc_dpi_flow_table_delete_flow_v4(db, flow_cleaner_callback,
+          PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
+        mc_pfwl_flow_table_delete_flow_v4(db, flow_cleaner_callback,
                                          partition_id, db->table[i].prev);
       }
       current = current->prev;
@@ -710,16 +710,16 @@ static
   }
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     void
-    dpi_flow_table_check_expiration_v6(
-        dpi_flow_DB_v6_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback,
+    pfwl_flow_table_check_expiration_v6(
+        pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
         uint16_t partition_id, uint32_t current_time) {
 
   uint32_t i;
-#if !DPI_USE_MTF
+#if !PFWL_USE_MTF
   ipv6_flow_t* current;
 #endif
   for (i = db->partitions[partition_id].partition.informations.lowest_index;
@@ -730,18 +730,18 @@ static
      *  that we simplify the loop over the list.
      **/
     db->table[i].last_timestamp = current_time;
-#if DPI_USE_MTF
+#if PFWL_USE_MTF
     while (current_time - db->table[i].prev->last_timestamp >
-           DPI_FLOW_TABLE_MAX_IDLE_TIME) {
-      mc_dpi_flow_table_delete_flow_v6(db, flow_cleaner_callback, partition_id,
+           PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
+      mc_pfwl_flow_table_delete_flow_v6(db, flow_cleaner_callback, partition_id,
                                        db->table[i].prev);
     }
 #else
     current = db->table[i].prev;
     while (current != &(db->table[i])) {
       if (current_time - db->table[i].prev->last_timestamp >
-          DPI_FLOW_TABLE_MAX_IDLE_TIME) {
-        mc_dpi_flow_table_delete_flow_v6(db, flow_cleaner_callback,
+          PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
+        mc_pfwl_flow_table_delete_flow_v6(db, flow_cleaner_callback,
                                          partition_id, db->table[i].prev);
       }
       current = current->prev;
@@ -768,17 +768,17 @@ void print_flow(ipv4_flow_t* iterator) {
 }
 #endif
 
-ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
-    dpi_library_state_t* state, uint16_t partition_id, uint32_t index,
-    dpi_pkt_infos_t* pkt_infos) {
-  dpi_flow_DB_v4_t* db = (dpi_flow_DB_v4_t*)state->db4;
+ipv4_flow_t* mc_pfwl_flow_table_find_or_create_flow_v4(
+    pfwl_library_state_t* state, uint16_t partition_id, uint32_t index,
+    pfwl_pkt_infos_t* pkt_infos) {
+  pfwl_flow_DB_v4_t* db = (pfwl_flow_DB_v4_t*)state->db4;
 
   ipv4_flow_t* head = &(db->table[index]);
   ipv4_flow_t* iterator = head->next;
 
   debug_print("%s\n",
               "[flow_table.c]: "
-              "dpi_flow_table_find_or_create_flow_v4 invoked.");
+              "pfwl_flow_table_find_or_create_flow_v4 invoked.");
 
   /** Flow searching. **/
   while (iterator != head && !v4_equals(iterator, pkt_infos)) {
@@ -798,7 +798,7 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
       iterator->infos.tracking.seen_rst &&
       ((struct tcphdr*)(pkt_infos->pkt + pkt_infos->l4offset))->syn) {
     // Delete old flow.
-    mc_dpi_flow_table_delete_flow_v4(db, state->flow_cleaner_callback,
+    mc_pfwl_flow_table_delete_flow_v4(db, state->flow_cleaner_callback,
                                      partition_id, iterator);
     // Force the following code to create a new flow.
     iterator = head;
@@ -811,7 +811,7 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
             db->partitions[partition_id]
                 .partition.informations.max_active_flows))
       return NULL;
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     if (likely(db->partitions[partition_id].partition.pool_size != 0)) {
       debug_print("%s\n",
                   "[flow_table.c]: New flow created, "
@@ -844,19 +844,19 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
     iterator->next = head->next;
     iterator->prev->next = iterator;
     iterator->next->prev = iterator;
-    dpi_init_flow_infos(state, &(iterator->infos), pkt_infos->l4prot);
+    pfwl_init_flow_infos(state, &(iterator->infos), pkt_infos->l4prot);
 
     ++db->partitions[partition_id].partition.informations.active_flows;
 #ifdef WITH_PROMETHEUS
     iterator->infos.prometheus_counter_packets =
-        dpi_prometheus_counter_create(state->prometheus_stats, "packets",
-                                      pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+        pfwl_prometheus_counter_create(state->prometheus_stats, "packets",
+                                      pkt_infos, PFWL_PROTOCOL_NOT_DETERMINED);
     iterator->infos.prometheus_counter_bytes =
-        dpi_prometheus_counter_create(state->prometheus_stats, "bytes",
-                                      pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+        pfwl_prometheus_counter_create(state->prometheus_stats, "bytes",
+                                      pkt_infos, PFWL_PROTOCOL_NOT_DETERMINED);
 #endif
   }
-#if DPI_USE_MTF
+#if PFWL_USE_MTF
   else if (iterator->prev != head) {
     /**
      * Remove the flow from the current position. It will be inserted
@@ -878,9 +878,9 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
   if (unlikely(
           pkt_infos->processing_time -
               db->partitions[partition_id].partition.informations.last_walk >=
-          DPI_FLOW_TABLE_WALK_TIME)) {
-    dpi_flow_table_check_expiration_v4(
-        (dpi_flow_DB_v4_t*)state->db4, state->flow_cleaner_callback,
+          PFWL_FLOW_TABLE_WALK_TIME)) {
+    pfwl_flow_table_check_expiration_v4(
+        (pfwl_flow_DB_v4_t*)state->db4, state->flow_cleaner_callback,
         partition_id, pkt_infos->processing_time);
     db->partitions[partition_id].partition.informations.last_walk =
         pkt_infos->processing_time;
@@ -894,22 +894,22 @@ ipv4_flow_t* mc_dpi_flow_table_find_or_create_flow_v4(
   }
 #ifdef WITH_PROMETHEUS
   if (iterator->infos.prometheus_counter_packets) {
-    dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_packets,
+    pfwl_prometheus_counter_increment(iterator->infos.prometheus_counter_packets,
                                      1);
-    dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_bytes,
+    pfwl_prometheus_counter_increment(iterator->infos.prometheus_counter_bytes,
                                      pkt_infos->data_length);
   }
 #endif
   return iterator;
 }
 
-uint32_t dpi_compute_v4_hash_function(dpi_flow_DB_v4_t* db,
-                                      const dpi_pkt_infos_t* const pkt_infos) {
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_FNV_HASH
+uint32_t pfwl_compute_v4_hash_function(pfwl_flow_DB_v4_t* db,
+                                      const pfwl_pkt_infos_t* const pkt_infos) {
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH
   uint32_t row = v4_fnv_hash_function(pkt_infos) % db->total_size;
-#elif DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
+#elif PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
   uint32_t row = v4_hash_murmur3(pkt_infos, db->seed) % db->total_size;
-#elif DPI_FLOW_TABLE_HASH_VERSION == DPI_BKDR_HASH
+#elif PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH
   uint32_t row = v4_hash_function_bkdr(pkt_infos) % db->total_size;
 #else /** Default hash function is the simplest one. **/
   uint32_t row = v4_hash_function_simple(pkt_infos) % db->total_size;
@@ -917,25 +917,25 @@ uint32_t dpi_compute_v4_hash_function(dpi_flow_DB_v4_t* db,
   return row;
 }
 
-ipv4_flow_t* dpi_flow_table_find_or_create_flow_v4(dpi_library_state_t* state,
-                                                   dpi_pkt_infos_t* pkt_infos) {
-  return mc_dpi_flow_table_find_or_create_flow_v4(
+ipv4_flow_t* pfwl_flow_table_find_or_create_flow_v4(pfwl_library_state_t* state,
+                                                   pfwl_pkt_infos_t* pkt_infos) {
+  return mc_pfwl_flow_table_find_or_create_flow_v4(
       state, 0,
-      dpi_compute_v4_hash_function((dpi_flow_DB_v4_t*)state->db4, pkt_infos),
+      pfwl_compute_v4_hash_function((pfwl_flow_DB_v4_t*)state->db4, pkt_infos),
       pkt_infos);
 }
 
-ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
-    dpi_library_state_t* state, uint16_t partition_id, uint32_t index,
-    dpi_pkt_infos_t* pkt_infos) {
-  dpi_flow_DB_v6_t* db = (dpi_flow_DB_v6_t*)state->db6;
+ipv6_flow_t* mc_pfwl_flow_table_find_or_create_flow_v6(
+    pfwl_library_state_t* state, uint16_t partition_id, uint32_t index,
+    pfwl_pkt_infos_t* pkt_infos) {
+  pfwl_flow_DB_v6_t* db = (pfwl_flow_DB_v6_t*)state->db6;
 
   ipv6_flow_t* head = &(db->table[index]);
   ipv6_flow_t* iterator = head->next;
 
   debug_print("%s\n",
               "[flow_table.c]: "
-              "dpi_flow_table_find_or_create_flow_v6 invoked.");
+              "pfwl_flow_table_find_or_create_flow_v6 invoked.");
 
   /** Flow searching. **/
   while (iterator != head && !v6_equals(iterator, pkt_infos)) {
@@ -950,7 +950,7 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
                 .partition.informations.max_active_flows))
       return NULL;
 
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     if (likely(db->partitions[partition_id].partition.pool_size != 0)) {
       debug_print("%s\n",
                   "[flow_table.c]: New flow created,"
@@ -982,19 +982,19 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
     iterator->next = head->next;
     iterator->prev->next = iterator;
     iterator->next->prev = iterator;
-    dpi_init_flow_infos(state, &(iterator->infos), pkt_infos->l4prot);
+    pfwl_init_flow_infos(state, &(iterator->infos), pkt_infos->l4prot);
 
     ++db->partitions[partition_id].partition.informations.active_flows;
 #ifdef WITH_PROMETHEUS
     iterator->infos.prometheus_counter_packets =
-        dpi_prometheus_counter_create(state->prometheus_stats, "packets",
-                                      pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+        pfwl_prometheus_counter_create(state->prometheus_stats, "packets",
+                                      pkt_infos, PFWL_PROTOCOL_NOT_DETERMINED);
     iterator->infos.prometheus_counter_bytes =
-        dpi_prometheus_counter_create(state->prometheus_stats, "bytes",
-                                      pkt_infos, DPI_PROTOCOL_NOT_DETERMINED);
+        pfwl_prometheus_counter_create(state->prometheus_stats, "bytes",
+                                      pkt_infos, PFWL_PROTOCOL_NOT_DETERMINED);
 #endif
   }
-#if DPI_USE_MTF
+#if PFWL_USE_MTF
   else if (iterator->prev != head) {
     /**
      * Remove the flow from the current position. It will be inserted
@@ -1019,15 +1019,15 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
   if (unlikely(
           pkt_infos->processing_time -
               db->partitions[partition_id].partition.informations.last_walk >=
-          DPI_FLOW_TABLE_WALK_TIME)) {
-    dpi_flow_table_check_expiration_v6(
-        (dpi_flow_DB_v6_t*)state->db6, state->flow_cleaner_callback,
+          PFWL_FLOW_TABLE_WALK_TIME)) {
+    pfwl_flow_table_check_expiration_v6(
+        (pfwl_flow_DB_v6_t*)state->db6, state->flow_cleaner_callback,
         partition_id, pkt_infos->processing_time);
     db->partitions[partition_id].partition.informations.last_walk =
         pkt_infos->processing_time;
   }
 
-  if (dpi_v6_addresses_equal(iterator->srcaddr,
+  if (pfwl_v6_addresses_equal(iterator->srcaddr,
                              pkt_infos->src_addr_t.ipv6_srcaddr) &&
       iterator->srcport == pkt_infos->srcport) {
     pkt_infos->direction = 0;
@@ -1035,22 +1035,22 @@ ipv6_flow_t* mc_dpi_flow_table_find_or_create_flow_v6(
     pkt_infos->direction = 1;
 #ifdef WITH_PROMETHEUS
   if (iterator->infos.prometheus_counter_packets) {
-    dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_packets,
+    pfwl_prometheus_counter_increment(iterator->infos.prometheus_counter_packets,
                                      1);
-    dpi_prometheus_counter_increment(iterator->infos.prometheus_counter_bytes,
+    pfwl_prometheus_counter_increment(iterator->infos.prometheus_counter_bytes,
                                      pkt_infos->data_length);
   }
 #endif
   return iterator;
 }
 
-uint32_t dpi_compute_v6_hash_function(dpi_flow_DB_v6_t* db,
-                                      const dpi_pkt_infos_t* const pkt_infos) {
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_FNV_HASH
+uint32_t pfwl_compute_v6_hash_function(pfwl_flow_DB_v6_t* db,
+                                      const pfwl_pkt_infos_t* const pkt_infos) {
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH
   uint32_t row = v6_fnv_hash_function(pkt_infos) % db->total_size;
-#elif DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH
+#elif PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
   uint32_t row = v6_hash_murmur3(pkt_infos, db->seed) % db->total_size;
-#elif DPI_FLOW_TABLE_HASH_VERSION == DPI_BKDR_HASH
+#elif PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH
   uint32_t row = v6_hash_function_bkdr(pkt_infos) % db->total_size;
 #else /** Default hash function is the simplest one. **/
   uint32_t row = v6_hash_function_simple(pkt_infos) % db->total_size;
@@ -1058,11 +1058,11 @@ uint32_t dpi_compute_v6_hash_function(dpi_flow_DB_v6_t* db,
   return row;
 }
 
-ipv6_flow_t* dpi_flow_table_find_or_create_flow_v6(dpi_library_state_t* state,
-                                                   dpi_pkt_infos_t* pkt_infos) {
-  return mc_dpi_flow_table_find_or_create_flow_v6(
+ipv6_flow_t* pfwl_flow_table_find_or_create_flow_v6(pfwl_library_state_t* state,
+                                                   pfwl_pkt_infos_t* pkt_infos) {
+  return mc_pfwl_flow_table_find_or_create_flow_v6(
       state, 0,
-      dpi_compute_v6_hash_function((dpi_flow_DB_v6_t*)state->db6, pkt_infos),
+      pfwl_compute_v6_hash_function((pfwl_flow_DB_v6_t*)state->db6, pkt_infos),
       pkt_infos);
 }
 
@@ -1073,10 +1073,10 @@ ipv6_flow_t* dpi_flow_table_find_or_create_flow_v6(dpi_library_state_t* state,
  * @param pkt_infos The L3 and L4 packet's parsed informations.
  * @return A pointer to the flow if it is present, NULL otherwise.
  */
-ipv4_flow_t* dpi_flow_table_find_flow_v4(dpi_library_state_t* state,
+ipv4_flow_t* pfwl_flow_table_find_flow_v4(pfwl_library_state_t* state,
                                          uint32_t index,
-                                         dpi_pkt_infos_t* pkt_infos) {
-  dpi_flow_DB_v4_t* db = (dpi_flow_DB_v4_t*)state->db4;
+                                         pfwl_pkt_infos_t* pkt_infos) {
+  pfwl_flow_DB_v4_t* db = (pfwl_flow_DB_v4_t*)state->db4;
 
   ipv4_flow_t* head = &(db->table[index]);
   ipv4_flow_t* iterator = head->next;
@@ -1099,10 +1099,10 @@ ipv4_flow_t* dpi_flow_table_find_flow_v4(dpi_library_state_t* state,
  * @param pkt_infos The L3 and L4 packet's parsed informations.
  * @return A pointer to the flow if it is present, NULL otherwise.
  */
-ipv6_flow_t* dpi_flow_table_find_flow_v6(dpi_library_state_t* state,
+ipv6_flow_t* pfwl_flow_table_find_flow_v6(pfwl_library_state_t* state,
                                          uint32_t index,
-                                         dpi_pkt_infos_t* pkt_infos) {
-  dpi_flow_DB_v6_t* db = (dpi_flow_DB_v6_t*)state->db6;
+                                         pfwl_pkt_infos_t* pkt_infos) {
+  pfwl_flow_DB_v6_t* db = (pfwl_flow_DB_v6_t*)state->db6;
 
   ipv6_flow_t* head = &(db->table[index]);
   ipv6_flow_t* iterator = head->next;
@@ -1118,20 +1118,20 @@ ipv6_flow_t* dpi_flow_table_find_flow_v6(dpi_library_state_t* state,
     return iterator;
 }
 
-void dpi_flow_table_delete_v4(
-    dpi_flow_DB_v4_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback) {
+void pfwl_flow_table_delete_v4(
+    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback) {
   if (db != NULL) {
     if (db->table != NULL) {
       for (uint16_t j = 0; j < db->num_partitions; ++j) {
         for (uint32_t i = db->partitions[j].partition.informations.lowest_index;
              i <= db->partitions[j].partition.informations.highest_index; ++i) {
           while (db->table[i].next != &(db->table[i])) {
-            mc_dpi_flow_table_delete_flow_v4(db, flow_cleaner_callback, j,
+            mc_pfwl_flow_table_delete_flow_v4(db, flow_cleaner_callback, j,
                                              db->table[i].next);
           }
         }
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-#if DPI_NUMA_AWARE
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_NUMA_AWARE
         numa_free(db->partitions[j].partition.memory_chunk_lower_bound,
                   sizeof(ipv6_flow_t) * db->individual_pool_size);
         numa_free(db->partitions[j].partition.pool,
@@ -1144,9 +1144,9 @@ void dpi_flow_table_delete_v4(
       }
     }
 
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
     numa_free(db->partitions,
-              sizeof(dpi_flow_DB_v4_partition_t) * db->num_partitions);
+              sizeof(pfwl_flow_DB_v4_partition_t) * db->num_partitions);
     numa_free(db->table, sizeof(ipv4_flow_t) * db->total_size);
 #else
     free(db->partitions);
@@ -1156,20 +1156,20 @@ void dpi_flow_table_delete_v4(
   }
 }
 
-void dpi_flow_table_delete_v6(
-    dpi_flow_DB_v6_t* db, dpi_flow_cleaner_callback* flow_cleaner_callback) {
+void pfwl_flow_table_delete_v6(
+    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback) {
   if (db != NULL) {
     if (db->table != NULL) {
       for (uint16_t j = 0; j < db->num_partitions; ++j) {
         for (uint32_t i = db->partitions[j].partition.informations.lowest_index;
              i <= db->partitions[j].partition.informations.highest_index; ++i) {
           while (db->table[i].next != &(db->table[i])) {
-            mc_dpi_flow_table_delete_flow_v6(db, flow_cleaner_callback, j,
+            mc_pfwl_flow_table_delete_flow_v6(db, flow_cleaner_callback, j,
                                              db->table[i].next);
           }
         }
-#if DPI_FLOW_TABLE_USE_MEMORY_POOL
-#if DPI_NUMA_AWARE
+#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
+#if PFWL_NUMA_AWARE
         numa_free(db->partitions[j].partition.memory_chunk_lower_bound,
                   sizeof(ipv4_flow_t) * db->individual_pool_size);
         numa_free(db->partitions[j].partition.pool,
@@ -1182,10 +1182,10 @@ void dpi_flow_table_delete_v6(
       }
     }
 
-#if DPI_NUMA_AWARE
+#if PFWL_NUMA_AWARE
     numa_free(db->table, sizeof(ipv6_flow_t) * db->total_size);
     numa_free(db->partitions,
-              sizeof(dpi_flow_DB_v6_partition_t) * db->num_partitions);
+              sizeof(pfwl_flow_DB_v6_partition_t) * db->num_partitions);
 #else
     free(db->partitions);
     free(db->table);

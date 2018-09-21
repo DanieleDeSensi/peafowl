@@ -11,30 +11,30 @@ static size_t nextExpectedMethod = 0;
 TEST(SIPTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/sip-rtp.pcap", protocols);
-    EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 102);
+    EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 102);
     getProtocols("./pcaps/whatsapp.pcap", protocols);
-    EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 6);
+    EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 6);
     getProtocols("./pcaps/dropbox.pcap", protocols);
-    EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 140);
+    EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 140);
 }
 
 TEST(SIPTest, CallbackRequestURI){
     std::vector<uint> protocols;
-    dpi_library_state_t* state = dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
-    pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_REQUEST_URI);
-    pfwl_protocol_field_add(state, DPI_PROTOCOL_SIP, DPI_FIELDS_SIP_METHOD);
-    std::vector<dpi_identification_result_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
-    EXPECT_EQ(protocols[DPI_PROTOCOL_SIP], (uint) 102);
+    pfwl_library_state_t* state = pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
+    pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_REQUEST_URI);
+    pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_METHOD);
+    std::vector<pfwl_identification_result_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
+    EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 102);
     for(auto r : results){
-      if(r.protocol_l7 == DPI_PROTOCOL_SIP){
-        if(r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len){
-          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].s;
-          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_REQUEST_URI].len;
+      if(r.protocol_l7 == PFWL_PROTOCOL_SIP){
+        if(r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].len){
+          const char* field_value = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].s;
+          size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].len;
           EXPECT_TRUE(!strncmp(field_value, expectedRequestURIs[nextExpectedURI], field_len));
           ++nextExpectedURI;
-        }else if(r.protocol_fields[DPI_FIELDS_SIP_METHOD].len){
-          const char* field_value = r.protocol_fields[DPI_FIELDS_SIP_METHOD].s;
-          size_t field_len = r.protocol_fields[DPI_FIELDS_SIP_METHOD].len;
+        }else if(r.protocol_fields[PFWL_FIELDS_SIP_METHOD].len){
+          const char* field_value = r.protocol_fields[PFWL_FIELDS_SIP_METHOD].s;
+          size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_METHOD].len;
           EXPECT_TRUE(!strncmp(field_value, expectedMethods[nextExpectedMethod], field_len));
           ++nextExpectedMethod;
         }

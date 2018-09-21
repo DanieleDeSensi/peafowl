@@ -13,17 +13,17 @@ using namespace prometheus;
 
 extern "C" {
 
-typedef struct dpi_prometheus_stats {
+typedef struct pfwl_prometheus_stats {
   Exposer* exposer;
   shared_ptr<Registry> registry;
   unordered_map<string, Family<Counter>&> counters;
   unordered_map<string, Family<Gauge>&> gauges;
   unordered_map<string, Family<Histogram>&> histograms;
   unordered_map<string, Family<Summary>&> summaries;
-} dpi_prometheus_stats_t;
+} pfwl_prometheus_stats_t;
 
-uint8_t dpi_prometheus_init(dpi_library_state_t* state, uint16_t port) {
-  dpi_prometheus_stats_t* stats = new dpi_prometheus_stats_t();
+uint8_t pfwl_prometheus_init(pfwl_library_state_t* state, uint16_t port) {
+  pfwl_prometheus_stats_t* stats = new pfwl_prometheus_stats_t();
   Exposer* exposer =
       new Exposer{(string("127.0.0.1:") + to_string(port)).c_str()};
   stats->exposer = exposer;
@@ -50,13 +50,13 @@ uint8_t dpi_prometheus_init(dpi_library_state_t* state, uint16_t port) {
   exposer->RegisterCollectable(stats->registry);
 
   state->prometheus_stats = static_cast<void*>(stats);
-  return DPI_STATE_UPDATE_SUCCESS;
+  return PFWL_STATE_UPDATE_SUCCESS;
 }
 
-static bool dpi_prometheus_create_labels(dpi_pkt_infos_t& infos,
+static bool pfwl_prometheus_create_labels(pfwl_pkt_infos_t& infos,
                                          map<string, string>& labels) {
   string srcAddr, dstAddr;
-  if (infos.ip_version == DPI_IP_VERSION_4) {
+  if (infos.ip_version == PFWL_IP_VERSION_4) {
     char str[INET_ADDRSTRLEN];
     struct in_addr ia;
     ia.s_addr = infos.src_addr_t.ipv4_srcaddr;
@@ -66,7 +66,7 @@ static bool dpi_prometheus_create_labels(dpi_pkt_infos_t& infos,
     ia.s_addr = infos.dst_addr_t.ipv4_dstaddr;
     inet_ntop(AF_INET, &ia, str, INET_ADDRSTRLEN);
     dstAddr = string(str);
-  } else if (infos.ip_version == DPI_IP_VERSION_6) {
+  } else if (infos.ip_version == PFWL_IP_VERSION_6) {
     char str[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &infos.src_addr_t.ipv6_srcaddr, str, INET6_ADDRSTRLEN);
     srcAddr = string(str);
@@ -90,19 +90,19 @@ static bool dpi_prometheus_create_labels(dpi_pkt_infos_t& infos,
   return true;
 }
 
-void* dpi_prometheus_counter_create(void* prometheus_stats,
+void* pfwl_prometheus_counter_create(void* prometheus_stats,
                                     const char* counter_name,
-                                    dpi_pkt_infos_t* infos,
-                                    dpi_l7_prot_id protocol) {
-  dpi_prometheus_stats* stats =
-      static_cast<dpi_prometheus_stats*>(prometheus_stats);
+                                    pfwl_pkt_infos_t* infos,
+                                    pfwl_l7_prot_id protocol) {
+  pfwl_prometheus_stats* stats =
+      static_cast<pfwl_prometheus_stats*>(prometheus_stats);
   auto f = stats->counters.find(counter_name);
   if (f != stats->counters.end()) {
     map<string, string> labels;
-    if (dpi_prometheus_create_labels(*infos, labels)) {
-      if (protocol != DPI_PROTOCOL_NOT_DETERMINED) {
+    if (pfwl_prometheus_create_labels(*infos, labels)) {
+      if (protocol != PFWL_PROTOCOL_NOT_DETERMINED) {
         labels.insert(
-            pair<string, string>("l7prot", dpi_get_protocol_string(protocol)));
+            pair<string, string>("l7prot", pfwl_get_protocol_string(protocol)));
       }
       return static_cast<void*>(&(f->second.Add(labels)));
     } else {
@@ -113,10 +113,10 @@ void* dpi_prometheus_counter_create(void* prometheus_stats,
   }
 }
 
-void dpi_prometheus_counter_delete(void* prometheus_stats,
+void pfwl_prometheus_counter_delete(void* prometheus_stats,
                                    const char* counter_name, void* counter) {
-  dpi_prometheus_stats* stats =
-      static_cast<dpi_prometheus_stats*>(prometheus_stats);
+  pfwl_prometheus_stats* stats =
+      static_cast<pfwl_prometheus_stats*>(prometheus_stats);
   auto f = stats->counters.find(counter_name);
   if (f != stats->counters.end()) {
     f->second.Remove(static_cast<Counter*>(counter));
@@ -125,18 +125,18 @@ void dpi_prometheus_counter_delete(void* prometheus_stats,
   }
 }
 
-void dpi_prometheus_counter_increment(void* counter, double value) {
+void pfwl_prometheus_counter_increment(void* counter, double value) {
   static_cast<Counter*>(counter)->Increment(value);
 }
 
-uint8_t dpi_prometheus_terminate(dpi_library_state_t* state) {
+uint8_t pfwl_prometheus_terminate(pfwl_library_state_t* state) {
   if (state->prometheus_stats) {
-    dpi_prometheus_stats* stats =
-        static_cast<dpi_prometheus_stats*>(state->prometheus_stats);
+    pfwl_prometheus_stats* stats =
+        static_cast<pfwl_prometheus_stats*>(state->prometheus_stats);
     delete stats->exposer;
     delete stats;
   }
-  return DPI_STATE_UPDATE_SUCCESS;
+  return PFWL_STATE_UPDATE_SUCCESS;
 }
 }
 #endif

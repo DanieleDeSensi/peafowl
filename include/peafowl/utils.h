@@ -32,9 +32,9 @@
 #include <netinet/in.h>
 #include <strings.h>
 
-#define DPI_MAX_UINT_16 65535
-#define DPI_MAX_INT_32 4294967295
-#define DPI_TCP_MAX_IN_TRAVEL_DATA 2147483648 /** 2^31 **/
+#define PFWL_MAX_UINT_16 65535
+#define PFWL_MAX_INT_32 4294967295
+#define PFWL_TCP_MAX_IN_TRAVEL_DATA 2147483648 /** 2^31 **/
 
 #define SET_BIT(val, bitIndex) val |= (1 << bitIndex)
 #define CLEAR_BIT(val, bitIndex) val &= ~(1 << bitIndex)
@@ -64,7 +64,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-uint8_t dpi_v6_addresses_equal(struct in6_addr x, struct in6_addr y);
+uint8_t pfwl_v6_addresses_equal(struct in6_addr x, struct in6_addr y);
 #ifdef __cplusplus
 }
 #endif

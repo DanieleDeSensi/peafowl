@@ -43,15 +43,15 @@ static inline uint8_t highCheck(const char* app_data) {
          (strstr((const char*) app_data, "\"port\"")?1:0);
 }
 
-static inline uint8_t hasDropboxFields(const char* app_data, dpi_inspector_accuracy accuracy) {
+static inline uint8_t hasDropboxFields(const char* app_data, pfwl_inspector_accuracy accuracy) {
   switch(accuracy){
-    case DPI_INSPECTOR_ACCURACY_LOW:{
+    case PFWL_INSPECTOR_ACCURACY_LOW:{
       return lowCheck(app_data);
     }break;
-    case DPI_INSPECTOR_ACCURACY_MEDIUM:{
+    case PFWL_INSPECTOR_ACCURACY_MEDIUM:{
       return lowCheck(app_data) && midCheck(app_data);
     }break;
-    case DPI_INSPECTOR_ACCURACY_HIGH:{
+    case PFWL_INSPECTOR_ACCURACY_HIGH:{
       return lowCheck(app_data) && midCheck(app_data) && highCheck(app_data);
     }break;
     default:{
@@ -60,13 +60,13 @@ static inline uint8_t hasDropboxFields(const char* app_data, dpi_inspector_accur
   }
 }
 
-uint8_t check_dropbox(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_dropbox(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t){
+                   pfwl_tracking_informations_t* t){
   if(pkt->l4prot == IPPROTO_UDP &&
      pkt->srcport == port_dropbox && pkt->dstport == port_dropbox &&
-     data_length > 2 && hasDropboxFields((const char*) app_data, state->inspectors_accuracy[DPI_PROTOCOL_DROPBOX])) {
-    return DPI_PROTOCOL_MATCHES;
+     data_length > 2 && hasDropboxFields((const char*) app_data, state->inspectors_accuracy[PFWL_PROTOCOL_DROPBOX])) {
+    return PFWL_PROTOCOL_MATCHES;
   }
-  return DPI_PROTOCOL_NO_MATCHES;
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

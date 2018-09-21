@@ -37,49 +37,49 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DPI_DEBUG_SSL 0
+#define PFWL_DEBUG_SSL 0
 #define debug_print(fmt, ...)                             \
   do {                                                    \
-    if (DPI_DEBUG_SSL) fprintf(stdout, fmt, __VA_ARGS__); \
+    if (PFWL_DEBUG_SSL) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
-#define ndpi_isalpha(ch) \
+#define npfwl_isalpha(ch) \
   (((ch) >= 'a' && (ch) <= 'z') || ((ch) >= 'A' && (ch) <= 'Z'))
-#define ndpi_isdigit(ch) ((ch) >= '0' && (ch) <= '9')
-#define ndpi_isspace(ch) (((ch) >= '\t' && (ch) <= '\r') || ((ch) == ' '))
-#define ndpi_isprint(ch) ((ch) >= 0x20 && (ch) <= 0x7e)
-#define ndpi_ispunct(ch)                                           \
+#define npfwl_isdigit(ch) ((ch) >= '0' && (ch) <= '9')
+#define npfwl_isspace(ch) (((ch) >= '\t' && (ch) <= '\r') || ((ch) == ' '))
+#define npfwl_isprint(ch) ((ch) >= 0x20 && (ch) <= 0x7e)
+#define npfwl_ispunct(ch)                                           \
   (((ch) >= '!' && (ch) <= '/') || ((ch) >= ':' && (ch) <= '@') || \
    ((ch) >= '[' && (ch) <= '`') || ((ch) >= '{' && (ch) <= '~'))
 
-uint8_t dpi_ssl_activate_callbacks(dpi_library_state_t* state,
-                                   dpi_ssl_callbacks_t* callbacks,
+uint8_t pfwl_ssl_activate_callbacks(pfwl_library_state_t* state,
+                                   pfwl_ssl_callbacks_t* callbacks,
                                    void* user_data) {
   if (state) {
-    BITSET(state->protocols_to_inspect, DPI_PROTOCOL_SSL);
-    BITSET(state->active_callbacks, DPI_PROTOCOL_SSL);
+    BITSET(state->protocols_to_inspect, PFWL_PROTOCOL_SSL);
+    BITSET(state->active_callbacks, PFWL_PROTOCOL_SSL);
     state->ssl_callbacks_user_data = user_data;
     state->ssl_callbacks = callbacks;
-    return DPI_STATE_UPDATE_SUCCESS;
+    return PFWL_STATE_UPDATE_SUCCESS;
   } else {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
 }
 
-uint8_t dpi_ssl_disable_callbacks(dpi_library_state_t* state) {
+uint8_t pfwl_ssl_disable_callbacks(pfwl_library_state_t* state) {
   if (state) {
-    BITCLEAR(state->active_callbacks, DPI_PROTOCOL_SSL);
+    BITCLEAR(state->active_callbacks, PFWL_PROTOCOL_SSL);
     state->ssl_callbacks = NULL;
     state->ssl_callbacks_user_data = NULL;
-    return DPI_STATE_UPDATE_SUCCESS;
+    return PFWL_STATE_UPDATE_SUCCESS;
   } else {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
 }
 
 static int getSSLcertificate(uint8_t* payload, u_int payload_len,
-                             dpi_ssl_internal_information_t* t,
-                             dpi_pkt_infos_t* pkt) {
+                             pfwl_ssl_internal_information_t* t,
+                             pfwl_pkt_infos_t* pkt) {
   if (payload[0] == 0x16 /* Handshake */) {
     uint16_t total_len = (payload[3] << 8) + payload[4] + 5 /* SSL Header */;
     uint8_t handshake_protocol = payload[5]; /* handshake protocol a bit
@@ -116,14 +116,14 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
             char* server_name = (char*)&payload[i + 4];
             uint8_t begin = 0, j, num_dots, len;
             while (begin < server_len) {
-              if (!ndpi_isprint(server_name[begin]))
+              if (!npfwl_isprint(server_name[begin]))
                 begin++;
               else
                 break;
             }
             len = server_len - begin;
             for (j = begin, num_dots = 0; j < len; j++) {
-              if (!ndpi_isprint((server_name[j]))) {
+              if (!npfwl_isprint((server_name[j]))) {
                 num_dots = 0;  // This is not what we look for
                 break;
               } else if (server_name[j] == '.') {
@@ -182,9 +182,9 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                         0x00)  // host_name
                       begin = +5;
                     while (begin < extension_len) {
-                      if ((!ndpi_isprint(server_name[begin])) ||
-                          ndpi_ispunct(server_name[begin]) ||
-                          ndpi_isspace(server_name[begin]))
+                      if ((!npfwl_isprint(server_name[begin])) ||
+                          npfwl_ispunct(server_name[begin]) ||
+                          npfwl_isspace(server_name[begin]))
                         begin++;
                       else
                         break;
@@ -215,8 +215,8 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
 }
 
 static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
-                                    dpi_ssl_internal_information_t* t,
-                                    dpi_pkt_infos_t* pkt) {
+                                    pfwl_ssl_internal_information_t* t,
+                                    pfwl_pkt_infos_t* pkt) {
   if ((payload_len > 9) &&
       (payload[0] ==
        0x16 /* consider only specific SSL packets (handshake) */)) {
@@ -228,27 +228,27 @@ static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
   return 0;
 }
 
-uint8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t invoke_callbacks_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                              const unsigned char* app_data,
                              uint32_t data_length,
-                             dpi_tracking_informations_t* tracking) {
+                             pfwl_tracking_informations_t* tracking) {
   debug_print("%s\n", "[ssl.c] SSL callback manager invoked.");
   uint8_t ret = check_ssl(state, pkt, app_data, data_length, tracking);
-  if (ret == DPI_PROTOCOL_NO_MATCHES) {
+  if (ret == PFWL_PROTOCOL_NO_MATCHES) {
     debug_print("%s\n",
                 "[ssl.c] An error occurred in the SSL protocol manager.");
-    return DPI_PROTOCOL_ERROR;
+    return PFWL_PROTOCOL_ERROR;
   } else {
     debug_print("%s\n", "[ssl.c] SSL callback manager exits.");
-    return DPI_PROTOCOL_MATCHES;
+    return PFWL_PROTOCOL_MATCHES;
   }
 }
 
-uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* payload, uint32_t data_length,
-                  dpi_tracking_informations_t* t) {
+                  pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_TCP) {
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
   int res;
   debug_print("Checking ssl with size %d, direction %d\n", data_length,
@@ -260,7 +260,7 @@ uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
   }
   if (t->ssl_information[pkt->direction].ssl_detected == 1) {
     debug_print("%s\n", "SSL already detected, not needed additional checks");
-    return DPI_PROTOCOL_MATCHES;
+    return PFWL_PROTOCOL_MATCHES;
   }
   if (t->ssl_information[pkt->direction].pkt_buffer == NULL) {
     res = detectSSLFromCertificate((uint8_t*)payload, data_length,
@@ -273,10 +273,10 @@ uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
         memcpy(t->ssl_information[pkt->direction].pkt_buffer, payload,
                data_length);
         t->ssl_information[pkt->direction].pkt_size = data_length;
-        return DPI_PROTOCOL_MORE_DATA_NEEDED;
+        return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
       t->ssl_information[pkt->direction].ssl_detected = 1;
-      return DPI_PROTOCOL_MATCHES;
+      return PFWL_PROTOCOL_MATCHES;
     }
   } else {
     t->ssl_information[pkt->direction].pkt_buffer = (uint8_t*)realloc(
@@ -294,11 +294,11 @@ uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
                 t->ssl_information[pkt->direction].pkt_size, res);
     if (res > 0) {
       if (res == 3) {
-        return DPI_PROTOCOL_MORE_DATA_NEEDED;
+        return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
       t->ssl_information[pkt->direction].ssl_detected = 1;
-      return DPI_PROTOCOL_MATCHES;
+      return PFWL_PROTOCOL_MATCHES;
     }
   }
-  return DPI_PROTOCOL_NO_MATCHES;
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

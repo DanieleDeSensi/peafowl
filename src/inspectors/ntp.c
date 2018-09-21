@@ -28,20 +28,20 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-#define DPI_NTP_MAX_VERSION 0x04
-#define DPI_NTP_VERSION_MASK 0x38
+#define PFWL_NTP_MAX_VERSION 0x04
+#define PFWL_NTP_VERSION_MASK 0x38
 
-uint8_t check_ntp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_ntp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t) {
+                  pfwl_tracking_informations_t* t) {
   if (pkt->l4prot != IPPROTO_UDP) {
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
   if ((pkt->srcport == port_ntp || pkt->dstport == port_ntp) &&
       data_length >= 48 &&
-      (((app_data[0] & DPI_NTP_VERSION_MASK) >> 3) <= DPI_NTP_MAX_VERSION)) {
-    return DPI_PROTOCOL_MATCHES;
+      (((app_data[0] & PFWL_NTP_VERSION_MASK) >> 3) <= PFWL_NTP_MAX_VERSION)) {
+    return PFWL_PROTOCOL_MATCHES;
   } else {
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
 }

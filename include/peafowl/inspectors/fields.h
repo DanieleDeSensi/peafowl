@@ -35,47 +35,47 @@ typedef struct {
 
 /* SIP field */
 typedef enum{
-  DPI_FIELDS_SIP_REQUEST_URI = 0,
-  DPI_FIELDS_SIP_METHOD,
-  DPI_FIELDS_SIP_CALLID,
-  DPI_FIELDS_SIP_REASON,
-  DPI_FIELDS_SIP_RTCPXR_CALLID,
-  DPI_FIELDS_SIP_CSEQ,
-  DPI_FIELDS_SIP_CSEQ_METHOD_STRING,
-  DPI_FIELDS_SIP_VIA,
-  DPI_FIELDS_SIP_CONTACT_URI,
-  DPI_FIELDS_SIP_RURI_USER,
-  DPI_FIELDS_SIP_RURI_DOMAIN,
-  DPI_FIELDS_SIP_FROM_USER,
-  DPI_FIELDS_SIP_FROM_DOMAIN,
-  DPI_FIELDS_SIP_TO_USER,
-  DPI_FIELDS_SIP_TO_DOMAIN,
-  DPI_FIELDS_SIP_PAI_USER,
-  DPI_FIELDS_SIP_PAI_DOMAIN,
-  DPI_FIELDS_SIP_PID_URI,
-  DPI_FIELDS_SIP_FROM_URI,
-  DPI_FIELDS_SIP_TO_URI,
-  DPI_FIELDS_SIP_RURI_URI,
-  DPI_FIELDS_SIP_TO_TAG,
-  DPI_FIELDS_SIP_FROM_TAG,
-  DPI_FIELDS_SIP_NUM,          // This must be the last
+  PFWL_FIELDS_SIP_REQUEST_URI = 0,
+  PFWL_FIELDS_SIP_METHOD,
+  PFWL_FIELDS_SIP_CALLID,
+  PFWL_FIELDS_SIP_REASON,
+  PFWL_FIELDS_SIP_RTCPXR_CALLID,
+  PFWL_FIELDS_SIP_CSEQ,
+  PFWL_FIELDS_SIP_CSEQ_METHOD_STRING,
+  PFWL_FIELDS_SIP_VIA,
+  PFWL_FIELDS_SIP_CONTACT_URI,
+  PFWL_FIELDS_SIP_RURI_USER,
+  PFWL_FIELDS_SIP_RURI_DOMAIN,
+  PFWL_FIELDS_SIP_FROM_USER,
+  PFWL_FIELDS_SIP_FROM_DOMAIN,
+  PFWL_FIELDS_SIP_TO_USER,
+  PFWL_FIELDS_SIP_TO_DOMAIN,
+  PFWL_FIELDS_SIP_PAI_USER,
+  PFWL_FIELDS_SIP_PAI_DOMAIN,
+  PFWL_FIELDS_SIP_PID_URI,
+  PFWL_FIELDS_SIP_FROM_URI,
+  PFWL_FIELDS_SIP_TO_URI,
+  PFWL_FIELDS_SIP_RURI_URI,
+  PFWL_FIELDS_SIP_TO_TAG,
+  PFWL_FIELDS_SIP_FROM_TAG,
+  PFWL_FIELDS_SIP_NUM,          // This must be the last
 }pfwl_fields_sip;
 
 /* DNS field */
 typedef enum{
-  DPI_FIELDS_DNS_NAME_SRV = 0, // Server name
-  DPI_FIELDS_DNS_NS_IP_1,      // Server name IP address
-  DPI_FIELDS_DNS_NS_IP_2,      // Server name IP address
-  DPI_FIELDS_DNS_AUTH_SRV,     // Authority name
-  DPI_FIELDS_DNS_NUM,          // This must be the last
+  PFWL_FIELDS_DNS_NAME_SRV = 0, // Server name
+  PFWL_FIELDS_DNS_NS_IP_1,      // Server name IP address
+  PFWL_FIELDS_DNS_NS_IP_2,      // Server name IP address
+  PFWL_FIELDS_DNS_AUTH_SRV,     // Authority name
+  PFWL_FIELDS_DNS_NUM,          // This must be the last
 }pfwl_fields_dns;
 
-typedef struct dpi_tracking_informations dpi_tracking_informations_t;
-typedef pfwl_field_t* (*pfwl_get_extracted_fields_callback)(dpi_tracking_informations_t*);
+typedef struct pfwl_tracking_informations pfwl_tracking_informations_t;
+typedef pfwl_field_t* (*pfwl_get_extracted_fields_callback)(pfwl_tracking_informations_t*);
 
 // SIP
-pfwl_field_t* get_extracted_fields_sip(dpi_tracking_informations_t*);
+pfwl_field_t* get_extracted_fields_sip(pfwl_tracking_informations_t*);
 // DNS
-pfwl_field_t* get_extracted_fields_dns(dpi_tracking_informations_t*);
+pfwl_field_t* get_extracted_fields_dns(pfwl_tracking_informations_t*);
 
 #endif /* FIELDS_H_ */

@@ -35,76 +35,76 @@
 #include <peafowl/flow_table.h>
 #include "protocols_identifiers.h"
 
-uint8_t check_dhcp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_dhcp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t);
-uint8_t check_dhcpv6(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                   pfwl_tracking_informations_t* t);
+uint8_t check_dhcpv6(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                      const unsigned char* app_data, uint32_t data_length,
-                     dpi_tracking_informations_t* t);
-uint8_t check_bgp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                     pfwl_tracking_informations_t* t);
+uint8_t check_bgp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_dns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_dns(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_mdns(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_mdns(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t);
-uint8_t check_ntp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                   pfwl_tracking_informations_t* t);
+uint8_t check_ntp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
+                  pfwl_tracking_informations_t* t);
 
-uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t);
-uint8_t check_sip(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                   pfwl_tracking_informations_t* t);
+uint8_t check_sip(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_skype(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_skype(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                     const unsigned char* app_data, uint32_t data_length,
-                    dpi_tracking_informations_t* t);
-uint8_t check_rtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                    pfwl_tracking_informations_t* t);
+uint8_t check_rtp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_ssh(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_ssh(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_smtp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_smtp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t);
-uint8_t check_pop3(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                   pfwl_tracking_informations_t* t);
+uint8_t check_pop3(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* t);
-uint8_t check_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                   pfwl_tracking_informations_t* t);
+uint8_t check_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_hangout(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_hangout(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_whatsapp(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_whatsapp(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_telegram(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_telegram(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_imap(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_imap(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_dropbox(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_dropbox(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
-uint8_t check_spotify(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                  pfwl_tracking_informations_t* t);
+uint8_t check_spotify(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                   const unsigned char* app_data, uint32_t data_length,
-                  dpi_tracking_informations_t* t);
+                  pfwl_tracking_informations_t* t);
 
-uint8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t invoke_callbacks_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                               const unsigned char* app_data,
                               uint32_t data_length,
-                              dpi_tracking_informations_t* tracking);
-uint8_t invoke_callbacks_ssl(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+                              pfwl_tracking_informations_t* tracking);
+uint8_t invoke_callbacks_ssl(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                              const unsigned char* app_data,
                              uint32_t data_length,
-                             dpi_tracking_informations_t* tracking);
+                             pfwl_tracking_informations_t* tracking);
 
 
 #endif /* INSPECTORS_H_ */

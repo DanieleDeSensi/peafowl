@@ -33,11 +33,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DPI_DEBUG_HTTP 0
+#define PFWL_DEBUG_HTTP 0
 
 #define debug_print(fmt, ...)                              \
   do {                                                     \
-    if (DPI_DEBUG_HTTP) fprintf(stdout, fmt, __VA_ARGS__); \
+    if (PFWL_DEBUG_HTTP) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
 /**
@@ -62,21 +62,21 @@
  * @param user_data   A pointer to global user HTTP data. This pointer will be
  *passed to any HTTP callback when it is invoked.
  *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
+ * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
  *otherwise.
  *
  **/
-uint8_t dpi_http_activate_callbacks(dpi_library_state_t* state,
-                                    dpi_http_callbacks_t* callbacks,
+uint8_t pfwl_http_activate_callbacks(pfwl_library_state_t* state,
+                                    pfwl_http_callbacks_t* callbacks,
                                     void* user_data) {
   if (state && callbacks->num_header_types <= 128) {
-    BITSET(state->protocols_to_inspect, DPI_PROTOCOL_HTTP);
-    BITSET(state->active_callbacks, DPI_PROTOCOL_HTTP);
+    BITSET(state->protocols_to_inspect, PFWL_PROTOCOL_HTTP);
+    BITSET(state->active_callbacks, PFWL_PROTOCOL_HTTP);
     state->http_callbacks_user_data = user_data;
     state->http_callbacks = callbacks;
-    return DPI_STATE_UPDATE_SUCCESS;
+    return PFWL_STATE_UPDATE_SUCCESS;
   } else {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
 }
 
@@ -84,17 +84,17 @@ uint8_t dpi_http_activate_callbacks(dpi_library_state_t* state,
  * Disable the HTTP callbacks. user_data is not freed/modified.
  * @param state       A pointer to the state of the library.
  *
- * @return DPI_STATE_UPDATE_SUCCESS if succeeded, DPI_STATE_UPDATE_FAILURE
+ * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
  * otherwise.
  */
-uint8_t dpi_http_disable_callbacks(dpi_library_state_t* state) {
+uint8_t pfwl_http_disable_callbacks(pfwl_library_state_t* state) {
   if (state) {
-    BITCLEAR(state->active_callbacks, DPI_PROTOCOL_HTTP);
+    BITCLEAR(state->active_callbacks, PFWL_PROTOCOL_HTTP);
     state->http_callbacks = NULL;
     state->http_callbacks_user_data = NULL;
-    return DPI_STATE_UPDATE_SUCCESS;
+    return PFWL_STATE_UPDATE_SUCCESS;
   } else {
-    return DPI_STATE_UPDATE_FAILURE;
+    return PFWL_STATE_UPDATE_FAILURE;
   }
 }
 
@@ -104,11 +104,11 @@ uint8_t dpi_http_disable_callbacks(dpi_library_state_t* state) {
  * @return 1 if the HTTP field of interest is complete, 0 if more segments are
  * needed, 2 if an error occurred.
  */
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     uint8_t
-    dpi_http_manage_pdu_reassembly(http_parser* parser, const char* at,
+    pfwl_http_manage_pdu_reassembly(http_parser* parser, const char* at,
                                    size_t length, char** temp_buffer,
                                    size_t* size) {
   /**
@@ -140,18 +140,18 @@ static
   return 1;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     int
     on_url(http_parser* parser, const char* at, size_t length) {
-  dpi_http_internal_informations_t* infos =
-      (dpi_http_internal_informations_t*)parser->data;
-  dpi_http_callbacks_t* callbacks = infos->callbacks;
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
+  pfwl_http_callbacks_t* callbacks = infos->callbacks;
 
   const char* real_data = at;
   size_t real_length = length;
-  uint8_t segmentation_result = dpi_http_manage_pdu_reassembly(
+  uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(
       parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
   if (segmentation_result == 0) {
     return 0;
@@ -173,20 +173,20 @@ static
   return 0;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     int
     on_field(http_parser* parser, const char* at, size_t length) {
-  dpi_http_internal_informations_t* infos =
-      (dpi_http_internal_informations_t*)parser->data;
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
 
   uint i;
   parser->parse_header_field = 0;
 
   const char* real_data = at;
   size_t real_length = length;
-  uint8_t segmentation_result = dpi_http_manage_pdu_reassembly(
+  uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(
       parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
   if (segmentation_result == 0) {
     return 0;
@@ -213,19 +213,19 @@ static
   return 0;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     int
     on_value(http_parser* parser, const char* at, size_t length) {
   if (parser->parse_header_field) {
-    dpi_http_internal_informations_t* infos =
-        (dpi_http_internal_informations_t*)parser->data;
-    dpi_http_callbacks_t* callbacks = infos->callbacks;
+    pfwl_http_internal_informations_t* infos =
+        (pfwl_http_internal_informations_t*)parser->data;
+    pfwl_http_callbacks_t* callbacks = infos->callbacks;
 
     const char* real_data = at;
     size_t real_length = length;
-    uint8_t segmentation_result = dpi_http_manage_pdu_reassembly(
+    uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(
         parser, at, length, &(infos->temp_buffer), &(infos->temp_buffer_size));
     if (segmentation_result == 0) {
       return 0;
@@ -236,16 +236,16 @@ static
       real_length = infos->temp_buffer_size;
     }
 
-    dpi_http_message_informations_t dpi_http_informations;
-    dpi_http_informations.http_version_major = parser->http_major;
-    dpi_http_informations.http_version_minor = parser->http_minor;
-    dpi_http_informations.request_or_response = parser->type;
+    pfwl_http_message_informations_t pfwl_http_informations;
+    pfwl_http_informations.http_version_major = parser->http_major;
+    pfwl_http_informations.http_version_minor = parser->http_minor;
+    pfwl_http_informations.request_or_response = parser->type;
     if (parser->type == HTTP_REQUEST)
-      dpi_http_informations.method_or_code = parser->method;
+      pfwl_http_informations.method_or_code = parser->method;
     else
-      dpi_http_informations.method_or_code = parser->status_code;
+      pfwl_http_informations.method_or_code = parser->status_code;
     (*callbacks->header_types_callbacks[parser->header_type])(
-        &dpi_http_informations, (unsigned char*)real_data, real_length,
+        &pfwl_http_informations, (unsigned char*)real_data, real_length,
         infos->pkt_informations, infos->flow_specific_user_data,
         infos->user_data);
 
@@ -256,25 +256,25 @@ static
   return 0;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     int
     on_body(http_parser* parser, const char* at, size_t length) {
-  dpi_http_internal_informations_t* infos =
-      (dpi_http_internal_informations_t*)parser->data;
-  dpi_http_callbacks_t* callbacks = infos->callbacks;
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
+  pfwl_http_callbacks_t* callbacks = infos->callbacks;
 
-  dpi_http_message_informations_t dpi_http_informations;
-  dpi_http_informations.http_version_major = parser->http_major;
-  dpi_http_informations.http_version_minor = parser->http_minor;
-  dpi_http_informations.request_or_response = parser->type;
+  pfwl_http_message_informations_t pfwl_http_informations;
+  pfwl_http_informations.http_version_major = parser->http_major;
+  pfwl_http_informations.http_version_minor = parser->http_minor;
+  pfwl_http_informations.request_or_response = parser->type;
   if (parser->type == HTTP_REQUEST)
-    dpi_http_informations.method_or_code = parser->method;
+    pfwl_http_informations.method_or_code = parser->method;
   else
-    dpi_http_informations.method_or_code = parser->status_code;
+    pfwl_http_informations.method_or_code = parser->status_code;
 
-  (*callbacks->http_body_callback)(&dpi_http_informations, (unsigned char*)at,
+  (*callbacks->http_body_callback)(&pfwl_http_informations, (unsigned char*)at,
                                    length, infos->pkt_informations,
                                    infos->flow_specific_user_data,
                                    infos->user_data, !parser->copy);
@@ -285,19 +285,19 @@ static
   return 0;
 }
 
-uint8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t invoke_callbacks_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                               const unsigned char* app_data,
                               uint32_t data_length,
-                              dpi_tracking_informations_t* tracking) {
+                              pfwl_tracking_informations_t* tracking) {
   debug_print("%s\n", "[http.c] HTTP callback manager invoked.");
   uint8_t ret = check_http(state, pkt, app_data, data_length, tracking);
-  if (ret == DPI_PROTOCOL_NO_MATCHES) {
+  if (ret == PFWL_PROTOCOL_NO_MATCHES) {
     debug_print("%s\n",
                 "[http.c] An error occurred in the HTTP protocol manager.");
-    return DPI_PROTOCOL_ERROR;
+    return PFWL_PROTOCOL_ERROR;
   } else {
     debug_print("%s\n", "[http.c] HTTP callback manager exits.");
-    return DPI_PROTOCOL_MATCHES;
+    return PFWL_PROTOCOL_MATCHES;
   }
 }
 
@@ -306,11 +306,11 @@ uint8_t invoke_callbacks_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
  * derived from host address so the user can include this identification
  * in its callback.
  */
-uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_http(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                    const unsigned char* app_data, uint32_t data_length,
-                   dpi_tracking_informations_t* tracking) {
+                   pfwl_tracking_informations_t* tracking) {
   if (pkt->l4prot != IPPROTO_TCP) {
-    return DPI_PROTOCOL_NO_MATCHES;
+    return PFWL_PROTOCOL_NO_MATCHES;
   }
   debug_print("%s\n", "-------------------------------------------");
   debug_print("%s\n", "[http.c] Executing HTTP inspector...");
@@ -318,17 +318,17 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
   http_parser* parser = &(tracking->http[pkt->direction]);
 
   /**
-   * We assume that dpi_tracking_informations_t is initialized to zero, so if
+   * We assume that pfwl_tracking_informations_t is initialized to zero, so if
    * data is NULL
    * we know that it has not been initialized and we initialize it.
    */
   if (parser->data == NULL) {
     http_parser_init(parser, HTTP_BOTH);
     bzero(&(tracking->http_informations[pkt->direction]),
-          sizeof(dpi_http_internal_informations_t));
+          sizeof(pfwl_http_internal_informations_t));
 
     tracking->http_informations[pkt->direction].callbacks =
-        ((dpi_http_callbacks_t*)state->http_callbacks);
+        ((pfwl_http_callbacks_t*)state->http_callbacks);
     tracking->http_informations[pkt->direction].user_data =
         state->http_callbacks_user_data;
     tracking->http_informations[pkt->direction].flow_specific_user_data =
@@ -341,19 +341,19 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
   http_parser_settings x = {0};
 
   if (state->http_callbacks) {
-    if (((dpi_http_callbacks_t*)state->http_callbacks)->header_url_callback !=
+    if (((pfwl_http_callbacks_t*)state->http_callbacks)->header_url_callback !=
         NULL)
       x.on_url = on_url;
     else
       x.on_url = 0;
 
-    if (((dpi_http_callbacks_t*)state->http_callbacks)->http_body_callback !=
+    if (((pfwl_http_callbacks_t*)state->http_callbacks)->http_body_callback !=
         NULL)
       x.on_body = on_body;
     else
       x.on_body = 0;
 
-    if (((dpi_http_callbacks_t*)state->http_callbacks)->num_header_types != 0) {
+    if (((pfwl_http_callbacks_t*)state->http_callbacks)->num_header_types != 0) {
       x.on_header_field = on_field;
       x.on_header_value = on_value;
     } else {
@@ -366,7 +366,7 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
     x.on_message_complete = 0;
   } else {
     /** If there are no user callbacks, we can avoid to do PDU reassembly. **/
-    free(((dpi_http_internal_informations_t*)parser->data)->temp_buffer);
+    free(((pfwl_http_internal_informations_t*)parser->data)->temp_buffer);
     x.on_body = 0;
     x.on_header_field = 0;
     x.on_header_value = 0;
@@ -380,7 +380,7 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
 
   if (parser->http_errno == HPE_OK) {
     debug_print("%s\n", "[http.c] HTTP matches");
-    return DPI_PROTOCOL_MATCHES;
+    return PFWL_PROTOCOL_MATCHES;
   } else {
     debug_print("[http.c] HTTP doesn't matches. Error: %s\n",
                 http_errno_description(parser->http_errno));
@@ -400,9 +400,9 @@ uint8_t check_http(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
      */
     if (tracking->seen_syn == 0) {
       http_parser_init(parser, HTTP_BOTH);
-      return DPI_PROTOCOL_MORE_DATA_NEEDED;
+      return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     } else {
-      return DPI_PROTOCOL_NO_MATCHES;
+      return PFWL_PROTOCOL_NO_MATCHES;
     }
   }
 }

@@ -39,9 +39,9 @@
  * @param tail A pointer to the tail of the timers list.
  * @param timer The timer to insert.
  */
-void dpi_reassembly_add_timer(dpi_reassembly_timer_t** head,
-                              dpi_reassembly_timer_t** tail,
-                              dpi_reassembly_timer_t* timer) {
+void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
+                              pfwl_reassembly_timer_t** tail,
+                              pfwl_reassembly_timer_t* timer) {
   if (*tail) {
     (*tail)->next = timer;
     timer->prev = (*tail);
@@ -60,9 +60,9 @@ void dpi_reassembly_add_timer(dpi_reassembly_timer_t** head,
  * @param tail A pointer to the tail of the timers list.
  * @param timer The timer to remove.
  */
-void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
-                                 dpi_reassembly_timer_t** tail,
-                                 dpi_reassembly_timer_t* timer) {
+void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t** head,
+                                 pfwl_reassembly_timer_t** tail,
+                                 pfwl_reassembly_timer_t* timer) {
   if (timer->prev)
     timer->prev->next = timer->next;
   else
@@ -80,8 +80,8 @@ void dpi_reassembly_delete_timer(dpi_reassembly_timer_t** head,
  * @param y Second sequence number.
  * @return 1 if x is before y, 0 otherwise.
  */
-uint8_t dpi_reassembly_before(uint32_t x, uint32_t y) {
-  return x < y || (x - y) > DPI_TCP_MAX_IN_TRAVEL_DATA;
+uint8_t pfwl_reassembly_before(uint32_t x, uint32_t y) {
+  return x < y || (x - y) > PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
 /**
@@ -90,8 +90,8 @@ uint8_t dpi_reassembly_before(uint32_t x, uint32_t y) {
  * @param y Second sequence number.
  * @return 1 if x is before or equal y, 0 otherwise.
  */
-uint8_t dpi_reassembly_before_or_equal(uint32_t x, uint32_t y) {
-  return x <= y || (x - y) >= DPI_TCP_MAX_IN_TRAVEL_DATA;
+uint8_t pfwl_reassembly_before_or_equal(uint32_t x, uint32_t y) {
+  return x <= y || (x - y) >= PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
 /**
@@ -100,8 +100,8 @@ uint8_t dpi_reassembly_before_or_equal(uint32_t x, uint32_t y) {
  * @param y Second sequence number.
  * @return 1 if x is after y, 0 otherwise.
  */
-uint8_t dpi_reassembly_after(uint32_t x, uint32_t y) {
-  return x > y || (y - x) > DPI_TCP_MAX_IN_TRAVEL_DATA;
+uint8_t pfwl_reassembly_after(uint32_t x, uint32_t y) {
+  return x > y || (y - x) > PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
 /**
@@ -110,8 +110,8 @@ uint8_t dpi_reassembly_after(uint32_t x, uint32_t y) {
  * @param y Second sequence number.
  * @return 1 if x is after or equal y, 0 otherwise.
  */
-uint8_t dpi_reassembly_after_or_equal(uint32_t x, uint32_t y) {
-  return x >= y || (y - x) >= DPI_TCP_MAX_IN_TRAVEL_DATA;
+uint8_t pfwl_reassembly_after_or_equal(uint32_t x, uint32_t y) {
+  return x >= y || (y - x) >= PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
 /**
@@ -120,14 +120,14 @@ uint8_t dpi_reassembly_after_or_equal(uint32_t x, uint32_t y) {
  * @param end The last byte of the segment.
  * @return The length of the TCP segment (or IP fragment).
  */
-uint32_t dpi_reassembly_fragment_length(uint32_t offset, uint32_t end) {
+uint32_t pfwl_reassembly_fragment_length(uint32_t offset, uint32_t end) {
   if (end >= offset)
     return end - offset;
   else
-    return DPI_MAX_INT_32 - offset + 1 + end;
+    return PFWL_MAX_INT_32 - offset + 1 + end;
 }
 
-#ifndef DPI_DEBUG
+#ifndef PFWL_DEBUG
 static
 #endif
     /**
@@ -137,12 +137,12 @@ static
      * @param ptr The content of the fragment.
      * @return The created fragment.
      */
-    dpi_reassembly_fragment_t*
-    dpi_reassembly_create_fragment(uint32_t offset, uint32_t end,
+    pfwl_reassembly_fragment_t*
+    pfwl_reassembly_create_fragment(uint32_t offset, uint32_t end,
                                    const unsigned char* ptr) {
-  dpi_reassembly_fragment_t* fragment;
+  pfwl_reassembly_fragment_t* fragment;
   fragment =
-      (dpi_reassembly_fragment_t*)calloc(1, sizeof(dpi_reassembly_fragment_t));
+      (pfwl_reassembly_fragment_t*)calloc(1, sizeof(pfwl_reassembly_fragment_t));
   if (unlikely(fragment == NULL)) {
     free(fragment);
     return NULL;
@@ -153,7 +153,7 @@ static
   fragment->end = end;
   fragment->tcp_fin = 0;
 
-  uint32_t length = dpi_reassembly_fragment_length(offset, end);
+  uint32_t length = pfwl_reassembly_fragment_length(offset, end);
   fragment->ptr = (unsigned char*)malloc(sizeof(unsigned char) * (length));
 
   if (unlikely(fragment->ptr == NULL)) {
@@ -178,11 +178,11 @@ static
  *
  * @return The created fragment.
  */
-dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
-    dpi_reassembly_fragment_t** head, const unsigned char* data,
+pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
+    pfwl_reassembly_fragment_t** head, const unsigned char* data,
     uint32_t offset, uint32_t end, uint32_t* bytes_removed,
     uint32_t* bytes_inserted) {
-  dpi_reassembly_fragment_t *prev, *next, *iterator, *tmp;
+  pfwl_reassembly_fragment_t *prev, *next, *iterator, *tmp;
   uint32_t fragment_start = 0;
   *bytes_removed = 0;
   *bytes_inserted = 0;
@@ -193,7 +193,7 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
 
   prev = NULL;
   for (next = (*head); next != NULL; next = next->next) {
-    if (dpi_reassembly_after_or_equal(next->offset, offset)) {
+    if (pfwl_reassembly_after_or_equal(next->offset, offset)) {
       break;
     }
     prev = next;
@@ -219,13 +219,13 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
    *  Check for overlaps with the previous fragment. We will left the
    *  previous fragment untouched and in case copy the new part.
    **/
-  if (prev != NULL && dpi_reassembly_before(offset, prev->end)) {
+  if (prev != NULL && pfwl_reassembly_before(offset, prev->end)) {
     /** If is contained in the previous fragment don't do anything.**/
-    if (dpi_reassembly_before_or_equal(end, prev->end)) {
+    if (pfwl_reassembly_before_or_equal(end, prev->end)) {
       return NULL;
     }
     offset = prev->end;
-    fragment_start = dpi_reassembly_fragment_length(offset, prev->end);
+    fragment_start = pfwl_reassembly_fragment_length(offset, prev->end);
   }
 
   /**
@@ -242,7 +242,7 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
      * This data doesn't overlaps. The data are ordered so the
      * successive will not overlap too.
      **/
-    if (dpi_reassembly_after_or_equal(iterator->offset, end)) {
+    if (pfwl_reassembly_after_or_equal(iterator->offset, end)) {
       break;
     }
 
@@ -250,7 +250,7 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
      * If the fragment 'iterator' is completely overlapped by the
      * new fragment, then remove it.
      **/
-    if (dpi_reassembly_after_or_equal(end, iterator->end)) {
+    if (pfwl_reassembly_after_or_equal(end, iterator->end)) {
       if (iterator->prev != NULL) {
         iterator->prev->next = iterator->next;
       } else {
@@ -262,7 +262,7 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
       tmp = iterator->next;
 
       (*bytes_removed) +=
-          dpi_reassembly_fragment_length(iterator->offset, iterator->end);
+          pfwl_reassembly_fragment_length(iterator->offset, iterator->end);
 
       free(iterator->ptr);
       free(iterator);
@@ -286,11 +286,11 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
   }
 
   /** Insert the new fragment in the list. **/
-  tmp = dpi_reassembly_create_fragment(offset, end, data + fragment_start);
+  tmp = pfwl_reassembly_create_fragment(offset, end, data + fragment_start);
 
   if (unlikely(tmp == NULL)) return NULL;
 
-  (*bytes_inserted) += dpi_reassembly_fragment_length(offset, end);
+  (*bytes_inserted) += pfwl_reassembly_fragment_length(offset, end);
 
   tmp->prev = prev;
   tmp->next = next;
@@ -308,8 +308,8 @@ dpi_reassembly_fragment_t* dpi_reassembly_insert_fragment(
  * @param head The pointer to the head of the list of fragments.
  * @return 0 if there are missing fragments, 1 otherwise.
  */
-uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
-    dpi_reassembly_fragment_t* head) {
+uint8_t pfwl_reassembly_ip_check_train_of_contiguous_fragments(
+    pfwl_reassembly_fragment_t* head) {
   if (!head) return 0;
   uint16_t offset = 0;
 
@@ -331,7 +331,7 @@ uint8_t dpi_reassembly_ip_check_train_of_contiguous_fragments(
  *                         occurred (e.g. misbehaving packet),
  *                         -1 is returned.
  */
-int32_t dpi_reassembly_ip_compact_fragments(dpi_reassembly_fragment_t* head,
+int32_t pfwl_reassembly_ip_compact_fragments(pfwl_reassembly_fragment_t* head,
                                             unsigned char** where,
                                             uint32_t len) {
   /* Copy the data portions of all fragments into the new buffer. */

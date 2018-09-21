@@ -32,12 +32,12 @@ public:
     std::pair<const u_char*, unsigned long> getNextPacket();
 };
 
-std::vector<dpi_identification_result_t> getProtocols(const char* pcapName,
+std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols);
 
-std::vector<dpi_identification_result_t> getProtocolsWithState(const char* pcapName,
+std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName,
                            std::vector<uint>& protocols,
-                           dpi_library_state_t* state);
+                           pfwl_library_state_t* state);
 
 
 #endif // PEAFOWL_TEST_COMMON

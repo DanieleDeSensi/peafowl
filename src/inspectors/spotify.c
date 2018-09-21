@@ -28,15 +28,15 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-uint8_t check_spotify(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
+uint8_t check_spotify(pfwl_library_state_t* state, pfwl_pkt_infos_t* pkt,
                       const unsigned char* app_data, uint32_t data_length,
-                      dpi_tracking_informations_t* t) {
+                      pfwl_tracking_informations_t* t) {
   if (pkt->l4prot == IPPROTO_UDP) {
     if (pkt->srcport == port_spotify &&
         pkt->dstport == port_spotify &&
         data_length >= 7) {
       if (memcmp(app_data, "SpotUdp", 7) == 0) {
-        return DPI_PROTOCOL_MATCHES;
+        return PFWL_PROTOCOL_MATCHES;
       }
     }
   } else if (pkt->l4prot == IPPROTO_TCP) {
@@ -45,7 +45,7 @@ uint8_t check_spotify(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
         app_data[3] == 0x00 && app_data[6] == 0x52 &&
         (app_data[7] == 0x0e || app_data[7] == 0x0f) &&
         app_data[8] == 0x50) {
-      return DPI_PROTOCOL_MATCHES;
+      return PFWL_PROTOCOL_MATCHES;
     } else if (pkt->ip_version == 4) { /* IPv4 Only: we need to support packet->iphv6 at some point */
       /*
         Spotify
@@ -80,9 +80,9 @@ uint8_t check_spotify(dpi_library_state_t* state, dpi_pkt_infos_t* pkt,
           /* 194.132.162.0/24 */
           src_addr_masked_24 == 0xC284A200 ||
           dst_addr_masked_24 == 0xC284A200) {
-          return DPI_PROTOCOL_MATCHES;
+          return PFWL_PROTOCOL_MATCHES;
       }
     }
   }
-  return DPI_PROTOCOL_NO_MATCHES;
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

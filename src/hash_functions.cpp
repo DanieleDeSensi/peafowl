@@ -25,27 +25,27 @@
  */
 #include <peafowl/hash_functions.h>
 
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_FNV_HASH || \
-    DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH || \
+    PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
 
 #define FNV1A_32_INIT 0x811c9dc5
 #define FNV_32_PRIME 0x01000193
 
 #if !defined(__GNUC__)
-#define DPI_HVAL_SECOND_STEP(hval) hval *= FNV_32_PRIME;
+#define PFWL_HVAL_SECOND_STEP(hval) hval *= FNV_32_PRIME;
 #else
-#define DPI_HVAL_SECOND_STEP(hval) \
+#define PFWL_HVAL_SECOND_STEP(hval) \
   hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
 #endif
 
-#ifndef DPI_DEBUG
-#if DPI_USE_INLINING == 1
+#ifndef PFWL_DEBUG
+#if PFWL_USE_INLINING == 1
 inline
 #endif
 #endif
     /** FNV-1a 32-bit hash function. **/
     uint32_t
-    v4_fnv_hash_function(const dpi_pkt_infos_t* const in) {
+    v4_fnv_hash_function(const pfwl_pkt_infos_t* const in) {
   uint32_t low_addr, high_addr;
   uint16_t low_port, high_port;
 
@@ -66,41 +66,41 @@ inline
   uint32_t hval = FNV1A_32_INIT;
 
   hval ^= (low_addr & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((low_addr >> 8) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((low_addr >> 16) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((low_addr >> 24) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= (high_addr & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((high_addr >> 8) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((high_addr >> 16) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((high_addr >> 24) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= in->l4prot;
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= (low_port & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((low_port >> 8) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= (high_port & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= ((high_port >> 8) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   /* return our new hash value */
   return hval;
 }
 
-static void get_v6_low_high_addr_port(const dpi_pkt_infos_t* const in,
+static void get_v6_low_high_addr_port(const pfwl_pkt_infos_t* const in,
                                  struct in6_addr* low_addr, struct in6_addr* high_addr,
                                  uint16_t* low_port, uint16_t* high_port){
   uint8_t i = 0;
@@ -138,14 +138,14 @@ static void get_v6_low_high_addr_port(const dpi_pkt_infos_t* const in,
   }
 }
 
-#ifndef DPI_DEBUG
-#if DPI_USE_INLINING == 1
+#ifndef PFWL_DEBUG
+#if PFWL_USE_INLINING == 1
 inline
 #endif
 #endif
     /** FNV-1a 32-bit hash function. **/
     uint32_t
-    v6_fnv_hash_function(const dpi_pkt_infos_t* const in) {
+    v6_fnv_hash_function(const pfwl_pkt_infos_t* const in) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -153,33 +153,33 @@ inline
   uint32_t hval = FNV1A_32_INIT;
   for (i = 0; i < 16; i++) {
     hval ^= low_addr.s6_addr[i];
-    DPI_HVAL_SECOND_STEP(hval)
+    PFWL_HVAL_SECOND_STEP(hval)
   }
 
   for (i = 0; i < 16; i++) {
     hval ^= high_addr.s6_addr[i];
-    DPI_HVAL_SECOND_STEP(hval)
+    PFWL_HVAL_SECOND_STEP(hval)
   }
 
   hval ^= in->l4prot;
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= ((low_port >> 8) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= (low_port & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= ((high_port >> 8) & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
   hval ^= (high_port & 0xFF);
-  DPI_HVAL_SECOND_STEP(hval)
+  PFWL_HVAL_SECOND_STEP(hval)
 
   return hval;
 }
 #endif
 
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_MURMUR3_HASH || \
-    DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH || \
+    PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
 
 //-----------------------------------------------------------------------------
 // MurmurHash3 was written by Austin Appleby, and is placed in the public
@@ -323,7 +323,7 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
   *(uint32_t*)out = h1;
 }
 
-static void get_v4_key(const dpi_pkt_infos_t* const in, char* v4_key) {
+static void get_v4_key(const pfwl_pkt_infos_t* const in, char* v4_key) {
   uint32_t lower_addr = 0, higher_addr = 0;
   uint16_t lower_port = 0, higher_port = 0;
 
@@ -360,7 +360,7 @@ static void get_v4_key(const dpi_pkt_infos_t* const in, char* v4_key) {
   v4_key[12] = (higher_port & 0xFF);
 }
 
-uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
+uint32_t v4_hash_murmur3(const pfwl_pkt_infos_t* const in, uint32_t seed) {
   char v4_key[13];
   get_v4_key(in, v4_key);
   uint32_t result;
@@ -368,7 +368,7 @@ uint32_t v4_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
   return result;
 }
 
-static void get_v6_key(const dpi_pkt_infos_t* const in, char* v6_key){
+static void get_v6_key(const pfwl_pkt_infos_t* const in, char* v6_key){
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -390,7 +390,7 @@ static void get_v6_key(const dpi_pkt_infos_t* const in, char* v6_key){
   v6_key[36] = (high_port & 0xFF);
 }
 
-uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
+uint32_t v6_hash_murmur3(const pfwl_pkt_infos_t* const in, uint32_t seed) {
   char v6_key[37];
   get_v6_key(in, v6_key);
   uint32_t result;
@@ -399,14 +399,14 @@ uint32_t v6_hash_murmur3(const dpi_pkt_infos_t* const in, uint32_t seed) {
 }
 #endif
 
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_SIMPLE_HASH || \
-    DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_simple(const dpi_pkt_infos_t* const in) {
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_SIMPLE_HASH || \
+    PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
+uint32_t v4_hash_function_simple(const pfwl_pkt_infos_t* const in) {
   return in->srcport + in->dstport + in->src_addr_t.ipv4_srcaddr +
          in->dst_addr_t.ipv4_dstaddr + in->l4prot;
 }
 
-uint32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in) {
+uint32_t v6_hash_function_simple(const pfwl_pkt_infos_t* const in) {
   uint8_t i;
   uint32_t partsrc = 0, partdst = 0;
   for (i = 0; i < 16; i++) {
@@ -418,9 +418,9 @@ uint32_t v6_hash_function_simple(const dpi_pkt_infos_t* const in) {
 
 #endif
 
-#if DPI_FLOW_TABLE_HASH_VERSION == DPI_BKDR_HASH || \
-    DPI_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in) {
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH || \
+    PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
+uint32_t v4_hash_function_bkdr(const pfwl_pkt_infos_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
   char v4_key[13];
@@ -432,7 +432,7 @@ uint32_t v4_hash_function_bkdr(const dpi_pkt_infos_t* const in) {
   return (hash & 0x7FFFFFFF);
 }
 
-uint32_t v6_hash_function_bkdr(const dpi_pkt_infos_t* const in) {
+uint32_t v6_hash_function_bkdr(const pfwl_pkt_infos_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
 
