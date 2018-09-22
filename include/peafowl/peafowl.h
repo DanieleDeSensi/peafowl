@@ -1,11 +1,11 @@
 /**
- * @file
+ * @file  peafowl.h
  * @brief This is the main peafowl header to be included.
  *
  * Created on: 19/09/2012
  *
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *  Copyright (C) 2012-2018, Daniele De Sensi (d.desensi.software@gmail.com)
  *
  *  This file is part of Peafowl.
  *
@@ -127,8 +127,8 @@ typedef struct pfwl_identification_result {
 } pfwl_identification_result_t;
 
 /**
-  * Summary information about the packet.
-  **/
+ * Summary information about the packet.
+ **/
 typedef struct pfwl_pkt_infos {
   uint16_t srcport;   /** In network byte order. **/
   uint16_t dstport;   /** In network byte order. **/
@@ -177,6 +177,7 @@ enum pfwl_http_methods {
 #undef XX
 };
 
+  
 typedef struct pfwl_http_message_informations {
   uint8_t http_version_major;
   uint8_t http_version_minor;
@@ -193,6 +194,7 @@ typedef struct pfwl_http_message_informations {
   uint8_t request_or_response;
 } pfwl_http_message_informations_t;
 
+  
 /**
  * @brief Callback for flow cleaning.
  * This callback is called when the flow is expired and deleted. It can be
@@ -202,6 +204,7 @@ typedef struct pfwl_http_message_informations {
  */
 typedef void(pfwl_flow_cleaner_callback)(void* flow_specific_user_data);
 
+  
 /**
  * Called when ssl inspector seen certificate
 **/
@@ -209,6 +212,7 @@ typedef void(pfwl_ssl_certificate_callback)(char* certificate, int size,
                                            void* user_data,
                                            pfwl_pkt_infos_t* pkt);
 
+  
 /**
  * This callback is called when the corresponding header field is found.
  * If the field is divided into more TCP segments it is reconstructed by
@@ -231,6 +235,7 @@ typedef void(pfwl_http_header_url_callback)(const unsigned char* url,
                                            void** flow_specific_user_data,
                                            void* user_data);
 
+  
 /**
  * This callback is called when the corresponding header field is found.
  * If the field is divided into more TCP segments it is reconstructed by
@@ -261,6 +266,7 @@ typedef void(pfwl_http_header_field_callback)(
     pfwl_pkt_infos_t* pkt_informations, void** flow_specific_user_data,
     void* user_data);
 
+  
 /**
  * This callback is called when an HTTP body is found. If the body is
  * divided in multiple TCP segments, then for each segment this callback
@@ -334,6 +340,7 @@ typedef struct pfwl_ssl_internal_information {
 
 typedef struct pfwl_state pfwl_state_t;
 
+  
 /**
  * @brief A generic protocol inspector.
  * A generic protocol inspector.
@@ -362,21 +369,23 @@ typedef enum {
   PFWL_INSPECTOR_ACCURACY_HIGH,
 } pfwl_inspector_accuracy;
 
+  
 /**
  * Fields to be extracted for a given protocol.
  **/
 typedef struct {
-    /**
-     * One flag per field.
-     * If 1, the field is extracted. If 0, it is not extracted.
-     **/
-    uint8_t* fields;
-    /**
-     * Number of fields to extract.
-     **/
-    uint8_t fields_num;
+  /**
+   * One flag per field.
+   * If 1, the field is extracted. If 0, it is not extracted.
+   **/
+  uint8_t* fields;
+  /**
+   * Number of fields to extract.
+   **/
+  uint8_t fields_num;
 } pfwl_fields_extraction_t;
 
+  
 /**
  * The handle to the library.
  **/
@@ -414,9 +423,6 @@ typedef struct pfwl_state {
   void* sip_callbacks;
   void* sip_callbacks_user_data;
 
-  /** DNS callbacks **/
-  /* ## TODO ## */
-
   /** Field callbacks. **/
   pfwl_fields_extraction_t fields_extraction[PFWL_NUM_PROTOCOLS];
 
@@ -442,6 +448,7 @@ typedef struct pfwl_state {
 #endif
 } pfwl_state_t;
 
+  
 /**
  * @brief Initializes Peafowl.
  * Initializes the state of the library. If not specified otherwise after
@@ -462,6 +469,7 @@ pfwl_state_t* pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
                                        uint32_t max_active_v4_flows,
                                        uint32_t max_active_v6_flows);
 
+  
 /**
  * Initializes the state of the library. If not specified otherwise after
  * the initialization, the library will consider all the protocols active.
@@ -469,12 +477,14 @@ pfwl_state_t* pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
  */
 pfwl_state_t* pfwl_init_stateless(void);
 
+  
 /**
  * Terminates the library.
  * @param state A pointer to the state of the library.
  */
 void pfwl_terminate(pfwl_state_t* state);
 
+  
 /**
  * Sets the maximum number of times that the library tries to guess the
  * protocol. During the flow protocol identification, after this number
@@ -490,6 +500,7 @@ void pfwl_terminate(pfwl_state_t* state);
  */
 uint8_t pfwl_set_max_trials(pfwl_state_t* state, uint16_t max_trials);
 
+  
 /**
  * Enable IPv4 defragmentation.
  * @param state        A pointer to the library state.
@@ -500,8 +511,9 @@ uint8_t pfwl_set_max_trials(pfwl_state_t* state, uint16_t max_trials);
  *         otherwise.
  */
 uint8_t pfwl_ipv4_fragmentation_enable(pfwl_state_t* state,
-                                      uint16_t table_size);
+				       uint16_t table_size);
 
+  
 /**
  * Enable IPv6 defragmentation.
  * @param state        A pointer to the library state.
@@ -512,8 +524,9 @@ uint8_t pfwl_ipv4_fragmentation_enable(pfwl_state_t* state,
  *         otherwise.
  */
 uint8_t pfwl_ipv6_fragmentation_enable(pfwl_state_t* state,
-                                      uint16_t table_size);
+				       uint16_t table_size);
 
+  
 /**
  * Sets the amount of memory that a single host can use for IPv4
  * defragmentation.
@@ -524,9 +537,10 @@ uint8_t pfwl_ipv6_fragmentation_enable(pfwl_state_t* state,
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv4_fragmentation_set_per_host_memory_limit(
-    pfwl_state_t* state, uint32_t per_host_memory_limit);
+uint8_t pfwl_ipv4_fragmentation_set_per_host_memory_limit(pfwl_state_t* state,
+							  uint32_t per_host_memory_limit);
 
+  
 /**
  * Sets the amount of memory that a single host can use for IPv6
  * defragmentation.
@@ -537,9 +551,10 @@ uint8_t pfwl_ipv4_fragmentation_set_per_host_memory_limit(
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv6_fragmentation_set_per_host_memory_limit(
-    pfwl_state_t* state, uint32_t per_host_memory_limit);
+uint8_t pfwl_ipv6_fragmentation_set_per_host_memory_limit(pfwl_state_t* state,
+							  uint32_t per_host_memory_limit);
 
+  
 /**
  * Sets the total amount of memory that can be used for IPv4
  * defragmentation.
@@ -553,9 +568,10 @@ uint8_t pfwl_ipv6_fragmentation_set_per_host_memory_limit(
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv4_fragmentation_set_total_memory_limit(
-    pfwl_state_t* state, uint32_t total_memory_limit);
+uint8_t pfwl_ipv4_fragmentation_set_total_memory_limit(pfwl_state_t* state,
+						       uint32_t total_memory_limit);
 
+  
 /**
  * Sets the total amount of memory that can be used for IPv6
  * defragmentation. If fragmentation is disabled and then enabled, this
@@ -567,9 +583,10 @@ uint8_t pfwl_ipv4_fragmentation_set_total_memory_limit(
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv6_fragmentation_set_total_memory_limit(
-    pfwl_state_t* state, uint32_t total_memory_limit);
+uint8_t pfwl_ipv6_fragmentation_set_total_memory_limit(pfwl_state_t* state,
+						       uint32_t total_memory_limit);
 
+  
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly an
  * IPv4 fragmented datagram. Is the maximum time gap between the first and
@@ -580,9 +597,10 @@ uint8_t pfwl_ipv6_fragmentation_set_total_memory_limit(
  * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
-uint8_t pfwl_ipv4_fragmentation_set_reassembly_timeout(
-    pfwl_state_t* state, uint8_t timeout_seconds);
+uint8_t pfwl_ipv4_fragmentation_set_reassembly_timeout(pfwl_state_t* state,
+						       uint8_t timeout_seconds);
 
+  
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly an
  * IPv6 fragmented datagram. Is the maximum time gap between the first and
@@ -596,6 +614,7 @@ uint8_t pfwl_ipv4_fragmentation_set_reassembly_timeout(
 uint8_t pfwl_ipv6_fragmentation_set_reassembly_timeout(
     pfwl_state_t* state, uint8_t timeout_seconds);
 
+  
 /**
  * Disable IPv4 defragmentation.
  * @param state A pointer to the state of the library.
@@ -605,6 +624,7 @@ uint8_t pfwl_ipv6_fragmentation_set_reassembly_timeout(
  */
 uint8_t pfwl_ipv4_fragmentation_disable(pfwl_state_t* state);
 
+  
 /**
  * Disable IPv6 defragmentation.
  * @param state A pointer to the state of the library.
@@ -614,6 +634,7 @@ uint8_t pfwl_ipv4_fragmentation_disable(pfwl_state_t* state);
  */
 uint8_t pfwl_ipv6_fragmentation_disable(pfwl_state_t* state);
 
+  
 /**
  * If enabled, the library will reorder out of order TCP packets
  * (enabled by default).
@@ -624,6 +645,7 @@ uint8_t pfwl_ipv6_fragmentation_disable(pfwl_state_t* state);
  */
 uint8_t pfwl_tcp_reordering_enable(pfwl_state_t* state);
 
+  
 /**
  * If it is called, the library will not reorder out of order TCP packets.
  * Out-of-order segments will be delivered to the inspector as they
@@ -638,6 +660,7 @@ uint8_t pfwl_tcp_reordering_enable(pfwl_state_t* state);
  */
 uint8_t pfwl_tcp_reordering_disable(pfwl_state_t* state);
 
+  
 /**
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
@@ -649,6 +672,7 @@ uint8_t pfwl_tcp_reordering_disable(pfwl_state_t* state);
 uint8_t pfwl_enable_protocol(pfwl_state_t* state,
                             pfwl_protocol_l7 protocol);
 
+  
 /**
  * Disable a protocol inspector.
  * @param state       A pointer to the state of the library.
@@ -658,8 +682,9 @@ uint8_t pfwl_enable_protocol(pfwl_state_t* state,
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_disable_protocol(pfwl_state_t* state,
-                             pfwl_protocol_l7 protocol);
+			      pfwl_protocol_l7 protocol);
 
+  
 /**
  * Enable all the protocol inspector.
  * @param state      A pointer to the state of the library.
@@ -669,6 +694,7 @@ uint8_t pfwl_disable_protocol(pfwl_state_t* state,
  */
 uint8_t pfwl_inspect_all(pfwl_state_t* state);
 
+  
 /**
  * Disable all the protocol inspector.
  * @param state      A pointer to the state of the library.
@@ -678,6 +704,7 @@ uint8_t pfwl_inspect_all(pfwl_state_t* state);
  */
 uint8_t pfwl_inspect_nothing(pfwl_state_t* state);
 
+  
 /**
  * Skips the L7 parsing for packets traveling on some ports for some L4
  * protocol.
@@ -691,9 +718,10 @@ uint8_t pfwl_inspect_nothing(pfwl_state_t* state);
  *         PFWL_STATE_UPDATE_FAILURE otherwise.
  */
 uint8_t pfwl_skip_L7_parsing_by_port(pfwl_state_t* state, uint8_t l4prot,
-                                    uint16_t port, pfwl_protocol_l7 id);
+				     uint16_t port, pfwl_protocol_l7 id);
 
-/*
+  
+/**
  * Try to detect the application protocol.
  * @param   state The state of the library.
  * @param   pkt The pointer to the beginning of IP header.
@@ -720,11 +748,12 @@ uint8_t pfwl_skip_L7_parsing_by_port(pfwl_state_t* state, uint8_t l4prot,
  * 			user callbacks).
  */
 pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
-                                             const unsigned char* pkt,
-                                             uint32_t length,
-                                             uint32_t current_time);
+					       const unsigned char* pkt,
+					       uint32_t length,
+					       uint32_t current_time);
 
-/*
+  
+/**
  * Extract from the packet the informations about source and destination
  * addresses, source and destination ports, L4 protocol and the offset
  * where the application data starts.
@@ -762,11 +791,12 @@ pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
  *          pfwl_state*_get_app_protocol(..)).
  */
 int8_t pfwl_parse_L3_L4_headers(pfwl_state_t* state,
-                               const unsigned char* p_pkt, uint32_t p_length,
-                               pfwl_pkt_infos_t* pkt_infos,
-                               uint32_t current_time);
+				const unsigned char* p_pkt, uint32_t p_length,
+				pfwl_pkt_infos_t* pkt_infos,
+				uint32_t current_time);
 
-/*
+  
+/**
  * Try to detect the application protocol. Before calling it, a check on
  * L4 protocol should be done and the function should be called only if
  * the packet is TCP or UDP.
@@ -798,10 +828,11 @@ int8_t pfwl_parse_L3_L4_headers(pfwl_state_t* state,
  *          more needed (e.g. after calling
  *          pfwl_state*_get_app_protocol(..)).
  */
-pfwl_identification_result_t pfwl_stateful_get_app_protocol(
-    pfwl_state_t* state, pfwl_pkt_infos_t* pkt_infos);
+pfwl_identification_result_t pfwl_stateful_get_app_protocol(pfwl_state_t* state,
+							    pfwl_pkt_infos_t* pkt_infos);
 
-/*
+  
+/**
  * Try to detect the application protocol. Before calling it, a check on
  * L4 protocol should be done and the function should be called only if
  * the packet is TCP or UDP. It should be used if the application already
@@ -837,10 +868,11 @@ pfwl_identification_result_t pfwl_stateful_get_app_protocol(
  *          more needed (e.g. after calling
  *          pfwl_state*_get_app_protocol(..)).
  */
-pfwl_identification_result_t pfwl_stateless_get_app_protocol(
-    pfwl_state_t* state, pfwl_flow_infos_t* flow,
-    pfwl_pkt_infos_t* pkt_infos);
+  pfwl_identification_result_t pfwl_stateless_get_app_protocol(pfwl_state_t* state,
+							       pfwl_flow_infos_t* flow,
+							       pfwl_pkt_infos_t* pkt_infos);
 
+  
 /**
  * Initialize the flow informations passed as argument.
  * @param state       A pointer to the state of the library.
@@ -851,6 +883,7 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
 void pfwl_init_flow_infos(pfwl_state_t* state,
                          pfwl_flow_infos_t* flow_infos, uint8_t l4prot);
 
+  
 /**
  * Try to guess the protocol looking only at source/destination ports.
  * This could be erroneous because sometimes protocols run over ports
@@ -860,6 +893,7 @@ void pfwl_init_flow_infos(pfwl_state_t* state,
  */
 pfwl_protocol_l7 pfwl_guess_protocol(pfwl_pkt_infos_t* pkt_infos);
 
+  
 /**
  * Get the string representing the error message associated to the
  * specified error_code.
@@ -868,6 +902,7 @@ pfwl_protocol_l7 pfwl_guess_protocol(pfwl_pkt_infos_t* pkt_infos);
  */
 const char* const pfwl_get_error_msg(int8_t error_code);
 
+  
 /**
  * Get the string representing the status message associated to the
  * specified status_code.
@@ -876,6 +911,7 @@ const char* const pfwl_get_error_msg(int8_t error_code);
  */
 const char* const pfwl_get_status_msg(int8_t status_code);
 
+  
 /**
  * Returns the string represetation of a protocol.
  * @param   protocol The protocol identifier.
@@ -883,6 +919,7 @@ const char* const pfwl_get_status_msg(int8_t status_code);
  */
 const char* const pfwl_get_protocol_string(pfwl_protocol_l7 protocol);
 
+  
 /**
  * Returns the protocol id corresponding to a protocol string.
  * @param string The protocols tring.
@@ -890,6 +927,7 @@ const char* const pfwl_get_protocol_string(pfwl_protocol_l7 protocol);
  */
 pfwl_protocol_l7 pfwl_get_protocol_id(const char* const string);
 
+  
 /**
  * Returns the string represetations of the protocols.
  * @return  An array A of string, such that A[i] is the
@@ -897,6 +935,7 @@ pfwl_protocol_l7 pfwl_get_protocol_id(const char* const string);
  */
 const char** const pfwl_get_protocols_strings();
 
+  
 /**
  * Sets the callback that will be called when a flow expires.
  * (Valid only if stateful API is used).
@@ -909,6 +948,7 @@ const char** const pfwl_get_protocols_strings();
 uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t* state,
                                       pfwl_flow_cleaner_callback* cleaner);
 
+  
 /**
  * Activate HTTP callbacks. When a protocol is identified the default
  * behavior is to not inspect the packets belonging to that flow anymore
@@ -940,6 +980,7 @@ uint8_t pfwl_http_activate_callbacks(pfwl_state_t* state,
                                     pfwl_http_callbacks_t* callbacks,
                                     void* user_data);
 
+  
 /**
  * Disable the HTTP callbacks. user_data is not freed/modified.
  * @param state       A pointer to the state of the library.
@@ -949,6 +990,7 @@ uint8_t pfwl_http_activate_callbacks(pfwl_state_t* state,
  */
 uint8_t pfwl_http_disable_callbacks(pfwl_state_t* state);
 
+  
 /**
     SSL callbacks.
 **/
@@ -981,7 +1023,8 @@ uint8_t pfwl_http_disable_callbacks(pfwl_state_t* state);
  **/
 uint8_t pfwl_ssl_activate_callbacks(pfwl_state_t* state,
                                    pfwl_ssl_callbacks_t* callbacks,
-                                   void* user_data);
+
+				    void* user_data);
 /**
  * Disable the SSL callbacks. user_data is not freed/modified.
  * @param state       A pointer to the state of the library.
@@ -991,6 +1034,7 @@ uint8_t pfwl_ssl_activate_callbacks(pfwl_state_t* state,
  */
 uint8_t pfwl_ssl_disable_callbacks(pfwl_state_t* state);
 
+  
 /**
  * Set a field callback for a given protocol.
  * When a protocol is identified the default
@@ -1023,6 +1067,7 @@ uint8_t pfwl_protocol_field_add(pfwl_state_t* state,
                                 pfwl_protocol_l7 protocol,
                                 int field_type);
 
+  
 /**
  * Disable the protocol field callback. udata is not freed/modified.
  * @param state        A pointer to the state of the library.
@@ -1036,6 +1081,7 @@ uint8_t pfwl_protocol_field_remove(pfwl_state_t* state,
                                     pfwl_protocol_l7 protocol,
                                     int field_type);
 
+  
 /**
  * Checks if the extraction of a specific field for a given protocol has been
  * required.
@@ -1047,6 +1093,8 @@ uint8_t pfwl_protocol_field_remove(pfwl_state_t* state,
 uint8_t pfwl_protocol_field_required(pfwl_state_t* state,
                                       pfwl_protocol_l7 protocol,
                                       int field_type);
+
+  
 /**
  * Adds a pointer to some data which will be passed as parameter to all
  * the fields callbacks.
@@ -1073,6 +1121,7 @@ uint8_t pfwl_set_protocol_accuracy(pfwl_state_t* state,
                                   pfwl_protocol_l7 protocol,
                                   pfwl_inspector_accuracy accuracy);
 
+  
 /**
  * Initializes the exporter to Prometheus DB.
  * @param state       A pointer to the state of the library.
@@ -1085,14 +1134,87 @@ uint8_t pfwl_prometheus_init(pfwl_state_t* state, uint16_t port);
 /****************************************/
 /** Only to be used directly by mcdpi. **/
 /****************************************/
-pfwl_state_t* pfwl_init_stateful_num_partitions(
-    uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
-    uint32_t max_active_v6_flows, uint16_t num_table_partitions);
+
+/**
+ * Initializes the state of the library. If not specified otherwise after
+ * the initialization, the library will consider all the protocols active.
+ * Using this API, the hash table is divided in num_table_partitions
+ * partitions. These partitions can be accessed concurrently in a thread
+ * safe way from different threads if and only if each thread access only
+ * to its partition.
+ * @param size_v4 Size of the array of pointers used to build the database
+ *        for v4 flows.
+ * @param size_v6 Size of the array of pointers used to build the database
+ *        for v6 flows.
+ * @param max_active_v4_flows The maximum number of IPv4 flows which can
+ *        be active at any time. After reaching this threshold, new flows
+ *        will not be created.
+ * @param max_active_v6_flows The maximum number of IPv6 flows which can
+ *        be active at any time. After reaching this threshold, new flows
+ *        will not be created.
+ * @param num_table_partitions The number of partitions of the hash table.
+ * @return A pointer to the state of the library otherwise.
+ */
+pfwl_state_t* pfwl_init_stateful_num_partitions(uint32_t size_v4,
+						uint32_t size_v6,
+						uint32_t max_active_v4_flows,
+						uint32_t max_active_v6_flows,
+						uint16_t num_table_partitions);
+
+
+/**
+ * Extract from the packet the informations about source and destination
+ * addresses, source and destination ports, L4 protocol and the offset
+ * where the application data starts.
+ * @param   state The state of the library.
+ * @param   pkt The pointer to the beginning of IP header.
+ * @param   data_length Length of the packet (from the beginning of the
+ *          IP header, without L2 headers/trailers).
+ * @param   pkt_infos The pointer to the packet infos. It will be filled
+ *          by the library.
+ * @param   current_time The current time in seconds. It must be
+ *          non-decreasing between two consecutive calls.
+ * @param	tid The thread identifier.
+ * @return  The status of the operation. It gives additional informations
+ *          about the processing of the request. If lesser than 0, an
+ *          error occurred. pfwl_get_error_msg() can be used to get a
+ *          textual representation of the error. If greater or equal than
+ *          0 then it should not be interpreted as an error but simply
+ *          gives additional informations (e.g. if the packet was IP
+ *          fragmented, if it was out of order in the TCP stream, if is a
+ *          segment of a larger application request, etc..).
+ *          pfwl_get_status_msg() can be used to get a textual
+ *          representation of the status. Status and error codes are
+ *          defined above in this header file.
+ *
+ *          The status is PFWL_STATUS_IP_FRAGMENT if the datagram is a
+ *          fragment. In this case, if IP fragmentation support is
+ *          enabled, the library copied the content of the datagram, so if
+ *          the user wants, he can release the resources used to store the
+ *          datagram.
+ *
+ *          The status is PFWL_STATUS_IP_LAST_FRAGMENT if the received
+ *          datagram allows the library to reconstruct a fragmented
+ *          datagram. In this case, pkt_infos->pkt will contain a pointer
+ *          to the recomposed datagram. This pointer will be different
+ *          from p_pkt. The user should free() this pointer when it is no
+ *          more needed (e.g. after calling
+ *          pfwl_state*_get_app_protocol(..)).
+ */
 int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
                                    const unsigned char* p_pkt,
                                    uint32_t p_length,
                                    pfwl_pkt_infos_t* pkt_infos,
                                    uint32_t current_time, int tid);
+
+/**
+ * Given a packet, return the ip offset after dissecting the datalink header.
+ * @param  packet         The pointer to the raw packet
+ * @param  packet header  The struct representing the packet header
+ * @return the length of the ip offset (aka the size of datalink header)
+ */
+uint32_t pfwl_parse_datalink(const u_char* packet, struct pcap_pkthdr header);
+  
 
 #ifdef __cplusplus
 }
