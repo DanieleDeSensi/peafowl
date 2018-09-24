@@ -29,6 +29,7 @@
 #include <peafowl/flow_table.h>
 #include <peafowl/hash_functions.h>
 #include <peafowl/inspectors/inspectors.h>
+#include <peafowl/inspectors/structures.h>
 #include <peafowl/ipv4_reassembly.h>
 #include <peafowl/ipv6_reassembly.h>
 #include <peafowl/tcp_stream_management.h>
@@ -1238,11 +1239,45 @@ uint8_t pfwl_callbacks_fields_set_udata(pfwl_state_t* state,
 }
 
 
-uint32_t pfwl_parse_datalink(const u_char* packet, struct pcap_pkthdr header) {
+uint32_t pfwl_parse_datalink(const u_char* packet,
+			     struct pcap_pkthdr header,
+			     pcap_t* pcap_handle) {
 
   // check parameters
-  if(!packet || !header)
+  if(!packet || !header || !pcap_handle)
     return -1;
 
-  /* TODO */
+  // len and offset
+  u_int16_t check, type = 0, eth_len = 0;
+  u_int16_t wifi_len = 0, radiotap_len = 0, fc;
+  u_int16_t dlink_offset = 0, ipv4_offset = 0, ipv6_offset = 0;
+  u_int16_t tcp_offset = 0, udp_offset = 0;
+  u_int16_t size_payload = 0;
+  
+  // check the datalink type to cast properly datalink header
+  const int datalink_type = pcap_datalink(pcap_handle);
+  switch(datalink_type) {
+    /** IEEE 802.3 Ethernet - 1 **/
+    case DLT_EN10MB:
+      printf("Datalink type: Ethernet\n");
+      // set datalink offset
+      dlink_offset = sizeof(struct ether_header);
+      check = ether_header->ether_type;
+      if(check <= 1500)        // ethernet I - followed by llc snap 05DC
+	eth_len = check;
+      else if(check >= 1536)   // ethernet II - ether type 0600
+        type = check;
+
+      // check for LLC layer with SNAP extension
+      if(eth_len) {
+	if(packet[link_offset] == SNAP) {
+	  llc_snap_header = (struct llc_snap_hdr *)(packet + link_offset);
+	  // SNAP field tells the upper layer protocol
+	  type = llc_snap_header->type;
+	  // update datalink offset with LLC/SNAP header len
+	  link_offset += + 8;
+	}
+      }
+      /* TODO CONTINUE */
+  }
 }

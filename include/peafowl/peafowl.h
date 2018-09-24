@@ -1210,10 +1210,13 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
 /**
  * Given a packet, return the ip offset after dissecting the datalink header.
  * @param  packet         The pointer to the raw packet
- * @param  packet header  The struct representing the packet header
+ * @param  header         The struct representing the packet header
+ * @param  handle         The pointer of type pcap_t for the pcap file
  * @return the length of the ip offset (aka the size of datalink header)
  */
-uint32_t pfwl_parse_datalink(const u_char* packet, struct pcap_pkthdr header);
+  uint32_t pfwl_parse_datalink(const u_char* packet,
+			       struct pcap_pkthdr header,
+			       pcap_t* handle);
   
 
 #ifdef __cplusplus
