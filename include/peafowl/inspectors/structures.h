@@ -1,6 +1,6 @@
 /**
  * @file  structures.h
- * @brief This is the main peafowl header to be included.
+ * @brief Declaration of structures for the packet headers parsing
  *
  * Created on: 24/09/2018
  *
@@ -34,10 +34,38 @@
 extern "C" {
 #endif
 
-#ifdef __GNUC__
-#define __attribute__ ((__packed__));
-#endif
+/* Header offsets */
+#define ETHHDR_SIZE          14
+#define TOKENRING_SIZE       22
+#define PPPHDR_SIZE           4
+#define SLIPHDR_SIZE         16
+#define RAWHDR_SIZE           0
+#define LOOPHDR_SIZE          4
+#define FDDIHDR_SIZE         21
+#define ISDNHDR_SIZE         16
+#define IEEE80211HDR_SIZE    32
 
+/* SNAP extension */
+#define SNAP               0xAA
+
+/* Ethernet protocol ID's from Ether Type field */
+#define	ETHERTYPE_ARP		0x0806		/* Address resolution */
+#define	ETHERTYPE_RARP	        0x8035		/* Reverse ARP */
+#define	ETHERTYPE_VLAN		0x8100		/* IEEE 802.1Q VLAN tagging */
+#define ETHERTYPE_MPLS_UNI      0x8847
+#define ETHERTYPE_MPLS_MULTI    0x8848
+
+/* mask for FCF */
+#define	WIFI_DATA                        0x2    /* 0000 0010 */
+#define FCF_TYPE(fc)     (((fc) >> 2) & 0x3)    /* 0000 0011 = 0x3 */
+#define FCF_SUBTYPE(fc)  (((fc) >> 4) & 0xF)    /* 0000 1111 = 0xF */
+#define FCF_TO_DS(fc)        ((fc) & 0x0100)
+#define FCF_FROM_DS(fc)      ((fc) & 0x0200)
+/* mask for Bad FCF presence */
+#define BAD_FCS                         0x50    /* 0101 0000 */
+
+
+  
   /* +++++++++++++++++ LLC SNAP header (IEEE 802.2) ++++++++++++ */
   struct llc_snap_hdr
   {
@@ -48,7 +76,7 @@ extern "C" {
     /* snap */
     u_int8_t  oui[3];
     u_int16_t type;
-  } __attribute__ ((__packed__));;
+  };
   
   
   /* +++++++++++++++ 802.1Q header (Virtual LAN) +++++++++++++++ */
@@ -56,7 +84,7 @@ extern "C" {
   {
     u_int16_t tci;
     u_int16_t type;
-  } __attribute__ ((__packed__));;
+  };
   
   
   
@@ -68,7 +96,7 @@ extern "C" {
 #elif (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     u_int32_t label:20, exp:3, s:1, ttl:8;
 #endif
-  } __attribute__((packed));
+  };
   
   
   
@@ -81,7 +109,7 @@ extern "C" {
     u_int32_t present;
     u_int64_t MAC_timestamp;
     u_int8_t  flags;
-  } __attribute__ ((__packed__));;
+  };
   
   
   /* ++++++++++++ Wireless header (IEEE 802.11) ++++++++++++++++ */
@@ -94,7 +122,7 @@ extern "C" {
     u_int8_t  dest[6];
     u_int16_t seq_ctrl;
     /* u_int64_t ccmp - for data encription only - check fc.flag */
-  } __attribute__ ((__packed__));;
+  };
   
 #ifdef __cplusplus
 }

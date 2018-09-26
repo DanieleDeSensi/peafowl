@@ -37,6 +37,7 @@
 
 #include <arpa/inet.h>
 #include <assert.h>
+#include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/tcp.h>
@@ -1239,45 +1240,177 @@ uint8_t pfwl_callbacks_fields_set_udata(pfwl_state_t* state,
 }
 
 
+static uint16_t pfwl_check_dtype(const u_char* packet,
+				 uint16_t type,
+				 uint16_t off)
+{
+  uint32_t dlink_offset = off;
+
+  // define vlan header
+  const struct vlan_hdr *vlan_header = NULL;
+  // define mpls 
+  union mpls {
+    uint32_t u32;
+    struct mpls_header mpls;
+  } mpls;
+  
+  switch(type)
+    {
+      /**
+	 NOTE:
+	 The check for IPv4 or IPv6 type is done later 
+	 in another function
+	 TODO: ARP check
+      **/
+      // VLAN
+    case ETHERTYPE_VLAN:
+      vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
+      type = ntohs(vlan_header->type);
+      // double tagging for 802.1Q
+      if(type == 0x8100) {
+	dlink_offset += 4;
+	vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
+      }
+      dlink_offset += 4;
+      break;
+      // MPLS
+    case ETHERTYPE_MPLS_UNI:
+    case ETHERTYPE_MPLS_MULTI:
+      mpls.u32 = *((uint32_t *) &packet[dlink_offset]);
+      mpls.u32 = ntohl(mpls.u32);
+      dlink_offset += 4;
+      // multiple MPLS fields
+      while(!mpls.mpls.s) {
+	mpls.u32 = *((uint32_t *) &packet[dlink_offset]);
+	mpls.u32 = ntohl(mpls.u32);
+	dlink_offset += 4;
+      }
+      break;
+    }
+  return dlink_offset;
+}
+
 uint32_t pfwl_parse_datalink(const u_char* packet,
-			     struct pcap_pkthdr header,
-			     pcap_t* pcap_handle) {
+			   struct pcap_pkthdr header,
+			   pcap_t* pcap_handle) {
 
   // check parameters
-  if(!packet || !header || !pcap_handle)
+  if(!packet || !pcap_handle)
     return -1;
 
   // len and offset
-  u_int16_t check, type = 0, eth_len = 0;
-  u_int16_t wifi_len = 0, radiotap_len = 0, fc;
-  u_int16_t dlink_offset = 0, ipv4_offset = 0, ipv6_offset = 0;
-  u_int16_t tcp_offset = 0, udp_offset = 0;
-  u_int16_t size_payload = 0;
+  uint16_t check, type = 0, eth_len = 0;
+  uint16_t wifi_len = 0, radiotap_len = 0, fc;
+  uint16_t dlink_offset = 0;
+
+  // define ethernet header
+  struct ether_header* ether_header = NULL;
+  // define radio_tap header
+  struct radiotap_hdr* radiotap_header = NULL;
+  // define wifi header
+  struct wifi_hdr* wifi_header = NULL;
+  // define llc header
+  struct llc_snap_hdr* llc_snap_header = NULL;
   
   // check the datalink type to cast properly datalink header
   const int datalink_type = pcap_datalink(pcap_handle);
   switch(datalink_type) {
-    /** IEEE 802.3 Ethernet - 1 **/
-    case DLT_EN10MB:
-      printf("Datalink type: Ethernet\n");
-      // set datalink offset
-      dlink_offset = sizeof(struct ether_header);
-      check = ether_header->ether_type;
-      if(check <= 1500)        // ethernet I - followed by llc snap 05DC
-	eth_len = check;
-      else if(check >= 1536)   // ethernet II - ether type 0600
-        type = check;
+    
+   /** IEEE 802.3 Ethernet - 1 **/
+   case DLT_EN10MB:
+     printf("Datalink type: Ethernet\n");
+     ether_header = (struct ether_header*)(packet);
+     // set datalink offset
+     dlink_offset = sizeof(struct ether_header);
+     check = ether_header->ether_type;
+     if(check <= 1500)        // ethernet I - followed by llc snap 05DC
+       eth_len = check;
+     else if(check >= 1536)   // ethernet II - ether type 0600
+       type = check; 
+     // check for LLC layer with SNAP extension
+     if(eth_len) {
+       if(packet[dlink_offset] == SNAP) {
+	 llc_snap_header = (struct llc_snap_hdr *)(packet + dlink_offset);
+	 type = llc_snap_header->type; // in this case LLC type is the l3 proto type
+	 dlink_offset += 8;
+       }
+     }
+     break;
+     
+   /** Linux Cooked Capture - 113 **/
+   case DLT_LINUX_SLL:
+     type = (packet[dlink_offset + 14] << 8) + packet[dlink_offset + 15];
+     dlink_offset += 16;
+     break;
 
-      // check for LLC layer with SNAP extension
-      if(eth_len) {
-	if(packet[link_offset] == SNAP) {
-	  llc_snap_header = (struct llc_snap_hdr *)(packet + link_offset);
-	  // SNAP field tells the upper layer protocol
-	  type = llc_snap_header->type;
-	  // update datalink offset with LLC/SNAP header len
-	  link_offset += + 8;
-	}
-      }
-      /* TODO CONTINUE */
+   /** Radiotap link-layer - 127 **/
+   case DLT_IEEE802_11_RADIO:
+     radiotap_header = (struct radiotap_hdr *) packet;
+     radiotap_len = radiotap_header->len;
+     // Check Bad FCS presence
+     if((radiotap_header->flags & BAD_FCS) == BAD_FCS) {
+       return -1;
+     }
+     // Calculate 802.11 header length (variable)
+     wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
+     fc = wifi_header->fc; // FRAME CONTROL BYTES
+     
+     // check wifi data presence
+     if(FCF_TYPE(fc) == WIFI_DATA) {
+       if((FCF_TO_DS(fc) && FCF_FROM_DS(fc) == 0x0) ||
+	  (FCF_TO_DS(fc) == 0x0 && FCF_FROM_DS(fc)))
+	 wifi_len = 26; /* + 4 byte fcs */
+     }
+     // no data frames
+     else
+       break;
+     // Wifi data present - check LLC
+     llc_snap_header = (struct llc_snap_hdr*)(packet + wifi_len + radiotap_len);
+     if(llc_snap_header->dsap == SNAP)
+       type = ntohs(llc_snap_header->type);
+     else {
+       printf("Probably a wifi packet of with data encription. Discard\n");
+       return -1;
+     }
+     dlink_offset = radiotap_len + wifi_len + sizeof(struct llc_snap_hdr);
+     break;
+
+   /** LINKTYPE_IEEE802_5 - 6 **/
+   case DLT_IEEE802:
+     dlink_offset = TOKENRING_SIZE;
+     break;
+
+   /** LINKTYPE_SLIP - 8 **/
+   case DLT_SLIP:
+     dlink_offset = SLIPHDR_SIZE;
+     break;
+
+   /** LINKTYPE_PPP - 09 **/
+   case DLT_PPP:
+     dlink_offset = PPPHDR_SIZE;
+     break;
+     
+   /** LINKTYPE_FDDI - 10 **/
+   case DLT_FDDI:
+     dlink_offset = FDDIHDR_SIZE;
+     break;
+
+   /** LINKTYPE_RAW - 101 **/
+   case DLT_RAW:
+     dlink_offset = RAWHDR_SIZE;
+     break;
+
+   /** LINKTYPE_LOOP - 108 **/
+   case DLT_LOOP:
+   /** LINKTYPE_NULL - 0 **/
+   case DLT_NULL:
+     dlink_offset = LOOPHDR_SIZE;
+     break;
+
+   default:
+    perror("unsupported interface type\n");
+
+    dlink_offset = pfwl_check_dtype(packet, type, dlink_offset); 
   }
+  return (uint32_t) dlink_offset;
 }

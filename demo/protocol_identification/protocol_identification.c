@@ -62,73 +62,36 @@ int main(int argc, char** argv){
         return (2);
     }
 
-    ////////
-    int datalink_type=pcap_datalink(handle);
     uint ip_offset=0;
-    if(datalink_type==DLT_EN10MB){
-        printf("Datalink type: Ethernet\n");
-        ip_offset=sizeof(struct ether_header);
-    }else if(datalink_type==DLT_RAW){
-        printf("Datalink type: RAW\n");
-        ip_offset=0;
-    }else if(datalink_type==DLT_LINUX_SLL){
-        printf("Datalink type: Linux Cooked\n");
-        ip_offset=16;
-    }else{
-        fprintf(stderr, "Datalink type not supported\n");
-        exit(-1);
-    }
-    ////////
-
-
     const u_char* packet;
     struct pcap_pkthdr header;
 
     pfwl_identification_result_t r;
     u_int32_t protocols[PFWL_NUM_PROTOCOLS];
     memset(protocols, 0, sizeof(protocols));
-    u_int32_t unknown=0;
-    
-    uint virtual_offset = 0;
+    u_int32_t unknown = 0;
 
     while((packet=pcap_next(handle, &header))!=NULL){
 
-      /* NEW FUNCTION HERE ### TODO
-         take pkt, pkt, pkt_header -> return ip_offset
-         all the datalink parsing is inside the function
-      */
-      ////////
-        if(datalink_type == DLT_EN10MB){
-            if(header.caplen < ip_offset){
-                continue;
-            }
-            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
-            if(ether_type == htons(0x8100)){ // VLAN
-                virtual_offset = 4;
-            }
-            if(ether_type != htons(ETHERTYPE_IP) &&
-               ether_type != htons(ETHERTYPE_IPV6)){
-                continue;
-            }
-        }///////
+      ip_offset = pfwl_parse_datalink(packet, header, handle);
 
-        r = pfwl_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+      r = pfwl_get_protocol(state, packet+ip_offset, header.caplen-ip_offset, time(NULL));
 
-        if(r.protocol_l4 == IPPROTO_TCP ||
-           r.protocol_l4 == IPPROTO_UDP){
-            if(r.protocol_l7 < PFWL_NUM_PROTOCOLS){
-                ++protocols[r.protocol_l7];
-            }else{
-                ++unknown;
-            }
-        }else{
-            ++unknown;
-        }
+      if(r.protocol_l4 == IPPROTO_TCP ||
+	 r.protocol_l4 == IPPROTO_UDP){
+	if(r.protocol_l7 < PFWL_NUM_PROTOCOLS){
+	  ++protocols[r.protocol_l7];
+	}else{
+	  ++unknown;
+	}
+      }else{
+	++unknown;
+      }
     }
 
     pfwl_terminate(state);
 
-    if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+    if(unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
     for(size_t i = 0; i < PFWL_NUM_PROTOCOLS; i++){
         if(protocols[i] > 0){
             printf("%s packets: %"PRIu32"\n", pfwl_get_protocol_string(i), protocols[i]);

@@ -77,7 +77,7 @@ extern "C" {
 #include <peafowl/inspectors/fields.h>
 #include <peafowl/utils.h>
 #include <peafowl/external/utils/uthash.h>
-
+#include <pcap.h>
 #include <sys/types.h>
 
 /** Errors **/
