@@ -1299,7 +1299,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
     return -1;
 
   // len and offset
-  uint16_t check, type = 0, eth_type_1 = 0;
+  uint16_t type = 0, eth_type_1 = 0;
   uint16_t wifi_len = 0, radiotap_len = 0, fc;
   uint16_t dlink_offset = 0;
 
@@ -1321,9 +1321,9 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      printf("Datalink type: Ethernet\n");
      ether_header = (struct ether_header*)(packet);
      // set datalink offset
-     dlink_offset = sizeof(struct ether_header);
-     check = ntohs(ether_header->ether_type);
-     if(check <= 1500) eth_type_1 = 1; // ethernet I - followed by llc snap 05DC
+     dlink_offset = ETHHDR_SIZE;
+     type = ntohs(ether_header->ether_type);
+     if(type <= 1500) eth_type_1 = 1; // ethernet I - followed by llc snap 05DC
      // check for LLC layer with SNAP extension
      if(eth_type_1) {
        if(packet[dlink_offset] == SNAP) {
@@ -1337,7 +1337,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
    /** Linux Cooked Capture - 113 **/
    case DLT_LINUX_SLL:
      type = (packet[dlink_offset + 14] << 8) + packet[dlink_offset + 15];
-     dlink_offset += 16;
+     dlink_offset = 16;
      break;
 
    /** Radiotap link-layer - 127 **/
@@ -1409,8 +1409,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      break;
   }
   
-  uint16_t offset = pfwl_check_dtype(packet, type, dlink_offset);
-  dlink_offset += offset;
+  dlink_offset = pfwl_check_dtype(packet, type, dlink_offset);
   
   return (uint32_t) dlink_offset;
 }

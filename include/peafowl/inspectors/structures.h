@@ -100,7 +100,7 @@ extern "C" {
   
   
   
-  /* ++++++++++ Radio Tap header (for IEEE 802.11) with timestamp +++++++++++++ */
+  /* ++++++++++ Radio Tap header (for IEEE 802.11) +++++++++++++ */
   struct radiotap_hdr
   {
     u_int8_t  version;         /* set to 0 */
