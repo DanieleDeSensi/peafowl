@@ -1291,15 +1291,15 @@ static uint16_t pfwl_check_dtype(const u_char* packet,
 }
 
 uint32_t pfwl_parse_datalink(const u_char* packet,
-			   struct pcap_pkthdr header,
-			   pcap_t* pcap_handle) {
+			     struct pcap_pkthdr header,
+			     pcap_t* pcap_handle) {
 
   // check parameters
   if(!packet || !pcap_handle)
     return -1;
 
   // len and offset
-  uint16_t check, type = 0, eth_len = 0;
+  uint16_t check, type = 0, eth_type_1 = 0;
   uint16_t wifi_len = 0, radiotap_len = 0, fc;
   uint16_t dlink_offset = 0;
 
@@ -1322,13 +1322,13 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      ether_header = (struct ether_header*)(packet);
      // set datalink offset
      dlink_offset = sizeof(struct ether_header);
-     check = ether_header->ether_type;
+     check = ntohs(ether_header->ether_type);
      if(check <= 1500)        // ethernet I - followed by llc snap 05DC
-       eth_len = check;
+       eth_type_1 = 1;
      else if(check >= 1536)   // ethernet II - ether type 0600
-       type = check; 
+       type = 1; 
      // check for LLC layer with SNAP extension
-     if(eth_len) {
+     if(eth_type_1) {
        if(packet[dlink_offset] == SNAP) {
 	 llc_snap_header = (struct llc_snap_hdr *)(packet + dlink_offset);
 	 type = llc_snap_header->type; // in this case LLC type is the l3 proto type
@@ -1408,9 +1408,11 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      break;
 
    default:
-    perror("unsupported interface type\n");
-
-    dlink_offset = pfwl_check_dtype(packet, type, dlink_offset); 
+     perror("unsupported interface type\n");
+     break;
   }
+  
+  dlink_offset = pfwl_check_dtype(packet, type, dlink_offset); 
+  
   return (uint32_t) dlink_offset;
 }
