@@ -1323,16 +1323,13 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      // set datalink offset
      dlink_offset = sizeof(struct ether_header);
      check = ntohs(ether_header->ether_type);
-     if(check <= 1500)        // ethernet I - followed by llc snap 05DC
-       eth_type_1 = 1;
-     else if(check >= 1536)   // ethernet II - ether type 0600
-       type = 1; 
+     if(check <= 1500) eth_type_1 = 1; // ethernet I - followed by llc snap 05DC
      // check for LLC layer with SNAP extension
      if(eth_type_1) {
        if(packet[dlink_offset] == SNAP) {
-	 llc_snap_header = (struct llc_snap_hdr *)(packet + dlink_offset);
-	 type = llc_snap_header->type; // in this case LLC type is the l3 proto type
-	 dlink_offset += 8;
+     	 llc_snap_header = (struct llc_snap_hdr *)(packet + dlink_offset);
+     	 type = llc_snap_header->type; // LLC type is the l3 proto type
+     	 dlink_offset += 8;
        }
      }
      break;
@@ -1412,7 +1409,8 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      break;
   }
   
-  dlink_offset = pfwl_check_dtype(packet, type, dlink_offset); 
+  uint16_t offset = pfwl_check_dtype(packet, type, dlink_offset);
+  dlink_offset += offset;
   
   return (uint32_t) dlink_offset;
 }
