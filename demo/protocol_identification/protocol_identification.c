@@ -69,7 +69,7 @@ int main(int argc, char** argv){
     pfwl_identification_result_t r;
     u_int32_t protocols[PFWL_NUM_PROTOCOLS];
     memset(protocols, 0, sizeof(protocols));
-    u_int32_t unknown = 0;
+    u_int32_t unknown = 0, icmp = 0;
 
     while((packet=pcap_next(handle, &header))!=NULL){
 
@@ -84,6 +84,8 @@ int main(int argc, char** argv){
 	}else{
 	  ++unknown;
 	}
+      }else if(r.status == PFWL_STATUS_ICMP){
+	++icmp;
       }else{
 	++unknown;
       }
@@ -92,6 +94,7 @@ int main(int argc, char** argv){
     pfwl_terminate(state);
 
     if(unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+    if(icmp > 0) printf("ICMP packets: %"PRIu32"\n", icmp);
     for(size_t i = 0; i < PFWL_NUM_PROTOCOLS; i++){
         if(protocols[i] > 0){
             printf("%s packets: %"PRIu32"\n", pfwl_get_protocol_string(i), protocols[i]);

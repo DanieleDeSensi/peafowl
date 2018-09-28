@@ -470,6 +470,12 @@ pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
   }
 
   if (!skip_l7) {
+    // check ICMP status
+    if(r.status == PFWL_STATUS_ICMP) {
+      r.protocol_l7 = PFWL_PROTOCOL_NOT_DETERMINED;
+      return r;
+    }
+    // check if not TCP or UDP
     if (infos.l4prot != IPPROTO_TCP && infos.l4prot != IPPROTO_UDP) {
       return r;
     }
@@ -808,12 +814,19 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
         application_offset += tmp;
         relative_offset = tmp;
         break;
+      case ICMP:
+	to_return = PFWL_STATUS_ICMP;
+	stop = 1;
+        pkt_infos->l4offset = 0; // L4 is not present
+	break;
       default:
         stop = 1;
         pkt_infos->l4offset = application_offset;
         break;
     }
   }
+
+  if(to_return == PFWL_STATUS_ICMP) return to_return;
 
   pkt_infos->l4prot = next_header;
 #ifdef PFWL_ENABLE_L4_TRUNCATION_PROTECTION
@@ -1264,10 +1277,12 @@ static uint16_t pfwl_check_dtype(const u_char* packet,
       **/
       // VLAN
     case ETHERTYPE_VLAN:
+      printf("Ethernet type: VLAN\n");
       vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
       type = ntohs(vlan_header->type);
       // double tagging for 802.1Q
       if(type == 0x8100) {
+	printf("\tdouble tagging VLAN\n");
 	dlink_offset += 4;
 	vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
       }
@@ -1276,6 +1291,7 @@ static uint16_t pfwl_check_dtype(const u_char* packet,
       // MPLS
     case ETHERTYPE_MPLS_UNI:
     case ETHERTYPE_MPLS_MULTI:
+      printf("Ethernet type: MPLS\n");
       mpls.u32 = *((uint32_t *) &packet[dlink_offset]);
       mpls.u32 = ntohl(mpls.u32);
       dlink_offset += 4;
@@ -1336,12 +1352,14 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      
    /** Linux Cooked Capture - 113 **/
    case DLT_LINUX_SLL:
+     printf("Datalink type: Linux Cooked\n");
      type = (packet[dlink_offset + 14] << 8) + packet[dlink_offset + 15];
      dlink_offset = 16;
      break;
 
    /** Radiotap link-layer - 127 **/
    case DLT_IEEE802_11_RADIO:
+     printf("Datalink type: Radiotap\n");
      radiotap_header = (struct radiotap_hdr *) packet;
      radiotap_len = radiotap_header->len;
      // Check Bad FCS presence
@@ -1374,26 +1392,31 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
 
    /** LINKTYPE_IEEE802_5 - 6 **/
    case DLT_IEEE802:
+     printf("Datalink type: Tokenring\n");
      dlink_offset = TOKENRING_SIZE;
      break;
 
    /** LINKTYPE_SLIP - 8 **/
    case DLT_SLIP:
+     printf("Datalink type: Slip\n");
      dlink_offset = SLIPHDR_SIZE;
      break;
 
    /** LINKTYPE_PPP - 09 **/
    case DLT_PPP:
+     printf("Datalink type: PPP\n");
      dlink_offset = PPPHDR_SIZE;
      break;
      
    /** LINKTYPE_FDDI - 10 **/
    case DLT_FDDI:
+     printf("Datalink type: FDDI\n");
      dlink_offset = FDDIHDR_SIZE;
      break;
 
    /** LINKTYPE_RAW - 101 **/
    case DLT_RAW:
+     printf("Datalink type: Raw\n");
      dlink_offset = RAWHDR_SIZE;
      break;
 
@@ -1401,6 +1424,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
    case DLT_LOOP:
    /** LINKTYPE_NULL - 0 **/
    case DLT_NULL:
+     printf("Datalink type: Loop or Null\n");
      dlink_offset = LOOPHDR_SIZE;
      break;
 

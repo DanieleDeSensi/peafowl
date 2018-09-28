@@ -80,6 +80,8 @@ extern "C" {
 #include <pcap.h>
 #include <sys/types.h>
 
+/** ICMP value **/
+#define ICMP 0x01
 /** Errors **/
 #define PFWL_ERROR_WRONG_IPVERSION -1
 #define PFWL_ERROR_IPSEC_NOTSUPPORTED -2
@@ -95,6 +97,7 @@ typedef struct pfwl_tracking_informations pfwl_tracking_informations_t;
 /** Statuses */
 typedef enum pfwl_status {
   PFWL_STATUS_OK = 0,
+  PFWL_STATUS_ICMP,
   PFWL_STATUS_IP_FRAGMENT,
   PFWL_STATUS_IP_LAST_FRAGMENT,
   PFWL_STATUS_TCP_OUT_OF_ORDER,
@@ -123,7 +126,7 @@ typedef struct pfwl_identification_result {
   // Number of fields extracted by the dissector
   size_t protocol_fields_num;
   // User-defined data associated to the specific flow
-  void* user_flow_data;  
+  void* user_flow_data;
 } pfwl_identification_result_t;
 
 /**
