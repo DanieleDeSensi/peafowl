@@ -1261,17 +1261,17 @@ static uint16_t pfwl_check_dtype(const u_char* packet,
 
   // define vlan header
   const struct vlan_hdr *vlan_header = NULL;
-  // define mpls 
+  // define mpls
   union mpls {
     uint32_t u32;
     struct mpls_header mpls;
   } mpls;
-  
+
   switch(type)
     {
       /**
 	 NOTE:
-	 The check for IPv4 or IPv6 type is done later 
+	 The check for IPv4 or IPv6 type is done later
 	 in another function
 	 TODO: ARP check
       **/
@@ -1306,6 +1306,16 @@ static uint16_t pfwl_check_dtype(const u_char* packet,
   return dlink_offset;
 }
 
+
+/*
+  Function for pfwl_parse_datalink()
+  @return n bit from position p of number x
+*/
+static inline uint8_t getBits(uint16_t x, int p, int n)
+{
+  return (x >> (p+1-n)) & ~(~0 << n);
+}
+
 uint32_t pfwl_parse_datalink(const u_char* packet,
 			     struct pcap_pkthdr header,
 			     pcap_t* pcap_handle) {
@@ -1327,11 +1337,11 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
   struct wifi_hdr* wifi_header = NULL;
   // define llc header
   struct llc_snap_hdr* llc_snap_header = NULL;
-  
+
   // check the datalink type to cast properly datalink header
   const int datalink_type = pcap_datalink(pcap_handle);
   switch(datalink_type) {
-    
+
    /** IEEE 802.3 Ethernet - 1 **/
    case DLT_EN10MB:
      printf("Datalink type: Ethernet\n");
@@ -1349,7 +1359,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
        }
      }
      break;
-     
+
    /** Linux Cooked Capture - 113 **/
    case DLT_LINUX_SLL:
      printf("Datalink type: Linux Cooked\n");
@@ -1357,38 +1367,60 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      dlink_offset = 16;
      break;
 
+   /**
+      NOTE: for Radiotap and Wireless
+      must be added 4 bytes of FCS (present in the end of l7)
+      to match the correct total bytes of the pkt
+   **/
    /** Radiotap link-layer - 127 **/
-   case DLT_IEEE802_11_RADIO:
+   case DLT_IEEE802_11_RADIO: {
      printf("Datalink type: Radiotap\n");
      radiotap_header = (struct radiotap_hdr *) packet;
      radiotap_len = radiotap_header->len;
-     // Check Bad FCS presence
-     if((radiotap_header->flags & BAD_FCS) == BAD_FCS) {
-       return -1;
+     dlink_offset = radiotap_len;
+
+     const u_char* p_radio = packet+radiotap_len;
+
+     // Check if Flag byte is present
+     if(getBits(radiotap_header->present,1,1) == 1) {
+         // Check Bad FCS presence
+         if(p_radio == F_BADFCS) {
+             printf("Malformed Radiotap packet. DISCARD\n");
+             return -1;
+         }
+         dlink_offset += 1;
+         p_radio++;
      }
-     // Calculate 802.11 header length (variable)
+     /* TODO: must be check other cases */
+   }
+
+  case DLT_IEEE802_11: {
+
+     // Calculate 802.11 header length
      wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
      fc = wifi_header->fc; // FRAME CONTROL BYTES
-     
+
      // check wifi data presence
      if(FCF_TYPE(fc) == WIFI_DATA) {
-       if((FCF_TO_DS(fc) && FCF_FROM_DS(fc) == 0x0) ||
-	  (FCF_TO_DS(fc) == 0x0 && FCF_FROM_DS(fc)))
-	 wifi_len = 26; /* + 4 byte fcs */
+         if((FCF_TO_DS(fc) && FCF_FROM_DS(fc) == 0x0) ||
+            (FCF_TO_DS(fc) == 0x0 && FCF_FROM_DS(fc))) {
+             wifi_len = sizeof(struct wifi_hdr); /* 26 bytes */
+             dlink_offset = wifi_len;
+         }
      }
      // no data frames
-     else
-       break;
+     else return -1;
      // Wifi data present - check LLC
-     llc_snap_header = (struct llc_snap_hdr*)(packet + wifi_len + radiotap_len);
+     llc_snap_header = (struct llc_snap_hdr*)(packet + wifi_len);
      if(llc_snap_header->dsap == SNAP)
        type = ntohs(llc_snap_header->type);
      else {
-       printf("Probably a wifi packet of with data encription. Discard\n");
-       return -1;
+         printf("Probably a wifi packet of with data encription. Discard\n");
+         return -1;
      }
-     dlink_offset = radiotap_len + wifi_len + sizeof(struct llc_snap_hdr);
+     dlink_offset += sizeof(struct llc_snap_hdr);
      break;
+   }
 
    /** LINKTYPE_IEEE802_5 - 6 **/
    case DLT_IEEE802:
@@ -1407,7 +1439,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      printf("Datalink type: PPP\n");
      dlink_offset = PPPHDR_SIZE;
      break;
-     
+
    /** LINKTYPE_FDDI - 10 **/
    case DLT_FDDI:
      printf("Datalink type: FDDI\n");
@@ -1432,8 +1464,8 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      perror("unsupported interface type\n");
      break;
   }
-  
+
   dlink_offset = pfwl_check_dtype(packet, type, dlink_offset);
-  
+
   return (uint32_t) dlink_offset;
 }

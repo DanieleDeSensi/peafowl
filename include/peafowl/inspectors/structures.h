@@ -46,12 +46,11 @@ extern "C" {
 #define IEEE80211HDR_SIZE    32
 
 /* SNAP extension */
-#define SNAP               0xAA
-
+#define SNAP                    0xAA
 /* Ethernet protocol ID's from Ether Type field */
-#define	ETHERTYPE_ARP		0x0806	        /* Address resolution */
+#define	ETHERTYPE_ARP		    0x0806	        /* Address resolution */
 #define	ETHERTYPE_RARP	        0x8035	        /* Reverse ARP */
-#define	ETHERTYPE_VLAN		0x8100	        /* IEEE 802.1Q VLAN tagging */
+#define	ETHERTYPE_VLAN		    0x8100	        /* IEEE 802.1Q VLAN tagging */
 #define ETHERTYPE_MPLS_UNI      0x8847          /* Multiprotocol Label Switching */
 #define ETHERTYPE_MPLS_MULTI    0x8848
 
@@ -61,11 +60,21 @@ extern "C" {
 #define FCF_SUBTYPE(fc)  (((fc) >> 4) & 0xF)    /* 0000 1111 = 0xF */
 #define FCF_TO_DS(fc)        ((fc) & 0x0100)
 #define FCF_FROM_DS(fc)      ((fc) & 0x0200)
-/* mask for Bad FCF presence */
-#define BAD_FCS                         0x50    /* 0101 0000 */
 
 
-  
+/* RADIOTAP_FLAGS */
+   enum ieee80211_radiotap_flags
+   {
+       F_CFP      = 0x01,
+       F_SHORTPRE = 0x02,
+       F_WEP      = 0x04,
+       F_FRAG     = 0x08,
+       F_FCS      = 0x10,
+       F_DATAPAD  = 0x20,
+       F_BADFCS   = 0x40,
+   };
+
+
   /* +++++++++++++++++ LLC SNAP header (IEEE 802.2) ++++++++++++ */
   struct llc_snap_hdr
   {
@@ -77,17 +86,17 @@ extern "C" {
     uint8_t  oui[3];
     uint16_t type;
   } __attribute__((__packed__));
-  
-  
+
+
   /* +++++++++++++++ 802.1Q header (Virtual LAN) +++++++++++++++ */
   struct vlan_hdr
   {
     uint16_t tci;
     uint16_t type;
-  } __attribute__((__packed__));;
-  
-  
-  
+  } __attribute__((__packed__));
+
+
+
   /* +++++++++++++++++++++++ MPLS header +++++++++++++++++++++++ */
   struct mpls_header
   {
@@ -96,10 +105,10 @@ extern "C" {
 #elif (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     uint32_t label:20, exp:3, s:1, ttl:8;
 #endif
-  } __attribute__((__packed__));;
-  
-  
-  
+  } __attribute__((__packed__));
+
+
+
   /* ++++++++++ Radio Tap header (for IEEE 802.11) +++++++++++++ */
   struct radiotap_hdr
   {
@@ -107,22 +116,22 @@ extern "C" {
     uint8_t  pad;
     uint16_t len;
     uint32_t present;
-    uint8_t  flags;
-  } __attribute__((__packed__));;
-  
-  
+  } __attribute__((__packed__));
+
+
   /* ++++++++++++ Wireless header (IEEE 802.11) ++++++++++++++++ */
   struct wifi_hdr
   {
     uint16_t fc;
     uint16_t duration;
-    uint8_t  rcvr[6];
-    uint8_t  trsm[6];
-    uint8_t  dest[6];
+    uint8_t  rcvr[6]; // these 3 fields
+    uint8_t  trsm[6]; // should be
+    uint8_t  dest[6]; // in a different order
+    uint16_t fgsq;
     uint16_t seq_ctrl;
     /* u_int64_t ccmp - for data encription only - check fc.flag */
-  } __attribute__((__packed__));;
-  
+  } __attribute__((__packed__));
+
 #ifdef __cplusplus
 }
 #endif
