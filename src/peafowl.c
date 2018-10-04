@@ -1384,7 +1384,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      // Check if Flag byte is present
      if(getBits(radiotap_header->present,1,1) == 1) {
          // Check Bad FCS presence
-         if(p_radio == F_BADFCS) {
+         if(*p_radio == F_BADFCS) {
              printf("Malformed Radiotap packet. DISCARD\n");
              return -1;
          }
