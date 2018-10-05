@@ -54,10 +54,9 @@ static const char* const requests[PFWL_SMTP_NUM_REQUESTS] = {
     "EHLO ", "EXPN ", "HELO ", "HELP ", "MAIL ", "DATA ",
     "RCPT ", "RSET ", "NOOP ", "QUIT ", "VRFY "};
 
-uint8_t check_smtp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                   const unsigned char* app_data, uint32_t data_length,
-                   pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot != IPPROTO_TCP) {
+uint8_t check_smtp(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 != IPPROTO_TCP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   uint8_t i;
@@ -69,7 +68,7 @@ uint8_t check_smtp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
     for (i = 0; i < PFWL_SMTP_NUM_RESPONSES; i++) {
       if (strncasecmp((const char*)app_data, responses[i],
                       PFWL_SMTP_MAX_RESPONSE_LENGTH) == 0) {
-        if (++t->num_smtp_matched_messages == PFWL_SMTP_NUM_MESSAGES_TO_MATCH) {
+        if (++tracking_info->num_smtp_matched_messages == PFWL_SMTP_NUM_MESSAGES_TO_MATCH) {
           return PFWL_PROTOCOL_MATCHES;
         } else
           return PFWL_PROTOCOL_MORE_DATA_NEEDED;
@@ -81,7 +80,7 @@ uint8_t check_smtp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
     for (i = 0; i < PFWL_SMTP_NUM_REQUESTS; i++) {
       if (strncasecmp((const char*)app_data, requests[i],
                       PFWL_SMTP_MAX_REQUEST_LENGTH) == 0) {
-        if (++t->num_smtp_matched_messages == PFWL_SMTP_NUM_MESSAGES_TO_MATCH) {
+        if (++tracking_info->num_smtp_matched_messages == PFWL_SMTP_NUM_MESSAGES_TO_MATCH) {
           return PFWL_PROTOCOL_MATCHES;
         } else
           return PFWL_PROTOCOL_MORE_DATA_NEEDED;

@@ -216,7 +216,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
   memcpy(in, real_task->input_output_task_t.L3_L4_input_task_t,
          PFWL_MULTICORE_DEFAULT_GRAIN_SIZE * sizeof(L3_L4_input_task_struct));
 
-  pfwl_pkt_infos_t pkt_infos;
+  pfwl_pkt_info_t pkt_infos;
   for (uint i = 0; i < PFWL_MULTICORE_DEFAULT_GRAIN_SIZE; i++) {
 #if PFWL_MULTICORE_PREFETCH
     __builtin_prefetch(&(in[i + 2]), 0, 0);
@@ -224,7 +224,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
 #endif
 
     real_task->input_output_task_t.L3_L4_output_task_t[i].status =
-        mc_pfwl_extract_packet_infos(this->state, in[i].pkt, in[i].length,
+        mc_pfwl_parse_L3_L4_header(this->state, in[i].pkt, in[i].length,
                                     &pkt_infos, in[i].current_time, worker_id);
 
     /* To have always a consistent value temp L7 worker selection. */
@@ -236,7 +236,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
 
     if (likely(real_task->input_output_task_t.L3_L4_output_task_t[i].status >=
                0)) {
-      if (pkt_infos.l4prot != IPPROTO_TCP && pkt_infos.l4prot != IPPROTO_UDP) {
+      if (pkt_infos.protocol_l4 != IPPROTO_TCP && pkt_infos.protocol_l4 != IPPROTO_UDP) {
         real_task->input_output_task_t.L3_L4_output_task_t[i].status =
             PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
         continue;
@@ -248,7 +248,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
             pkt_infos;
         if (pkt_infos.ip_version == PFWL_IP_VERSION_4) {
           real_task->input_output_task_t.L3_L4_output_task_t[i].hash_result =
-              pfwl_compute_v4_hash_function((pfwl_flow_DB_v4*)this->state->db4,
+              pfwl_compute_v4_hash_function((pfwl_flow_DB_v4*)this->state->flow_table,
                                            &pkt_infos);
           real_task->input_output_task_t.L3_L4_output_task_t[i]
               .destination_worker =
@@ -409,8 +409,8 @@ int pfwl_L7_worker::svc_init() {
 
 void* pfwl_L7_worker::svc(void* task) {
   mc_pfwl_task_t* real_task = (mc_pfwl_task_t*)task;
-  pfwl_pkt_infos_t infos;
-  pfwl_flow_infos_t* flow_infos = NULL;
+  pfwl_pkt_info_t infos;
+  pfwl_flow_info_t* flow_infos = NULL;
 
 #if MC_PFWL_TICKS_WAIT == 1
   ticks svcstart = getticks();
@@ -422,8 +422,8 @@ void* pfwl_L7_worker::svc(void* task) {
   for (uint i = 0; i < PFWL_MULTICORE_DEFAULT_GRAIN_SIZE; i++) {
     real_task->input_output_task_t.L7_output_task_t[i].user_pointer =
         temp[i].user_pointer;
-    ipv4_flow_t* ipv4_flow = NULL;
-    ipv6_flow_t* ipv6_flow = NULL;
+    pfwl_flow_t* ipv4_flow = NULL;
+    pfwl_flow_t* ipv6_flow = NULL;
 
     int8_t l3_status = temp[i].status;
     if (unlikely(l3_status < 0 || l3_status == PFWL_STATUS_IP_FRAGMENT)) {
@@ -438,11 +438,11 @@ void* pfwl_L7_worker::svc(void* task) {
 #endif
 
     if (infos.ip_version == PFWL_IP_VERSION_4) {
-      ipv4_flow = mc_pfwl_flow_table_find_or_create_flow_v4(
+      ipv4_flow = mc_pfwl_flow_table_find_or_create_flow(
           state, this->worker_id, temp[i].hash_result, &(infos));
       if (ipv4_flow) flow_infos = &(ipv4_flow->infos);
     } else {
-      ipv6_flow = mc_pfwl_flow_table_find_or_create_flow_v6(
+      ipv6_flow = mc_pfwl_flow_table_find_or_create_flow(
           state, this->worker_id, temp[i].hash_result, &(infos));
       if (ipv6_flow) flow_infos = &(ipv6_flow->infos);
     }
@@ -458,15 +458,15 @@ void* pfwl_L7_worker::svc(void* task) {
       break;
     } else {
       real_task->input_output_task_t.L7_output_task_t[i].result =
-          pfwl_stateless_get_app_protocol(state, flow_infos, &(infos));
+          pfwl_parse_L7_stateless(state, flow_infos, &(infos));
       if (real_task->input_output_task_t.L7_output_task_t[i].result.status ==
           PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
         if (ipv4_flow != NULL) {
-          mc_pfwl_flow_table_delete_flow_v4((pfwl_flow_DB_v4_t*)state->db4,
+          mc_pfwl_flow_table_delete_flow((pfwl_flow_table_t*)state->flow_table,
                                            state->flow_cleaner_callback,
                                            this->worker_id, ipv4_flow);
         } else {
-          mc_pfwl_flow_table_delete_flow_v6((pfwl_flow_DB_v6_t*)state->db6,
+          mc_pfwl_flow_table_delete_flow((pfwl_flow_table_t*)state->db6,
                                            state->flow_cleaner_callback,
                                            this->worker_id, ipv6_flow);
         }

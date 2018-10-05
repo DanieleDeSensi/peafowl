@@ -65,7 +65,7 @@ static void match_found(string::size_type position, trie::value_type const &matc
 	cout << "Matched '" << match.second << "' at " << position << endl;
 }
 
-void body_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
+void body_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_info_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
 	if(*flow_specific_user_data==NULL){
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
             *flow_specific_user_data=new byte_scanner(*(static_cast<trie*>(user_data)), match_found);
@@ -199,7 +199,7 @@ int main(int argc, char **argv){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
 
-		pfwl_state_t* state=pfwl_init_stateful(32767, 32767, 1000000, 1000000);
+    pfwl_state_t* state=pfwl_init();
 		pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
 		pfwl_http_callbacks_t callback={0, 0, 0, 0, &body_cb};
 		pfwl_http_activate_callbacks(state, &callback, (void*)(&t));

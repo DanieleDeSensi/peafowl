@@ -41,10 +41,9 @@ static void ssh_zap_cr(char *str, int len) {
 }
 */
 
-uint8_t check_ssh(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                  const unsigned char* app_data, uint32_t data_length,
-                  pfwl_tracking_informations_t* t) {
-    if (pkt->direction == 0) {
+uint8_t check_ssh(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                  pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+    if (pkt_info->direction == 0) {
         // Client -> Server)
         if (data_length > 7 && data_length < 100 &&
             memcmp(app_data, "SSH-", 4) == 0) {
@@ -56,7 +55,7 @@ uint8_t check_ssh(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                 ssh_zap_cr(t->ssh_client_signature, data_length);
             }
             */
-            ++t->ssh_stage;
+            ++tracking_info->ssh_stage;
         }
     } else {
         // Server -> Client
@@ -70,11 +69,11 @@ uint8_t check_ssh(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
                 ssh_zap_cr(t->ssh_server_signature, data_length);
             }
             */
-            ++t->ssh_stage;
+            ++tracking_info->ssh_stage;
         }
     }
 
-    if (t->ssh_stage >= 2) {
+    if (tracking_info->ssh_stage >= 2) {
         return PFWL_PROTOCOL_MATCHES;
     } else {
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;

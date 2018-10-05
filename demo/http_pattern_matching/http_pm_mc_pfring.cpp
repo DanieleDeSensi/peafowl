@@ -169,7 +169,7 @@ static void match_found(string::size_type position,
 
 void body_cb(pfwl_http_message_informations_t* http_informations,
 		const u_char* app_data, u_int32_t data_length,
-		pfwl_pkt_infos_t* pkt,
+		pfwl_pkt_info_t* pkt,
 		void** flow_specific_user_data, void* user_data,
 		u_int8_t last){
   
@@ -347,7 +347,7 @@ int main(int argc, char **argv){
 		details.available_processors=num_workers;
 		details.mapping=mapping;
 
-		mc_pfwl_library_state_t* state=mc_pfwl_init_stateful(
+		mc_pfwl_state_t* state=mc_pfwl_init_stateful(
 				32767, 32767, 1000000, 1000000, details);
 
 		int snaplen = SNAPLEN;
@@ -371,7 +371,7 @@ int main(int argc, char **argv){
 				state, &reading_cb, &processing_cb, (void*) NULL);
 		mc_pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
 		pfwl_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
-				assert(mc_pfwl_http_activate_callbacks(state, &callback, (void*)(&t))==PFWL_STATE_UPDATE_SUCCESS);
+				assert(mc_pfwl_http_activate_callbacks(state, &callback, (void*)(&t))==1);
 
 
 		pkt_buff = new ff::SWSR_Ptr_Buffer(num_pkt_buffers);

@@ -179,18 +179,18 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain, const char *s,
         if (s[i] == '@') {
           host_offset = i;
           st = URI_HOST;
-          user->s = s + (first_offset + 1);
-          user->len = (i - first_offset - 1);
+          user->str.s = s + (first_offset + 1);
+          user->str.len = (i - first_offset - 1);
           foundUser = 1;
           foundAtValue = 1;
         } else if (s[i] == ':') {
           st = URI_PASSWORD;
-          user->s = s + (first_offset + 1);
-          user->len = (i - first_offset - 1);
+          user->str.s = s + (first_offset + 1);
+          user->str.len = (i - first_offset - 1);
           foundUser = 1;
         } else if (s[i] == ';' || s[i] == '?' || s[i] == '&') {
-          user->s = s + (first_offset + 1);
-          user->len = (i - first_offset - 1);
+          user->str.s = s + (first_offset + 1);
+          user->str.len = (i - first_offset - 1);
           st = URI_PARAM;
           foundUser = 1;
         }
@@ -219,16 +219,16 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain, const char *s,
           st = URI_HOST_IPV6;
         else if (s[i] == ':' || s[i] == '>' || s[i] == ';' || s[i] == ' ') {
           st = URI_HOST_END;
-          domain->s = s + host_offset + 1;
-          domain->len = (i - host_offset - 1);
+          domain->str.s = s + host_offset + 1;
+          domain->str.len = (i - host_offset - 1);
           foundHost = 1;
         }
         break;
 
       case URI_HOST_IPV6:
         if (s[i] == ']') {
-          domain->s = s + host_offset + 1;
-          domain->len = (i - host_offset - 1);
+          domain->str.s = s + host_offset + 1;
+          domain->str.len = (i - host_offset - 1);
           foundHost = 1;
           st = URI_HOST_END;
         }
@@ -249,17 +249,17 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain, const char *s,
   }
 
   if (foundUser == 0)
-    user->len = 0;
+    user->str.len = 0;
   else if (foundAtValue == 0 && foundUser == 1) {
-    domain->s = user->s;
-    domain->len = user->len;
+    domain->str.s = user->str.s;
+    domain->str.len = user->str.len;
 
     /*and after set to 0 */
-    user->len = 0;
+    user->str.len = 0;
   }
   if (foundUser == 0 && foundHost == 0) {
-    domain->s = s + first_offset + 1;
-    domain->len = (len - first_offset);
+    domain->str.s = s + first_offset + 1;
+    domain->str.len = (len - first_offset);
   }
 
   return 1;
@@ -268,7 +268,7 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain, const char *s,
 uint8_t set_hname(pfwl_field_t *hname, int len, const char *s) {
   const char *end;
 
-  if (hname->len > 0) {
+  if (hname->str.len > 0) {
     return 0;
   }
 
@@ -281,8 +281,8 @@ uint8_t set_hname(pfwl_field_t *hname, int len, const char *s) {
     }
   }
 
-  hname->s = s;
-  hname->len = len;
+  hname->str.s = s;
+  hname->str.len = len;
   return 1;
 }
 
@@ -330,8 +330,8 @@ int isValidIp4Address(pfwl_field_t *mip) {
   char ipAddress[17];
   struct sockaddr_in sa;
 
-  if (mip->s == NULL || mip->len > 16) return 0;
-  snprintf(ipAddress, 17, "%.*s", (int)mip->len, mip->s);
+  if (mip->str.s == NULL || mip->str.len > 16) return 0;
+  snprintf(ipAddress, 17, "%.*s", (int)mip->str.len, mip->str.s);
 
   result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr));
   return result != 0;
@@ -366,11 +366,11 @@ int parseSdpCLine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
         break;
       case ST_CONNECTIONADRESS:
-        mp->media_ip.s = (char *)data + last_offset + 1;
-        mp->media_ip.len = len - last_offset - 3;
-        if (mp->rtcp_ip.len == 0) {
-          mp->rtcp_ip.len = mp->media_ip.len;
-          mp->rtcp_ip.s = mp->media_ip.s;
+        mp->media_ip.str.s = (char *)data + last_offset + 1;
+        mp->media_ip.str.len = len - last_offset - 3;
+        if (mp->rtcp_ip.str.len == 0) {
+          mp->rtcp_ip.str.len = mp->media_ip.str.len;
+          mp->rtcp_ip.str.s = mp->media_ip.str.s;
         }
         st = ST_END;
         break;
@@ -471,8 +471,8 @@ int parseSdpALine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
       case ST_IP:
         st = ST_END;
-        mp->rtcp_ip.s = (const char *)data + last_offset + 1;
-        mp->rtcp_ip.len = len - last_offset - 3;
+        mp->rtcp_ip.str.s = (const char *)data + last_offset + 1;
+        mp->rtcp_ip.str.len = len - last_offset - 3;
         st = ST_END;
         return 1;
 
@@ -529,9 +529,9 @@ int parseSdpARtpMapLine(pfwl_sip_codecmap_t *cp, const unsigned char *data,
 int addMediaObject(pfwl_sip_miprtcpstatic_t *mp, pfwl_field_t *mediaIp,
                    int mediaPort, pfwl_field_t *rtcpIp, int rtcpPort) {
   mp->media_ip_len =
-      snprintf(mp->media_ip_s, 30, "%.*s", (int)mediaIp->len, mediaIp->s);
+      snprintf(mp->media_ip_s, 30, "%.*s", (int)mediaIp->str.len, mediaIp->str.s);
   mp->rtcp_ip_len =
-      snprintf(mp->rtcp_ip_s, 30, "%.*s", (int)rtcpIp->len, rtcpIp->s);
+      snprintf(mp->rtcp_ip_s, 30, "%.*s", (int)rtcpIp->str.len, rtcpIp->str.s);
   mp->media_port = mediaPort;
   mp->rtcp_port = rtcpPort > 0 ? rtcpPort : (mediaPort + 1);
 
@@ -605,15 +605,15 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
     }
   }
 
-  if (tmpmp.media_ip.len == 0 || !isValidIp4Address(&tmpmp.media_ip) ||
-      !strncmp(tmpmp.media_ip.s, "0.0.0.0", 7)) {
+  if (tmpmp.media_ip.str.len == 0 || !isValidIp4Address(&tmpmp.media_ip) ||
+      !strncmp(tmpmp.media_ip.str.s, "0.0.0.0", 7)) {
     return -1;
   }
 
   /* let do it for rtcp */
-  if (tmpmp.rtcp_ip.len == 0) {
-    tmpmp.rtcp_ip.len = tmpmp.media_ip.len;
-    tmpmp.rtcp_ip.s = tmpmp.media_ip.s;
+  if (tmpmp.rtcp_ip.str.len == 0) {
+    tmpmp.rtcp_ip.str.len = tmpmp.media_ip.str.len;
+    tmpmp.rtcp_ip.str.s = tmpmp.media_ip.str.s;
   }
 
   // miprtcpstatic_t
@@ -673,8 +673,8 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
 
 int parseVQRtcpXR(const unsigned char *body,
                   pfwl_sip_internal_information_t *psip,
-                  pfwl_state_t* state,
-                  pfwl_field_t* extracted_fields_sip) {
+                  pfwl_field_t* extracted_fields_sip,
+                  uint8_t* required_fields) {
   const unsigned char *c, *tmp;
   int offset, last_offset;
 
@@ -693,7 +693,7 @@ int parseVQRtcpXR(const unsigned char *body,
       if (strlen((const char *)tmp) < 4) continue;
 
       /* CallID: */
-      if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_RTCPXR_CALLID)){
+      if(required_fields[PFWL_FIELDS_SIP_RTCPXR_CALLID]){
         if (*tmp == 'C' && *(tmp + 4) == 'I' &&
             *(tmp + RTCPXR_CALLID_LEN) == ':') {
           set_hname(&(extracted_fields_sip[PFWL_FIELDS_SIP_RTCPXR_CALLID]),
@@ -767,8 +767,8 @@ uint8_t splitCSeq(pfwl_sip_internal_information_t *sipStruct, const char *s,
     pch++;
 
     pfwl_field_t* cSeqMethodString = &(extracted_fields_sip[PFWL_FIELDS_SIP_CSEQ_METHOD_STRING]);
-    cSeqMethodString->s = pch;
-    cSeqMethodString->len = (len - mylen);
+    cSeqMethodString->str.s = pch;
+    cSeqMethodString->str.len = (len - mylen);
 
     sipStruct->cSeqMethod = getMethodType(pch++, (len - mylen));
     sipStruct->cSeqNumber = atoi(s);
@@ -780,8 +780,8 @@ uint8_t splitCSeq(pfwl_sip_internal_information_t *sipStruct, const char *s,
 
 int light_parse_message(const unsigned char *app_data, uint32_t data_length,
                         pfwl_sip_internal_information_t *psip,
-                        pfwl_state_t* state,
-                        pfwl_field_t* extracted_fields_sip) {
+                        pfwl_field_t* extracted_fields_sip,
+                        uint8_t *required_fields) {
   unsigned int new_len = data_length;
   int header_offset = 0;
 
@@ -825,7 +825,7 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
         else
           header_offset = CALLID_LEN;
 
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_CALLID)){
+        if(required_fields[PFWL_FIELDS_SIP_CALLID]){
           pfwl_field_t* callId =  &(extracted_fields_sip[PFWL_FIELDS_SIP_CALLID]);
           set_hname(callId, (offset - last_offset - CALLID_LEN),
                     (const char *)tmp + CALLID_LEN);
@@ -854,9 +854,9 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
 
 uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       pfwl_sip_internal_information_t *sip_info,
-                      pfwl_inspector_accuracy type,
+                      pfwl_inspector_accuracy_t type,
                       pfwl_field_t* extracted_fields_sip,
-                      pfwl_state_t* state) {
+                      uint8_t *required_fields) {
   int header_offset = 0;
   const char *pch, *ped;
   // uint8_t allowRequest = 0;
@@ -902,10 +902,10 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
     sip_info->responseCode = atoi((const char *)tmp + 8);
     sip_info->isRequest = 0;
 
-    if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_REASON)){
+    if(required_fields[PFWL_FIELDS_SIP_REASON]){
       pfwl_field_t* reasonField = &(extracted_fields_sip[PFWL_FIELDS_SIP_REASON]);
-      reasonField->s = tmp + 12;
-      reasonField->len = reason - (tmp + 13);
+      reasonField->str.s = tmp + 12;
+      reasonField->str.len = reason - (tmp + 13);
     }
   } else {
     sip_info->isRequest = 1;
@@ -951,24 +951,25 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       return PFWL_PROTOCOL_NO_MATCHES;
     }
 
-    if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_METHOD) ||
-       pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_REQUEST_URI) ||
-       pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_RURI_USER) ||
-       pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_RURI_DOMAIN)){
+    if(required_fields[PFWL_FIELDS_SIP_METHOD]      ||
+       required_fields[PFWL_FIELDS_SIP_REQUEST_URI] ||
+       required_fields[PFWL_FIELDS_SIP_RURI_USER]   ||
+       required_fields[PFWL_FIELDS_SIP_RURI_DOMAIN]){
       if ((pch = strchr(tmp + 1, ' ')) != NULL) {
         pfwl_field_t* methodString = &(extracted_fields_sip[PFWL_FIELDS_SIP_METHOD]);
-        methodString->s = tmp;
-        methodString->len = (pch - tmp);
+        methodString->str.s = tmp;
+        methodString->str.len = (pch - tmp);
 
         if ((ped = strchr(pch + 1, ' ')) != NULL) {
           pfwl_field_t* requestURI = &(extracted_fields_sip[PFWL_FIELDS_SIP_REQUEST_URI]);
-          requestURI->s = pch + 1;
-          requestURI->len = (ped - pch - 1);
+          requestURI->str.s = pch + 1;
+          requestURI->str.len = (ped - pch - 1);
+
           /* extract user */
           pfwl_field_t* ruriUser = &(extracted_fields_sip[PFWL_FIELDS_SIP_RURI_USER]);
           pfwl_field_t* ruriDomain = &(extracted_fields_sip[PFWL_FIELDS_SIP_RURI_DOMAIN]);
           getUser(ruriUser, ruriDomain,
-                  requestURI->s, requestURI->len);
+                  requestURI->str.s, requestURI->str.len);
         }
       }
     }
@@ -991,7 +992,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
         if (sip_info->hasSdp) {
           parseSdp(c, sip_info, contentLength);
         } else if (sip_info->hasVqRtcpXR) {
-          parseVQRtcpXR(c, sip_info, state, extracted_fields_sip);
+          parseVQRtcpXR(c, sip_info, extracted_fields_sip, required_fields);
         }
         break;
       }
@@ -1004,7 +1005,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           header_offset = 1;
         else
           header_offset = CALLID_LEN;
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_CALLID)){
+        if(required_fields[PFWL_FIELDS_SIP_CALLID]){
           pfwl_field_t* callId = &(extracted_fields_sip[PFWL_FIELDS_SIP_CALLID]);
           set_hname(callId, (offset - last_offset - CALLID_LEN),
                   tmp + CALLID_LEN);
@@ -1026,12 +1027,12 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       } else if ((*tmp == 'C' || *tmp == 'c') &&
                  (*(tmp + 1) == 'S' || *(tmp + 1) == 's') &&
                  *(tmp + CSEQ_LEN) == ':') {                    
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_CSEQ) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_CSEQ_METHOD_STRING)){
+        if(required_fields[PFWL_FIELDS_SIP_CSEQ] ||
+           required_fields[PFWL_FIELDS_SIP_CSEQ_METHOD_STRING]){
           pfwl_field_t* cSeq = &(extracted_fields_sip[PFWL_FIELDS_SIP_CSEQ]);
           set_hname(cSeq, (offset - last_offset - CSEQ_LEN),
                       tmp + CSEQ_LEN);
-          splitCSeq(sip_info, cSeq->s, cSeq->len, extracted_fields_sip);
+          splitCSeq(sip_info, cSeq->str.s, cSeq->str.len, extracted_fields_sip);
         }
       }
       /* content type  Content-Type: application/sdp  CONTENTTYPE_LEN */
@@ -1058,7 +1059,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       } else if (parseVIA && ((*tmp == 'V' || *tmp == 'v') &&
                               (*(tmp + 1) == 'i' || *(tmp + 1) == 'i') &&
                               *(tmp + VIA_LEN) == ':')) {
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_VIA)){
+        if(required_fields[PFWL_FIELDS_SIP_VIA]){
           pfwl_field_t* via = &(extracted_fields_sip[PFWL_FIELDS_SIP_VIA]);
           set_hname(via, (offset - last_offset - VIA_LEN),
                   tmp + VIA_LEN);
@@ -1068,7 +1069,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                                   ((*tmp == 'C' || *tmp == 'c') &&
                                    (*(tmp + 5) == 'C' || *(tmp + 5) == 'c') &&
                                    *(tmp + CONTACT_LEN) == ':'))) {
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_CONTACT_URI)){
+        if(required_fields[PFWL_FIELDS_SIP_CONTACT_URI]){
           pfwl_field_t* contactURI = &(extracted_fields_sip[PFWL_FIELDS_SIP_CONTACT_URI]);
 
           if (*(tmp + 1) == ':')
@@ -1084,10 +1085,10 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                  ((*tmp == 'F' || *tmp == 'f') &&
                   (*(tmp + 3) == 'M' || *(tmp + 3) == 'm') &&
                   *(tmp + FROM_LEN) == ':')) {
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_FROM_URI) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_FROM_TAG) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_FROM_USER) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_FROM_DOMAIN)){
+        if(required_fields[PFWL_FIELDS_SIP_FROM_URI]  ||
+           required_fields[PFWL_FIELDS_SIP_FROM_TAG]  ||
+           required_fields[PFWL_FIELDS_SIP_FROM_USER] ||
+           required_fields[PFWL_FIELDS_SIP_FROM_DOMAIN]){
           pfwl_field_t* fromURI = &(extracted_fields_sip[PFWL_FIELDS_SIP_FROM_URI]);
           pfwl_field_t* fromTag = &(extracted_fields_sip[PFWL_FIELDS_SIP_FROM_TAG]);
           pfwl_field_t* fromUser = &(extracted_fields_sip[PFWL_FIELDS_SIP_FROM_USER]);
@@ -1099,23 +1100,23 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           set_hname(fromURI, (offset - last_offset - FROM_LEN),
                     tmp + FROM_LEN);
 
-          if (!fromURI->len == 0 &&
-              getTag(fromTag, fromURI->s,
-                     fromURI->len)) {
+          if (!fromURI->str.len == 0 &&
+              getTag(fromTag, fromURI->str.s,
+                     fromURI->str.len)) {
           }
           /* extract user */
-          getUser(fromUser, fromDomain, fromURI->s,
-                  fromURI->len);
+          getUser(fromUser, fromDomain, fromURI->str.s,
+                  fromURI->str.len);
         }
 
         continue;
       } else if ((*tmp == 't' && *(tmp + 1) == ':') ||
                  ((*tmp == 'T' || *tmp == 't') && *(tmp + TO_LEN) == ':')) {
 
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_TO_URI) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_TO_TAG) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_TO_USER) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_TO_DOMAIN)){
+        if(required_fields[PFWL_FIELDS_SIP_TO_URI]    ||
+           required_fields[PFWL_FIELDS_SIP_TO_TAG]    ||
+           required_fields[PFWL_FIELDS_SIP_TO_USER]   ||
+           required_fields[PFWL_FIELDS_SIP_TO_DOMAIN]){
           pfwl_field_t* toURI = &(extracted_fields_sip[PFWL_FIELDS_SIP_TO_URI]);
           pfwl_field_t* toTag = &(extracted_fields_sip[PFWL_FIELDS_SIP_TO_TAG]);
           pfwl_field_t* toUser = &(extracted_fields_sip[PFWL_FIELDS_SIP_TO_USER]);
@@ -1127,20 +1128,20 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
 
           if (set_hname(toURI, (offset - last_offset - header_offset),
                         tmp + header_offset)) {
-            if (!toURI->len == 0 &&
-                getTag(toTag, toURI->s, toURI->len)) {
+            if (!toURI->str.len == 0 &&
+                getTag(toTag, toURI->str.s, toURI->str.len)) {
             }
             /* extract user */
-            getUser(toUser, toDomain, toURI->s, toURI->len);
+            getUser(toUser, toDomain, toURI->str.s, toURI->str.len);
           }
         }
         continue;
       }
 
       if (allowPai) {
-        if(pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_PID_URI) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_PAI_USER) ||
-           pfwl_protocol_field_required(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_PAI_DOMAIN)){
+        if(required_fields[PFWL_FIELDS_SIP_PID_URI]   ||
+           required_fields[PFWL_FIELDS_SIP_PAI_USER]  ||
+           required_fields[PFWL_FIELDS_SIP_PAI_DOMAIN]){
           pfwl_field_t* pidURI = &(extracted_fields_sip[PFWL_FIELDS_SIP_PID_URI]);
           pfwl_field_t* paiUser = &(extracted_fields_sip[PFWL_FIELDS_SIP_PAI_USER]);
           pfwl_field_t* paiDomain = &(extracted_fields_sip[PFWL_FIELDS_SIP_PAI_DOMAIN]);
@@ -1153,7 +1154,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       tmp + PPREFERREDIDENTITY_LEN);
 
             /* extract user */
-            getUser(paiUser, paiDomain, pidURI->s, pidURI->len);
+            getUser(paiUser, paiDomain, pidURI->str.s, pidURI->str.len);
 
             continue;
           } else if (((*tmp == 'P' || *tmp == 'p') &&
@@ -1165,7 +1166,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       tmp + PASSERTEDIDENTITY_LEN);
 
             /* extract user */
-            getUser(paiUser, paiDomain, pidURI->s, pidURI->len);
+            getUser(paiUser, paiDomain, pidURI->str.s, pidURI->str.len);
 
             continue;
           }
@@ -1178,14 +1179,14 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
 
 uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
                      pfwl_sip_internal_information_t *sip_info,
-                     pfwl_inspector_accuracy type,
+                     pfwl_inspector_accuracy_t type,
                      pfwl_field_t* extracted_fields_sip,
-                     pfwl_state_t *state) {
+                     uint8_t *required_fields) {
   uint8_t r = 0;
   if (type == PFWL_INSPECTOR_ACCURACY_LOW) {
-    r = light_parse_message(app_data, data_length, sip_info, state, extracted_fields_sip);
+    r = light_parse_message(app_data, data_length, sip_info, extracted_fields_sip, required_fields);
   } else {
-    r = parse_message(app_data, data_length, sip_info, type, extracted_fields_sip, state);
+    r = parse_message(app_data, data_length, sip_info, type, extracted_fields_sip, required_fields);
   }
   /* TODO: To be ported
   if(r == PFWL_PROTOCOL_MATCHES && sip_info->hasVqRtcpXR) {
@@ -1196,13 +1197,12 @@ uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
   return r;
 }
 
-uint8_t check_sip(pfwl_state_t *state, pfwl_pkt_infos_t *pkt,
-                  const unsigned char *app_data, uint32_t data_length,
-                  pfwl_tracking_informations_t *t) {
+uint8_t check_sip(const unsigned char *app_data, uint32_t data_length, pfwl_identification_result_t *pkt_info,
+                  pfwl_tracking_informations_t *tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
   if (!data_length) {
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
-  memset(&(t->sip_informations), 0, sizeof(t->sip_informations));
+  memset(&(tracking_info->sip_informations), 0, sizeof(tracking_info->sip_informations));
   /* check if this is real SIP */
   if (!isalpha(app_data[0])) {
     return PFWL_PROTOCOL_NO_MATCHES;
@@ -1211,12 +1211,10 @@ uint8_t check_sip(pfwl_state_t *state, pfwl_pkt_infos_t *pkt,
   // TODO: TO be ported
   // msg->rcinfo.proto_type = PROTO_SIP;
 
-  uint8_t r = parse_packet(app_data, data_length, &t->sip_informations,
-                           state->inspectors_accuracy[PFWL_PROTOCOL_SIP],
-                           t->extracted_fields.sip, state);
+  uint8_t r = parse_packet(app_data, data_length,
+                           &tracking_info->sip_informations,
+                           accuracy,
+                           pkt_info->protocol_fields.sip,
+                           required_fields);
   return r;
-}
-
-pfwl_field_t* get_extracted_fields_sip(pfwl_tracking_informations_t* t){
-  return t->extracted_fields.sip;
 }

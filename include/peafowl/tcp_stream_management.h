@@ -90,7 +90,7 @@ void pfwl_reordering_tcp_delete_all_fragments(
  *         segment.
  */
 pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
-    pfwl_pkt_infos_t* pkt, pfwl_tracking_informations_t* tracking);
+    pfwl_identification_result_t* pkt, pfwl_tracking_informations_t* tracking);
 
 /**
  * Only checks if the connection terminates.
@@ -100,7 +100,7 @@ pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
  * @return 1 if the connection is terminated, 0 otherwise.
  */
 uint8_t pfwl_reordering_tcp_track_connection_light(
-    pfwl_pkt_infos_t* pkt, pfwl_tracking_informations_t* tracking);
+    pfwl_identification_result_t* pkt, pfwl_tracking_informations_t* tracking);
 
 #ifdef __cplusplus
 }

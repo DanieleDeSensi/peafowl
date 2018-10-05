@@ -595,6 +595,8 @@ Configuration
 Default parameters are suited for many cases. Different configuration parameters can be modified in "config.h" 
 file. The most important are the following:
 
++ PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE: Default value for the average bucket size of the flow table.
++ PFWL_DEFAULT_EXPECTED_FLOWS: Default value for the expected flows
 + PFWL_CACHE_LINE_SIZE: Size of L1 cache line
 + PFWL_FLOW_TABLE_USE_MEMORY_POOL: If 1 a certain amount of memory is preallocated for the hash table. That
   amount of memory can be specified using macros PFWL_FLOW_TABLE_MEMORY_POOL_DEFAULT_SIZE_v4 and

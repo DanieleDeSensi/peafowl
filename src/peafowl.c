@@ -46,16 +46,12 @@
 #include <strings.h>
 #include <time.h>
 
-#ifdef WITH_PROMETHEUS
-#include "prometheus.h"
-#endif
-
 #define debug_print(fmt, ...)                         \
   do {                                                \
     if (PFWL_DEBUG) fprintf(stderr, fmt, __VA_ARGS__); \
   } while (0)
 
-static const pfwl_protocol_l7 const
+static const pfwl_protocol_l7_t const
     pfwl_well_known_ports_association_tcp[PFWL_MAX_UINT_16 + 1] =
         {[0 ... PFWL_MAX_UINT_16] = PFWL_PROTOCOL_UNKNOWN,
          [port_dns] = PFWL_PROTOCOL_DNS,
@@ -76,7 +72,7 @@ static const pfwl_protocol_l7 const
          [port_hangout_19309] = PFWL_PROTOCOL_HANGOUT,
          [port_ssh] = PFWL_PROTOCOL_SSH,};
 
-static const pfwl_protocol_l7 const
+static const pfwl_protocol_l7_t const
     pfwl_well_known_ports_association_udp[PFWL_MAX_UINT_16 + 1] =
         {[0 ... PFWL_MAX_UINT_16] = PFWL_PROTOCOL_UNKNOWN,
          [port_dns] = PFWL_PROTOCOL_DNS,
@@ -100,74 +96,58 @@ static const pfwl_protocol_l7 const
 
 typedef struct{
   const char* name;
-  pfwl_inspector_callback dissector;
-  pfwl_get_extracted_fields_callback get_extracted_fields;
+  pfwl_dissector dissector;
   int extracted_fields_num;
 }pfwl_protocol_descriptor_t;
 
 static const pfwl_protocol_descriptor_t const protocols_descriptors[PFWL_NUM_PROTOCOLS] =
   {
-    [PFWL_PROTOCOL_DHCP]     = {"DHCP"    , check_dhcp    , NULL, 0},
-    [PFWL_PROTOCOL_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  , NULL, 0},
-    [PFWL_PROTOCOL_DNS]      = {"DNS"     , check_dns     , get_extracted_fields_dns, PFWL_FIELDS_DNS_NUM},
-    [PFWL_PROTOCOL_MDNS]     = {"MDNS"    , check_mdns    , NULL, 0},
-    [PFWL_PROTOCOL_SIP]      = {"SIP"     , check_sip     , get_extracted_fields_sip, PFWL_FIELDS_SIP_NUM},
-    [PFWL_PROTOCOL_RTP]      = {"RTP"     , check_rtp     , NULL, 0},
-    [PFWL_PROTOCOL_SSH]      = {"SSH"     , check_ssh     , NULL, 0},
-    [PFWL_PROTOCOL_SKYPE]    = {"Skype"   , check_skype   , NULL, 0},
-    [PFWL_PROTOCOL_NTP]      = {"NTP"     , check_ntp     , NULL, 0},
-    [PFWL_PROTOCOL_BGP]      = {"BGP"     , check_bgp     , NULL, 0},
-    [PFWL_PROTOCOL_HTTP]     = {"HTTP"    , check_http    , NULL, 0},
-    [PFWL_PROTOCOL_SMTP]     = {"SMTP"    , check_smtp    , NULL, 0},
-    [PFWL_PROTOCOL_POP3]     = {"POP3"    , check_pop3    , NULL, 0},
-    [PFWL_PROTOCOL_IMAP]     = {"IMAP"    , check_imap    , NULL, 0},
-    [PFWL_PROTOCOL_SSL]      = {"SSL"     , check_ssl     , NULL, 0},
-    [PFWL_PROTOCOL_HANGOUT]  = {"Hangout" , check_hangout , NULL, 0},
-    [PFWL_PROTOCOL_WHATSAPP] = {"WhatsApp", check_whatsapp, NULL, 0},
-    [PFWL_PROTOCOL_TELEGRAM] = {"Telegram", check_telegram, NULL, 0},
-    [PFWL_PROTOCOL_DROPBOX]  = {"Dropbox" , check_dropbox , NULL, 0},
-    [PFWL_PROTOCOL_SPOTIFY]  = {"Spotify" , check_spotify , NULL, 0},
+    [PFWL_PROTOCOL_DHCP]     = {"DHCP"    , check_dhcp    , 0},
+    [PFWL_PROTOCOL_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  , 0},
+    [PFWL_PROTOCOL_DNS]      = {"DNS"     , check_dns     , PFWL_FIELDS_DNS_NUM},
+    [PFWL_PROTOCOL_MDNS]     = {"MDNS"    , check_mdns    , 0},
+    [PFWL_PROTOCOL_SIP]      = {"SIP"     , check_sip     , PFWL_FIELDS_SIP_NUM},
+    [PFWL_PROTOCOL_RTP]      = {"RTP"     , check_rtp     , 0},
+    [PFWL_PROTOCOL_SSH]      = {"SSH"     , check_ssh     , 0},
+    [PFWL_PROTOCOL_SKYPE]    = {"Skype"   , check_skype   , 0},
+    [PFWL_PROTOCOL_NTP]      = {"NTP"     , check_ntp     , 0},
+    [PFWL_PROTOCOL_BGP]      = {"BGP"     , check_bgp     , 0},
+    [PFWL_PROTOCOL_HTTP]     = {"HTTP"    , check_http    , PFWL_FIELDS_HTTP_NUM},
+    [PFWL_PROTOCOL_SMTP]     = {"SMTP"    , check_smtp    , 0},
+    [PFWL_PROTOCOL_POP3]     = {"POP3"    , check_pop3    , 0},
+    [PFWL_PROTOCOL_IMAP]     = {"IMAP"    , check_imap    , 0},
+    [PFWL_PROTOCOL_SSL]      = {"SSL"     , check_ssl     , PFWL_FIELDS_SSL_NUM},
+    [PFWL_PROTOCOL_HANGOUT]  = {"Hangout" , check_hangout , 0},
+    [PFWL_PROTOCOL_WHATSAPP] = {"WhatsApp", check_whatsapp, 0},
+    [PFWL_PROTOCOL_TELEGRAM] = {"Telegram", check_telegram, 0},
+    [PFWL_PROTOCOL_DROPBOX]  = {"Dropbox" , check_dropbox , 0},
+    [PFWL_PROTOCOL_SPOTIFY]  = {"Spotify" , check_spotify , 0},
 };
 
-static const pfwl_inspector_callback const callbacks_manager[PFWL_NUM_PROTOCOLS] = {
-    [PFWL_PROTOCOL_HTTP] = invoke_callbacks_http,
-    [PFWL_PROTOCOL_SSL] = invoke_callbacks_ssl,
-};
-
-typedef struct pfwl_l7_skipping_infos_key {
+typedef struct pfwl_l7_skipping_info_key {
   u_int16_t port;
   u_int8_t l4prot;
-} pfwl_l7_skipping_infos_key_t;
+} pfwl_l7_skipping_info_key_t;
 
-typedef struct pfwl_l7_skipping_infos {
-  pfwl_l7_skipping_infos_key_t key;
-  pfwl_protocol_l7 protocol;
+typedef struct pfwl_l7_skipping_info {
+  pfwl_l7_skipping_info_key_t key;
+  pfwl_protocol_l7_t protocol;
   UT_hash_handle hh; /* makes this structure hashable */
-} pfwl_l7_skipping_infos_t;
+} pfwl_l7_skipping_info_t;
 
-/**
- * Initializes the state of the library. If not specified otherwise after
- * the initialization, the library will consider all the protocols active.
- * Using this API, the hash table is divided in num_table_partitions
- * partitions. These partitions can be accessed concurrently in a thread
- * safe way from different threads if and only if each thread access only
- * to its partition.
- * @param size_v4 Size of the array of pointers used to build the database
- *        for v4 flows.
- * @param size_v6 Size of the array of pointers used to build the database
- *        for v6 flows.
- * @param max_active_v4_flows The maximum number of IPv4 flows which can
- *        be active at any time. After reaching this threshold, new flows
- *        will not be created.
- * @param max_active_v6_flows The maximum number of IPv6 flows which can
- *        be active at any time. After reaching this threshold, new flows
- *        will not be created.
- * @param num_table_partitions The number of partitions of the hash table.
- * @return A pointer to the state of the library otherwise.
- */
-pfwl_state_t* pfwl_init_stateful_num_partitions(
-    uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
-    uint32_t max_active_v6_flows, uint16_t num_table_partitions) {
+
+uint8_t pfwl_set_expected_flows(pfwl_state_t *state, uint32_t flows, uint8_t strict){
+  if(state->flow_table){
+    pfwl_flow_table_delete(state->flow_table, NULL);
+    state->flow_table = pfwl_flow_table_create(flows, strict, 1);
+  }
+
+  return 0;
+}
+
+pfwl_state_t* pfwl_init_stateful_num_partitions(uint32_t expected_flows,
+                                                uint8_t strict,
+                                                uint16_t num_table_partitions) {
   pfwl_state_t* state =
       (pfwl_state_t*)malloc(sizeof(pfwl_state_t));
 
@@ -183,10 +163,7 @@ pfwl_state_t* pfwl_init_stateful_num_partitions(
       size_v6, max_active_v6_flows, num_table_partitions,
       PFWL_FLOW_TABLE_MEMORY_POOL_DEFAULT_SIZE_v6);
 #else
-  state->db4 = pfwl_flow_table_create_v4(size_v4, max_active_v4_flows,
-                                        num_table_partitions);
-  state->db6 = pfwl_flow_table_create_v6(size_v6, max_active_v6_flows,
-                                        num_table_partitions);
+  state->flow_table = pfwl_flow_table_create(expected_flows, strict, num_table_partitions);
 #endif
   pfwl_set_max_trials(state, PFWL_DEFAULT_MAX_TRIALS_PER_FLOW);
   pfwl_inspect_all(state);
@@ -212,367 +189,217 @@ pfwl_state_t* pfwl_init_stateful_num_partitions(
   return state;
 }
 
-pfwl_state_t* pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
-                                       uint32_t max_active_v4_flows,
-                                       uint32_t max_active_v6_flows) {
-  return pfwl_init_stateful_num_partitions(size_v4, size_v6, max_active_v4_flows,
-                                          max_active_v6_flows, 1);
+pfwl_state_t* pfwl_init(){
+  return pfwl_init_stateful_num_partitions(PFWL_DEFAULT_EXPECTED_FLOWS, 0, 1);
 }
 
-/**
- * Initializes the state of the library. If not specified otherwise after
- * the initialization, the library will consider all the protocols active.
- * @return A pointer to the state of the library otherwise.
- */
-pfwl_state_t* pfwl_init_stateless(void) {
-  return pfwl_init_stateful(0, 0, 0, 0);
+pfwl_state_t* pfwl_init_stateless() {
+  return pfwl_init();
 }
 
-/**
- * Sets the maximum number of times that the library tries to guess the
- * protocol. During the flow protocol identification, after this number
- * of trials, in the case in which it cannot decide between two or more
- * protocols, one of them will be chosen, otherwise PFWL_PROTOCOL_UNKNOWN
- * will be returned.
- * @param state A pointer to the state of the library.
- * @param max_trials Maximum number of trials. Zero will be consider as
- *                   infinity.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
- *         otherwise.
- */
 uint8_t pfwl_set_max_trials(pfwl_state_t* state, uint16_t max_trials) {
   state->max_trials = max_trials;
-  return PFWL_STATE_UPDATE_SUCCESS;
+  return 1;
 }
 
-/**
- * Enable IPv4 defragmentation.
- * @param state        A pointer to the library state.
- * @param table_size   The size of the table to be used to store IPv4
- *                     fragments informations.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
- *         otherwise.
- */
 uint8_t pfwl_ipv4_fragmentation_enable(pfwl_state_t* state,
                                       uint16_t table_size) {
   if (likely(state)) {
     state->ipv4_frag_state =
         pfwl_reordering_enable_ipv4_fragmentation(table_size);
     if (state->ipv4_frag_state)
-      return PFWL_STATE_UPDATE_SUCCESS;
+      return 1;
     else
-      return PFWL_STATE_UPDATE_FAILURE;
+      return 0;
   } else
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
 }
 
-/**
- * Enable IPv6 defragmentation.
- * @param state        A pointer to the library state.
- * @param table_size   The size of the table to be used to store IPv6
- *                     fragments informations.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded, PFWL_STATE_UPDATE_FAILURE
- *         otherwise.
- */
 uint8_t pfwl_ipv6_fragmentation_enable(pfwl_state_t* state,
                                       uint16_t table_size) {
   if (likely(state)) {
     state->ipv6_frag_state =
         pfwl_reordering_enable_ipv6_fragmentation(table_size);
     if (state->ipv6_frag_state)
-      return PFWL_STATE_UPDATE_SUCCESS;
+      return 1;
     else
-      return PFWL_STATE_UPDATE_FAILURE;
+      return 0;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Sets the amount of memory that a single host can use for IPv4
- * defragmentation.
- * @param state                   A pointer to the library state.
- * @param per_host_memory_limit   The maximum amount of memory that
- *                                any IPv4 host can use.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv4_fragmentation_set_per_host_memory_limit(
     pfwl_state_t* state, uint32_t per_host_memory_limit) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_ipv4_fragmentation_set_per_host_memory_limit(
         state->ipv4_frag_state, per_host_memory_limit);
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Sets the amount of memory that a single host can use for IPv6
- * defragmentation.
- * @param state                   A pointer to the library state.
- * @param per_host_memory_limit   The maximum amount of memory that
- *                                 any IPv6 host can use.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv6_fragmentation_set_per_host_memory_limit(
     pfwl_state_t* state, uint32_t per_host_memory_limit) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_ipv6_fragmentation_set_per_host_memory_limit(
         state->ipv6_frag_state, per_host_memory_limit);
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Sets the total amount of memory that can be used for IPv4
- * defragmentation.
- * If fragmentation is disabled and then enabled, this information must be
- * passed again.
- * Otherwise default value will be used.
- * @param state               A pointer to the state of the library
- * @param totel_memory_limit  The maximum amount of memory that can be used
- *                            for IPv4 defragmentation.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv4_fragmentation_set_total_memory_limit(
     pfwl_state_t* state, uint32_t total_memory_limit) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_ipv4_fragmentation_set_total_memory_limit(
         state->ipv4_frag_state, total_memory_limit);
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Sets the total amount of memory that can be used for IPv6
- * defragmentation. If fragmentation is disabled and then enabled, this
- * information must be passed again. Otherwise default value will be used.
- * @param state               A pointer to the state of the library
- * @param total_memory_limit  The maximum amount of memory that can be
- *                            used for IPv6 defragmentation.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv6_fragmentation_set_total_memory_limit(
     pfwl_state_t* state, uint32_t total_memory_limit) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_ipv6_fragmentation_set_total_memory_limit(
         state->ipv6_frag_state, total_memory_limit);
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Sets the maximum time (in seconds) that can be spent to reassembly an
- * IPv4 fragmented datagram. Is the maximum time gap between the first and
- * last fragments of the datagram.
- * @param state            A pointer to the state of the library.
- * @param timeout_seconds  The reassembly timeout.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv4_fragmentation_set_reassembly_timeout(
     pfwl_state_t* state, uint8_t timeout_seconds) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_ipv4_fragmentation_set_reassembly_timeout(
         state->ipv4_frag_state, timeout_seconds);
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Sets the maximum time (in seconds) that can be spent to reassembly an
- * IPv6 fragmented datagram. Is the maximum time gap between the first and
- * last fragments of the datagram.
- * @param state            A pointer to the state of the library.
- * @param timeout_seconds  The reassembly timeout.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv6_fragmentation_set_reassembly_timeout(
     pfwl_state_t* state, uint8_t timeout_seconds) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_ipv6_fragmentation_set_reassembly_timeout(
         state->ipv6_frag_state, timeout_seconds);
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Disable IPv4 defragmentation.
- * @param state A pointer to the state of the library.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv4_fragmentation_disable(pfwl_state_t* state) {
   if (likely(state && state->ipv4_frag_state)) {
     pfwl_reordering_disable_ipv4_fragmentation(state->ipv4_frag_state);
     state->ipv4_frag_state = NULL;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Disable IPv6 defragmentation.
- * @param state A pointer to the state of the library.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_ipv6_fragmentation_disable(pfwl_state_t* state) {
   if (likely(state && state->ipv6_frag_state)) {
     pfwl_reordering_disable_ipv6_fragmentation(state->ipv6_frag_state);
     state->ipv6_frag_state = NULL;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * If enabled, the library will reorder out of order TCP packets
- * (enabled by default).
- * @param state  A pointer to the state of the library.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_tcp_reordering_enable(pfwl_state_t* state) {
   if (likely(state)) {
     state->tcp_reordering_enabled = 1;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * If it is called, the library will not reorder out of order TCP packets.
- * Out-of-order segments will be delivered to the inspector as they
- * arrive. This means that the inspector may not be able to identify the
- * application protocol. Moreover, if there are callbacks saved for TCP
- * based protocols, if TCP reordering is disabled, the extracted
- * informations could be erroneous or incomplete.
- * @param state A pointer to the state of the library.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_tcp_reordering_disable(pfwl_state_t* state) {
   if (likely(state)) {
     state->tcp_reordering_enabled = 0;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
 uint8_t pfwl_enable_protocol(pfwl_state_t* state,
-                            pfwl_protocol_l7 protocol) {
+                            pfwl_protocol_l7_t protocol) {
   if (protocol < PFWL_NUM_PROTOCOLS) {
-    BITSET(state->protocols_to_inspect, protocol);
-    ++state->active_protocols;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    // Increment counter only if it was not set, otherwise
+    // calling twice enable_protocol on the same protocol
+    // would lead to a wrong number of active protocols
+    if(!BITTEST(state->protocols_to_inspect, protocol)){
+      ++state->active_protocols;
+    }
+    BITSET(state->protocols_to_inspect, protocol);    
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
 uint8_t pfwl_disable_protocol(pfwl_state_t* state,
-                             pfwl_protocol_l7 protocol) {
+                             pfwl_protocol_l7_t protocol) {
   if (protocol < PFWL_NUM_PROTOCOLS) {
+    // Decrement counter only if it was set, otherwise
+    // calling twice disable_protocol on the same protocol
+    // would lead to a wrong number of active protocols
+    if(BITTEST(state->protocols_to_inspect, protocol)){
+      --state->active_protocols;
+    }
     BITCLEAR(state->protocols_to_inspect, protocol);
     BITCLEAR(state->active_callbacks, protocol);
-    --state->active_protocols;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   }
 }
 
-/**
- * Enable all the protocol inspector.
- * @param state      A pointer to the state of the library.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_inspect_all(pfwl_state_t* state) {
   unsigned char nonzero = ~0;
   memset(state->protocols_to_inspect, nonzero, BITNSLOTS(PFWL_NUM_PROTOCOLS));
   state->active_protocols = PFWL_NUM_PROTOCOLS;
-  return PFWL_STATE_UPDATE_SUCCESS;
+  return 1;
 }
 
-/**
- * Disable all the protocol inspector.
- * @param state      A pointer to the state of the library.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_inspect_nothing(pfwl_state_t* state) {
   bzero(state->protocols_to_inspect, BITNSLOTS(PFWL_NUM_PROTOCOLS));
 
   state->active_protocols = 0;
 
   bzero(state->active_callbacks, PFWL_NUM_PROTOCOLS);
-  return PFWL_STATE_UPDATE_SUCCESS;
+  return 1;
 }
 
 uint8_t pfwl_skip_L7_parsing_by_port(pfwl_state_t* state, uint8_t l4prot,
-                                    uint16_t port, pfwl_protocol_l7 id) {
-  pfwl_l7_skipping_infos_t* skinfos = malloc(sizeof(pfwl_l7_skipping_infos_t));
-  memset(skinfos, 0, sizeof(pfwl_l7_skipping_infos_t));
-  skinfos->key.l4prot = l4prot;
-  skinfos->key.port = port;
-  skinfos->protocol = id;
-  HASH_ADD(hh, state->l7_skip, key, sizeof(skinfos->key), skinfos);
-  return PFWL_STATE_UPDATE_SUCCESS;
+                                    uint16_t port, pfwl_protocol_l7_t id) {
+  pfwl_l7_skipping_info_t* skinfo = malloc(sizeof(pfwl_l7_skipping_info_t));
+  memset(skinfo, 0, sizeof(pfwl_l7_skipping_info_t));
+  skinfo->key.l4prot = l4prot;
+  skinfo->key.port = port;
+  skinfo->protocol = id;
+  HASH_ADD(hh, state->l7_skip, key, sizeof(skinfo->key), skinfo);
+  return 1;
 }
 
-/**
- * Terminates the library.
- * @param state A pointer to the state of the library.
- */
 void pfwl_terminate(pfwl_state_t* state) {
   if (likely(state)) {
-    pfwl_http_disable_callbacks(state);
     pfwl_ipv4_fragmentation_disable(state);
     pfwl_ipv6_fragmentation_disable(state);
     pfwl_tcp_reordering_disable(state);
 
-    pfwl_flow_table_delete_v4(state->db4, state->flow_cleaner_callback);
-    pfwl_flow_table_delete_v6(state->db6, state->flow_cleaner_callback);
-#ifdef WITH_PROMETHEUS
-    pfwl_prometheus_terminate(state);
-#endif
+    pfwl_flow_table_delete(state->flow_table, state->flow_cleaner_callback);
     for(size_t i = 0; i < PFWL_NUM_PROTOCOLS; i++){
       free(state->fields_extraction[i].fields);
     }
@@ -580,65 +407,35 @@ void pfwl_terminate(pfwl_state_t* state) {
   }
 }
 
-/*
- * Try to detect the application protocol.
- * @param   state The state of the library.
- * @param   pkt The pointer to the beginning of IP header.
- * @param   data_length Length of the packet (from the beginning of the IP
- *          header, without L2 headers/trailers).
- * @param   current_time The current time in seconds.
- * @return  The status of the operation.  It gives additional informations
- *          about the processing of the request. If lesser than 0, an error
- *          occurred. pfwl_get_error_msg() can be used to get a textual
- *          representation of the error. If greater or equal than 0 then
- *          it should not be interpreted as an error but simply gives
- *          additional informations (e.g. if the packet was IP fragmented,
- *          if it was out of order in the TCP stream, if is a segment of a
- *          larger application request, etc..). pfwl_get_status_msg() can
- *          be used to get a textual representation of the status. Status
- *          and error codes are defined above in this header file. If an
- *          error occurred, the other returned fields are not meaningful.
- *
- *          The application protocol identifier plus the transport
- *          protocol identifier. The application protocol identifier is
- *          relative to the specific transport protocol.
- *
- * 			The flow specific user data (possibly manipulated by the
- * 			user callbacks).
- */
 pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
-                                             const unsigned char* pkt,
-                                             uint32_t length,
-                                             uint32_t current_time) {
+                                               const unsigned char* pkt,
+                                               uint32_t length,
+                                               uint32_t current_time) {
   pfwl_identification_result_t r;
-  r.status = PFWL_STATUS_OK;
-  pfwl_pkt_infos_t infos;
-  memset(&infos, 0, sizeof(infos));
   uint8_t l3_status;
 
-  r.status = pfwl_parse_L3_L4_headers(state, pkt, length, &infos, current_time);
+  r = pfwl_parse_L3_L4(state, pkt, length, current_time);
   l3_status = r.status;
-  r.protocol_l4 = infos.l4prot;
 
   if (unlikely(r.status == PFWL_STATUS_IP_FRAGMENT || r.status < 0)) {
     return r;
   }
 
   uint8_t skip_l7 = 0;
-  uint16_t srcport = ntohs(infos.srcport);
-  uint16_t dstport = ntohs(infos.dstport);
-  pfwl_l7_skipping_infos_t* sk = NULL;
-  pfwl_l7_skipping_infos_key_t key;
+  uint16_t srcport = ntohs(r.port_src);
+  uint16_t dstport = ntohs(r.port_dst);
+  pfwl_l7_skipping_info_t* sk = NULL;
+  pfwl_l7_skipping_info_key_t key;
   memset(&key, 0, sizeof(key));
-  key.l4prot = infos.l4prot;
+  key.l4prot = r.protocol_l4;
   key.port = dstport;
-  HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_infos_key_t), sk);
+  HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_info_key_t), sk);
   if (sk) {
     skip_l7 = 1;
     r.protocol_l7 = sk->protocol;
   } else {
     key.port = srcport;
-    HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_infos_key_t),
+    HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_info_key_t),
               sk);
     if (sk) {
       skip_l7 = 1;
@@ -647,7 +444,7 @@ pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
   }
 
   if (!skip_l7) {
-    if (infos.l4prot != IPPROTO_TCP && infos.l4prot != IPPROTO_UDP) {
+    if (r.protocol_l4 != IPPROTO_TCP && r.protocol_l4 != IPPROTO_UDP) {
       return r;
     }
 
@@ -658,61 +455,24 @@ pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state,
      * by pfwl_parse_L3_L4_headers. Basically we return the status which
      * provides more informations.
      */
-    r = pfwl_stateful_get_app_protocol(state, &infos);
+    pfwl_parse_L7(state, &r);
   }
 
   if (l3_status == PFWL_STATUS_IP_LAST_FRAGMENT) {
-    free((unsigned char*)infos.pkt);
+    free((unsigned char*) r.pkt);
   }
 
   return r;
 }
 
-/*
- * Extract from the packet the informations about source and destination
- * addresses, source and destination ports, L4 protocol and the offset
- * where the application data starts.
- * @param   state The state of the library.
- * @param   pkt The pointer to the beginning of IP header.
- * @param   data_length Length of the packet (from the beginning of the
- *          IP header, without L2 headers/trailers).
- * @param   pkt_infos The pointer to the packet infos. It will be filled
- *          by the library.
- * @param   current_time The current time in seconds. It must be
- *          non-decreasing between two consecutive calls.
- * @param	tid The thread identifier.
- * @return  The status of the operation. It gives additional informations
- *          about the processing of the request. If lesser than 0, an
- *          error occurred. pfwl_get_error_msg() can be used to get a
- *          textual representation of the error. If greater or equal than
- *          0 then it should not be interpreted as an error but simply
- *          gives additional informations (e.g. if the packet was IP
- *          fragmented, if it was out of order in the TCP stream, if is a
- *          segment of a larger application request, etc..).
- *          pfwl_get_status_msg() can be used to get a textual
- *          representation of the status. Status and error codes are
- *          defined above in this header file.
- *
- *          The status is PFWL_STATUS_IP_FRAGMENT if the datagram is a
- *          fragment. In this case, if IP fragmentation support is
- *          enabled, the library copied the content of the datagram, so if
- *          the user wants, he can release the resources used to store the
- *          datagram.
- *
- *          The status is PFWL_STATUS_IP_LAST_FRAGMENT if the received
- *          datagram allows the library to reconstruct a fragmented
- *          datagram. In this case, pkt_infos->pkt will contain a pointer
- *          to the recomposed datagram. This pointer will be different
- *          from p_pkt. The user should free() this pointer when it is no
- *          more needed (e.g. after calling
- *          pfwl_state*_get_app_protocol(..)).
- */
-int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
+pfwl_identification_result_t mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
                                    const unsigned char* p_pkt,
                                    uint32_t p_length,
-                                   pfwl_pkt_infos_t* pkt_infos,
                                    uint32_t current_time, int tid) {
-  if (unlikely(p_length == 0)) return PFWL_STATUS_OK;
+  pfwl_identification_result_t r;
+  memset(&r, 0, sizeof(r));
+  r.status = PFWL_STATUS_OK;
+  if (unlikely(p_length == 0)) return r;
   uint8_t version;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   version = (p_pkt[0] >> 4) & 0x0F;
@@ -722,14 +482,10 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
 #error "Please fix <bits/endian.h>"
 #endif
 
-  unsigned char* pkt = (unsigned char*)p_pkt;
+  unsigned char* pkt = (unsigned char*) p_pkt;
   uint32_t length = p_length;
   uint16_t offset;
   uint8_t more_fragments;
-
-  pkt_infos->l4prot = 0;
-  pkt_infos->srcport = 0;
-  pkt_infos->dstport = 0;
 
   /** Offset starting from the beginning of p_pkt. **/
   uint32_t application_offset;
@@ -753,7 +509,8 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
     if (unlikely(length < (sizeof(struct iphdr)) || tot_len > length ||
                  tot_len <= ((ip4->ihl) * 4))) {
-      return PFWL_ERROR_L3_TRUNCATED_PACKET;
+      r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+      return r;
     }
 #endif
     /**
@@ -784,17 +541,19 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
                                                 current_time, offset,
                                                 more_fragments, tid);
       if (pkt == NULL) {
-        return PFWL_STATUS_IP_FRAGMENT;
+        r.status = PFWL_STATUS_IP_FRAGMENT;
+        return r;
       }
       to_return = PFWL_STATUS_IP_LAST_FRAGMENT;
       ip4 = (struct iphdr*)(pkt);
       length = ntohs(((struct iphdr*)(pkt))->tot_len);
     } else {
-      return PFWL_STATUS_IP_FRAGMENT;
+      r.status = PFWL_STATUS_IP_FRAGMENT;
+      return r;
     }
 
-    pkt_infos->src_addr_t.ipv4_srcaddr = ip4->saddr;
-    pkt_infos->dst_addr_t.ipv4_dstaddr = ip4->daddr;
+    r.addr_src.ipv4 = ip4->saddr;
+    r.addr_dst.ipv4 = ip4->daddr;
 
     application_offset = (ip4->ihl) * 4;
     relative_offset = application_offset;
@@ -806,7 +565,8 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
         ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen) + sizeof(struct ip6_hdr);
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
     if (unlikely(tot_len > length)) {
-      return PFWL_ERROR_L3_TRUNCATED_PACKET;
+      r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+      return r;
     }
 #endif
 
@@ -818,14 +578,15 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
      */
     length = tot_len;
 
-    pkt_infos->src_addr_t.ipv6_srcaddr = ip6->ip6_src;
-    pkt_infos->dst_addr_t.ipv6_dstaddr = ip6->ip6_dst;
+    r.addr_src.ipv6 = ip6->ip6_src;
+    r.addr_dst.ipv6 = ip6->ip6_dst;
 
     application_offset = sizeof(struct ip6_hdr);
     relative_offset = application_offset;
     next_header = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
   } else {
-    return PFWL_ERROR_WRONG_IPVERSION;
+    r.status = PFWL_ERROR_WRONG_IPVERSION;
+    return r;
   }
 
   while (!stop) {
@@ -836,12 +597,13 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
         if (unlikely(application_offset + sizeof(struct tcphdr) > length ||
                      application_offset + tcp->doff * 4 > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L4_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L4_TRUNCATED_PACKET;
+          return r;
         }
 #endif
-        pkt_infos->srcport = tcp->source;
-        pkt_infos->dstport = tcp->dest;
-        pkt_infos->l4offset = application_offset;
+        r.port_src = tcp->source;
+        r.port_dst = tcp->dest;
+        r.offset_l4 = application_offset;
         application_offset += (tcp->doff * 4);
         stop = 1;
       } break;
@@ -851,12 +613,13 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
         if (unlikely(application_offset + sizeof(struct udphdr) > length ||
                      application_offset + ntohs(udp->len) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L4_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L4_TRUNCATED_PACKET;
+          return r;
         }
 #endif
-        pkt_infos->srcport = udp->source;
-        pkt_infos->dstport = udp->dest;
-        pkt_infos->l4offset = application_offset;
+        r.port_src = udp->source;
+        r.port_dst = udp->dest;
+        r.offset_l4 = application_offset;
         application_offset += 8;
         stop = 1;
       } break;
@@ -864,7 +627,8 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_hbh) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L3_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          return r;
         }
 #endif
         if (likely(version == 6)) {
@@ -875,14 +639,16 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
           next_header = hbh_hdr->ip6h_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          r.status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          return r;
         }
       } break;
       case IPPROTO_DSTOPTS: { /* Destination options */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_dest) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L3_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          return r;
         }
 #endif
         if (likely(version == 6)) {
@@ -894,14 +660,16 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
           next_header = dst_hdr->ip6d_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          r.status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          return r;
         }
       } break;
       case IPPROTO_ROUTING: { /* Routing header */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_rthdr) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L3_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          return r;
         }
 #endif
         if (likely(version == 6)) {
@@ -913,14 +681,16 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
           next_header = rt_hdr->ip6r_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          r.status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          return r;
         }
       } break;
       case IPPROTO_FRAGMENT: { /* Fragment header */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_frag) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L3_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          return r;
         }
 #endif
         if (likely(version == 6)) {
@@ -964,7 +734,8 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
             if (to_delete) free(to_delete);
 
             if (pkt == NULL) {
-              return PFWL_STATUS_IP_FRAGMENT;
+              r.status = PFWL_STATUS_IP_FRAGMENT;
+              return r;
             }
 
             to_return = PFWL_STATUS_IP_LAST_FRAGMENT;
@@ -977,11 +748,13 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
              **/
             application_offset = relative_offset = 0;
           } else {
-            return PFWL_STATUS_IP_FRAGMENT;
+            r.status = PFWL_STATUS_IP_FRAGMENT;
+            return r;
           }
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          r.status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          return r;
         }
       } break;
       case IPPROTO_IPV6: /** 6in4 and 6in6 tunneling **/
@@ -993,12 +766,13 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
                          sizeof(struct ip6_hdr) >
                      length - application_offset)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L3_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          return r;
         }
 #endif
 
-        pkt_infos->src_addr_t.ipv6_srcaddr = ip6->ip6_src;
-        pkt_infos->dst_addr_t.ipv6_dstaddr = ip6->ip6_dst;
+        r.addr_src.ipv6 = ip6->ip6_src;
+        r.addr_dst.ipv6 = ip6->ip6_dst;
 
         application_offset += sizeof(struct ip6_hdr);
         relative_offset = sizeof(struct ip6_hdr);
@@ -1013,11 +787,12 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
                      application_offset + ((ip4->ihl) * 4) > length ||
                      application_offset + ntohs(ip4->tot_len) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          return PFWL_ERROR_L3_TRUNCATED_PACKET;
+          r.status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          return r;
         }
 #endif
-        pkt_infos->src_addr_t.ipv4_srcaddr = ip4->saddr;
-        pkt_infos->dst_addr_t.ipv4_dstaddr = ip4->daddr;
+        r.addr_src.ipv4 = ip4->saddr;
+        r.addr_dst.ipv4 = ip4->daddr;
         next_header = ip4->protocol;
         tmp = (ip4->ihl) * 4;
         application_offset += tmp;
@@ -1025,178 +800,71 @@ int8_t mc_pfwl_extract_packet_infos(pfwl_state_t* state,
         break;
       default:
         stop = 1;
-        pkt_infos->l4offset = application_offset;
+        r.offset_l4 = application_offset;
         break;
     }
   }
 
-  pkt_infos->l4prot = next_header;
+  r.protocol_l4 = next_header;
 #ifdef PFWL_ENABLE_L4_TRUNCATION_PROTECTION
   if (unlikely(application_offset > length)) {
     if (unlikely(pkt != p_pkt)) free(pkt);
-    return PFWL_ERROR_L4_TRUNCATED_PACKET;
+    r.status = PFWL_ERROR_L4_TRUNCATED_PACKET;
+    return r;
   }
 #endif
-  pkt_infos->processing_time = current_time;
-  pkt_infos->pkt = pkt;
-  pkt_infos->l7offset = application_offset;
-  pkt_infos->data_length = length - application_offset;
-  pkt_infos->ip_version = version;
-  return to_return;
+  r.timestamp = current_time;
+  r.pkt = pkt;
+  r.offset_l7 = application_offset;
+  r.data_length_l7 = length - application_offset;
+  r.ip_version = version;
+  r.status = to_return;
+  return r;
 }
 
-int8_t pfwl_parse_L3_L4_headers(pfwl_state_t* state,
-                               const unsigned char* p_pkt, uint32_t p_length,
-                               pfwl_pkt_infos_t* pkt_infos,
-                               uint32_t current_time) {
+pfwl_identification_result_t pfwl_parse_L3_L4(pfwl_state_t* state,
+                                const unsigned char* p_pkt, uint32_t p_length,
+                                uint32_t current_time) {
   /**
    * We can pass any thread id, indeed in this case we don't
    * need lock synchronization.
    **/
-  return mc_pfwl_extract_packet_infos(state, p_pkt, p_length, pkt_infos,
-                                     current_time, 0);
+  return mc_pfwl_parse_L3_L4_header(state, p_pkt, p_length, current_time, 0);
 }
 
-/*
- * Try to detect the application protocol. Before calling it, a check on
- * L4 protocol should be done and the function should be called only if
- * the packet is TCP or UDP.
- * @param   state The pointer to the library state.
- * @param   pkt_infos The pointer to the packet infos.
- * @return  The status of the operation. It gives additional informations
- *          about the processing of the request. If lesser than 0, an
- *          error occurred. pfwl_get_error_msg() can be used to get a
- *          textual representation of the error. If greater or equal
- *          than 0 then it should not be interpreted as an error but
- *          simply gives additional informations (e.g. if the packet was
- *          IP fragmented, if it was out of order in the TCP stream, if is
- *          a segment of a larger application request, etc..).
- *          pfwl_get_status_msg() can be used to get a textual
- *          representation of the status. Status and error codes are
- *          defined above in this header file.
- *
- *          The status is PFWL_STATUS_IP_FRAGMENT if the datagram is a
- *          fragment. In this case, if IP fragmentation support is
- *          enabled, the library copied the content of the datagram, so if
- *          the user wants, he can release the resources used to store the
- *          datagram.
- *
- *          The status is PFWL_STATUS_IP_LAST_FRAGMENT if the received
- *          datagram allows the library to reconstruct a fragmented
- *          datagram. In this case, pkt_infos->pkt will contain a pointer
- *          to the recomposed datagram. This pointer will be different
- *          from p_pkt. The user should free() this pointer when it is no
- *          more needed (e.g. after calling
- *          pfwl_state*_get_app_protocol(..)).
- */
-pfwl_identification_result_t pfwl_stateful_get_app_protocol(
-    pfwl_state_t* state, pfwl_pkt_infos_t* pkt_infos) {
-  pfwl_identification_result_t r;
-  r.status = PFWL_STATUS_OK;
+void pfwl_parse_L7(pfwl_state_t* state, pfwl_identification_result_t *identification_info) {
+  identification_info->status = PFWL_STATUS_OK;
 
-  pfwl_flow_infos_t* flow_infos = NULL;
-  ipv4_flow_t* ipv4_flow = NULL;
-  ipv6_flow_t* ipv6_flow = NULL;
+  pfwl_flow_info_t* flow_info = NULL;
+  pfwl_flow_t* flow = NULL;
 
-  if (pkt_infos->ip_version == PFWL_IP_VERSION_4) {
-    ipv4_flow = pfwl_flow_table_find_or_create_flow_v4(state, pkt_infos);
-    if (ipv4_flow) flow_infos = &(ipv4_flow->infos);
-  } else {
-    ipv6_flow = pfwl_flow_table_find_or_create_flow_v6(state, pkt_infos);
-    if (ipv6_flow) flow_infos = &(ipv6_flow->infos);
+  flow = pfwl_flow_table_find_or_create_flow(state->flow_table, identification_info, state->flow_cleaner_callback,
+                                             state->protocols_to_inspect, state->tcp_reordering_enabled);
+
+  if (unlikely(flow == NULL)) {
+    identification_info->status = PFWL_ERROR_MAX_FLOWS;
+    return;
   }
 
-  if (unlikely(flow_infos == NULL)) {
-    r.status = PFWL_ERROR_MAX_FLOWS;
-    return r;
-  }
+  flow_info = &(flow->info);
 
-  r = pfwl_stateless_get_app_protocol(state, flow_infos, pkt_infos);
+  pfwl_parse_L7_stateless(state, identification_info, flow_info);
 
-  if (r.status == PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
-    if (ipv4_flow != NULL) {
-      pfwl_flow_table_delete_flow_v4(state->db4, state->flow_cleaner_callback,
-                                    ipv4_flow);
-    } else {
-      pfwl_flow_table_delete_flow_v6(state->db6, state->flow_cleaner_callback,
-                                    ipv6_flow);
-    }
+  if (identification_info->status == PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
+    pfwl_flow_table_delete_flow(state->flow_table, state->flow_cleaner_callback, flow);
   }
-  return r;
+  return;
 }
 
-/**
- * Initialize the flow informations passed as argument.
- * @param state       A pointer to the state of the library.
- * @param flow_infos  The informations that will be initialized by
- *                    the library.
- * @param l4prot      The transport protocol identifier.
- */
-void pfwl_init_flow_infos(pfwl_state_t* state,
-                         pfwl_flow_infos_t* flow_infos, uint8_t l4prot) {
-  pfwl_protocol_l7 i;
-
-  for (i = 0; i < BITNSLOTS(PFWL_NUM_PROTOCOLS); i++) {
-    flow_infos->possible_matching_protocols[i] = state->protocols_to_inspect[i];
-  }
-  flow_infos->possible_protocols = state->active_protocols;
-
-  flow_infos->l7prot = PFWL_PROTOCOL_NOT_DETERMINED;
-  flow_infos->trials = 0;
-  flow_infos->tcp_reordering_enabled = state->tcp_reordering_enabled;
-  flow_infos->last_rebuilt_tcp_data = NULL;
-  bzero(&(flow_infos->tracking), sizeof(pfwl_tracking_informations_t));
-}
-
-/*
- * Try to detect the application protocol. Before calling it, a check on
- * L4 protocol should be done and the function should be called only if
- * the packet is TCP or UDP. It should be used if the application already
- * has the concept of 'flow'. In this case the first time that the flow is
- * passed to the call, it must be initialized with
- * pfwl_init_flow_infos(...).
- * @param   state The pointer to the library state.
- * @param   flow The informations about the flow. They must be kept by the
- *               user.
- * @param   pkt_infos The pointer to the packet infos.
- * @return  The status of the operation. It gives additional informations
- *          about the processing of the request. If lesser than 0, an error
- *          occurred. pfwl_get_error_msg() can be used to get a textual
- *          representation of the error. If greater or equal than 0 then
- *          it should not be interpreted as an error but simply gives
- *          additional informations (e.g. if the packet was IP fragmented,
- *          if it was out of order in the TCP stream, if is a segment of
- *          a larger application request, etc..). pfwl_get_status_msg()
- *          can be used to get a textual representation of the status.
- *          Status and error codes are defined above in this header file.
- *
- *          The status is PFWL_STATUS_IP_FRAGMENT if the datagram is a
- *          fragment. In this case, if IP fragmentation support is
- *          enabled, the library copied the content of the datagram, so if
- *          the user wants, he can release the resources used to store the
- *          datagram.
- *
- *          The status is PFWL_STATUS_IP_LAST_FRAGMENT if the received
- *          datagram allows the library to reconstruct a fragmented
- *          datagram. In this case, pkt_infos->pkt will contain a pointer
- *          to the recomposed datagram. This pointer will be different
- *          from p_pkt. The user should free() this pointer when it is no
- *          more needed (e.g. after calling
- *          pfwl_state*_get_app_protocol(..)).
- */
-pfwl_identification_result_t pfwl_stateless_get_app_protocol(
-    pfwl_state_t* state, pfwl_flow_infos_t* flow,
-    pfwl_pkt_infos_t* pkt_infos) {
-  pfwl_identification_result_t r;
-  r.status = PFWL_STATUS_OK;
-  r.protocol_l4 = pkt_infos->l4prot;
-  r.user_flow_data = (flow->tracking.udata);
-  pfwl_protocol_l7 i;
+void pfwl_parse_L7_stateless(pfwl_state_t* state, pfwl_identification_result_t *identification_info, pfwl_flow_info_t* flow) {
+  identification_info->status = PFWL_STATUS_OK;
+  identification_info->user_flow_data = (flow->tracking.udata);
+  pfwl_protocol_l7_t i;
 
   uint8_t check_result = PFWL_PROTOCOL_NO_MATCHES;
-  const pfwl_protocol_l7* well_known_ports;
-  const unsigned char* app_data = pkt_infos->pkt + pkt_infos->l7offset;
-  uint32_t data_length = pkt_infos->data_length;
+  const pfwl_protocol_l7_t* well_known_ports;
+  const unsigned char* app_data = identification_info->pkt + identification_info->offset_l7;
+  uint32_t data_length = identification_info->data_length_l7;
   pfwl_tcp_reordering_reordered_segment_t seg;
   seg.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
   seg.data = NULL;
@@ -1207,14 +875,14 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
   }
 
   if (flow->l7prot < PFWL_PROTOCOL_NOT_DETERMINED) {
-    r.protocol_l7 = flow->l7prot;
-    if (pkt_infos->l4prot == IPPROTO_TCP) {
+    identification_info->protocol_l7 = flow->l7prot;
+    if (identification_info->protocol_l4 == IPPROTO_TCP) {
       if (flow->tcp_reordering_enabled) {
-        seg = pfwl_reordering_tcp_track_connection(pkt_infos, &(flow->tracking));
+        seg = pfwl_reordering_tcp_track_connection(identification_info, &(flow->tracking));
 
         if (seg.status == PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
-          r.status = PFWL_STATUS_TCP_OUT_OF_ORDER;
-          return r;
+          identification_info->status = PFWL_STATUS_TCP_OUT_OF_ORDER;
+          return;
         } else if (seg.status == PFWL_TCP_REORDERING_STATUS_REBUILT) {
           app_data = seg.data;
           data_length = seg.data_length;
@@ -1224,46 +892,31 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
           flow->last_rebuilt_tcp_data = app_data;
         }
       } else {
-        seg.connection_terminated = pfwl_reordering_tcp_track_connection_light(
-            pkt_infos, &(flow->tracking));
+        seg.connection_terminated = pfwl_reordering_tcp_track_connection_light(identification_info, &(flow->tracking));
       }
-
-      if ((BITTEST(state->active_callbacks, flow->l7prot))
-          && data_length != 0) {
-        (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
-                                             data_length, &(flow->tracking));
-      }
-    } else if (pkt_infos->l4prot == IPPROTO_UDP &&
-               BITTEST(state->active_callbacks, flow->l7prot)) {
-      (*(callbacks_manager[flow->l7prot]))(state, pkt_infos, app_data,
-                                           data_length, &(flow->tracking));
     }
 
     pfwl_tracking_informations_t* t = &(flow->tracking);
     if (flow->l7prot < PFWL_NUM_PROTOCOLS &&
         state->fields_extraction[flow->l7prot].fields_num) {
       pfwl_protocol_descriptor_t descr = protocols_descriptors[flow->l7prot];
-      size_t fields_num = descr.extracted_fields_num;
-      r.protocol_fields = (*descr.get_extracted_fields)(t);
-      memset(r.protocol_fields, 0, sizeof(pfwl_field_t)*fields_num);
-      (*(descr.dissector))(state, pkt_infos, app_data, data_length, t);
-      r.protocol_fields_num = fields_num;
+      (*(descr.dissector))(app_data, data_length, identification_info, t, state->inspectors_accuracy[flow->l7prot], state->fields_extraction[flow->l7prot].fields);
     }
 
     if (seg.connection_terminated) {
-      r.status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
+      identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
     }
-    return r;
+    return;
   } else if (flow->l7prot == PFWL_PROTOCOL_NOT_DETERMINED) {
-    if (pkt_infos->l4prot == IPPROTO_TCP && state->active_protocols > 0) {
+    if (identification_info->protocol_l4 == IPPROTO_TCP && state->active_protocols > 0) {
       well_known_ports = pfwl_well_known_ports_association_tcp;
       if (flow->tcp_reordering_enabled) {
-        seg = pfwl_reordering_tcp_track_connection(pkt_infos, &(flow->tracking));
+        seg = pfwl_reordering_tcp_track_connection(identification_info, &(flow->tracking));
 
         if (seg.status == PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
-          r.status = PFWL_STATUS_TCP_OUT_OF_ORDER;
-          r.protocol_l7 = PFWL_PROTOCOL_UNKNOWN;
-          return r;
+          identification_info->status = PFWL_STATUS_TCP_OUT_OF_ORDER;
+          identification_info->protocol_l7 = PFWL_PROTOCOL_UNKNOWN;
+          return;
         } else if (seg.status == PFWL_TCP_REORDERING_STATUS_REBUILT) {
           app_data = seg.data;
           data_length = seg.data_length;
@@ -1273,15 +926,14 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
           flow->last_rebuilt_tcp_data = app_data;
         }
       } else {
-        if (pfwl_reordering_tcp_track_connection_light(pkt_infos,
-                                                      &(flow->tracking)))
-          r.status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
+        if (pfwl_reordering_tcp_track_connection_light(identification_info, &(flow->tracking)))
+          identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
       }
-    } else if (pkt_infos->l4prot == IPPROTO_UDP &&
+    } else if (identification_info->protocol_l4 == IPPROTO_UDP &&
                state->active_protocols > 0) {
       well_known_ports = pfwl_well_known_ports_association_udp;
     } else {
-      return r;
+      return;
     }
 
     /**
@@ -1289,16 +941,16 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
      * invoked the TCP reordering to update the connection state.
      */
     if (data_length == 0) {
-      r.protocol_l7 = flow->l7prot;
-      return r;
+      identification_info->protocol_l7 = flow->l7prot;
+      return;
     }
 
-    pfwl_protocol_l7 first_protocol_to_check;
-    pfwl_protocol_l7 checked_protocols = 0;
+    pfwl_protocol_l7_t first_protocol_to_check;
+    pfwl_protocol_l7_t checked_protocols = 0;
 
-    if ((first_protocol_to_check = well_known_ports[pkt_infos->srcport]) ==
+    if ((first_protocol_to_check = well_known_ports[identification_info->port_src]) ==
             PFWL_PROTOCOL_UNKNOWN &&
-        (first_protocol_to_check = well_known_ports[pkt_infos->dstport]) ==
+        (first_protocol_to_check = well_known_ports[identification_info->port_dst]) ==
             PFWL_PROTOCOL_UNKNOWN) {
       first_protocol_to_check = 0;
     }
@@ -1308,32 +960,15 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
       if (BITTEST(flow->possible_matching_protocols, i)) {
         pfwl_protocol_descriptor_t descr = protocols_descriptors[i];
         pfwl_tracking_informations_t* t = &(flow->tracking);
-        size_t fields_num = descr.extracted_fields_num;
-        if(descr.get_extracted_fields){
-          memset((*descr.get_extracted_fields)(t), 0, sizeof(pfwl_field_t)*fields_num);
-        }
-        check_result = (*(descr.dissector))(state, pkt_infos, app_data,
-                                          data_length, t);
+        check_result = (*(descr.dissector))(app_data, data_length, identification_info, t, state->inspectors_accuracy[i], state->fields_extraction[i].fields);
         if (check_result == PFWL_PROTOCOL_MATCHES) {
           flow->l7prot = i;
-          r.protocol_l7 = flow->l7prot;
-
-          if (flow->l7prot < PFWL_NUM_PROTOCOLS &&
-              state->fields_extraction[flow->l7prot].fields_num) {
-            r.protocol_fields = (*descr.get_extracted_fields)(t);
-            r.protocol_fields_num = fields_num;
-          }
+          identification_info->protocol_l7 = flow->l7prot;
 
           if (seg.connection_terminated) {
-            r.status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
+            identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
           }
-#ifdef WITH_PROMETHEUS
-          flow->prometheus_counter_packets = pfwl_prometheus_counter_create(
-              state->prometheus_stats, "packets", pkt_infos, flow->l7prot);
-          flow->prometheus_counter_bytes = pfwl_prometheus_counter_create(
-              state->prometheus_stats, "bytes", pkt_infos, flow->l7prot);
-#endif
-          return r;
+          return;
         } else if (check_result == PFWL_PROTOCOL_NO_MATCHES) {
           BITCLEAR(flow->possible_matching_protocols, i);
           --(flow->possible_protocols);
@@ -1353,7 +988,7 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
     }
   }
 
-  r.protocol_l7 = flow->l7prot;
+  identification_info->protocol_l7 = flow->l7prot;
 
   if(flow->last_rebuilt_tcp_data){
     free((void*) flow->last_rebuilt_tcp_data);
@@ -1361,28 +996,21 @@ pfwl_identification_result_t pfwl_stateless_get_app_protocol(
   }
 
   if (seg.connection_terminated) {
-    r.status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
+    identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
   }
-  return r;
+  return;
 }
 
-/**
- * Try to guess the protocol looking only at source/destination ports.
- * This could be erroneous because sometimes protocols
- * run over ports which are not their well-known ports.
- * @param    pkt_infos The pointer to the packet infos.
- * @return   Returns the possible matching protocol.
- */
-pfwl_protocol_l7 pfwl_guess_protocol(pfwl_pkt_infos_t* pkt_infos) {
-  pfwl_protocol_l7 r = PFWL_PROTOCOL_UNKNOWN;
-  if (pkt_infos->l4prot == IPPROTO_TCP) {
-    r = pfwl_well_known_ports_association_tcp[pkt_infos->srcport];
+pfwl_protocol_l7_t pfwl_guess_protocol(pfwl_identification_result_t identification_info) {
+  pfwl_protocol_l7_t r = PFWL_PROTOCOL_UNKNOWN;
+  if (identification_info.protocol_l4 == IPPROTO_TCP) {
+    r = pfwl_well_known_ports_association_tcp[identification_info.port_src];
     if (r == PFWL_PROTOCOL_UNKNOWN)
-      r = pfwl_well_known_ports_association_tcp[pkt_infos->dstport];
-  } else if (pkt_infos->l4prot == IPPROTO_UDP) {
-    r = pfwl_well_known_ports_association_udp[pkt_infos->srcport];
+      r = pfwl_well_known_ports_association_tcp[identification_info.port_dst];
+  } else if (identification_info.protocol_l4 == IPPROTO_UDP) {
+    r = pfwl_well_known_ports_association_udp[identification_info.port_src];
     if (r == PFWL_PROTOCOL_UNKNOWN)
-      r = pfwl_well_known_ports_association_udp[pkt_infos->dstport];
+      r = pfwl_well_known_ports_association_udp[identification_info.port_dst];
   } else {
     r = PFWL_PROTOCOL_UNKNOWN;
   }
@@ -1390,22 +1018,16 @@ pfwl_protocol_l7 pfwl_guess_protocol(pfwl_pkt_infos_t* pkt_infos) {
 }
 
 uint8_t pfwl_set_protocol_accuracy(pfwl_state_t *state,
-                                  pfwl_protocol_l7 protocol,
-                                  pfwl_inspector_accuracy accuracy) {
+                                  pfwl_protocol_l7_t protocol,
+                                  pfwl_inspector_accuracy_t accuracy) {
   if (state) {
     state->inspectors_accuracy[protocol] = accuracy;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   } else {
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
-/**
- * Get the string representing the error message associated to the
- * specified error_code.
- * @param   error_code The error code.
- * @return  The error message.
- */
 const char* const pfwl_get_error_msg(int8_t error_code) {
   switch (error_code) {
     case PFWL_ERROR_WRONG_IPVERSION:
@@ -1421,18 +1043,12 @@ const char* const pfwl_get_error_msg(int8_t error_code) {
       return "ERROR: The transport protocol is not supported.";
     case PFWL_ERROR_MAX_FLOWS:
       return "ERROR: The maximum number of active flows has been"
-             " reached.";
+             " reached. Please increase it when initializing the libray";
     default:
       return "ERROR: Not existing error code.";
   }
 }
 
-/**
- * Get the string representing the status message associated to the
- * specified status_code.
- * @param   status_code The status code.
- * @return  The status message.
- */
 const char* const pfwl_get_status_msg(int8_t status_code) {
   switch (status_code) {
     case PFWL_STATUS_OK:
@@ -1455,7 +1071,7 @@ const char* const pfwl_get_status_msg(int8_t status_code) {
   }
 }
 
-const char* const pfwl_get_protocol_string(pfwl_protocol_l7 protocol) {
+const char* const pfwl_get_protocol_string(pfwl_protocol_l7_t protocol) {
   if (protocol < PFWL_NUM_PROTOCOLS) {
     return protocols_descriptors[protocol].name;
   } else {
@@ -1463,11 +1079,11 @@ const char* const pfwl_get_protocol_string(pfwl_protocol_l7 protocol) {
   }
 }
 
-pfwl_protocol_l7 pfwl_get_protocol_id(const char* const string) {
+pfwl_protocol_l7_t pfwl_get_protocol_id(const char* const string) {
   size_t i;
   for (i = 0; i < (size_t)PFWL_NUM_PROTOCOLS; i++) {
     if (strcasecmp(string, protocols_descriptors[i].name) == 0) {
-      return (pfwl_protocol_l7)i;
+      return (pfwl_protocol_l7_t)i;
       ;
     }
   }
@@ -1484,48 +1100,39 @@ const char** const pfwl_get_protocols_strings() {
   return protocols_strings;
 }
 
-/**
- * Sets the callback that will be called when a flow expires.
- * (Valid only if stateful API is used).
- * @param state     A pointer to the state of the library.
- * @param cleaner   The callback used to clear the user state.
- *
- * @return PFWL_STATE_UPDATE_SUCCESS if succeeded,
- *         PFWL_STATE_UPDATE_FAILURE otherwise.
- */
 uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t* state,
-                                      pfwl_flow_cleaner_callback* cleaner) {
+                                       pfwl_flow_cleaner_callback_t* cleaner) {
   state->flow_cleaner_callback = cleaner;
-  return PFWL_STATE_UPDATE_SUCCESS;
+  return 1;
 }
 
 uint8_t pfwl_protocol_field_add(pfwl_state_t* state,
-                                 pfwl_protocol_l7 protocol,
+                                 pfwl_protocol_l7_t protocol,
                                  int field_type){
   if(state){
     state->fields_extraction[protocol].fields[field_type] = 1;
     state->fields_extraction[protocol].fields_num++;
     pfwl_set_protocol_accuracy(state, protocol, PFWL_INSPECTOR_ACCURACY_HIGH);  // TODO: mmm, the problem is that we do not set back the original accuracy when doing field_remove
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   }else{
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
 uint8_t pfwl_protocol_field_remove(pfwl_state_t* state,
-                                    pfwl_protocol_l7 protocol,
+                                    pfwl_protocol_l7_t protocol,
                                     int field_type){
   if(state){
     state->fields_extraction[protocol].fields[field_type] = 0;
     state->fields_extraction[protocol].fields_num--;
-    return PFWL_STATE_UPDATE_SUCCESS;
+    return 1;
   }else{
-    return PFWL_STATE_UPDATE_FAILURE;
+    return 0;
   }
 }
 
 uint8_t pfwl_protocol_field_required(pfwl_state_t* state,
-                                      pfwl_protocol_l7 protocol,
+                                      pfwl_protocol_l7_t protocol,
                                       int field_type){
   if(state){
     return state->fields_extraction[protocol].fields[field_type];
@@ -1534,19 +1141,19 @@ uint8_t pfwl_protocol_field_required(pfwl_state_t* state,
   }
 }
 
-/**
- * Adds a pointer to some data which will be passed as parameter to all
- * the fields callbacks.
- * @param state A pointer to the state of the library.
- * @param udata
- * @return
- */
 uint8_t pfwl_callbacks_fields_set_udata(pfwl_state_t* state,
                                         void* udata){
     if(state){
         state->callbacks_udata = udata;
-        return PFWL_STATE_UPDATE_SUCCESS;
+        return 1;
     }else{
-        return PFWL_STATE_UPDATE_FAILURE;
+        return 0;
     }
+}
+
+void pfwl_init_flow_info(pfwl_state_t* state,
+                          pfwl_flow_info_t* flow_info){
+    pfwl_init_flow_info_internal(flow_info,
+                                  state->protocols_to_inspect,
+                                  state->tcp_reordering_enabled);
 }

@@ -33,7 +33,7 @@
 #include <src/manager.hpp>
 #endif
 
-typedef struct mc_pfwl_library_state mc_pfwl_library_state_t;
+typedef struct mc_pfwl_state mc_pfwl_state_t;
 
 typedef struct mc_pfwl_processing_result {
   void* user_pointer;
@@ -117,26 +117,13 @@ typedef void(mc_pfwl_processing_result_callback)(
  * Initializes the library and sets the parallelism degree according to
  * the cost model obtained from the parameters that the user specifies.
  * If not specified otherwise after the initialization, the library will
- * consider all the protocols active.
+ * consider all the protocols to be active.
  *
- * @param size_v4 Size of the array of pointers used to build the database
- *                for v4 flows.
- * @param size_v6 Size of the array of pointers used to build the database
- *                for v6 flows.
- * @param max_active_v4_flows The maximum number of IPv4 flows which can
- *                            be active at any time. After reaching this
- *                            threshold, new flows will not be created.
- * @param max_active_v6_flows The maximum number of IPv6 flows which can
- *                            be active at any time. After reaching this
- *                            threshold, new flows will not be created.
  * @param parallelism_details Details about the parallelism form. Must be
  *                            zeroed and then filled by the user.
  * @return A pointer to the state of the library.
  */
-mc_pfwl_library_state_t* mc_pfwl_init_stateful(
-    uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
-    uint32_t max_active_v6_flows,
-    mc_pfwl_parallelism_details_t parallelism_details);
+mc_pfwl_state_t* mc_pfwl_init(mc_pfwl_parallelism_details_t parallelism_details);
 
 /**
  * Sets the reading and processing callbacks. It can be done only after
@@ -151,7 +138,7 @@ mc_pfwl_library_state_t* mc_pfwl_init_stateful(
  *                              the callbacks.
  */
 void mc_pfwl_set_core_callbacks(
-    mc_pfwl_library_state_t* state,
+    mc_pfwl_state_t* state,
     mc_pfwl_packet_reading_callback* reading_callback,
     mc_pfwl_processing_result_callback* processing_callback, void* user_data);
 
@@ -169,29 +156,42 @@ void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t* state,
  * Starts the library.
  * @param state A pointer to the state of the library.
  */
-void mc_pfwl_run(mc_pfwl_library_state_t* state);
+void mc_pfwl_run(mc_pfwl_state_t* state);
 
 /**
  * Wait the end of the data processing.
  * @param state A pointer to the state of the library.
  */
-void mc_pfwl_wait_end(mc_pfwl_library_state_t* state);
+void mc_pfwl_wait_end(mc_pfwl_state_t* state);
 
 /**
  * Prints execution's statistics.
  * @param state A pointer to the state of the library.
  */
-void mc_pfwl_print_stats(mc_pfwl_library_state_t* state);
+void mc_pfwl_print_stats(mc_pfwl_state_t* state);
 
 /**
  * Terminates the library.
  * @param state A pointer to the state of the library.
  */
-void mc_pfwl_terminate(mc_pfwl_library_state_t* state);
+void mc_pfwl_terminate(mc_pfwl_state_t* state);
 
 /*************************************************/
 /*          Status change API calls              */
 /*************************************************/
+/**
+ * @brief Sets the number of simultaneously active flows to be expected.
+ * @param state A pointer to the state of the library.
+ * @param flows_v4 The number of simultaneously active IPv4 flows.
+ * @param flows_v6 The number of simultaneously active IPv6 flows.
+ * @param strict If 1, when that number of active flows is reached,
+ * an error will be returned (PFWL_ERROR_MAX_FLOWS) and new flows
+ * will not be created. If 0, there will not be any limit to the number
+ * of simultaneously active flows.
+ * @return 0 if succeeded, 1 otherwise.
+ */
+uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t* state, uint32_t flows_v4,
+                                   uint32_t flows_v6, uint8_t strict);
 
 /**
  * Sets the maximum number of times that the library tries to guess the
@@ -202,11 +202,11 @@ void mc_pfwl_terminate(mc_pfwl_library_state_t* state);
  * @param state       A pointer to the state of the library.
  * @param max_trials  The maximum number of trials.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_set_max_trials(mc_pfwl_library_state_t* state,
+uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state,
                               uint16_t max_trials);
 
 /**
@@ -215,11 +215,11 @@ uint8_t mc_pfwl_set_max_trials(mc_pfwl_library_state_t* state,
  * @param table_size   The size of the table to be used to store IPv4
  *                     fragments informations.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *          updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *          updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_library_state_t* state,
+uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t* state,
                                          uint16_t table_size);
 
 /**
@@ -228,11 +228,11 @@ uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_library_state_t* state,
  * @param table_size   The size of the table to be used to store IPv6
  *                     fragments informations.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_library_state_t* state,
+uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_state_t* state,
                                          uint16_t table_size);
 
 /**
@@ -242,12 +242,12 @@ uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_library_state_t* state,
  * @param per_host_memory_limit   The maximum amount of memory that
  *                                 any IPv4 host can use.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
-    mc_pfwl_library_state_t* state, uint32_t per_host_memory_limit);
+    mc_pfwl_state_t* state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the amount of memory that a single host can use for IPv6
@@ -256,12 +256,12 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
  * @param per_host_memory_limit   The maximum amount of memory that
  *                                any IPv6 host can use.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
-    mc_pfwl_library_state_t* state, uint32_t per_host_memory_limit);
+    mc_pfwl_state_t* state, uint32_t per_host_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for IPv4
@@ -273,12 +273,12 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
  * @param totel_memory_limit  The maximum amount of memory that can
  *                             be used for IPv4 defragmentation.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
-    mc_pfwl_library_state_t* state, uint32_t total_memory_limit);
+    mc_pfwl_state_t* state, uint32_t total_memory_limit);
 
 /**
  * Sets the total amount of memory that can be used for
@@ -290,12 +290,12 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
  * @param totel_memory_limit  The maximum amount of memory that can
  *                            be used for IPv6 defragmentation.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
-    mc_pfwl_library_state_t* state, uint32_t total_memory_limit);
+    mc_pfwl_state_t* state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to
@@ -305,12 +305,12 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
  * @param state            A pointer to the state of the library.
  * @param timeout_seconds  The reassembly timeout.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the
+ * @return 1 If the state has been
+ *         successfully updated. 0 if the
  *         state has not been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
-    mc_pfwl_library_state_t* state, uint8_t timeout_seconds);
+    mc_pfwl_state_t* state, uint8_t timeout_seconds);
 
 /**
  * Sets the maximum time (in seconds) that can be spent to reassembly
@@ -320,43 +320,43 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
  * @param state            A pointer to the state of the library.
  * @param timeout_seconds  The reassembly timeout.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(
-    mc_pfwl_library_state_t* state, uint8_t timeout_seconds);
+    mc_pfwl_state_t* state, uint8_t timeout_seconds);
 
 /**
  * Disable IPv4 defragmentation.
  * @param state A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the
+ * @return 1 If the state has been
+ *         successfully updated. 0 if the
  *         state has not been changed because a problem happened.
  */
-uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_state_t* state);
 
 /**
  * Disable IPv6 defragmentation.
  * @param state A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_state_t* state);
 
 /**
  * If enabled, the library will reorder out of order TCP packets
  * (enabled by default).
  * @param state  A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. PFWL_STATE_UPDATE_FAILURE if the state
+ * @return 1 If the state has been
+ *         successfully updated. 0 if the state
  *         has not been changed because a problem happened.
  */
-uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_state_t* state);
 
 /**
  * If it is called, the library will not reorder out of order TCP packets.
@@ -367,55 +367,55 @@ uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_library_state_t* state);
  * extracted informations could be erroneous or incomplete.
  * @param state A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_state_t* state);
 
 /**
  * Enable a protocol inspector.
  * @param state         A pointer to the state of the library.
  * @param protocol      The protocol to enable.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_enable_protocol(mc_pfwl_library_state_t* state,
-                               pfwl_l7_prot_id protocol);
+uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t* state,
+                               pfwl_protocol_l7_t protocol);
 
 /**
  * Disable a protocol inspector.
  * @param state       A pointer to the state of the library.
  * @param protocol    The protocol to disable.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_disable_protocol(mc_pfwl_library_state_t* state,
-                                pfwl_l7_prot_id protocol);
+uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t* state,
+                                pfwl_protocol_l7_t protocol);
 
 /**
  * Enable all the protocol inspector.
  * @param state      A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_inspect_all(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_inspect_all(mc_pfwl_state_t* state);
 
 /**
  * Disable all the protocol inspector.
  * @param state      A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_inspect_nothing(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_inspect_nothing(mc_pfwl_state_t* state);
 
 /**
  * Returns the string represetations of the protocols.
@@ -430,14 +430,14 @@ const char** const mc_pfwl_get_protocol_strings();
  * @param   protocol The protocol identifier.
  * @return  The string representation of the protocol with id 'protocol'.
  */
-const char* const mc_pfwl_get_protocol_string(pfwl_l7_prot_id protocol);
+const char* const mc_pfwl_get_protocol_string(pfwl_protocol_l7_t protocol);
 
 /**
  * Returns the protocol id corresponding to a protocol string.
  * @param string The protocols tring.
  * @return The protocol id corresponding to a protocol string.
  */
-pfwl_l7_prot_id mc_pfwl_get_protocol_id(const char* const string);
+pfwl_protocol_l7_t mc_pfwl_get_protocol_id(const char* const string);
 
 /**
  * Sets the callback that will be called when a flow expires.
@@ -445,13 +445,13 @@ pfwl_l7_prot_id mc_pfwl_get_protocol_id(const char* const string);
  * @param state     A pointer to the state of the library.
  * @param cleaner   The callback used to clear the user state.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been
- *         successfully updated. PFWL_STATE_UPDATE_FAILURE if
+ * @return 1 If the state has been
+ *         successfully updated. 0 if
  *         the state has not been changed because a problem
  *         happened.
  */
-uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_library_state_t* state,
-                                         pfwl_flow_cleaner_callback* cleaner);
+uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_state_t* state,
+                                         pfwl_flow_cleaner_callback_t* cleaner);
 
 /**
  * Sets callbacks informations. When a protocol is identified the
@@ -476,12 +476,12 @@ uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_library_state_t* state,
  *                    will be passed to any HTTP callback when it is
  *                    invoked.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  *
  **/
-uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_library_state_t* state,
+uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_state_t* state,
                                        pfwl_http_callbacks_t* callbacks,
                                        void* user_data);
 
@@ -490,10 +490,10 @@ uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_library_state_t* state,
  * user_data is not freed/modified.
  * @param state       A pointer to the state of the library.
  *
- * @return PFWL_STATE_UPDATE_SUCCESS If the state has been successfully
- *         updated. PFWL_STATE_UPDATE_FAILURE if the state has not
+ * @return 1 If the state has been successfully
+ *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_library_state_t* state);
+uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_state_t* state);
 
 #endif /* MP_PFWL_API_H_ */

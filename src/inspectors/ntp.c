@@ -31,13 +31,12 @@
 #define PFWL_NTP_MAX_VERSION 0x04
 #define PFWL_NTP_VERSION_MASK 0x38
 
-uint8_t check_ntp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                  const unsigned char* app_data, uint32_t data_length,
-                  pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot != IPPROTO_UDP) {
+uint8_t check_ntp(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                  pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 != IPPROTO_UDP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
-  if ((pkt->srcport == port_ntp || pkt->dstport == port_ntp) &&
+  if ((pkt_info->port_src == port_ntp || pkt_info->port_dst == port_ntp) &&
       data_length >= 48 &&
       (((app_data[0] & PFWL_NTP_VERSION_MASK) >> 3) <= PFWL_NTP_MAX_VERSION)) {
     return PFWL_PROTOCOL_MATCHES;

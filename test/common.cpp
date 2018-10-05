@@ -28,7 +28,7 @@ std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
     struct pcap_pkthdr header;
 
     while(true){
-        const u_char* packet=pcap_next(_handle, &header);
+        const u_char* packet = pcap_next(_handle, &header);
         if(!packet){
             r.first = NULL;
             r.second = 0;
@@ -49,28 +49,26 @@ std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
                 continue;
             }
         }
-        r.first = packet+_ip_offset+virtual_offset;
-        r.second = header.caplen-_ip_offset-virtual_offset;
+        r.second = header.caplen -_ip_offset - virtual_offset;
+        // We copy the packet to avoid copying all the extracted fields manually
+        // Indeed the fields are valid only for the lifetime of the packet
+        // This is only done to simplify the testing process.
+        r.first = (const unsigned char*) malloc(sizeof(char) * r.second);
+        memcpy((void*) r.first, packet + _ip_offset + virtual_offset, r.second);
         return r;
     }
 }
 
-std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName,
-                  std::vector<uint>& protocols){
-    return getProtocolsWithState(pcapName,
-                          protocols,
-                          pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS));
+std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName, std::vector<uint>& protocols){
+    return getProtocolsWithState(pcapName, protocols, pfwl_init());
 }
 
-std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName,
-                           std::vector<uint>& protocols,
-                           pfwl_state_t* state){
+std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state){
     std::vector<pfwl_identification_result_t> results;
     protocols.clear();
     protocols.resize(PFWL_NUM_PROTOCOLS + 1); // +1 to store unknown protocols
 
     Pcap pcap(pcapName);
-
     pfwl_identification_result_t r;
     std::pair<const u_char*, unsigned long> pkt;
 

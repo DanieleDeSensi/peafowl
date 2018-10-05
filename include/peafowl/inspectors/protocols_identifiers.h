@@ -62,8 +62,8 @@ enum protocols {
   PFWL_PROTOCOL_UNKNOWN
 };
 
-typedef uint8_t pfwl_protocol_l7;
-typedef uint8_t pfwl_protocol_l4;
+typedef uint8_t pfwl_protocol_l7_t;
+typedef uint8_t pfwl_protocol_l4_t;
 
 /**
  *  Inspectors must catch all the possible packet types during the message

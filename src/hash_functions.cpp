@@ -45,22 +45,22 @@ inline
 #endif
     /** FNV-1a 32-bit hash function. **/
     uint32_t
-    v4_fnv_hash_function(const pfwl_pkt_infos_t* const in) {
+    v4_fnv_hash_function(const pfwl_identification_result_t* const in) {
   uint32_t low_addr, high_addr;
   uint16_t low_port, high_port;
 
-  if (in->src_addr_t.ipv4_srcaddr < in->dst_addr_t.ipv4_dstaddr ||
-      (in->src_addr_t.ipv4_srcaddr == in->dst_addr_t.ipv4_dstaddr &&
-       in->srcport <= in->dstport)) {
-    low_addr = in->src_addr_t.ipv4_srcaddr;
-    low_port = in->srcport;
-    high_addr = in->dst_addr_t.ipv4_dstaddr;
-    high_port = in->dstport;
+  if (in->addr_src.ipv4 < in->addr_dst.ipv4 ||
+      (in->addr_src.ipv4 == in->addr_dst.ipv4 &&
+       in->port_src <= in->port_dst)) {
+    low_addr = in->addr_src.ipv4;
+    low_port = in->port_src;
+    high_addr = in->addr_dst.ipv4;
+    high_port = in->port_dst;
   } else {
-    high_addr = in->src_addr_t.ipv4_srcaddr;
-    high_port = in->srcport;
-    low_addr = in->dst_addr_t.ipv4_dstaddr;
-    low_port = in->dstport;
+    high_addr = in->addr_src.ipv4;
+    high_port = in->port_src;
+    low_addr = in->addr_dst.ipv4;
+    low_port = in->port_dst;
   }
 
   uint32_t hval = FNV1A_32_INIT;
@@ -83,7 +83,7 @@ inline
   hval ^= ((high_addr >> 24) & 0xFF);
   PFWL_HVAL_SECOND_STEP(hval)
 
-  hval ^= in->l4prot;
+  hval ^= in->protocol_l4;
   PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= (low_port & 0xFF);
@@ -100,40 +100,40 @@ inline
   return hval;
 }
 
-static void get_v6_low_high_addr_port(const pfwl_pkt_infos_t* const in,
+static void get_v6_low_high_addr_port(const pfwl_identification_result_t* const in,
                                  struct in6_addr* low_addr, struct in6_addr* high_addr,
                                  uint16_t* low_port, uint16_t* high_port){
   uint8_t i = 0;
   for (i = 0; i < 16; i++) {
-    if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] <
-        in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      *low_addr = in->src_addr_t.ipv6_srcaddr;
-      *high_addr = in->dst_addr_t.ipv6_dstaddr;
-      *low_port = in->srcport;
-      *high_port = in->dstport;
+    if (in->addr_src.ipv6.s6_addr[i] <
+        in->addr_dst.ipv6.s6_addr[i]) {
+      *low_addr = in->addr_src.ipv6;
+      *high_addr = in->addr_dst.ipv6;
+      *low_port = in->port_src;
+      *high_port = in->port_dst;
       break;
-    } else if (in->src_addr_t.ipv6_srcaddr.s6_addr[i] >
-               in->src_addr_t.ipv6_srcaddr.s6_addr[i]) {
-      *high_addr = in->src_addr_t.ipv6_srcaddr;
-      *low_addr = in->dst_addr_t.ipv6_dstaddr;
-      *high_port = in->srcport;
-      *low_port = in->dstport;
+    } else if (in->addr_src.ipv6.s6_addr[i] >
+               in->addr_dst.ipv6.s6_addr[i]) {
+      *high_addr = in->addr_src.ipv6;
+      *low_addr = in->addr_dst.ipv6;
+      *high_port = in->port_src;
+      *low_port = in->port_dst;
       break;
     }
   }
 
   /** If i==16 the addresses are equal. **/
   if (i == 16) {
-    if (in->srcport <= in->dstport) {
-      *low_addr = in->src_addr_t.ipv6_srcaddr;
-      *high_addr = in->dst_addr_t.ipv6_dstaddr;
-      *low_port = in->srcport;
-      *high_port = in->dstport;
+    if (in->port_src <= in->port_dst) {
+      *low_addr = in->addr_src.ipv6;
+      *high_addr = in->addr_dst.ipv6;
+      *low_port = in->port_src;
+      *high_port = in->port_dst;
     } else {
-      *high_addr = in->src_addr_t.ipv6_srcaddr;
-      *low_addr = in->dst_addr_t.ipv6_dstaddr;
-      *high_port = in->srcport;
-      *low_port = in->dstport;
+      *high_addr = in->addr_src.ipv6;
+      *low_addr = in->addr_dst.ipv6;
+      *high_port = in->port_src;
+      *low_port = in->port_dst;
     }
   }
 }
@@ -143,9 +143,8 @@ static void get_v6_low_high_addr_port(const pfwl_pkt_infos_t* const in,
 inline
 #endif
 #endif
-    /** FNV-1a 32-bit hash function. **/
-    uint32_t
-    v6_fnv_hash_function(const pfwl_pkt_infos_t* const in) {
+/** FNV-1a 32-bit hash function. **/
+uint32_t v6_fnv_hash_function(const pfwl_identification_result_t* const in) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -161,7 +160,7 @@ inline
     PFWL_HVAL_SECOND_STEP(hval)
   }
 
-  hval ^= in->l4prot;
+  hval ^= in->protocol_l4;
   PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= ((low_port >> 8) & 0xFF);
@@ -323,22 +322,22 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
   *(uint32_t*)out = h1;
 }
 
-static void get_v4_key(const pfwl_pkt_infos_t* const in, char* v4_key) {
+static void get_v4_key(const pfwl_identification_result_t* const in, char* v4_key) {
   uint32_t lower_addr = 0, higher_addr = 0;
   uint16_t lower_port = 0, higher_port = 0;
 
-  if (in->src_addr_t.ipv4_srcaddr < in->dst_addr_t.ipv4_dstaddr ||
-      (in->src_addr_t.ipv4_srcaddr == in->dst_addr_t.ipv4_dstaddr &&
-       in->srcport <= in->dstport)) {
-    lower_addr = in->src_addr_t.ipv4_srcaddr;
-    higher_addr = in->dst_addr_t.ipv4_dstaddr;
-    lower_port = in->srcport;
-    higher_port = in->dstport;
+  if (in->addr_src.ipv4 < in->addr_dst.ipv4 ||
+      (in->addr_src.ipv4 == in->addr_dst.ipv4 &&
+       in->port_src <= in->port_dst)) {
+    lower_addr = in->addr_src.ipv4;
+    higher_addr = in->addr_dst.ipv4;
+    lower_port = in->port_src;
+    higher_port = in->port_dst;
   } else {
-    lower_addr = in->dst_addr_t.ipv4_dstaddr;
-    higher_addr = in->src_addr_t.ipv4_srcaddr;
-    lower_port = in->dstport;
-    higher_port = in->srcport;
+    lower_addr = in->addr_dst.ipv4;
+    higher_addr = in->addr_src.ipv4;
+    lower_port = in->port_dst;
+    higher_port = in->port_src;
   }
 
   v4_key[0] = ((lower_addr >> 24) & 0xFF);
@@ -351,7 +350,7 @@ static void get_v4_key(const pfwl_pkt_infos_t* const in, char* v4_key) {
   v4_key[6] = ((higher_addr >> 8) & 0xFF);
   v4_key[7] = (higher_addr & 0xFF);
 
-  v4_key[8] = in->l4prot;
+  v4_key[8] = in->protocol_l4;
 
   v4_key[9] = ((lower_port >> 8) & 0xFF);
   v4_key[10] = (lower_port & 0xFF);
@@ -360,7 +359,7 @@ static void get_v4_key(const pfwl_pkt_infos_t* const in, char* v4_key) {
   v4_key[12] = (higher_port & 0xFF);
 }
 
-uint32_t v4_hash_murmur3(const pfwl_pkt_infos_t* const in, uint32_t seed) {
+uint32_t v4_hash_murmur3(const pfwl_identification_result_t* const in, uint32_t seed) {
   char v4_key[13];
   get_v4_key(in, v4_key);
   uint32_t result;
@@ -368,7 +367,7 @@ uint32_t v4_hash_murmur3(const pfwl_pkt_infos_t* const in, uint32_t seed) {
   return result;
 }
 
-static void get_v6_key(const pfwl_pkt_infos_t* const in, char* v6_key){
+static void get_v6_key(const pfwl_identification_result_t* const in, char* v6_key){
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -381,7 +380,7 @@ static void get_v6_key(const pfwl_pkt_infos_t* const in, char* v6_key){
     v6_key[i + 16] = high_addr.s6_addr[i];
   }
 
-  v6_key[32] = in->l4prot;
+  v6_key[32] = in->protocol_l4;
 
   v6_key[33] = ((low_port >> 8) & 0xFF);
   v6_key[34] = (low_port & 0xFF);
@@ -390,7 +389,7 @@ static void get_v6_key(const pfwl_pkt_infos_t* const in, char* v6_key){
   v6_key[36] = (high_port & 0xFF);
 }
 
-uint32_t v6_hash_murmur3(const pfwl_pkt_infos_t* const in, uint32_t seed) {
+uint32_t v6_hash_murmur3(const pfwl_identification_result_t* const in, uint32_t seed) {
   char v6_key[37];
   get_v6_key(in, v6_key);
   uint32_t result;
@@ -401,26 +400,26 @@ uint32_t v6_hash_murmur3(const pfwl_pkt_infos_t* const in, uint32_t seed) {
 
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_SIMPLE_HASH || \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_simple(const pfwl_pkt_infos_t* const in) {
-  return in->srcport + in->dstport + in->src_addr_t.ipv4_srcaddr +
-         in->dst_addr_t.ipv4_dstaddr + in->l4prot;
+uint32_t v4_hash_function_simple(const pfwl_identification_result_t* const in) {
+  return in->port_src + in->port_dst + in->addr_src.ipv4 +
+         in->addr_dst.ipv4 + in->protocol_l4;
 }
 
-uint32_t v6_hash_function_simple(const pfwl_pkt_infos_t* const in) {
+uint32_t v6_hash_function_simple(const pfwl_identification_result_t* const in) {
   uint8_t i;
   uint32_t partsrc = 0, partdst = 0;
   for (i = 0; i < 16; i++) {
-    partsrc += in->src_addr_t.ipv6_srcaddr.s6_addr[i];
-    partdst += in->dst_addr_t.ipv6_dstaddr.s6_addr[i];
+    partsrc += in->addr_src.ipv6.s6_addr[i];
+    partdst += in->addr_dst.ipv6.s6_addr[i];
   }
-  return in->srcport + in->dstport + partsrc + partdst + in->l4prot;
+  return in->port_src + in->port_dst + partsrc + partdst + in->protocol_l4;
 }
 
 #endif
 
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH || \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_bkdr(const pfwl_pkt_infos_t* const in) {
+uint32_t v4_hash_function_bkdr(const pfwl_identification_result_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
   char v4_key[13];
@@ -432,7 +431,7 @@ uint32_t v4_hash_function_bkdr(const pfwl_pkt_infos_t* const in) {
   return (hash & 0x7FFFFFFF);
 }
 
-uint32_t v6_hash_function_bkdr(const pfwl_pkt_infos_t* const in) {
+uint32_t v6_hash_function_bkdr(const pfwl_identification_result_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
 

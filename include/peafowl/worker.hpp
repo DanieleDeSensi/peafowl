@@ -58,8 +58,8 @@ typedef struct L3_L4_input_task {
 typedef struct L3_L4_output_task {
   uint32_t hash_result;
   uint16_t destination_worker;
-  int8_t status;
-  pfwl_pkt_infos_t pkt_infos;
+  uint8_t status;
+  pfwl_pkt_info_t pkt_infos;
   void* user_pointer;
 } L3_L4_output_task_struct;
 

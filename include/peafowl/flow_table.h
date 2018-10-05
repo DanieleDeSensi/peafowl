@@ -29,6 +29,7 @@
 
 #include <peafowl/peafowl.h>
 #include <peafowl/config.h>
+#include <peafowl/external/utils/uthash.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -207,21 +208,13 @@ typedef struct pfwl_tracking_informations {
   /** WhatsApp Tracking informations.  **/
   /**************************************/
   size_t whatsapp_matched_sequence;
-
-  /**********************************/
-  /** Protocols extracted fields.  **/
-  /**********************************/
-  union{
-    pfwl_field_t sip[PFWL_FIELDS_SIP_NUM];
-    pfwl_field_t dns[PFWL_FIELDS_DNS_NUM];
-  }extracted_fields;
 } pfwl_tracking_informations_t;
 
 /**
  * If stateless version is used, this structure the first time must be
- * initialized with 'pfwl_init_flow_infos'.
+ * initialized with 'pfwl_init_flow_info'.
  **/
-typedef struct pfwl_flow_infos {
+typedef struct pfwl_flow_info {
   /** The possible number of l7 protocols that match with this flow. **/
   uint8_t possible_protocols;
 
@@ -230,7 +223,7 @@ typedef struct pfwl_flow_infos {
    * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
    * or the matching protocol identifier.
    */
-  pfwl_protocol_l7 l7prot;
+  pfwl_protocol_l7_t l7prot;
 
   /** Number of times that the library tried to guess the protocol. **/
   uint16_t trials;
@@ -251,140 +244,85 @@ typedef struct pfwl_flow_infos {
   uint8_t tcp_reordering_enabled : 1;
   pfwl_tracking_informations_t tracking;
   const unsigned char* last_rebuilt_tcp_data; // For internal use only.
-#ifdef WITH_PROMETHEUS
-  void* prometheus_counter_packets;
-  void* prometheus_counter_bytes;
-#endif
-} pfwl_flow_infos_t;
 
-typedef struct ipv4_flow ipv4_flow_t;
-typedef struct ipv6_flow ipv6_flow_t;
+  uint64_t num_packets;
+  uint64_t num_bytes;
+} pfwl_flow_info_t;
 
-struct ipv4_flow {
-  uint16_t srcport;
-  uint16_t dstport;
-  uint32_t srcaddr;
-  uint32_t dstaddr;
+typedef struct pfwl_flow pfwl_flow_t;
+
+struct pfwl_flow {
+  pfwl_ip_addr_t addr_src;
+  pfwl_ip_addr_t addr_dst;
+  uint16_t port_src;
+  uint16_t port_dst;
   uint8_t l4prot;
 
-  ipv4_flow_t* prev;
-  ipv4_flow_t* next;
-  pfwl_flow_infos_t infos;
+  pfwl_flow_t* prev;
+  pfwl_flow_t* next;
+  pfwl_flow_info_t info;
   uint32_t last_timestamp;
 };
 
-struct ipv6_flow {
-  uint16_t srcport;
-  uint16_t dstport;
-  struct in6_addr srcaddr;
-  struct in6_addr dstaddr;
-  uint8_t l4prot;
-
-  ipv6_flow_t* prev;
-  ipv6_flow_t* next;
-  pfwl_flow_infos_t infos;
-  uint32_t last_timestamp;
-};
-
-typedef struct pfwl_flow_DB_v4 pfwl_flow_DB_v4_t;
-typedef struct pfwl_flow_DB_v6 pfwl_flow_DB_v6_t;
+typedef struct pfwl_flow_table pfwl_flow_table_t;
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
-pfwl_flow_DB_v4_t* pfwl_flow_table_create_v4(uint32_t size,
+pfwl_flow_table_t* pfwl_flow_table_create(uint32_t size,
                                            uint32_t max_active_v4_flows,
-                                           uint16_t num_partitions,
-                                           uint32_t start_pool_size);
-pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
-                                           uint32_t max_active_v6_flows,
                                            uint16_t num_partitions,
                                            uint32_t start_pool_size);
 
 #else
-pfwl_flow_DB_v4_t* pfwl_flow_table_create_v4(uint32_t size,
-                                           uint32_t max_active_v4_flows,
-                                           uint16_t num_partitions);
-pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
-                                           uint32_t max_active_v6_flows,
-                                           uint16_t num_partitions);
+pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
+                                          uint8_t strict,
+                                          uint16_t num_partitions);
 #endif
 
-void pfwl_flow_table_delete_v4(pfwl_flow_DB_v4_t* db,
-                              pfwl_flow_cleaner_callback* flow_cleaner_callback);
-void pfwl_flow_table_delete_v6(pfwl_flow_DB_v6_t* db,
-                              pfwl_flow_cleaner_callback* flow_cleaner_callback);
+void pfwl_flow_table_delete(pfwl_flow_table_t* db,
+                            pfwl_flow_cleaner_callback_t* flow_cleaner_callback);
 
-/**
- * Search for a flow in the table.
- * @param state A pointer to the state of the library.
- * @param index The hash index of the flow to search.
- * @param pkt_infos The L3 and L4 packet's parsed informations.
- * @return A pointer to the flow if it is present, NULL otherwise.
- */
-ipv4_flow_t* pfwl_flow_table_find_flow_v4(pfwl_state_t* state,
-                                         uint32_t index,
-                                         pfwl_pkt_infos_t* pkt_infos);
+pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db,
+                                       uint32_t index,
+                                       pfwl_identification_result_t* pkt_info);
 
-/**
- * Search for a flow in the table.
- * @param state A pointer to the state of the library.
- * @param index The hash index of the flow to search.
- * @param pkt_infos The L3 and L4 packet's parsed informations.
- * @return A pointer to the flow if it is present, NULL otherwise.
- */
-ipv6_flow_t* pfwl_flow_table_find_flow_v6(pfwl_state_t* state,
-                                         uint32_t index,
-                                         pfwl_pkt_infos_t* pkt_infos);
+pfwl_flow_t* pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
+                                                 pfwl_identification_result_t* pkt_info,
+                                                 pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+                                                 char* protocols_to_inspect,
+                                                 uint8_t tcp_reordering_enabled);
 
-/**
- * Find the flow to which pkt_infos belongs or creates it if doesn't
- * exists. Updates pkt_infos->direction field according to the direction
- * of the stored flow.
- * @return The informations about the flow.
- */
-ipv4_flow_t* pfwl_flow_table_find_or_create_flow_v4(pfwl_state_t* state,
-                                                   pfwl_pkt_infos_t* pkt_infos);
-ipv6_flow_t* pfwl_flow_table_find_or_create_flow_v6(pfwl_state_t* state,
-                                                   pfwl_pkt_infos_t* pkt_infos);
-
-void pfwl_flow_table_delete_flow_v4(
-    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
-    ipv4_flow_t* to_delete);
-
-void pfwl_flow_table_delete_flow_v6(
-    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
-    ipv6_flow_t* to_delete);
+void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+                                 pfwl_flow_t* to_delete);
 
 /**
  * They are used directly only in mc_dpi. Should never be used directly
  * by the user.
  **/
-uint32_t pfwl_compute_v4_hash_function(pfwl_flow_DB_v4_t* db,
-                                      const pfwl_pkt_infos_t* const pkt_infos);
+uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
+                                      const pfwl_identification_result_t* const pkt_info);
 
-uint32_t pfwl_compute_v6_hash_function(pfwl_flow_DB_v6_t* db,
-                                      const pfwl_pkt_infos_t* const pkt_infos);
+uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,
+                                      const pfwl_identification_result_t* const pkt_info);
 
-ipv4_flow_t* mc_pfwl_flow_table_find_or_create_flow_v4(
-    pfwl_state_t* state, uint16_t partition_id, uint32_t index,
-    pfwl_pkt_infos_t* pkt_infos);
+void pfwl_init_flow_info_internal(pfwl_flow_info_t* flow_info,
+                          char* protocols_to_inspect,
+                          uint8_t tcp_reordering_enabled);
 
-ipv6_flow_t* mc_pfwl_flow_table_find_or_create_flow_v6(
-    pfwl_state_t* state, uint16_t partition_id, uint32_t index,
-    pfwl_pkt_infos_t* pkt_infos);
+pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
+    pfwl_flow_table_t* db,
+    uint16_t partition_id,
+    uint32_t index,
+    pfwl_identification_result_t* pkt_info,
+    pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+    char* protocols_to_inspect,
+    uint8_t tcp_reordering_enabled);
 
-void pfwl_flow_table_setup_partitions_v4(pfwl_flow_DB_v4_t* table,
+void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
                                         uint16_t num_partitions);
 
-void pfwl_flow_table_setup_partitions_v6(pfwl_flow_DB_v6_t* table,
-                                        uint16_t num_partitions);
-
-void mc_pfwl_flow_table_delete_flow_v4(
-    pfwl_flow_DB_v4_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
-    uint16_t partition_id, ipv4_flow_t* to_delete);
-
-void mc_pfwl_flow_table_delete_flow_v6(
-    pfwl_flow_DB_v6_t* db, pfwl_flow_cleaner_callback* flow_cleaner_callback,
-    uint16_t partition_id, ipv6_flow_t* to_delete);
+void mc_pfwl_flow_table_delete_flow(
+    pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+    uint16_t partition_id, pfwl_flow_t* to_delete);
 
 #ifdef __cplusplus
 }

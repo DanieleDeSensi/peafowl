@@ -147,7 +147,7 @@ int main(int argc, char** argv){
 	mc_pfwl_parallelism_details_t par;
 	memset(&par, 0, sizeof(par));
 	par.available_processors = AVAILABLE_PROCESSORS;
-	mc_pfwl_library_state_t* state = mc_pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS, par);
+	mc_pfwl_state_t* state = mc_pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS, par);
 	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
 	if(handle==NULL){

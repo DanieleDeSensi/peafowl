@@ -25,19 +25,18 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_telegram(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                      const unsigned char* app_data, uint32_t data_length,
-                      pfwl_tracking_informations_t* t){
+uint8_t check_telegram(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                      pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields){
   if (!data_length) {
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   } 
 
-  if (pkt->l4prot != IPPROTO_TCP) {
+  if (pkt_info->protocol_l4 != IPPROTO_TCP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
 
   if (data_length > 56) {
-    uint16_t dport = ntohs(pkt->dstport);
+    uint16_t dport = ntohs(pkt_info->port_dst);
 
     if (app_data[0] == 0xef && (dport == 443 || dport == 80 || dport == 25)) {
       if (app_data[1] == 0x7f || app_data[1]*4 <= data_length - 1) {

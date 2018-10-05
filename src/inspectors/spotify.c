@@ -28,25 +28,24 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-uint8_t check_spotify(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                      const unsigned char* app_data, uint32_t data_length,
-                      pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot == IPPROTO_UDP) {
-    if (pkt->srcport == port_spotify &&
-        pkt->dstport == port_spotify &&
+uint8_t check_spotify(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                      pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 == IPPROTO_UDP) {
+    if (pkt_info->port_src == port_spotify &&
+        pkt_info->port_dst == port_spotify &&
         data_length >= 7) {
       if (memcmp(app_data, "SpotUdp", 7) == 0) {
         return PFWL_PROTOCOL_MATCHES;
       }
     }
-  } else if (pkt->l4prot == IPPROTO_TCP) {
+  } else if (pkt_info->protocol_l4 == IPPROTO_TCP) {
     if (data_length >= 9 && app_data[0] == 0x00 &&
         app_data[1] == 0x04 && app_data[2] == 0x00 &&
         app_data[3] == 0x00 && app_data[6] == 0x52 &&
         (app_data[7] == 0x0e || app_data[7] == 0x0f) &&
         app_data[8] == 0x50) {
       return PFWL_PROTOCOL_MATCHES;
-    } else if (pkt->ip_version == 4) { /* IPv4 Only: we need to support packet->iphv6 at some point */
+    } else if (pkt_info->ip_version == 4) { /* IPv4 Only: we need to support packet->iphv6 at some point */
       /*
         Spotify
         78.31.8.0 - 78.31.15.255 (78.31.8.0/22)
@@ -60,8 +59,8 @@ uint8_t check_spotify(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
         194.132.162.0 - 194.132.163.255   (194.132.162.0/24)
         AS43650
       */
-      long src_addr = ntohl(pkt->src_addr_t.ipv4_srcaddr);
-      long dst_addr = ntohl(pkt->dst_addr_t.ipv4_dstaddr);
+      long src_addr = ntohl(pkt_info->addr_src.ipv4);
+      long dst_addr = ntohl(pkt_info->addr_dst.ipv4);
       long src_addr_masked_22 = src_addr & 0xFFFFFC00; // */22
       long dst_addr_masked_22 = dst_addr & 0xFFFFFC00; // */22
       long src_addr_masked_24 = src_addr & 0xFFFFFF00; // */24

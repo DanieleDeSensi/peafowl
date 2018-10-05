@@ -50,6 +50,14 @@
 #define PFWL_USE_LIKELY 1
 #endif
 
+#ifndef PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE
+#define PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE 8
+#endif
+
+#ifndef PFWL_DEFAULT_EXPECTED_IPv4_FLOWS
+#define PFWL_DEFAULT_EXPECTED_FLOWS 262143
+#endif
+
 #if !defined(likely)
 #if defined(__GNUC__) && (PFWL_USE_LIKELY == 1)
 #define likely(x) __builtin_expect(!!(x), 1)

@@ -52,34 +52,10 @@
   (((ch) >= '!' && (ch) <= '/') || ((ch) >= ':' && (ch) <= '@') || \
    ((ch) >= '[' && (ch) <= '`') || ((ch) >= '{' && (ch) <= '~'))
 
-uint8_t pfwl_ssl_activate_callbacks(pfwl_state_t* state,
-                                   pfwl_ssl_callbacks_t* callbacks,
-                                   void* user_data) {
-  if (state) {
-    BITSET(state->protocols_to_inspect, PFWL_PROTOCOL_SSL);
-    BITSET(state->active_callbacks, PFWL_PROTOCOL_SSL);
-    state->ssl_callbacks_user_data = user_data;
-    state->ssl_callbacks = callbacks;
-    return PFWL_STATE_UPDATE_SUCCESS;
-  } else {
-    return PFWL_STATE_UPDATE_FAILURE;
-  }
-}
-
-uint8_t pfwl_ssl_disable_callbacks(pfwl_state_t* state) {
-  if (state) {
-    BITCLEAR(state->active_callbacks, PFWL_PROTOCOL_SSL);
-    state->ssl_callbacks = NULL;
-    state->ssl_callbacks_user_data = NULL;
-    return PFWL_STATE_UPDATE_SUCCESS;
-  } else {
-    return PFWL_STATE_UPDATE_FAILURE;
-  }
-}
-
 static int getSSLcertificate(uint8_t* payload, u_int payload_len,
-                             pfwl_ssl_internal_information_t* t,
-                             pfwl_pkt_infos_t* pkt) {
+                             pfwl_identification_result_t* t,
+                             pfwl_inspector_accuracy_t accuracy,
+                             uint8_t *required_fields) {
   if (payload[0] == 0x16 /* Handshake */) {
     uint16_t total_len = (payload[3] << 8) + payload[4] + 5 /* SSL Header */;
     uint8_t handshake_protocol = payload[5]; /* handshake protocol a bit
@@ -132,10 +108,10 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
               }
             }
             if (num_dots >= 2) {
-              if (t->callbacks != NULL &&
-                  t->callbacks->certificate_callback != NULL && len > 0) {
-                (*(t->callbacks->certificate_callback))(
-                    &server_name[begin], len, t->callbacks_user_data, pkt);
+              if (len > 0 && required_fields[PFWL_FIELDS_SSL_CERTIFICATE]) {
+                    pfwl_field_t* cert = &(t->protocol_fields.ssl[PFWL_FIELDS_SSL_CERTIFICATE]);
+                    cert->str.s = &server_name[begin];
+                    cert->str.len = len;
               }
               return 2;
             }
@@ -193,11 +169,10 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                     if (len > total_len) {
                       return 0; /* bad ssl */
                     }
-                    if (t->callbacks != NULL &&
-                        t->callbacks->certificate_callback != NULL && len > 0) {
-                      (*(t->callbacks->certificate_callback))(
-                          &server_name[begin], len, t->callbacks_user_data,
-                          pkt);
+                    if (len > 0 && required_fields[PFWL_FIELDS_SSL_CERTIFICATE]) {
+                          pfwl_field_t* cert = &(t->protocol_fields.ssl[PFWL_FIELDS_SSL_CERTIFICATE]);
+                          cert->str.s = &server_name[begin];
+                          cert->str.len = len;
                     }
                     return 2;
                   }
@@ -215,12 +190,13 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
 }
 
 static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
-                                    pfwl_ssl_internal_information_t* t,
-                                    pfwl_pkt_infos_t* pkt) {
+                                    pfwl_identification_result_t* t,
+                                    pfwl_inspector_accuracy_t accuracy,
+                                    uint8_t *required_fields) {
   if ((payload_len > 9) &&
       (payload[0] ==
        0x16 /* consider only specific SSL packets (handshake) */)) {
-    int rc = getSSLcertificate(payload, payload_len, t, pkt);
+    int rc = getSSLcertificate(payload, payload_len, t, accuracy, required_fields);
     if (rc > 0) {
       return rc;
     }
@@ -228,75 +204,51 @@ static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
   return 0;
 }
 
-uint8_t invoke_callbacks_ssl(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                             const unsigned char* app_data,
-                             uint32_t data_length,
-                             pfwl_tracking_informations_t* tracking) {
-  debug_print("%s\n", "[ssl.c] SSL callback manager invoked.");
-  uint8_t ret = check_ssl(state, pkt, app_data, data_length, tracking);
-  if (ret == PFWL_PROTOCOL_NO_MATCHES) {
-    debug_print("%s\n",
-                "[ssl.c] An error occurred in the SSL protocol manager.");
-    return PFWL_PROTOCOL_ERROR;
-  } else {
-    debug_print("%s\n", "[ssl.c] SSL callback manager exits.");
-    return PFWL_PROTOCOL_MATCHES;
-  }
-}
-
-uint8_t check_ssl(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                  const unsigned char* payload, uint32_t data_length,
-                  pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot != IPPROTO_TCP) {
+uint8_t check_ssl(const unsigned char* payload,
+                  uint32_t data_length,
+                  pfwl_identification_result_t* pkt_info,
+                  pfwl_tracking_informations_t* tracking_info,
+                  pfwl_inspector_accuracy_t accuracy,
+                  uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 != IPPROTO_TCP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   int res;
   debug_print("Checking ssl with size %d, direction %d\n", data_length,
-              pkt->direction);
-  if (state->ssl_callbacks != NULL) {
-    t->ssl_information[pkt->direction].callbacks = state->ssl_callbacks;
-    t->ssl_information[pkt->direction].callbacks_user_data =
-        state->ssl_callbacks_user_data;
-  }
-  if (t->ssl_information[pkt->direction].ssl_detected == 1) {
-    debug_print("%s\n", "SSL already detected, not needed additional checks");
-    return PFWL_PROTOCOL_MATCHES;
-  }
-  if (t->ssl_information[pkt->direction].pkt_buffer == NULL) {
+              pkt_info->direction);
+  if (tracking_info->ssl_information[pkt_info->direction].pkt_buffer == NULL) {
     res = detectSSLFromCertificate((uint8_t*)payload, data_length,
-                                   &t->ssl_information[pkt->direction], pkt);
+                                   pkt_info, accuracy, required_fields);
     debug_print("Result %d\n", res);
     if (res > 0) {
       if (res == 3) {
-        t->ssl_information[pkt->direction].pkt_buffer =
+        tracking_info->ssl_information[pkt_info->direction].pkt_buffer =
             (uint8_t*)malloc(data_length);
-        memcpy(t->ssl_information[pkt->direction].pkt_buffer, payload,
+        memcpy(tracking_info->ssl_information[pkt_info->direction].pkt_buffer, payload,
                data_length);
-        t->ssl_information[pkt->direction].pkt_size = data_length;
+        tracking_info->ssl_information[pkt_info->direction].pkt_size = data_length;
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
-      t->ssl_information[pkt->direction].ssl_detected = 1;
       return PFWL_PROTOCOL_MATCHES;
     }
   } else {
-    t->ssl_information[pkt->direction].pkt_buffer = (uint8_t*)realloc(
-        t->ssl_information[pkt->direction].pkt_buffer,
-        t->ssl_information[pkt->direction].pkt_size + data_length);
-    memcpy(t->ssl_information[pkt->direction].pkt_buffer +
-               t->ssl_information[pkt->direction].pkt_size,
+    tracking_info->ssl_information[pkt_info->direction].pkt_buffer = (uint8_t*)realloc(
+        tracking_info->ssl_information[pkt_info->direction].pkt_buffer,
+        tracking_info->ssl_information[pkt_info->direction].pkt_size + data_length);
+    memcpy(tracking_info->ssl_information[pkt_info->direction].pkt_buffer +
+               tracking_info->ssl_information[pkt_info->direction].pkt_size,
            payload, data_length);
-    t->ssl_information[pkt->direction].pkt_size += data_length;
+    tracking_info->ssl_information[pkt_info->direction].pkt_size += data_length;
     res =
-        detectSSLFromCertificate(t->ssl_information[pkt->direction].pkt_buffer,
-                                 t->ssl_information[pkt->direction].pkt_size,
-                                 &t->ssl_information[pkt->direction], pkt);
+        detectSSLFromCertificate(tracking_info->ssl_information[pkt_info->direction].pkt_buffer,
+                                 tracking_info->ssl_information[pkt_info->direction].pkt_size,
+                                 pkt_info, accuracy, required_fields);
     debug_print("Checked %d bytes and result %d\n",
-                t->ssl_information[pkt->direction].pkt_size, res);
+                tracking_info->ssl_information[pkt_info->direction].pkt_size, res);
     if (res > 0) {
       if (res == 3) {
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
-      t->ssl_information[pkt->direction].ssl_detected = 1;
       return PFWL_PROTOCOL_MATCHES;
     }
   }

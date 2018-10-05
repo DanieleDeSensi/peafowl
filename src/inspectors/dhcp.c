@@ -35,16 +35,15 @@
 #error "Please fix <bits/endian.h>"
 #endif
 
-uint8_t check_dhcp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                   const unsigned char* app_data, uint32_t data_length,
-                   pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot != IPPROTO_UDP) {
+uint8_t check_dhcp(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 != IPPROTO_UDP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   if (data_length >= 244 && /** Minimum data_length. **/
       /** Ports check. **/
-      ((pkt->srcport == port_dhcp_1 && pkt->dstport == port_dhcp_2) ||
-       (pkt->dstport == port_dhcp_1 && pkt->srcport == port_dhcp_2)) &&
+      ((pkt_info->port_src == port_dhcp_1 && pkt_info->port_dst == port_dhcp_2) ||
+       (pkt_info->port_dst == port_dhcp_1 && pkt_info->port_src == port_dhcp_2)) &&
       /** Magic cookie. **/
       get_u32(app_data, 236) == PFWL_DHCP_MAGIC_COOKIE &&
       /**

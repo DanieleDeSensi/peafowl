@@ -38,15 +38,14 @@ static uint8_t whatsapp_sequence[] = {
       _x < _y ? _x : _y;       \
 })
 
-uint8_t check_whatsapp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                      const unsigned char* app_data, uint32_t data_length,
-                      pfwl_tracking_informations_t* t){
-  if(t->whatsapp_matched_sequence < sizeof(whatsapp_sequence)) {
-    if(memcmp(app_data, &whatsapp_sequence[t->whatsapp_matched_sequence], 
-      MIN(sizeof(whatsapp_sequence) - t->whatsapp_matched_sequence, data_length))) {
+uint8_t check_whatsapp(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                      pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields){
+  if(tracking_info->whatsapp_matched_sequence < sizeof(whatsapp_sequence)) {
+    if(memcmp(app_data, &whatsapp_sequence[tracking_info->whatsapp_matched_sequence], 
+      MIN(sizeof(whatsapp_sequence) - tracking_info->whatsapp_matched_sequence, data_length))) {
       return PFWL_PROTOCOL_NO_MATCHES;
     } else {
-      t->whatsapp_matched_sequence += data_length;
+      tracking_info->whatsapp_matched_sequence += data_length;
       return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     }
   } else {

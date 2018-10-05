@@ -23,6 +23,7 @@ add_library(peafowl SHARED ${SOURCES})
 add_library(peafowl_static STATIC ${SOURCES})
 
 if (ENABLE_PARALLEL)
+  include_directories(${CMAKE_SOURCE_DIR}/include/peafowl/external/fastflow/)
   target_link_libraries(peafowl ${CMAKE_THREAD_LIBS_INIT})
 endif (ENABLE_PARALLEL)
 

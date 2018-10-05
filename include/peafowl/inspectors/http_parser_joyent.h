@@ -274,6 +274,8 @@ enum http_errno { HTTP_ERRNO_MAP(HTTP_ERRNO_GEN) };
 /* Get an http_errno value from an http_parser */
 #define HTTP_PARSER_ERRNO(p) ((enum http_errno)(p)->http_errno)
 
+typedef union pfwl_field pfwl_field_t;
+
 struct http_parser {
   /** PRIVATE **/
   unsigned int type : 2;         /* enum http_parser_type */
@@ -303,12 +305,14 @@ struct http_parser {
   /** PUBLIC **/
   void *data; /* A pointer to get hook to the "connection" or "socket" object */
 #ifdef PFWL_EXTENSION
-  uint8_t parse_header_field : 1;
-  uint8_t header_type : 7; /** Header field name index. **/
-  uint8_t copy; /** If 1, indicates to the callback to copy the content passed
-                   to it because the message is
-                                   segmented. If 0, the callback can assume that
-                   the content is not segmented. **/
+  pfwl_field_t* extracted_fields;
+  uint8_t *required_fields;
+  uint8_t hdr_field;
+  uint8_t copy; /**
+                 * If 1, indicates to the callback to copy the content passed
+                 * to it because the message is segmented. If 0, the callback
+                 * can assume that the content is not segmented.
+                 **/
 #endif
 };
 

@@ -38,18 +38,17 @@ const struct in6_addr PFWL_MDNS_IPV6_DEST_ADDRESS = {
     .s6_addr = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0xFB}};
 
-uint8_t check_mdns(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                   const unsigned char* app_data, uint32_t data_length,
-                   pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot != IPPROTO_UDP) {
+uint8_t check_mdns(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 != IPPROTO_UDP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
-  if (pkt->dstport == port_mdns && data_length >= 12) {
-    if (pkt->ip_version == PFWL_IP_VERSION_4 &&
-        pkt->dst_addr_t.ipv4_dstaddr == PFWL_MDNS_IPv4_DEST_ADDRESS) {
+  if (pkt_info->port_dst == port_mdns && data_length >= 12) {
+    if (pkt_info->ip_version == PFWL_IP_VERSION_4 &&
+        pkt_info->addr_dst.ipv4 == PFWL_MDNS_IPv4_DEST_ADDRESS) {
       return PFWL_PROTOCOL_MATCHES;
-    } else if (pkt->ip_version == PFWL_IP_VERSION_6 &&
-               pfwl_v6_addresses_equal(pkt->dst_addr_t.ipv6_dstaddr,
+    } else if (pkt_info->ip_version == PFWL_IP_VERSION_6 &&
+               pfwl_v6_addresses_equal(pkt_info->addr_dst.ipv6,
                                       PFWL_MDNS_IPV6_DEST_ADDRESS)) {
       return PFWL_PROTOCOL_MATCHES;
     }

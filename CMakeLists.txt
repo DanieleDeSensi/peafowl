@@ -35,7 +35,7 @@ endif (ENABLE_CODECOV)
 # Library #
 ###########
 add_subdirectory(src)
-add_subdirectory(demo)
+#add_subdirectory(demo)
 
 ############
 # cppcheck #

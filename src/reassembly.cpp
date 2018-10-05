@@ -33,12 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/**
- * Add a new timer to the list of IP reassembly timers.
- * @param head A pointer to the head of the timers list.
- * @param tail A pointer to the tail of the timers list.
- * @param timer The timer to insert.
- */
 void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
                               pfwl_reassembly_timer_t** tail,
                               pfwl_reassembly_timer_t* timer) {
@@ -54,12 +48,6 @@ void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
   }
 }
 
-/**
- * Remove a timer to the list of IP reassembly timers.
- * @param head A pointer to the head of the timers list.
- * @param tail A pointer to the tail of the timers list.
- * @param timer The timer to remove.
- */
 void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t** head,
                                  pfwl_reassembly_timer_t** tail,
                                  pfwl_reassembly_timer_t* timer) {
@@ -74,52 +62,22 @@ void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t** head,
     (*tail) = timer->prev;
 }
 
-/**
- * Returns 1 if the sequence number x is before y, 0 otherwise.
- * @param x First sequence number.
- * @param y Second sequence number.
- * @return 1 if x is before y, 0 otherwise.
- */
 uint8_t pfwl_reassembly_before(uint32_t x, uint32_t y) {
   return x < y || (x - y) > PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
-/**
- * Returns 1 if the sequence number x is before or equal y, 0 otherwise.
- * @param x First sequence number.
- * @param y Second sequence number.
- * @return 1 if x is before or equal y, 0 otherwise.
- */
 uint8_t pfwl_reassembly_before_or_equal(uint32_t x, uint32_t y) {
   return x <= y || (x - y) >= PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
-/**
- * Returns 1 if the sequence number x is after y, 0 otherwise.
- * @param x First sequence number.
- * @param y Second sequence number.
- * @return 1 if x is after y, 0 otherwise.
- */
 uint8_t pfwl_reassembly_after(uint32_t x, uint32_t y) {
   return x > y || (y - x) > PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
-/**
- * Returns 1 if the sequence number x is after or equal y, 0 otherwise.
- * @param x First sequence number.
- * @param y Second sequence number.
- * @return 1 if x is after or equal y, 0 otherwise.
- */
 uint8_t pfwl_reassembly_after_or_equal(uint32_t x, uint32_t y) {
   return x >= y || (y - x) >= PFWL_TCP_MAX_IN_TRAVEL_DATA;
 }
 
-/**
- * Returns the length of a TCP segment (or IP fragment).
- * @param offset The offset where the segment starts.
- * @param end The last byte of the segment.
- * @return The length of the TCP segment (or IP fragment).
- */
 uint32_t pfwl_reassembly_fragment_length(uint32_t offset, uint32_t end) {
   if (end >= offset)
     return end - offset;
@@ -130,15 +88,7 @@ uint32_t pfwl_reassembly_fragment_length(uint32_t offset, uint32_t end) {
 #ifndef PFWL_DEBUG
 static
 #endif
-    /**
-     * Builds a new fragment.
-     * @param offset The offset where the fragment start.
-     * @param end The last byte of the fragment.
-     * @param ptr The content of the fragment.
-     * @return The created fragment.
-     */
-    pfwl_reassembly_fragment_t*
-    pfwl_reassembly_create_fragment(uint32_t offset, uint32_t end,
+pfwl_reassembly_fragment_t* pfwl_reassembly_create_fragment(uint32_t offset, uint32_t end,
                                    const unsigned char* ptr) {
   pfwl_reassembly_fragment_t* fragment;
   fragment =
@@ -164,20 +114,6 @@ static
   return fragment;
 }
 
-/**
- * Insert a fragment in the correct position in the list of fragments,
- * considering overlaps, etc..
- * @param head The head of the list of fragments.
- * @param data The data contained in the fragment (without IP header).
- * @param offset The offset of this fragment.
- * @param end The end of this fragment.
- * @param bytes_removed The total number of bytes removed (in the fragments) by
- * this call.
- * @param bytes_inserted The total number of byte inserted (in the fragments) by
- * this call.
- *
- * @return The created fragment.
- */
 pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
     pfwl_reassembly_fragment_t** head, const unsigned char* data,
     uint32_t offset, uint32_t end, uint32_t* bytes_removed,
@@ -303,11 +239,6 @@ pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
   return tmp;
 }
 
-/**
- * See there is a train of contiguous fragments.
- * @param head The pointer to the head of the list of fragments.
- * @return 0 if there are missing fragments, 1 otherwise.
- */
 uint8_t pfwl_reassembly_ip_check_train_of_contiguous_fragments(
     pfwl_reassembly_fragment_t* head) {
   if (!head) return 0;
@@ -322,15 +253,6 @@ uint8_t pfwl_reassembly_ip_check_train_of_contiguous_fragments(
   return 1;
 }
 
-/**
- * Compacts a train of contiguous fragments and returns it.
- * @param head A pointer to the head of the train.
- * @param where A pointer to a buffer where to put the data.
- * @param len The data_length of the buffer where to put the data.
- * @return The data_length of the recompacted data. If an error
- *                         occurred (e.g. misbehaving packet),
- *                         -1 is returned.
- */
 int32_t pfwl_reassembly_ip_compact_fragments(pfwl_reassembly_fragment_t* head,
                                             unsigned char** where,
                                             uint32_t len) {

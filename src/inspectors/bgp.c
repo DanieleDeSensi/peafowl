@@ -25,17 +25,16 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_bgp(pfwl_state_t* state, pfwl_pkt_infos_t* pkt,
-                  const unsigned char* app_data, uint32_t data_length,
-                  pfwl_tracking_informations_t* t) {
-  if (pkt->l4prot != IPPROTO_TCP) {
+uint8_t check_bgp(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+                  pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
+  if (pkt_info->protocol_l4 != IPPROTO_TCP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   if (data_length > 18) {
     if (get_u64(app_data, 0) == 0xffffffffffffffffULL &&
         get_u64(app_data, 8) == 0xffffffffffffffffULL &&
         ntohs(get_u16(app_data, 16)) <= data_length &&
-        (pkt->dstport == port_bgp || pkt->srcport == port_bgp) &&
+        (pkt_info->port_dst == port_bgp || pkt_info->port_src == port_bgp) &&
         app_data[18] < 5) {
       return PFWL_PROTOCOL_MATCHES;
     } else
