@@ -75,19 +75,23 @@ int main(int argc, char** argv){
 
       ip_offset = pfwl_parse_datalink(packet, header, handle);
 
-      r = pfwl_get_protocol(state, packet+ip_offset, header.caplen-ip_offset, time(NULL));
+      if(ip_offset == -1)
+          ++unknown;
+      else {
+          r = pfwl_get_protocol(state, packet+ip_offset, header.caplen-ip_offset, time(NULL));
 
-      if(r.protocol_l4 == IPPROTO_TCP ||
-	 r.protocol_l4 == IPPROTO_UDP){
-	if(r.protocol_l7 < PFWL_NUM_PROTOCOLS){
-	  ++protocols[r.protocol_l7];
-	}else{
-	  ++unknown;
-	}
-      }else if(r.status == PFWL_STATUS_ICMP){
-	++icmp;
-      }else{
-	++unknown;
+          if(r.protocol_l4 == IPPROTO_TCP ||
+             r.protocol_l4 == IPPROTO_UDP){
+              if(r.protocol_l7 < PFWL_NUM_PROTOCOLS){
+                  ++protocols[r.protocol_l7];
+              }else{
+                  ++unknown;
+              }
+          }else if(r.status == PFWL_STATUS_ICMP){
+              ++icmp;
+          }else{
+              ++unknown;
+          }
       }
     }
 
@@ -102,4 +106,3 @@ int main(int argc, char** argv){
     }
     return 0;
 }
-

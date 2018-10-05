@@ -54,12 +54,25 @@ extern "C" {
 #define ETHERTYPE_MPLS_UNI      0x8847          /* Multiprotocol Label Switching */
 #define ETHERTYPE_MPLS_MULTI    0x8848
 
-/* mask for FCF */
-#define	WIFI_DATA                        0x2    /* 0000 0010 */
-#define FCF_TYPE(fc)     (((fc) >> 2) & 0x3)    /* 0000 0011 = 0x3 */
-#define FCF_SUBTYPE(fc)  (((fc) >> 4) & 0xF)    /* 0000 1111 = 0xF */
-#define FCF_TO_DS(fc)        ((fc) & 0x0100)
-#define FCF_FROM_DS(fc)      ((fc) & 0x0200)
+/* Value for Type and Subtype */
+enum ieee80211_types
+{
+    W_MGMT = 0,
+    W_CTRL,
+    W_DATA,
+};
+// MGMT
+#define M_BEACON  8
+#define M_DISASS 10
+#define M_B_ACK  10
+// CTRL
+#define C_RTS    11
+#define C_ACK    13
+// DATA
+#define D_DATA    0
+#define D_NULL    2
+#define D_QOSD    8
+#define D_QOSN   12
 
 
 /* RADIOTAP_FLAGS */
@@ -122,7 +135,8 @@ extern "C" {
   /* ++++++++++++ Wireless header (IEEE 802.11) ++++++++++++++++ */
   struct wifi_hdr
   {
-    uint16_t fc;
+    uint8_t  ts;
+    uint8_t  flags;
     uint16_t duration;
     uint8_t  rcvr[6]; // these 3 fields
     uint8_t  trsm[6]; // should be

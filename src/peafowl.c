@@ -1326,7 +1326,7 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
 
   // len and offset
   uint16_t type = 0, eth_type_1 = 0;
-  uint16_t wifi_len = 0, radiotap_len = 0, fc;
+  uint16_t wifi_len = 0, radiotap_len = 0;
   uint16_t dlink_offset = 0;
 
   // define ethernet header
@@ -1379,7 +1379,12 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
      radiotap_len = radiotap_header->len;
      dlink_offset = radiotap_len;
 
-     const u_char* p_radio = packet+radiotap_len;
+     const u_char* p_radio = packet + 8;
+
+     // Check if MAC timestamp is present
+     if(getBits(radiotap_header->present,0,1) == 1) {
+         p_radio += 8;
+     }
 
      // Check if Flag byte is present
      if(getBits(radiotap_header->present,1,1) == 1) {
@@ -1388,38 +1393,71 @@ uint32_t pfwl_parse_datalink(const u_char* packet,
              printf("Malformed Radiotap packet. DISCARD\n");
              return -1;
          }
-         dlink_offset += 1;
          p_radio++;
      }
-     /* TODO: must be check other cases */
+
+     /**
+        Once Radiotap is present,
+        we must check if Wifi data is present
+     **/
+       wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
+       uint8_t ts;   // TYPE/SUBTYPE
+
+       // Check Data type
+       if((ts = getBits(wifi_header->ts, 3, 2)) == W_DATA) {
+           if(((ts = getBits(wifi_header->ts, 7, 4)) == D_DATA) ||
+              ((ts = getBits(wifi_header->ts, 7, 4)) == D_QOSD)) {
+               wifi_len = sizeof(struct wifi_hdr); /* 26 bytes */
+               dlink_offset += wifi_len;
+           }
+       }
+       // Managment or Control type
+       else {
+           printf("802.11 Managment or Control packet. DISCARD\n");
+           return -1;
+       }
+
+       // Check LLC
+       llc_snap_header = (struct llc_snap_hdr*)(packet + wifi_len);
+       if(llc_snap_header->dsap == SNAP ||
+          llc_snap_header->ssap == SNAP)
+           dlink_offset += sizeof(struct llc_snap_hdr);
+       else {
+           printf("Probably a wifi packet with data encription. Discard\n");
+           return -1;
+       }
+       break;
    }
 
-  case DLT_IEEE802_11: {
+   case DLT_IEEE802_11: {
 
-     // Calculate 802.11 header length
-     wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
-     fc = wifi_header->fc; // FRAME CONTROL BYTES
+       wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
+       uint8_t ts;   // TYPE/SUBTYPE
 
-     // check wifi data presence
-     if(FCF_TYPE(fc) == WIFI_DATA) {
-         if((FCF_TO_DS(fc) && FCF_FROM_DS(fc) == 0x0) ||
-            (FCF_TO_DS(fc) == 0x0 && FCF_FROM_DS(fc))) {
-             wifi_len = sizeof(struct wifi_hdr); /* 26 bytes */
-             dlink_offset = wifi_len;
-         }
-     }
-     // no data frames
-     else return -1;
-     // Wifi data present - check LLC
-     llc_snap_header = (struct llc_snap_hdr*)(packet + wifi_len);
-     if(llc_snap_header->dsap == SNAP)
-       type = ntohs(llc_snap_header->type);
-     else {
-         printf("Probably a wifi packet of with data encription. Discard\n");
-         return -1;
-     }
-     dlink_offset += sizeof(struct llc_snap_hdr);
-     break;
+       // Check Data type
+       if((ts = getBits(wifi_header->ts, 3, 2)) == W_DATA) {
+           if(((ts = getBits(wifi_header->ts, 7, 4)) == D_DATA) ||
+              ((ts = getBits(wifi_header->ts, 7, 4)) == D_QOSD)) {
+               wifi_len = sizeof(struct wifi_hdr); /* 26 bytes */
+               dlink_offset = wifi_len;
+           }
+       }
+       // Managment or Control type
+       else {
+           printf("802.11 Managment or Control packet. DISCARD\n");
+           return -1;
+       }
+
+       // Check LLC
+       llc_snap_header = (struct llc_snap_hdr*)(packet + wifi_len);
+       if(llc_snap_header->dsap == SNAP ||
+          llc_snap_header->ssap == SNAP)
+           dlink_offset += sizeof(struct llc_snap_hdr);
+       else {
+           printf("Probably a wifi packet with data encription. Discard\n");
+           return -1;
+       }
+       break;
    }
 
    /** LINKTYPE_IEEE802_5 - 6 **/
