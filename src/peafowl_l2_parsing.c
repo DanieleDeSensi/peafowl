@@ -193,12 +193,12 @@ static uint16_t pfwl_check_dtype(const u_char* packet, uint16_t type, uint16_t o
       **/
   // VLAN
   case ETHERTYPE_VLAN:
-    debug_print("Ethernet type: VLAN\n");
+    debug_print("%s\n", "Ethernet type: VLAN\n");
     vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
     type = ntohs(vlan_header->type);
     // double tagging for 802.1Q
     if(type == 0x8100) {
-      debug_print("\tdouble tagging VLAN\n");
+      debug_print("%s\n", "\tdouble tagging VLAN\n");
       dlink_offset += 4;
       //vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
     }
@@ -207,7 +207,7 @@ static uint16_t pfwl_check_dtype(const u_char* packet, uint16_t type, uint16_t o
     // MPLS
   case ETHERTYPE_MPLS_UNI:
   case ETHERTYPE_MPLS_MULTI:
-    debug_print("Ethernet type: MPLS\n");
+    debug_print("%s\n", "Ethernet type: MPLS\n");
     mpls.u32 = *((uint32_t *) &packet[dlink_offset]);
     mpls.u32 = ntohl(mpls.u32);
     dlink_offset += 4;
@@ -266,7 +266,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
   switch(datalink_type) {
   /** IEEE 802.3 Ethernet - 1 **/
   case DLT_EN10MB:
-    debug_print("Datalink type: Ethernet\n");
+    debug_print("%s\n", "Datalink type: Ethernet\n");
     ether_header = (struct ether_header*)(packet);
     // set datalink offset
     dlink_offset = ETHHDR_SIZE;
@@ -284,7 +284,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
 
     /** Linux Cooked Capture - 113 **/
   case DLT_LINUX_SLL:
-    debug_print("Datalink type: Linux Cooked\n");
+    debug_print("%s\n", "Datalink type: Linux Cooked\n");
     type = (packet[dlink_offset + 14] << 8) + packet[dlink_offset + 15];
     dlink_offset = 16;
     break;
@@ -296,7 +296,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
    **/
     /** Radiotap link-layer - 127 **/
   case DLT_IEEE802_11_RADIO: {
-    debug_print("Datalink type: Radiotap\n");
+    debug_print("%s\n", "Datalink type: Radiotap\n");
     radiotap_header = (struct radiotap_hdr *) packet;
     radiotap_len = radiotap_header->len;
     dlink_offset = radiotap_len;
@@ -312,7 +312,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
     if(getBits(radiotap_header->present,1,1) == 1) {
       // Check Bad FCS presence
       if(*p_radio == F_BADFCS) {
-        debug_print("Malformed Radiotap packet. DISCARD\n");
+        debug_print("%s\n", "Malformed Radiotap packet. DISCARD\n");
         r->status = PFWL_ERROR_L2_PARSING;
         return;
       }
@@ -336,7 +336,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
     }
     // Managment or Control type
     else {
-      debug_print("802.11 Managment or Control packet. DISCARD\n");
+      debug_print("%s\n", "802.11 Managment or Control packet. DISCARD\n");
       r->status = PFWL_ERROR_L2_PARSING;
       return;
     }
@@ -347,7 +347,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
        llc_snap_header->ssap == SNAP)
       dlink_offset += sizeof(struct llc_snap_hdr);
     else {
-      debug_print("Probably a wifi packet with data encription. Discard\n");
+      debug_print("%s\n", "Probably a wifi packet with data encription. Discard\n");
       r->status = PFWL_ERROR_L2_PARSING;
       return;
     }
@@ -369,7 +369,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
     }
     // Managment or Control type
     else {
-      debug_print("802.11 Managment or Control packet. DISCARD\n");
+      debug_print("%s\n", "802.11 Managment or Control packet. DISCARD\n");
       r->status = PFWL_ERROR_L2_PARSING;
       return;
     }
@@ -380,7 +380,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
        llc_snap_header->ssap == SNAP)
       dlink_offset += sizeof(struct llc_snap_hdr);
     else {
-      debug_print("Probably a wifi packet with data encription. Discard\n");
+      debug_print("%s\n", "Probably a wifi packet with data encription. Discard\n");
       r->status = PFWL_ERROR_L2_PARSING;
       return;
     }
@@ -389,31 +389,31 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
 
     /** LINKTYPE_IEEE802_5 - 6 **/
   case DLT_IEEE802:
-    debug_print("Datalink type: Tokenring\n");
+    debug_print("%s\n", "Datalink type: Tokenring\n");
     dlink_offset = TOKENRING_SIZE;
     break;
 
     /** LINKTYPE_SLIP - 8 **/
   case DLT_SLIP:
-    debug_print("Datalink type: Slip\n");
+    debug_print("%s\n", "Datalink type: Slip\n");
     dlink_offset = SLIPHDR_SIZE;
     break;
 
     /** LINKTYPE_PPP - 09 **/
   case DLT_PPP:
-    debug_print("Datalink type: PPP\n");
+    debug_print("%s\n", "Datalink type: PPP\n");
     dlink_offset = PPPHDR_SIZE;
     break;
 
     /** LINKTYPE_FDDI - 10 **/
   case DLT_FDDI:
-    debug_print("Datalink type: FDDI\n");
+    debug_print("%s\n", "Datalink type: FDDI\n");
     dlink_offset = FDDIHDR_SIZE;
     break;
 
     /** LINKTYPE_RAW - 101 **/
   case DLT_RAW:
-    debug_print("Datalink type: Raw\n");
+    debug_print("%s\n", "Datalink type: Raw\n");
     dlink_offset = RAWHDR_SIZE;
     break;
 
@@ -421,7 +421,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
   case DLT_LOOP:
     /** LINKTYPE_NULL - 0 **/
   case DLT_NULL:
-    debug_print("Datalink type: Loop or Null\n");
+    debug_print("%s\n", "Datalink type: Loop or Null\n");
     dlink_offset = LOOPHDR_SIZE;
     break;
 
