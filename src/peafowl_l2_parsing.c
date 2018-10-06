@@ -49,15 +49,13 @@
 #include <time.h>
 #include <pcap.h>
 
-#ifdef PFWL_DEBUG_L2
+#ifndef PFWL_DEBUG_L2
+#define PFWL_DEBUG_L2 0
+#endif
 #define debug_print(fmt, ...)                         \
   do {                                                \
-    fprintf(stderr, fmt, __VA_ARGS__); \
+    if(PFWL_DEBUG_L2) fprintf(stderr, fmt, __VA_ARGS__); \
   } while (0)
-#else
-#define debug_print(fmt, ...)                         \
-  do {} while (0)
-#endif
 
 
 /* Header offsets */
@@ -202,7 +200,7 @@ static uint16_t pfwl_check_dtype(const u_char* packet, uint16_t type, uint16_t o
     if(type == 0x8100) {
       debug_print("\tdouble tagging VLAN\n");
       dlink_offset += 4;
-      vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
+      //vlan_header = (struct vlan_hdr *) (packet + dlink_offset);
     }
     dlink_offset += 4;
     break;
@@ -326,12 +324,12 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
         we must check if Wifi data is present
      **/
     wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
-    uint8_t ts;   // TYPE/SUBTYPE
+    //uint8_t ts;   // TYPE/SUBTYPE (the following 3 getBits)
 
     // Check Data type
-    if((ts = getBits(wifi_header->ts, 3, 2)) == W_DATA) {
-      if(((ts = getBits(wifi_header->ts, 7, 4)) == D_DATA) ||
-         ((ts = getBits(wifi_header->ts, 7, 4)) == D_QOSD)) {
+    if(getBits(wifi_header->ts, 3, 2) == W_DATA) {
+      if((getBits(wifi_header->ts, 7, 4) == D_DATA) ||
+         (getBits(wifi_header->ts, 7, 4) == D_QOSD)) {
         wifi_len = sizeof(struct wifi_hdr); /* 26 bytes */
         dlink_offset += wifi_len;
       }

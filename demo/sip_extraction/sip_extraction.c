@@ -41,11 +41,6 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#define SIZE_IPv4_FLOW_TABLE 32767
-#define SIZE_IPv6_FLOW_TABLE 32767
-#define MAX_IPv4_ACTIVE_FLOWS 500000
-#define MAX_IPv6_ACTIVE_FLOWS 500000
-
 int main(int argc, char** argv){
 	if(argc!=2){
 		fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);

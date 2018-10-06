@@ -219,11 +219,6 @@ This application can be easily modified to read packet from the network instead 
 #include <inttypes.h>
 #include <assert.h>
 
-#define SIZE_IPv4_FLOW_TABLE 32767
-#define SIZE_IPv6_FLOW_TABLE 32767
-#define MAX_IPv4_ACTIVE_FLOWS 500000
-#define MAX_IPv6_ACTIVE_FLOWS 500000
-
 int main(int argc, char** argv){
     if(argc!=2){
         fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
@@ -232,31 +227,13 @@ int main(int argc, char** argv){
     char* pcap_filename=argv[1];
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    pfwl_library_state_t* state=pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS);
-    pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
+    pfwl_library_state_t* state = pfwl_init();
+    pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
 
     if(handle==NULL){
         fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
         return (2);
     }
-
-    int datalink_type=pcap_datalink(handle);
-    uint ip_offset=0;
-    if(datalink_type==DLT_EN10MB){
-        printf("Datalink type: Ethernet\n");
-        ip_offset=sizeof(struct ether_header);
-    }else if(datalink_type==DLT_RAW){
-        printf("Datalink type: RAW\n");
-        ip_offset=0;
-    }else if(datalink_type==DLT_LINUX_SLL){
-        printf("Datalink type: Linux Cooked\n");
-        ip_offset=16;
-    }else{
-        fprintf(stderr, "Datalink type not supported\n");
-        exit(-1);
-    }
-
-
 
     const u_char* packet;
     struct pcap_pkthdr header;
@@ -266,25 +243,8 @@ int main(int argc, char** argv){
     memset(protocols, 0, sizeof(protocols));
     u_int32_t unknown=0;
 
-    uint virtual_offset = 0;
-
     while((packet=pcap_next(handle, &header))!=NULL){
-        if(datalink_type == DLT_EN10MB){
-            if(header.caplen < ip_offset){
-                continue;
-            }
-            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
-            if(ether_type == htons(0x8100)){ // VLAN
-                virtual_offset = 4;
-            }
-            if(ether_type != htons(ETHERTYPE_IP) &&
-               ether_type != htons(ETHERTYPE_IPV6)){
-                continue;
-            }
-        }
-
-        r=pfwl_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
-
+        r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), pcap_datalink(handle));
 
         if(r.protocol.l4prot == IPPROTO_TCP ||
            r.protocol.l4prot == IPPROTO_UDP){
