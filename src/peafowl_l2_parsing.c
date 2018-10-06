@@ -357,12 +357,12 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
   case DLT_IEEE802_11: {
 
     wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
-    uint8_t ts;   // TYPE/SUBTYPE
+    //uint8_t ts;   // TYPE/SUBTYPE (the following 3 getBits)
 
     // Check Data type
-    if((ts = getBits(wifi_header->ts, 3, 2)) == W_DATA) {
-      if(((ts = getBits(wifi_header->ts, 7, 4)) == D_DATA) ||
-         ((ts = getBits(wifi_header->ts, 7, 4)) == D_QOSD)) {
+    if(getBits(wifi_header->ts, 3, 2) == W_DATA) {
+      if((getBits(wifi_header->ts, 7, 4) == D_DATA) ||
+         (getBits(wifi_header->ts, 7, 4) == D_QOSD)) {
         wifi_len = sizeof(struct wifi_hdr); /* 26 bytes */
         dlink_offset = wifi_len;
       }
