@@ -1,6 +1,6 @@
 #include "common.h"
 
-Pcap::Pcap(const char* pcapName):_handle(NULL), _ip_offset(0), _datalink_type(0){
+Pcap::Pcap(const char* pcapName):_handle(NULL), _datalink_type(0){
     char errbuf[PCAP_ERRBUF_SIZE];
     _handle = pcap_open_offline(pcapName, errbuf);
 
@@ -10,17 +10,6 @@ Pcap::Pcap(const char* pcapName):_handle(NULL), _ip_offset(0), _datalink_type(0)
     }
 
     _datalink_type=pcap_datalink(_handle);
-    _ip_offset=0;
-    if(_datalink_type==DLT_EN10MB){
-        _ip_offset=sizeof(struct ether_header);
-    }else if(_datalink_type==DLT_RAW){
-        _ip_offset=0;
-    }else if(_datalink_type==DLT_LINUX_SLL){
-        _ip_offset=16;
-    }else{
-        fprintf(stderr, "Datalink type not supported\n");
-        exit(-1);
-    }
 }
 
 std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
@@ -34,46 +23,47 @@ std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
             r.second = 0;
             return r;
         }
-        uint16_t virtual_offset = 0;
-
-        if(_datalink_type == DLT_EN10MB){
-            if(header.caplen < _ip_offset){
-                continue;
-            }
-            uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
-            if(ether_type == htons(0x8100)){ // VLAN
-                virtual_offset = 4;
-            }
-            if(ether_type != htons(ETHERTYPE_IP) &&
-               ether_type != htons(ETHERTYPE_IPV6)){
-                continue;
-            }
-        }
-        r.second = header.caplen -_ip_offset - virtual_offset;
-        // We copy the packet to avoid copying all the extracted fields manually
-        // Indeed the fields are valid only for the lifetime of the packet
-        // This is only done to simplify the testing process.
-        r.first = (const unsigned char*) malloc(sizeof(char) * r.second);
-        memcpy((void*) r.first, packet + _ip_offset + virtual_offset, r.second);
+        r.second = header.caplen;
+        r.first = packet;
         return r;
     }
 }
 
-std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName, std::vector<uint>& protocols){
+std::vector<pfwl_dissection_info_t> getProtocols(const char* pcapName, std::vector<uint>& protocols){
     return getProtocolsWithState(pcapName, protocols, pfwl_init());
 }
 
-std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state){
-    std::vector<pfwl_identification_result_t> results;
+std::vector<pfwl_dissection_info_t> getProtocolsWithState(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state){
+    std::vector<pfwl_dissection_info_t> results;
     protocols.clear();
     protocols.resize(PFWL_NUM_PROTOCOLS + 1); // +1 to store unknown protocols
 
     Pcap pcap(pcapName);
-    pfwl_identification_result_t r;
+    pfwl_dissection_info_t r;
     std::pair<const u_char*, unsigned long> pkt;
 
     while((pkt = pcap.getNextPacket()).first != NULL){
-        r = pfwl_get_protocol(state, pkt.first, pkt.second, time(NULL));
+        r = pfwl_dissect_from_L2(state, pkt.first, pkt.second, time(NULL), pcap._datalink_type);
+        // We copy the packet to avoid copying all the extracted fields manually
+        // Indeed the fields are valid only for the lifetime of the packet
+        // This is only done to simplify the testing process.
+        for(size_t i = 0; i < PFWL_FIELDS_NUM; i++){
+          if(i == PFWL_FIELDS_HTTP_CONTENT_TYPE ||
+             i == PFWL_FIELDS_HTTP_BODY ||
+             i == PFWL_FIELDS_SIP_REQUEST_URI ||
+             i == PFWL_FIELDS_SIP_METHOD){
+            size_t field_len = r.protocol_fields[i].str.len;
+            const char* field = r.protocol_fields[i].str.s;
+            if(field_len){
+              char* tmp = (char*) malloc(sizeof(char) * field_len);
+              memcpy((void*) tmp, field, field_len);
+              r.protocol_fields[i].str.s = tmp;
+            }
+          }
+        }
+        r.user_flow_data = (void**) malloc(sizeof(int*)); // Dirty trick.
+        *r.user_flow_data = NULL;
+
         results.push_back(r);
         if(r.protocol_l4 == IPPROTO_TCP ||
            r.protocol_l4 == IPPROTO_UDP){
@@ -82,6 +72,5 @@ std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcap
         }
     }
 
-    pfwl_terminate(state);
     return results;
 }

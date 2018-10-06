@@ -1,29 +1,31 @@
 /**
+ * peafowl.h
+ *
  * @file
- * @brief This is the main peafowl header to be included.
- *
- * Created on: 19/09/2012
+ * @brief This is the main peafowl header.
  *
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
+ *
  *  Provided features:
  *		+Support for IPv6 and its optional headers
  *  	+Tunneling: 6in6, 4in4, 6in4, 4in6
@@ -85,6 +87,7 @@ extern "C" {
 #define PFWL_ERROR_L4_TRUNCATED_PACKET -4              ///< L4 data truncated or corrupted
 #define PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED -5  ///< Transport protocol (L4) not supported
 #define PFWL_ERROR_MAX_FLOWS -6                        ///< Maximum number of flows reached
+#define PFWL_ERROR_L2_PARSING -7                       ///< Error while parsing L2 header.
 
 /// @cond EXTERNAL
 typedef struct pfwl_flow_info pfwl_flow_info_t;
@@ -100,7 +103,12 @@ typedef enum pfwl_status {
                                           ///< has been stored and the data will be recompacted
                                           ///< and analyzed when all the fragments will be
                                           ///< received.
-  PFWL_STATUS_IP_LAST_FRAGMENT,           ///< Received the last fragment of an IP packet.
+  PFWL_STATUS_IP_LAST_FRAGMENT,           ///< The received datagram allowed the library to reconstruct a fragmented
+                                          ///< datagram. In this case, identification_info->pkt_refragmented
+                                          ///< will contain a pointer to the recomposed datagram. This pointer will be different
+                                          ///< from the packet provided. The user should free() this pointer when it is no
+                                          ///< more needed (e.g. after calling pfwl_parse_L3_L4(..)).
+                                          ///< This status may only be returned if pfwl_parse_L3_L4 is explicitely called.
   PFWL_STATUS_TCP_OUT_OF_ORDER,           ///< Received an out of order TCP segment.
                                           ///< If TCP defragmentation is enabled, the
                                           ///< segment has been stored, and
@@ -111,26 +119,18 @@ typedef enum pfwl_status {
                                           ///< closed by RST
 } pfwl_status_t;
 
-typedef union{
-  pfwl_field_t sip[PFWL_FIELDS_SIP_NUM];     ///< The fields extracted by the SIP dissector
-  pfwl_field_t dns[PFWL_FIELDS_DNS_NUM];     ///< The fields extracted by the DNS dissector
-  pfwl_field_t ssl[PFWL_FIELDS_SSL_NUM];     ///< The fields extracted by the SSL dissector
-  pfwl_field_t http[PFWL_FIELDS_HTTP_NUM];   ///< The fields extracted by the HTTP dissector
-}pfwl_extracted_fields_t;
-
-
 /**
  * An IP address.
  **/
 typedef union pfwl_ip_addr {
   uint32_t ipv4;        ///< The IPv4 address
   struct in6_addr ipv6; ///< The IPv6 address
-} pfwl_ip_addr_t; ///< IP address
+} pfwl_ip_addr_t;       ///< IP address
 
 /**
  * The result of the identification process.
  **/
-typedef struct pfwl_identification_result {
+typedef struct pfwl_dissection_info {
   pfwl_status_t status;           ///< The status of the operation. It gives additional informations
                                   ///< about the processing of the request. If lesser than 0, an
                                   ///< error occurred. pfwl_get_error_msg() can be used to get a
@@ -142,21 +142,10 @@ typedef struct pfwl_identification_result {
                                   ///< pfwl_get_status_msg() can be used to get a textual
                                   ///< representation of the status. Status and error codes are
                                   ///< defined above in this header file.
-                                  ///<
-                                  ///< The status is PFWL_STATUS_IP_FRAGMENT if the datagram is a
-                                  ///< fragment. In this case, if IP fragmentation support is enabled,
-                                  ///< the library copied the content of the datagram, so if the user
-                                  ///< wants, he can release the resources used to store the datagram.
-                                  ///<
-                                  ///< The status is PFWL_STATUS_IP_LAST_FRAGMENT if the received
-                                  ///< datagram allows the library to reconstruct a fragmented
-                                  ///< datagram. In this case, identification_info->pkt will contain a pointer
-                                  ///< to the recomposed datagram. This pointer will be different
-                                  ///< from the packet provided. The user should free() this pointer when it is no
-                                  ///< more needed (e.g. after calling pfwl_parse_L3_L4_headers(..)).
-  const unsigned char* pkt;       ///< Pointer to the packet
   uint32_t timestamp;             ///< Time when the library started the processing (in seconds).
-  void* user_flow_data;           ///< User-defined data associated to the specific flow
+  void** user_flow_data;          ///< User-defined data associated to the specific flow.
+  // Information known after L2 parsing
+  uint16_t offset_l3;             ///< Offset where L3 packet starts.
   // Information known after L3 parsing
   pfwl_ip_addr_t addr_src;        ///< Source address, in network byte order.
   pfwl_ip_addr_t addr_dst;        ///< Destination address, in network byte order.
@@ -164,23 +153,27 @@ typedef struct pfwl_identification_result {
   uint8_t direction;              ///< Direction of the packet:
                                   ///< 0: From source to dest. 1: From dest to source
                                   ///< (with respect to src and dst stored in the flow).
-  pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol
+  pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol.
   uint16_t offset_l4;             ///< Offset where L4 packet starts.
+  const unsigned char* pkt_refragmented; ///< Refragmented IP packet. If the packet was not refragmented,
+                                         ///< this is equal to the packet provided to peafowl.
   // Information known after L4 parsing
   uint16_t port_src;              ///< Source port, in network byte order.
   uint16_t port_dst;              ///< Destination port, in network byte order.
   uint16_t offset_l7;             ///< Offset where L7 packet starts.
   uint32_t data_length_l7;        ///< Length of the application data
                                   ///< (from the end of L4 header to the end).
-
+  const unsigned char* data_l7;   ///< (Resegmented) Application data.
   // Information known after L7 parsing
-  pfwl_protocol_l7_t protocol_l7; ///< The level 7 protocol
-  pfwl_extracted_fields_t protocol_fields;  ///< Fields extracted by the dissector. They are valid for the lifetime
-                                            ///< of the packet provided to peafowl.
-                                            ///< If the user needs to preserve the data for a longer time
-                                            ///< then the life of a captured packet, a copy of each field
-                                            ///< needs to be done.
-} pfwl_identification_result_t;
+  pfwl_protocol_l7_t protocol_l7; ///< The level 7 protocol.
+  pfwl_field_t protocol_fields[PFWL_FIELDS_NUM];  ///< Fields extracted by the dissector. Some of these fields
+                                                  ///< (e.g. strings) are only valid until
+                                                  ///< another packet for the same flow is processed. I.e.
+                                                  ///< If another packet for this flow is received, this
+                                                  ///< data will not be valid anymore.
+                                                  ///< If the user needs to preserve the data for a longer time,
+                                                  ///< a copy of each needed field needs to be done.
+} pfwl_dissection_info_t;
 
 /**
  * @brief Callback for flow cleaning.
@@ -191,23 +184,19 @@ typedef struct pfwl_identification_result {
  */
 typedef void(pfwl_flow_cleaner_callback_t)(void* flow_specific_user_data);
 
-typedef struct pfwl_http_internal_informations {
-  char* temp_buffer;
-  size_t temp_buffer_size;
-  uint8_t temp_buffer_dirty : 1;
-} pfwl_http_internal_informations_t;
-
-typedef struct pfwl_ssl_internal_information {
-  uint8_t* pkt_buffer;
-  int pkt_size;
-} pfwl_ssl_internal_information_t;
-
+/// @cond Private structures
 typedef struct pfwl_state pfwl_state_t;
+/// @endcond
 
+/**
+ * Some dissector can run at a different
+ * accuracy level. This represent the level
+ * of accuracy that may be required to a dissector.
+ **/
 typedef enum {
-  PFWL_INSPECTOR_ACCURACY_LOW = 0,
-  PFWL_INSPECTOR_ACCURACY_MEDIUM,
-  PFWL_INSPECTOR_ACCURACY_HIGH,
+  PFWL_INSPECTOR_ACCURACY_LOW = 0, ///< Low accuracy
+  PFWL_INSPECTOR_ACCURACY_MEDIUM,  ///< Medium accuracy
+  PFWL_INSPECTOR_ACCURACY_HIGH,    ///< High accuracy
 } pfwl_inspector_accuracy_t;
 
 /**
@@ -232,7 +221,7 @@ typedef enum {
 typedef uint8_t (*pfwl_dissector)(
     const unsigned char* app_data,
     uint32_t data_length,
-    pfwl_identification_result_t* identification_info,
+    pfwl_dissection_info_t* identification_info,
     pfwl_tracking_informations_t* tracking_info,
     pfwl_inspector_accuracy_t accuracy,
     uint8_t* required_fields
@@ -491,17 +480,48 @@ uint8_t pfwl_inspect_nothing(pfwl_state_t* state);
 uint8_t pfwl_skip_L7_parsing_by_port(pfwl_state_t* state, uint8_t l4prot,
                                     uint16_t port, pfwl_protocol_l7_t id);
 
+
+
 /**
- * Try to detect the application protocol.
+ * Try to detect the application protocol starting from the beginning of the L2 (datalink) packet.
+ * @param   state The state of the library.
+ * @param   pkt The pointer to the beginning of datalink header.
+ * @param   length Length of the packet.
+ * @param   timestamp The current time in seconds.
+ * @param datalink_type The datalink type, as defined by libpcap. This can be
+ * obtained by calling pcap_datalink(...) on a PCAP handle.
+ * If you do not use libpcap to capture packets, a list of allowed datalink_type
+ * values can be found with 'man pcap-linktype'.
+ * @return  Dissection information from L2 up to L7.
+ */
+pfwl_dissection_info_t pfwl_dissect_from_L2(pfwl_state_t* state, const unsigned char* pkt,
+                                                  uint32_t length, uint32_t timestamp, int datalink_type);
+
+/**
+ * Try to detect the application protocol starting from the beginning of the L3 (IP) packet.
  * @param   state The state of the library.
  * @param   pkt The pointer to the beginning of IP header.
  * @param   length Length of the packet (from the beginning of the IP
  *          header, without L2 headers/trailers).
- * @param   current_time The current time in seconds.
- * @return  The identification result.
+ * @param   timestamp The current time in seconds.
+ * @param   dissection_info The result of the dissection.
+ *          Dissection information from L3 to L7 will be filled by this call.
  */
-pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state, const unsigned char* pkt,
-                                               uint32_t length, uint32_t current_time);
+void pfwl_dissect_from_L3(pfwl_state_t* state, const unsigned char* pkt,
+                          uint32_t length, uint32_t timestamp,
+                          pfwl_dissection_info_t* dissection_info);
+
+/**
+ * Parses the datalink header.
+ * @brief pfwl_parse_L2
+ * @param packet A pointer to the packet.
+ * @param datalink_type The datalink type, as defined by libpcap. This can be
+ * obtained by calling pcap_datalink(...) on a PCAP handle.
+ * If you do not use libpcap to capture packets, a list of allowed datalink_type
+ * values can be found with 'man pcap-linktype'.
+ * @param dissection_info The result of the dissection (up to L2 parsing). It will be filled by this call.
+ */
+void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissection_info_t* dissection_info);
 
 /**
  * Extracts from the packet the informations about source and destination
@@ -513,20 +533,22 @@ pfwl_identification_result_t pfwl_get_protocol(pfwl_state_t* state, const unsign
  *          IP header, without L2 headers/trailers).
  * @param   current_time The current time in seconds. It must be
  *          non-decreasing between two consecutive calls.
+ * @param   dissection_info Info about the dissection done up to now (up to L2 parsing).
+ *          It will be filled by the library with additional info about L3 and L4 dissection.
  * @return  The identification result.
  */
-pfwl_identification_result_t pfwl_parse_L3_L4(pfwl_state_t* state, const unsigned char* pkt, uint32_t length,
-                                              uint32_t current_time);
+void pfwl_parse_L3_L4(pfwl_state_t* state, const unsigned char* pkt, uint32_t length,
+                      uint32_t current_time, pfwl_dissection_info_t* dissection_info);
 
 /**
  * Try to detect the application protocol. Before calling it, a check on
  * L4 protocol should be done and the function should be called only if
  * the packet is TCP or UDP.
  * @param   state The pointer to the library state.
- * @param   identification_info Info about the identification done up to now (up to L4 parsing).
+ * @param   dissection_info Info about the dissection done up to now (up to L4 parsing).
  *          It will be filled by the library with additional info about L7 dissection.
  */
-void pfwl_parse_L7(pfwl_state_t* state, pfwl_identification_result_t* identification_info);
+void pfwl_parse_L7(pfwl_state_t* state, pfwl_dissection_info_t* dissection_info);
 
 /**
  * Try to detect the application protocol. Before calling it, a check on
@@ -541,7 +563,7 @@ void pfwl_parse_L7(pfwl_state_t* state, pfwl_identification_result_t* identifica
  * @param identification_info Info about the identification done up to now (up to L4 parsing).
  *          It will be filled by the library with additional info about L7 dissection.
  */
-void pfwl_parse_L7_stateless(pfwl_state_t* state, pfwl_identification_result_t* identification_info, pfwl_flow_info_t* flow);
+void pfwl_parse_L7_stateless(pfwl_state_t* state, pfwl_dissection_info_t* identification_info, pfwl_flow_info_t* flow);
 
 /**
  * Initialize the flow informations passed as argument.
@@ -558,7 +580,7 @@ void pfwl_init_flow_info(pfwl_state_t* state, pfwl_flow_info_t* flow_info);
  * @param identification_info Info about the identification done up to now (up to L4 parsing).
  * @return   Returns the possible matching protocol.
  */
-pfwl_protocol_l7_t pfwl_guess_protocol(pfwl_identification_result_t identification_info);
+pfwl_protocol_l7_t pfwl_guess_protocol(pfwl_dissection_info_t identification_info);
 
 /**
  * Get the string representing the error message associated to the
@@ -630,51 +652,33 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t* state,
  * of the protocol.
  *
  * @param state        A pointer to the state of the library.
- * @param protocol     The protocol.
- * @param field_type   The field (check the enum for that specific protocol).
+ * @param field        The field to extract.
  *
  * @return 0 if succeeded,
  *         1 otherwise.
  *
  **/
 uint8_t pfwl_protocol_field_add(pfwl_state_t* state,
-                                pfwl_protocol_l7_t protocol,
-                                int field_type);
+                                pfwl_field_id_t field);
 
 /**
  * Disable the protocol field callback. udata is not freed/modified.
- * @param state        A pointer to the state of the library.
- * @param protocol     The protocol.
- * @param field_type   The field (check the enum for that specific protocol).
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
  *
  * @return 0 if succeeded,
  *         1 otherwise.
  */
-uint8_t pfwl_protocol_field_remove(pfwl_state_t* state,
-                                    pfwl_protocol_l7_t protocol,
-                                    int field_type);
+uint8_t pfwl_protocol_field_remove(pfwl_state_t* state, pfwl_field_id_t field);
 
 /**
  * Checks if the extraction of a specific field for a given protocol has been
  * required.
- * @param state        A pointer to the state of the library.
- * @param protocol     The protocol.
- * @param field_type   The field (check the enum for that specific protocol).
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
  * @return 1 if the field has been required, 0 otherwise.
  */
-uint8_t pfwl_protocol_field_required(pfwl_state_t* state,
-                                      pfwl_protocol_l7_t protocol,
-                                      int field_type);
-/**
- * Adds a pointer to some data which will be passed as parameter to all
- * the fields callbacks.
- * @param state A pointer to the state of the library.
- * @param udata
- * @return
- */
-uint8_t pfwl_callbacks_fields_set_udata(pfwl_state_t* state,
-                                 void* udata);
-
+uint8_t pfwl_protocol_field_required(pfwl_state_t* state, pfwl_field_id_t field);
 
 /**
  * Some protocols inspector (e.g. SIP) can be applied with a different
@@ -706,30 +710,21 @@ uint8_t pfwl_prometheus_init(pfwl_state_t* state, uint16_t port);
 /// @cond MC
 pfwl_state_t* pfwl_init_stateful_num_partitions(uint32_t expected_flows, uint8_t strict, uint16_t num_table_partitions);
 
-pfwl_identification_result_t mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
-                                   const unsigned char* p_pkt,
-                                   uint32_t p_length,
-                                   uint32_t current_time, int tid);
+void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
+                                const unsigned char* p_pkt,
+                                uint32_t p_length,
+                                uint32_t current_time, int tid,
+                                pfwl_dissection_info_t* dissection_info);
 /// @endcond
 
 
 /// @cond Private structures
 typedef struct pfwl_l7_skipping_info pfwl_l7_skipping_info_t;
-/**
- * Fields to be extracted for a given protocol.
- **/
-typedef struct {
-    /**
-     * One flag per field.
-     * If 1, the field is extracted. If 0, it is not extracted.
-     **/
-    uint8_t* fields;
-    /**
-     * Number of fields to extract.
-     **/
-    uint8_t fields_num;
-} pfwl_fields_extraction_t;
 
+/**
+ * Please do not rely on this structure. It is meant for private internal use
+ * to the library and may significantly change between different commits.
+ **/
 typedef struct pfwl_state {
   /********************************************************************/
   /** Created by pfwl_init_state and never modified                  **/
@@ -741,18 +736,21 @@ typedef struct pfwl_state {
   /** update functions. They are never modified in other places      **/
   /********************************************************************/
   char protocols_to_inspect[BITNSLOTS(PFWL_NUM_PROTOCOLS)];
-  char active_callbacks[BITNSLOTS(PFWL_NUM_PROTOCOLS)]; // TODO: Remove, replaced with field_callbacks_lengths
 
   pfwl_protocol_l7_t active_protocols;
 
   uint16_t max_trials;
 
-  pfwl_flow_cleaner_callback_t* flow_cleaner_callback;
-
-  void* callbacks_udata;
-
   /** Field extraction. **/
-  pfwl_fields_extraction_t fields_extraction[PFWL_NUM_PROTOCOLS];
+  /**
+   * One flag per field.
+   * If 1, the field is extracted. If 0, it is not extracted.
+   **/
+  uint8_t fields_to_extract[PFWL_FIELDS_NUM];
+  /**
+   * Number of fields to extract, per protocol.
+   **/
+  uint8_t fields_to_extract_num[PFWL_NUM_PROTOCOLS];
 
   uint8_t tcp_reordering_enabled : 1;
 

@@ -5,27 +5,27 @@
  * captured from a .pcap file or from the network.
  * Each dump file is named: "dump_test/[srcIP]:[srcPort]_to_[dstIP]:[dstPort]_at_[timestamp].jpeg
  *
- * Created on: 19/10/2012
- *
+ * Created on: 19/09/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -40,6 +40,7 @@
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <errno.h>
 
 #ifndef ETHERTYPE_IPV6
 #define	ETHERTYPE_IPV6		0x86dd		/* IP protocol version 6 */
@@ -63,8 +64,8 @@ int main(int argc, char** argv){
 
   pfwl_state_t *state = pfwl_init();
 	pfwl_set_flow_cleaner_callback(state, &flow_delete_cb);
-  pfwl_protocol_field_add(state, PFWL_PROTOCOL_HTTP, PFWL_FIELDS_HTTP_CONTENT_TYPE);
-  pfwl_protocol_field_add(state, PFWL_PROTOCOL_HTTP, PFWL_FIELDS_HTTP_BODY);
+  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_CONTENT_TYPE);
+  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
 
 	pcap_t *handle; /* Session handle */
 	struct pcap_pkthdr header; /* The header that pcap gives us */
@@ -73,7 +74,7 @@ int main(int argc, char** argv){
 	char errbuf[PCAP_ERRBUF_SIZE];
 	bzero(errbuf, PCAP_ERRBUF_SIZE);
 	printf("Open offline.\n");
-	handle=pcap_open_offline(argv[1], errbuf);
+  handle = pcap_open_offline(argv[1], errbuf);
 	if(!handle){
 		bzero(errbuf, PCAP_ERRBUF_SIZE);
 		printf("Open live %s.\n", argv[1]);
@@ -89,50 +90,42 @@ int main(int argc, char** argv){
 
 	/* Grab a packet */
   while((packet = pcap_next(handle, &header)) != NULL){
-		struct ether_header *ethhdr=(struct ether_header*) packet;
-		if(ethhdr->ether_type!=htons(ETHERTYPE_IP) && ethhdr->ether_type!=htons(ETHERTYPE_IPV6)){
-			continue;
-		}
-    pfwl_identification_result_t r = pfwl_get_protocol(state,(const u_char*) packet + sizeof(struct ether_header), header.caplen-sizeof(struct ether_header), time(NULL));
+    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state,(const u_char*) packet, header.caplen, time(NULL), pcap_datalink(handle));
     if(r.protocol_l7 == PFWL_PROTOCOL_HTTP){
-      if((r.user_flow_data == NULL) && r.protocol_fields.http[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.len && (strncmp((char*) r.protocol_fields.http[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.s, "image/jpeg", r.protocol_fields.http[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.len) == 0)){
+      if((*r.user_flow_data == NULL) &&
+         r.protocol_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.len &&
+         (strncmp((char*) r.protocol_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.s, "image/jpeg", r.protocol_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.len) == 0)){
         struct in_addr src, dst;
-        src.s_addr = pkt->src_addr_t.ipv4_srcaddr;
-        dst.s_addr = pkt->dst_addr_t.ipv4_dstaddr;
+        src.s_addr = r.addr_src.ipv4;
+        dst.s_addr = r.addr_dst.ipv4;
         char src_string[64];
         strcpy(src_string, inet_ntoa(src));
         char dst_string[64];
         strcpy(dst_string, inet_ntoa(dst));
 
-
         char filename[MAX_FILENAME_SIZE];
-        sprintf(filename, "demo_jpeg_dump/%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32".jpeg", src_string, ntohs(pkt->srcport), dst_string, ntohs(pkt->dstport), pkt->processing_time);
+        sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32".jpeg", src_string, ntohs(r.port_src), dst_string, ntohs(r.port_dst), r.timestamp);
 
         u_int32_t j=0;
         /** File already exists. **/
         while(access(filename, F_OK)!=-1){
-          sprintf(filename, "demo_jpeg_dump/%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32"_%"PRIu32".jpeg", src_string, ntohs(pkt->srcport), dst_string, ntohs(pkt->dstport), pkt->processing_time, ++j);
+          sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32"_%"PRIu32".jpeg", src_string, ntohs(r.port_src), dst_string, ntohs(r.port_dst), r.timestamp, ++j);
         }
-        r.user_flow_data = fopen(filename, "w");
-        assert(r.user_flow_data);
+        *r.user_flow_data = fopen(filename, "w");
+        assert(*r.user_flow_data);
       }
 
-
-      if(r.protocol_fields.http[PFWL_FIELDS_HTTP_BODY].str.len && r.user_flow_data){
+      if(r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.len && *r.user_flow_data){
         u_int32_t i;
-        for(i=0; i<data_length; ++i)
-          fputc(app_data[i], ((FILE*) r.user_flow_data));
+        for(i = 0; i< r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.len; ++i)
+          fputc(r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.s[i], ((FILE*) *r.user_flow_data));
 
-        if(last_chunk){
-          assert(fclose(((FILE*) r.user_flow_data))==0);
-          r.user_flow_data = NULL;
-        }
-
+        assert(fclose(((FILE*) *r.user_flow_data))==0);
+        *r.user_flow_data = NULL;
       }
     }
 
 	}
-	printf("Finished.\n");
 	/* And close the session */
 	pcap_close(handle);
 

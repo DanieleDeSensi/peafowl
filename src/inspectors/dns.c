@@ -2,24 +2,25 @@
  * dns.c
  *
  * =========================================================================
- *  Copyright (C) 2012-2018, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 #include <peafowl/peafowl.h>
@@ -173,7 +174,7 @@ static uint8_t isResponse(struct dns_header* dns_header, uint8_t* is_name_server
 }
 
 
-uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_identification_result_t* pkt_info,
+uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields)
 {
   // check param
@@ -191,7 +192,7 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_iden
     uint16_t data_len = 0, type;
     struct dns_header* dns_header = (struct dns_header*)(app_data);
     pfwl_dns_internal_information_t* dns_info = &tracking_info->dns_informations;
-    pfwl_field_t* extracted_fields_dns = pkt_info->protocol_fields.dns;
+    pfwl_field_t* extracted_fields = pkt_info->protocol_fields;
 
     // pointer to beginning of queries section
     const unsigned char* pq = app_data + sizeof(struct dns_header);
@@ -220,7 +221,7 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_iden
       if(accuracy == PFWL_INSPECTOR_ACCURACY_HIGH && is_valid) {
 	// check name server field
   if(required_fields[PFWL_FIELDS_DNS_NAME_SRV]) {
-	  pfwl_field_t* name_srv = &(extracted_fields_dns[PFWL_FIELDS_DNS_NAME_SRV]);
+    pfwl_field_t* name_srv = &(extracted_fields[PFWL_FIELDS_DNS_NAME_SRV]);
 	  const char* temp = (const char*)(pq + 1);
 	    char* r = strchr((const char*)pq + 1, '\0');
       name_srv->str.s = temp;
@@ -257,7 +258,7 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_iden
 	  **/
 
 	  do{
-	    pfwl_field_t* name_srv_IP = &(extracted_fields_dns[PFWL_FIELDS_DNS_NS_IP_1 + i]);
+      pfwl_field_t* name_srv_IP = &(extracted_fields[PFWL_FIELDS_DNS_NS_IP_1 + i]);
 	    // Answer section
 	    if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
 
@@ -282,7 +283,7 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_iden
 	}
 	// check auth server
   if(required_fields[PFWL_FIELDS_DNS_AUTH_SRV] && is_auth_server) {
-	  pfwl_field_t* auth_srv = &(extracted_fields_dns[PFWL_FIELDS_DNS_AUTH_SRV]);
+    pfwl_field_t* auth_srv = &(extracted_fields[PFWL_FIELDS_DNS_AUTH_SRV]);
 
 	  /* /\** No Answer field(s) present: skip the query section and point to Authority fields **\/ */
 	  /* if(!is_name_server) pq += (extracted_fields_dns[PFWL_FIELDS_DNS_NAME_SRV].len + 4); */

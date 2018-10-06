@@ -1,27 +1,27 @@
 /*
  * tcp_stream_management.c
  *
- * Created on: 06/10/2012
- *
+ * Created on: 19/09/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 #include <peafowl/flow_table.h>
@@ -155,12 +155,11 @@ static
 #ifndef PFWL_DEBUG
 static
 #endif
-    void
-    pfwl_reordering_tcp_analyze_out_of_order(
-        pfwl_identification_result_t* pkt, pfwl_tracking_informations_t* tracking,
+void pfwl_reordering_tcp_analyze_out_of_order(
+        pfwl_dissection_info_t* pkt, pfwl_tracking_informations_t* tracking,
         uint32_t received_seq_num) {
   uint32_t end = received_seq_num + pkt->data_length_l7;
-  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt) + (pkt->offset_l4));
+  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt_refragmented) + (pkt->offset_l4));
 
   if (tcph->rst == 1) {
     tracking->seen_rst = 1;
@@ -176,7 +175,7 @@ static
     debug_print("%s\n", "The segment has no payload");
     if (tcph->fin == 1 && !BIT_IS_SET(tracking->seen_fin, pkt->direction) &&
         (frag = pfwl_reassembly_insert_fragment(
-             &(tracking->segments[pkt->direction]), pkt->pkt + pkt->offset_l7,
+             &(tracking->segments[pkt->direction]), pkt->pkt_refragmented + pkt->offset_l7,
              received_seq_num, end, &dummy, &dummy))) {
       frag->tcp_fin = 1;
       SET_BIT(tracking->seen_fin, pkt->direction);
@@ -186,7 +185,7 @@ static
   }
 
   frag = pfwl_reassembly_insert_fragment(&(tracking->segments[pkt->direction]),
-                                        pkt->pkt + pkt->offset_l7,
+                                        pkt->pkt_refragmented + pkt->offset_l7,
                                         received_seq_num, end, &dummy, &dummy);
   if (frag && tcph->fin == 1) {
     frag->tcp_fin = 1;
@@ -218,7 +217,7 @@ static
 #endif
     pfwl_tcp_reordering_reordered_segment_t
     pfwl_reordering_tcp_analyze_sequence_numbers(
-        pfwl_identification_result_t* pkt, pfwl_tracking_informations_t* tracking) {
+        pfwl_dissection_info_t* pkt, pfwl_tracking_informations_t* tracking) {
 
   pfwl_tcp_reordering_reordered_segment_t to_return;
   to_return.data = NULL;
@@ -226,7 +225,7 @@ static
   to_return.connection_terminated = 0;
   to_return.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
 
-  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt) + (pkt->offset_l4));
+  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt_refragmented) + (pkt->offset_l4));
   uint32_t received_seq_num = ntohl(tcph->seq);
   uint32_t expected_seq_num = tracking->expected_seq_num[pkt->direction];
   /** Automatically wrapped when exceed the 32bit limit. **/
@@ -285,7 +284,7 @@ static
           (unsigned char*)malloc(sizeof(char) * (new_length));
       assert(buffer);
 
-      memcpy(buffer, pkt->pkt + pkt->offset_l7, pkt_length);
+      memcpy(buffer, pkt->pkt_refragmented + pkt->offset_l7, pkt_length);
       unsigned char* where = buffer + pkt_length;
       pfwl_reordering_tcp_group_contiguous_segments(
           &(tracking->segments[pkt->direction]), &where);
@@ -325,8 +324,8 @@ static
   }
 }
 
-uint8_t pfwl_reordering_tcp_track_connection_light(pfwl_identification_result_t *pkt, pfwl_tracking_informations_t* tracking) {
-  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt) + (pkt->offset_l4));
+uint8_t pfwl_reordering_tcp_track_connection_light(pfwl_dissection_info_t *pkt, pfwl_tracking_informations_t* tracking) {
+  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt_refragmented) + (pkt->offset_l4));
   if (tcph->fin == 1) {
     SET_BIT(tracking->seen_fin, pkt->direction);
   }
@@ -345,14 +344,14 @@ uint8_t pfwl_reordering_tcp_track_connection_light(pfwl_identification_result_t 
 }
 
 pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
-    pfwl_identification_result_t* pkt, pfwl_tracking_informations_t* tracking) {
+    pfwl_dissection_info_t* pkt, pfwl_tracking_informations_t* tracking) {
   pfwl_tcp_reordering_reordered_segment_t to_return;
   to_return.data = NULL;
   to_return.data_length = 0;
   to_return.connection_terminated = 0;
   to_return.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
 
-  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt) + (pkt->offset_l4));
+  struct tcphdr* tcph = (struct tcphdr*)((pkt->pkt_refragmented) + (pkt->offset_l4));
 
   if (tracking->seen_ack) {
     debug_print("%s\n",

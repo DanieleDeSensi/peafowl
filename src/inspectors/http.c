@@ -2,24 +2,25 @@
  * http.c
  *
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -123,7 +124,7 @@ int on_url(http_parser* parser, const char* at, size_t length) {
   return 0;
 }
 
-static pfwl_fields_http field_to_enum(const char* fieldname, size_t fieldlen){
+static pfwl_field_id_t field_to_enum(const char* fieldname, size_t fieldlen){
   //TODO Use UTHash
   if(!strncmp(fieldname, "Content-Type", fieldlen)){
     return PFWL_FIELDS_HTTP_CONTENT_TYPE;
@@ -131,7 +132,7 @@ static pfwl_fields_http field_to_enum(const char* fieldname, size_t fieldlen){
     return PFWL_FIELDS_HTTP_USER_AGENT;
   }
 
-  return PFWL_FIELDS_HTTP_NUM;
+  return PFWL_FIELDS_NUM;
 }
 
 #ifndef PFWL_DEBUG
@@ -140,7 +141,7 @@ static
 int on_field(http_parser* parser, const char* at, size_t length) {
   pfwl_http_internal_informations_t* infos =
       (pfwl_http_internal_informations_t*)parser->data;
-  parser->hdr_field = PFWL_FIELDS_HTTP_NUM;
+  parser->hdr_field = PFWL_FIELDS_NUM;
 
   const char* real_data = at;
   size_t real_length = length;
@@ -155,8 +156,8 @@ int on_field(http_parser* parser, const char* at, size_t length) {
     infos->temp_buffer_dirty = 1;
   }
 
-  pfwl_fields_http field = field_to_enum(real_data, real_length);
-  if (field < PFWL_FIELDS_HTTP_NUM && parser->required_fields[field]) {
+  pfwl_field_id_t field = field_to_enum(real_data, real_length);
+  if (field < PFWL_FIELDS_NUM && parser->required_fields[field]) {
     parser->hdr_field = field;
   }
   return 0;
@@ -166,7 +167,7 @@ int on_field(http_parser* parser, const char* at, size_t length) {
 static
 #endif
 int on_value(http_parser* parser, const char* at, size_t length) {
-  if (parser->hdr_field < PFWL_FIELDS_HTTP_NUM) {
+  if (parser->hdr_field < PFWL_FIELDS_NUM) {
     pfwl_http_internal_informations_t* infos = (pfwl_http_internal_informations_t*) parser->data;
 
     parser->extracted_fields[PFWL_FIELDS_HTTP_VERSION_MAJOR].num = parser->http_major;
@@ -239,7 +240,7 @@ int on_body(http_parser* parser, const char* at, size_t length) {
  */
 uint8_t check_http(const unsigned char* app_data,
                    uint32_t data_length,
-                   pfwl_identification_result_t* pkt_info,
+                   pfwl_dissection_info_t* pkt_info,
                    pfwl_tracking_informations_t* tracking_info,
                    pfwl_inspector_accuracy_t accuracy,
                    uint8_t *required_fields) {
@@ -262,7 +263,7 @@ uint8_t check_http(const unsigned char* app_data,
           sizeof(pfwl_http_internal_informations_t));
 
     parser->required_fields = required_fields;
-    parser->extracted_fields = pkt_info->protocol_fields.http;
+    parser->extracted_fields = pkt_info->protocol_fields;
     parser->data = tracking_info->http_informations;
   }
 

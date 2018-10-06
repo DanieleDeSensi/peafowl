@@ -1,5 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
-
+add_definitions(-g -O0)
 add_subdirectory(protocol_identification)
 add_subdirectory(dump_jpeg)
 add_subdirectory(sip_extraction)

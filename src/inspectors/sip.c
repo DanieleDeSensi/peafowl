@@ -3,29 +3,29 @@
  *
  * Created on: 29/06/2016
  *
- * This dissector is adapted from captagent SIP dissector
- (https://github.com/sipcapture/captagent).
+ * This dissector is adapted from captagent SIP dissector (https://github.com/sipcapture/captagent).
  *
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ *  Copyright (C) 2012-2019, Daniele De Sensi (d.desensi.software@gmail.com)
  *  Copyright (C) 2016, Lorenzo Mangani (lorenzo.mangani@gmail.com), QXIP BV
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -1197,7 +1197,7 @@ uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,
   return r;
 }
 
-uint8_t check_sip(const unsigned char *app_data, uint32_t data_length, pfwl_identification_result_t *pkt_info,
+uint8_t check_sip(const unsigned char *app_data, uint32_t data_length, pfwl_dissection_info_t *pkt_info,
                   pfwl_tracking_informations_t *tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
   if (!data_length) {
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
@@ -1214,7 +1214,7 @@ uint8_t check_sip(const unsigned char *app_data, uint32_t data_length, pfwl_iden
   uint8_t r = parse_packet(app_data, data_length,
                            &tracking_info->sip_informations,
                            accuracy,
-                           pkt_info->protocol_fields.sip,
+                           pkt_info->protocol_fields,
                            required_fields);
   return r;
 }

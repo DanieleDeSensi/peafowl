@@ -1,26 +1,26 @@
 /*
  * flow_table.h
  *
- * Created on: 22/10/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -119,6 +119,21 @@ typedef struct pfwl_dns_internal_information {
   
 } pfwl_dns_internal_information_t;
   /******************** DNS (end) ******************/
+
+/********************** HTTP ************************/
+typedef struct pfwl_http_internal_informations {
+  char* temp_buffer;
+  size_t temp_buffer_size;
+  uint8_t temp_buffer_dirty : 1;
+} pfwl_http_internal_informations_t;
+/********************** HTTP (END) ************************/
+
+/********************** SSL ************************/
+typedef struct pfwl_ssl_internal_information {
+  uint8_t* pkt_buffer;
+  int pkt_size;
+} pfwl_ssl_internal_information_t;
+/********************** SSL (END) ************************/
 
 /** This must be initialized to zero before use. **/
 typedef struct pfwl_tracking_informations {
@@ -243,6 +258,7 @@ typedef struct pfwl_flow_info {
    */
   uint8_t tcp_reordering_enabled : 1;
   pfwl_tracking_informations_t tracking;
+  const unsigned char* last_rebuilt_ip_fragments; // For internal use only.
   const unsigned char* last_rebuilt_tcp_data; // For internal use only.
 
   uint64_t num_packets;
@@ -278,31 +294,31 @@ pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
                                           uint16_t num_partitions);
 #endif
 
-void pfwl_flow_table_delete(pfwl_flow_table_t* db,
-                            pfwl_flow_cleaner_callback_t* flow_cleaner_callback);
+void pflw_flow_table_set_flow_cleaner_callback(pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback);
+
+void pfwl_flow_table_delete(pfwl_flow_table_t* db);
 
 pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db,
                                        uint32_t index,
-                                       pfwl_identification_result_t* pkt_info);
+                                       pfwl_dissection_info_t* pkt_info);
 
 pfwl_flow_t* pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
-                                                 pfwl_identification_result_t* pkt_info,
-                                                 pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+                                                 pfwl_dissection_info_t* pkt_info,
                                                  char* protocols_to_inspect,
                                                  uint8_t tcp_reordering_enabled);
 
-void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
-                                 pfwl_flow_t* to_delete);
+void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_t* to_delete);
+void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, pfwl_flow_t* to_delete);
 
 /**
  * They are used directly only in mc_dpi. Should never be used directly
  * by the user.
  **/
 uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
-                                      const pfwl_identification_result_t* const pkt_info);
+                                      const pfwl_dissection_info_t* const pkt_info);
 
 uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,
-                                      const pfwl_identification_result_t* const pkt_info);
+                                      const pfwl_dissection_info_t* const pkt_info);
 
 void pfwl_init_flow_info_internal(pfwl_flow_info_t* flow_info,
                           char* protocols_to_inspect,
@@ -312,17 +328,15 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t* db,
     uint16_t partition_id,
     uint32_t index,
-    pfwl_identification_result_t* pkt_info,
-    pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+    pfwl_dissection_info_t* pkt_info,
     char* protocols_to_inspect,
     uint8_t tcp_reordering_enabled);
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
                                         uint16_t num_partitions);
 
-void mc_pfwl_flow_table_delete_flow(
-    pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
-    uint16_t partition_id, pfwl_flow_t* to_delete);
+void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, uint16_t partition_id, pfwl_flow_t* to_delete);
+void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, uint16_t partition_id, pfwl_flow_t* to_delete);
 
 #ifdef __cplusplus
 }

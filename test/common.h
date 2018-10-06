@@ -24,18 +24,17 @@
 class Pcap{
 private:
     pcap_t* _handle;
-    uint _ip_offset;
-    int _datalink_type;
 public:
+    int _datalink_type;
     Pcap(const char* pcapName);
 
     std::pair<const u_char*, unsigned long> getNextPacket();
 };
 
-std::vector<pfwl_identification_result_t> getProtocols(const char* pcapName,
+std::vector<pfwl_dissection_info_t> getProtocols(const char* pcapName,
                   std::vector<uint>& protocols);
 
-std::vector<pfwl_identification_result_t> getProtocolsWithState(const char* pcapName,
+std::vector<pfwl_dissection_info_t> getProtocolsWithState(const char* pcapName,
                            std::vector<uint>& protocols,
                            pfwl_state_t* state);
 

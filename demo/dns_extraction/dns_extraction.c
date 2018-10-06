@@ -6,27 +6,29 @@
  * Created on: 19/09/2018
  *
  * =========================================================================
- *  Copyright (C) 2018, Michele Campus (michelecampus5@gmail.com)
- *  Copyright (C) 2012-2018, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2018, Michele Campus (michelecampus5@gmail.com)
+ * Copyright (c) 2012-2018, Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
+
 
 #include <peafowl/peafowl.h>
 #include <pcap.h>
@@ -63,68 +65,36 @@ int main(int argc, char** argv){
     fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
     return (2);
   }
-  int datalink_type = pcap_datalink(handle);
-  uint ip_offset = 0;
-  
-  if(datalink_type == DLT_EN10MB){
-    printf("Datalink type: Ethernet\n");
-    ip_offset = sizeof(struct ether_header);
-  }else if(datalink_type == DLT_RAW){
-    printf("Datalink type: RAW\n");
-    ip_offset = 0;
-  }else if(datalink_type == DLT_LINUX_SLL){
-    printf("Datalink type: Linux Cooked\n");
-    ip_offset = 16;
-  }else{
-    fprintf(stderr, "Datalink type not supported\n");
-    exit(-1);
-  }
 
   const u_char* packet;
   struct pcap_pkthdr header;
 
-  uint virtual_offset = 0;
-
   // Server Name field
-  pfwl_protocol_field_add(state, PFWL_PROTOCOL_DNS, PFWL_FIELDS_DNS_NAME_SRV);
+  pfwl_protocol_field_add(state, PFWL_FIELDS_DNS_NAME_SRV);
   // IP address of Server Name field
-  /* pfwl_protocol_field_add(state, PFWL_PROTOCOL_DNS, PFWL_FIELDS_DNS_NS_IP_1); */
+  /* pfwl_protocol_field_add(state, PFWL_FIELDS_DNS_NS_IP_1); */
   // Authoritative Server Name field
-  /* pfwl_protocol_field_add(state, PFWL_PROTOCOL_DNS, PFWL_FIELDS_DNS_AUTH_SRV); */
+  /* pfwl_protocol_field_add(state, PFWL_FIELDS_DNS_AUTH_SRV); */
 
   while((packet = pcap_next(handle, &header)) != NULL){
-    if(datalink_type == DLT_EN10MB){
-      if(header.caplen < ip_offset){
-	continue;
-      }
-      uint16_t ether_type = ((struct ether_header*) packet)->ether_type;
-      if(ether_type == htons(0x8100)){ // VLAN
-	virtual_offset = 4;
-      }
-      if(ether_type != htons(ETHERTYPE_IP) &&
-	 ether_type != htons(ETHERTYPE_IPV6)){
-	continue;
-      }
-    }
-
-    pfwl_identification_result_t r = pfwl_get_protocol(state, packet+ip_offset+virtual_offset, header.caplen-ip_offset-virtual_offset, time(NULL));
+    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), pcap_datalink(handle));
 
     if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
-       r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].len){
-      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].s;
-      size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].len;
+       r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].str.len){
+      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].str.s;
+      size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].str.len;
       printf("Name Server detected: %.*s\n", (int) field_len, field_value);
     }
     if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
-       r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].len){
-      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].s;
-      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].len;
+       r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].str.len){
+      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].str.s;
+      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].str.len;
       printf("IP address of Name Server: %.*s\n", (int) field_len, field_value);
     }
     if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
-       r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].len){
-      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].s;
-      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].len;
+       r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].str.len){
+      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].str.s;
+      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].str.len;
       printf("Authoritative Server detected: %.*s\n", (int) field_len, field_value);
     }
   }

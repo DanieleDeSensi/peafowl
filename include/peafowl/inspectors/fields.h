@@ -1,27 +1,26 @@
 /*
  * fields.h
  *
- *  Created on: 23/09/2012
- *
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -46,62 +45,59 @@ typedef union pfwl_field{
   uint32_t num;
 }pfwl_field_t;
 
-/** SIP field **/
 typedef enum{
-  PFWL_FIELDS_SIP_REQUEST_URI = 0, ///< [STRING]
-  PFWL_FIELDS_SIP_METHOD,          ///< [STRING]
-  PFWL_FIELDS_SIP_CALLID,          ///< [STRING]
-  PFWL_FIELDS_SIP_REASON,          ///< [STRING]
-  PFWL_FIELDS_SIP_RTCPXR_CALLID,   ///< [STRING]
-  PFWL_FIELDS_SIP_CSEQ,            ///< [STRING]
+  /** SIP field **/
+  PFWL_FIELDS_SIP_FIRST = 0,          ///< Dummy value to indicate first SIP field
+  PFWL_FIELDS_SIP_REQUEST_URI = PFWL_FIELDS_SIP_FIRST,    ///< [STRING]
+  PFWL_FIELDS_SIP_METHOD,             ///< [STRING]
+  PFWL_FIELDS_SIP_CALLID,             ///< [STRING]
+  PFWL_FIELDS_SIP_REASON,             ///< [STRING]
+  PFWL_FIELDS_SIP_RTCPXR_CALLID,      ///< [STRING]
+  PFWL_FIELDS_SIP_CSEQ,               ///< [STRING]
   PFWL_FIELDS_SIP_CSEQ_METHOD_STRING, ///< [STRING]
-  PFWL_FIELDS_SIP_VIA,          ///< [STRING]
-  PFWL_FIELDS_SIP_CONTACT_URI,  ///< [STRING]
-  PFWL_FIELDS_SIP_RURI_USER,    ///< [STRING]
-  PFWL_FIELDS_SIP_RURI_DOMAIN,  ///< [STRING]
-  PFWL_FIELDS_SIP_FROM_USER,    ///< [STRING]
-  PFWL_FIELDS_SIP_FROM_DOMAIN,  ///< [STRING]
-  PFWL_FIELDS_SIP_TO_USER,      ///< [STRING]
-  PFWL_FIELDS_SIP_TO_DOMAIN,    ///< [STRING]
-  PFWL_FIELDS_SIP_PAI_USER,     ///< [STRING]
-  PFWL_FIELDS_SIP_PAI_DOMAIN,   ///< [STRING]
-  PFWL_FIELDS_SIP_PID_URI,      ///< [STRING]
-  PFWL_FIELDS_SIP_FROM_URI,     ///< [STRING]
-  PFWL_FIELDS_SIP_TO_URI,       ///< [STRING]
-  PFWL_FIELDS_SIP_RURI_URI,     ///< [STRING]
-  PFWL_FIELDS_SIP_TO_TAG,       ///< [STRING]
-  PFWL_FIELDS_SIP_FROM_TAG,     ///< [STRING]
-  PFWL_FIELDS_SIP_NUM,          ///< Dummy value to indicate number of fields. Must be the last field specified.
-}pfwl_fields_sip;
-
-/** DNS field **/
-typedef enum{
-  PFWL_FIELDS_DNS_NAME_SRV = 0, ///< Server name [STRING]
-  PFWL_FIELDS_DNS_NS_IP_1,      ///< Server name IP address [STRING]
-  PFWL_FIELDS_DNS_NS_IP_2,      ///< Server name IP address [STRING]
-  PFWL_FIELDS_DNS_AUTH_SRV,     ///< Authority name [STRING]
-  PFWL_FIELDS_DNS_NUM,          ///< Dummy value to indicate number of fields. Must be the last field specified.
-}pfwl_fields_dns;
-
-/** SSL field **/
-typedef enum{
-  PFWL_FIELDS_SSL_CERTIFICATE = 0, ///< Server name [STRING]
-  PFWL_FIELDS_SSL_NUM,             ///< Dummy value to indicate number of fields. Must be the last field specified.
-}pfwl_fields_ssl;
-
-/** HTTP field **/
-typedef enum{
-  PFWL_FIELDS_HTTP_VERSION_MAJOR = 0,  ///< HTTP Version - Major [NUM]
-  PFWL_FIELDS_HTTP_VERSION_MINOR,      ///< HTTP Version - Minor [NUM]
-  PFWL_FIELDS_HTTP_METHOD,             ///< HTTP Method. Please check against pfwl_http_methods_t [NUM]
-  PFWL_FIELDS_HTTP_STATUS_CODE,        ///< HTTP Status code [NUM]
-  PFWL_FIELDS_HTTP_MSG_TYPE,           ///< HTTP request or response. Please check againts pfwl_http_message_type_t enumeration [NUM]
-  PFWL_FIELDS_HTTP_BODY,               ///< HTTP Body            [STRING]
-  PFWL_FIELDS_HTTP_URL,                ///< HTTP URL             [STRING]
-  PFWL_FIELDS_HTTP_USER_AGENT,         ///< HTTP User agent      [STRING]
-  PFWL_FIELDS_HTTP_CONTENT_TYPE,       ///< HTTP Content TYpe    [STRING]
-  PFWL_FIELDS_HTTP_NUM,                ///< Dummy value to indicate number of fields. Must be the last field specified.
-}pfwl_fields_http;
+  PFWL_FIELDS_SIP_VIA,                ///< [STRING]
+  PFWL_FIELDS_SIP_CONTACT_URI,        ///< [STRING]
+  PFWL_FIELDS_SIP_RURI_USER,          ///< [STRING]
+  PFWL_FIELDS_SIP_RURI_DOMAIN,        ///< [STRING]
+  PFWL_FIELDS_SIP_FROM_USER,          ///< [STRING]
+  PFWL_FIELDS_SIP_FROM_DOMAIN,        ///< [STRING]
+  PFWL_FIELDS_SIP_TO_USER,            ///< [STRING]
+  PFWL_FIELDS_SIP_TO_DOMAIN,          ///< [STRING]
+  PFWL_FIELDS_SIP_PAI_USER,           ///< [STRING]
+  PFWL_FIELDS_SIP_PAI_DOMAIN,         ///< [STRING]
+  PFWL_FIELDS_SIP_PID_URI,            ///< [STRING]
+  PFWL_FIELDS_SIP_FROM_URI,           ///< [STRING]
+  PFWL_FIELDS_SIP_TO_URI,             ///< [STRING]
+  PFWL_FIELDS_SIP_RURI_URI,           ///< [STRING]
+  PFWL_FIELDS_SIP_TO_TAG,             ///< [STRING]
+  PFWL_FIELDS_SIP_FROM_TAG,           ///< [STRING]
+  PFWL_FIELDS_SIP_LAST,               ///< Dummy value to indicate last SIP field
+  /** DNS field **/
+  PFWL_FIELDS_DNS_FIRST,              ///< Dummy value to indicate first DNS field
+  PFWL_FIELDS_DNS_NAME_SRV = PFWL_FIELDS_DNS_FIRST, ///< Server name [STRING]
+  PFWL_FIELDS_DNS_NS_IP_1,            ///< Server name IP address [STRING]
+  PFWL_FIELDS_DNS_NS_IP_2,            ///< Server name IP address [STRING]
+  PFWL_FIELDS_DNS_AUTH_SRV,           ///< Authority name [STRING]
+  PFWL_FIELDS_DNS_LAST,               ///< Dummy value to indicate last DNS field
+  /** SSL field **/
+  PFWL_FIELDS_SSL_FIRST,              ///< Dummy value to indicate first SSL field
+  PFWL_FIELDS_SSL_CERTIFICATE = PFWL_FIELDS_SSL_FIRST,  ///< Server name [STRING]
+  PFWL_FIELDS_SSL_LAST,               ///< Dummy value to indicate last SSL field
+  /** HTTP field **/
+  PFWL_FIELDS_HTTP_FIRST,             ///< Dummy value to indicate first HTTP field
+  PFWL_FIELDS_HTTP_VERSION_MAJOR = PFWL_FIELDS_HTTP_FIRST,     ///< HTTP Version - Major [NUM]
+  PFWL_FIELDS_HTTP_VERSION_MINOR,     ///< HTTP Version - Minor [NUM]
+  PFWL_FIELDS_HTTP_METHOD,            ///< HTTP Method. Please check against pfwl_http_methods_t [NUM]
+  PFWL_FIELDS_HTTP_STATUS_CODE,       ///< HTTP Status code [NUM]
+  PFWL_FIELDS_HTTP_MSG_TYPE,          ///< HTTP request or response. Please check againts pfwl_http_message_type_t enumeration [NUM]
+  PFWL_FIELDS_HTTP_BODY,              ///< HTTP Body            [STRING]
+  PFWL_FIELDS_HTTP_URL,               ///< HTTP URL             [STRING]
+  PFWL_FIELDS_HTTP_USER_AGENT,        ///< HTTP User agent      [STRING]
+  PFWL_FIELDS_HTTP_CONTENT_TYPE,      ///< HTTP Content TYpe    [STRING]
+  PFWL_FIELDS_HTTP_LAST,              ///< Dummy value to indicate last HTTP field
+  /** **/
+  PFWL_FIELDS_NUM,                    ///< Dummy value to indicate number of fields. Must be the last field specified.
+}pfwl_field_id_t;
 
 typedef enum pfwl_http_message_type {
   PFWL_HTTP_REQUEST = HTTP_REQUEST,

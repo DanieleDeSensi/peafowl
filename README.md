@@ -635,7 +635,7 @@ valuable advices.
 
 The following people contributed to Peafowl:
 - Daniele De Sensi (d.desensi.software@gmail.com): Main developer
-- Michele Campus (michelecampus5@gmail.com): DNS dissector
+- Michele Campus (michelecampus5@gmail.com): DNS dissector, L2 parsing
 - Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors
 - max197616 (https://github.com/max197616): SSL dissector
 - QXIP B.V. sponsored the development of some parts of Peafowl (e.g. SIP dissector, Prometheus DB export, and others)

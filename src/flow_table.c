@@ -1,26 +1,27 @@
 /*
  * flow_table.c
  *
- *  Created on: 22/10/2012
+ * Created on: 19/09/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -113,7 +114,7 @@ static inline void v6_flow_free(pfwl_flow_t* flow) {
 #endif
 }
 
-typedef uint32_t(pfwl_fnv_hash_function)(pfwl_identification_result_t* in, uint8_t log);
+typedef uint32_t(pfwl_fnv_hash_function)(pfwl_dissection_info_t* in, uint8_t log);
 
 typedef struct pfwl_flow_DB_partition_specific_informations {
   /** This table part is in the range [lowest_index, highest_index]. **/
@@ -122,6 +123,7 @@ typedef struct pfwl_flow_DB_partition_specific_informations {
   uint32_t last_walk;
   uint32_t active_flows;
   uint32_t max_active_flows;
+  pfwl_flow_t* delayed_deletion_flow; // This is a flow that received the TCP FIN but we do not clean immediately, to give the user the possibility to get the last data found.
 } pfwl_flow_DB_partition_specific_informations_t;
 
 typedef struct pfwl_flow_table_partition {
@@ -154,6 +156,7 @@ struct pfwl_flow_table {
    *  the thread's partition specific informations.
    */
   pfwl_flow_t* table;
+  pfwl_flow_cleaner_callback_t* flow_cleaner_callback;
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
   uint32_t seed;
 #endif
@@ -171,7 +174,7 @@ struct pfwl_flow_table {
 #ifndef PFWL_DEBUG
 static
 #endif
-uint8_t v4_equals(pfwl_flow_t* flow, pfwl_identification_result_t* pkt_info) {
+uint8_t v4_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
   return ((flow->addr_src.ipv4 == pkt_info->addr_src.ipv4 &&
            flow->addr_dst.ipv4 == pkt_info->addr_dst.ipv4 &&
            flow->port_src == pkt_info->port_src &&
@@ -186,7 +189,7 @@ uint8_t v4_equals(pfwl_flow_t* flow, pfwl_identification_result_t* pkt_info) {
 #ifndef PFWL_DEBUG
 static
 #endif
-uint8_t v6_equals(pfwl_flow_t* flow, pfwl_identification_result_t* pkt_info) {
+uint8_t v6_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
   uint8_t i;
 
   /*1: src=src and dst=dst. 2: src=dst and dst=src. */
@@ -220,7 +223,7 @@ uint8_t v6_equals(pfwl_flow_t* flow, pfwl_identification_result_t* pkt_info) {
 #ifndef PFWL_DEBUG
 static
 #endif
-uint8_t flow_equals(pfwl_flow_t* flow, pfwl_identification_result_t* pkt_info) {
+uint8_t flow_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
   if(pkt_info->ip_version == PFWL_IP_VERSION_4){
     return v4_equals(flow, pkt_info);
   }else{
@@ -243,6 +246,7 @@ static
 
   table_informations->last_walk = 0;
   table_informations->active_flows = 0;
+  table_informations->delayed_deletion_flow = NULL;
 }
 
 static void pfwl_flow_table_update_flow_count(pfwl_flow_table_t* db) {
@@ -272,8 +276,8 @@ pfwl_flow_DB_v4_t* pfwl_flow_table_create(uint32_t size,
                                            uint32_t start_pool_size) {
 #else
 pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
-                                             uint8_t strict,
-                                             uint16_t num_partitions) {
+                                          uint8_t strict,
+                                          uint16_t num_partitions) {
 #endif
   pfwl_flow_table_t* table = NULL;
   uint32_t size = expected_flows / PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE;
@@ -286,6 +290,7 @@ pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
     table->num_partitions = num_partitions;
     table->max_active_flows = expected_flows;
     table->max_active_flows_strict = strict;
+    table->flow_cleaner_callback = NULL;
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     table->start_pool_size = start_pool_size;
 #endif
@@ -319,6 +324,10 @@ pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
   } else
     table = NULL;
   return table;
+}
+
+void pflw_flow_table_set_flow_cleaner_callback(pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback){
+  db->flow_cleaner_callback = flow_cleaner_callback;
 }
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
@@ -396,7 +405,7 @@ void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
 }
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
-pfwl_flow_DB_v6_t* pfwl_flow_table_6(6(uint32_t size,
+pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
                                            uint32_t max_active_v6_flows,
                                            uint16_t num_partitions,
                                            uint32_t start_pool_size) {
@@ -450,21 +459,22 @@ pfwl_flow_table_t* pfwl_flow_table_create_v6(uint32_t expected_flows,
   return table;
 }
 
-void mc_pfwl_flow_table_delete_flow(
-    pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db,
     uint16_t partition_id, pfwl_flow_t* to_delete) {
   to_delete->prev->next = to_delete->next;
   to_delete->next->prev = to_delete->prev;
 
-  if (flow_cleaner_callback)
-    (*(flow_cleaner_callback))(
-        to_delete->info.tracking.udata);
+  if (db->flow_cleaner_callback)
+    (*(db->flow_cleaner_callback))(to_delete->info.tracking.udata);
   --db->partitions[partition_id].partition.informations.active_flows;
   free(to_delete->info.tracking.http_informations[0].temp_buffer);
   free(to_delete->info.tracking.http_informations[1].temp_buffer);
   pfwl_reordering_tcp_delete_all_fragments(&(to_delete->info.tracking));
   if(to_delete->info.last_rebuilt_tcp_data){
     free((void*) to_delete->info.last_rebuilt_tcp_data);
+  }
+  if(to_delete->info.last_rebuilt_ip_fragments){
+    free((void*) to_delete->info.last_rebuilt_ip_fragments);
   }
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
@@ -492,19 +502,25 @@ void mc_pfwl_flow_table_delete_flow(
 #endif
 }
 
+void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, uint16_t partition_id, pfwl_flow_t* to_delete){
+  db->partitions[partition_id].partition.informations.delayed_deletion_flow = to_delete;
 
-void pfwl_flow_table_delete_flow(
-    pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
-    pfwl_flow_t* to_delete) {
-  mc_pfwl_flow_table_delete_flow(db, flow_cleaner_callback, 0, to_delete);
+}
+
+void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, pfwl_flow_t* to_delete){
+  mc_pfwl_flow_table_delete_flow_later(db, 0, to_delete);
+}
+
+
+void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_t* to_delete) {
+  mc_pfwl_flow_table_delete_flow(db, 0, to_delete);
 }
 
 #ifndef PFWL_DEBUG
 static
 #endif
 void pfwl_flow_table_check_expiration(
-        pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
-        uint16_t partition_id, uint32_t current_time) {
+        pfwl_flow_table_t* db, uint16_t partition_id, uint32_t current_time) {
   uint32_t i;
 #if !PFWL_USE_MTF
   ipv4_flow_t* current;
@@ -520,8 +536,7 @@ void pfwl_flow_table_check_expiration(
 #if PFWL_USE_MTF
     while (current_time - db->table[i].prev->last_timestamp >
            PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
-      mc_pfwl_flow_table_delete_flow(db, flow_cleaner_callback, partition_id,
-                                       db->table[i].prev);
+      mc_pfwl_flow_table_delete_flow(db, partition_id, db->table[i].prev);
     }
 #else
     current = db->table[i].prev;
@@ -571,26 +586,30 @@ void pfwl_init_flow_info_internal(pfwl_flow_info_t* flow_info,
   flow_info->trials = 0;
   flow_info->tcp_reordering_enabled = tcp_reordering_enabled;
   flow_info->last_rebuilt_tcp_data = NULL;
+  flow_info->last_rebuilt_ip_fragments = NULL;
   bzero(&(flow_info->tracking), sizeof(pfwl_tracking_informations_t));
 }
 
-pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
-    pfwl_flow_table_t* db,
-    uint16_t partition_id,
-    uint32_t index,
-    pfwl_identification_result_t* pkt_info,
-    pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
-    char* protocols_to_inspect,
-    uint8_t tcp_reordering_enabled) {
-
-  pfwl_flow_t* head = &(db->table[index]);
-  pfwl_flow_t* iterator = head->next;
+pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
+  uint16_t partition_id,
+  uint32_t index,
+  pfwl_dissection_info_t* pkt_info,
+  char* protocols_to_inspect,
+  uint8_t tcp_reordering_enabled) {
 
   debug_print("%s\n",
-              "[flow_table.c]: "
-              "pfwl_flow_table_find_or_create_flow_v4 invoked.");
+            "[flow_table.c]: "
+            "pfwl_flow_table_find_or_create_flow_v4 invoked.");
+
+  // Do it before searching the current flow
+  if(db->partitions[partition_id].partition.informations.delayed_deletion_flow){
+    mc_pfwl_flow_table_delete_flow(db, partition_id, db->partitions[partition_id].partition.informations.delayed_deletion_flow);
+    db->partitions[partition_id].partition.informations.delayed_deletion_flow = NULL;
+  }
 
   /** Flow searching. **/
+  pfwl_flow_t* head = &(db->table[index]);
+  pfwl_flow_t* iterator = head->next;
   while (iterator != head && !flow_equals(iterator, pkt_info)) {
     iterator = iterator->next;
   }
@@ -606,10 +625,9 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
    **/
   if (iterator != head && pkt_info->protocol_l4 == IPPROTO_TCP &&
       iterator->info.tracking.seen_rst &&
-      ((struct tcphdr*)(pkt_info->pkt + pkt_info->offset_l4))->syn) {
+      ((struct tcphdr*)(pkt_info->pkt_refragmented + pkt_info->offset_l4))->syn) {
     // Delete old flow.
-    mc_pfwl_flow_table_delete_flow(db, flow_cleaner_callback,
-                                     partition_id, iterator);
+    mc_pfwl_flow_table_delete_flow(db, partition_id, iterator);
     // Force the following code to create a new flow.
     iterator = head;
   }
@@ -681,8 +699,7 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
           pkt_info->timestamp -
               db->partitions[partition_id].partition.informations.last_walk >=
           PFWL_FLOW_TABLE_WALK_TIME)) {
-    pfwl_flow_table_check_expiration(db, flow_cleaner_callback,
-        partition_id, pkt_info->timestamp);
+    pfwl_flow_table_check_expiration(db, partition_id, pkt_info->timestamp);
     db->partitions[partition_id].partition.informations.last_walk =
         pkt_info->timestamp;
   }
@@ -699,7 +716,7 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
 }
 
 uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
-                                      const pfwl_identification_result_t* const pkt_info) {
+                                      const pfwl_dissection_info_t* const pkt_info) {
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH
   uint32_t row = v4_fnv_hash_function(pkt_info) % db->total_size;
 #elif PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
@@ -713,20 +730,19 @@ uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
 }
 
 pfwl_flow_t* pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
-                                                    pfwl_identification_result_t* pkt_info,
-                                                    pfwl_flow_cleaner_callback_t* flow_cleaner_callback,
+                                                    pfwl_dissection_info_t* pkt_info,
                                                     char* protocols_to_inspect,
                                                     uint8_t tcp_reordering_enabled) {
   return mc_pfwl_flow_table_find_or_create_flow(
       db, 0,
       pfwl_compute_v4_hash_function(db, pkt_info),
-      pkt_info, flow_cleaner_callback,
+      pkt_info,
       protocols_to_inspect,
       tcp_reordering_enabled);
 }
 
 uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,
-                                      const pfwl_identification_result_t* const pkt_info) {
+                                      const pfwl_dissection_info_t* const pkt_info) {
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH
   uint32_t row = v6_fnv_hash_function(pkt_info) % db->total_size;
 #elif PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
@@ -741,7 +757,7 @@ uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,
 
 pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db,
                                          uint32_t index,
-                                         pfwl_identification_result_t* pkt_info) {
+                                         pfwl_dissection_info_t* pkt_info) {
   pfwl_flow_t* head = &(db->table[index]);
   pfwl_flow_t* iterator = head->next;
 
@@ -756,15 +772,14 @@ pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db,
     return iterator;
 }
 
-void pfwl_flow_table_delete(
-    pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback) {
+void pfwl_flow_table_delete(pfwl_flow_table_t* db) {
   if (db != NULL) {
     if (db->table != NULL) {
       for (uint16_t j = 0; j < db->num_partitions; ++j) {
         for (uint32_t i = db->partitions[j].partition.informations.lowest_index;
              i <= db->partitions[j].partition.informations.highest_index; ++i) {
           while (db->table[i].next != &(db->table[i])) {
-            mc_pfwl_flow_table_delete_flow(db, flow_cleaner_callback, j,
+            mc_pfwl_flow_table_delete_flow(db, j,
                                              db->table[i].next);
           }
         }

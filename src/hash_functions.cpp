@@ -1,26 +1,27 @@
 /*
  * hash_functions.c
  *
- * Created on: 06/10/2012
+ * Created on: 19/09/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 #include <peafowl/hash_functions.h>
@@ -45,7 +46,7 @@ inline
 #endif
     /** FNV-1a 32-bit hash function. **/
     uint32_t
-    v4_fnv_hash_function(const pfwl_identification_result_t* const in) {
+    v4_fnv_hash_function(const pfwl_dissection_info_t* const in) {
   uint32_t low_addr, high_addr;
   uint16_t low_port, high_port;
 
@@ -100,7 +101,7 @@ inline
   return hval;
 }
 
-static void get_v6_low_high_addr_port(const pfwl_identification_result_t* const in,
+static void get_v6_low_high_addr_port(const pfwl_dissection_info_t* const in,
                                  struct in6_addr* low_addr, struct in6_addr* high_addr,
                                  uint16_t* low_port, uint16_t* high_port){
   uint8_t i = 0;
@@ -144,7 +145,7 @@ inline
 #endif
 #endif
 /** FNV-1a 32-bit hash function. **/
-uint32_t v6_fnv_hash_function(const pfwl_identification_result_t* const in) {
+uint32_t v6_fnv_hash_function(const pfwl_dissection_info_t* const in) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -322,7 +323,7 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
   *(uint32_t*)out = h1;
 }
 
-static void get_v4_key(const pfwl_identification_result_t* const in, char* v4_key) {
+static void get_v4_key(const pfwl_dissection_info_t* const in, char* v4_key) {
   uint32_t lower_addr = 0, higher_addr = 0;
   uint16_t lower_port = 0, higher_port = 0;
 
@@ -359,7 +360,7 @@ static void get_v4_key(const pfwl_identification_result_t* const in, char* v4_ke
   v4_key[12] = (higher_port & 0xFF);
 }
 
-uint32_t v4_hash_murmur3(const pfwl_identification_result_t* const in, uint32_t seed) {
+uint32_t v4_hash_murmur3(const pfwl_dissection_info_t* const in, uint32_t seed) {
   char v4_key[13];
   get_v4_key(in, v4_key);
   uint32_t result;
@@ -367,7 +368,7 @@ uint32_t v4_hash_murmur3(const pfwl_identification_result_t* const in, uint32_t 
   return result;
 }
 
-static void get_v6_key(const pfwl_identification_result_t* const in, char* v6_key){
+static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key){
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -389,7 +390,7 @@ static void get_v6_key(const pfwl_identification_result_t* const in, char* v6_ke
   v6_key[36] = (high_port & 0xFF);
 }
 
-uint32_t v6_hash_murmur3(const pfwl_identification_result_t* const in, uint32_t seed) {
+uint32_t v6_hash_murmur3(const pfwl_dissection_info_t* const in, uint32_t seed) {
   char v6_key[37];
   get_v6_key(in, v6_key);
   uint32_t result;
@@ -400,12 +401,12 @@ uint32_t v6_hash_murmur3(const pfwl_identification_result_t* const in, uint32_t 
 
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_SIMPLE_HASH || \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_simple(const pfwl_identification_result_t* const in) {
+uint32_t v4_hash_function_simple(const pfwl_dissection_info_t* const in) {
   return in->port_src + in->port_dst + in->addr_src.ipv4 +
          in->addr_dst.ipv4 + in->protocol_l4;
 }
 
-uint32_t v6_hash_function_simple(const pfwl_identification_result_t* const in) {
+uint32_t v6_hash_function_simple(const pfwl_dissection_info_t* const in) {
   uint8_t i;
   uint32_t partsrc = 0, partdst = 0;
   for (i = 0; i < 16; i++) {
@@ -419,7 +420,7 @@ uint32_t v6_hash_function_simple(const pfwl_identification_result_t* const in) {
 
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH || \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_bkdr(const pfwl_identification_result_t* const in) {
+uint32_t v4_hash_function_bkdr(const pfwl_dissection_info_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
   char v4_key[13];
@@ -431,7 +432,7 @@ uint32_t v4_hash_function_bkdr(const pfwl_identification_result_t* const in) {
   return (hash & 0x7FFFFFFF);
 }
 
-uint32_t v6_hash_function_bkdr(const pfwl_identification_result_t* const in) {
+uint32_t v6_hash_function_bkdr(const pfwl_dissection_info_t* const in) {
   uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
 

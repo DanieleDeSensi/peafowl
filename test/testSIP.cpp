@@ -21,20 +21,20 @@ TEST(SIPTest, Generic) {
 TEST(SIPTest, CallbackRequestURI){
     std::vector<uint> protocols;
     pfwl_state_t* state = pfwl_init();
-    pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_REQUEST_URI);
-    pfwl_protocol_field_add(state, PFWL_PROTOCOL_SIP, PFWL_FIELDS_SIP_METHOD);
-    std::vector<pfwl_identification_result_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
+    pfwl_protocol_field_add(state, PFWL_FIELDS_SIP_REQUEST_URI);
+    pfwl_protocol_field_add(state, PFWL_FIELDS_SIP_METHOD);
+    std::vector<pfwl_dissection_info_t>  results = getProtocolsWithState("./pcaps/sip-rtp.pcap", protocols, state);
     EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 102);
     for(auto r : results){
       if(r.protocol_l7 == PFWL_PROTOCOL_SIP){
-        if(r.protocol_fields.sip[PFWL_FIELDS_SIP_REQUEST_URI].str.len){
-          const char* field_value = r.protocol_fields.sip[PFWL_FIELDS_SIP_REQUEST_URI].str.s;
-          size_t field_len = r.protocol_fields.sip[PFWL_FIELDS_SIP_REQUEST_URI].str.len;
+        if(r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].str.len){
+          const char* field_value = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].str.s;
+          size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].str.len;
           EXPECT_TRUE(!strncmp(field_value, expectedRequestURIs[nextExpectedURI], field_len));
           ++nextExpectedURI;
-        }else if(r.protocol_fields.sip[PFWL_FIELDS_SIP_METHOD].str.len){
-          const char* field_value = r.protocol_fields.sip[PFWL_FIELDS_SIP_METHOD].str.s;
-          size_t field_len = r.protocol_fields.sip[PFWL_FIELDS_SIP_METHOD].str.len;
+        }else if(r.protocol_fields[PFWL_FIELDS_SIP_METHOD].str.len){
+          const char* field_value = r.protocol_fields[PFWL_FIELDS_SIP_METHOD].str.s;
+          size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_METHOD].str.len;
           EXPECT_TRUE(!strncmp(field_value, expectedMethods[nextExpectedMethod], field_len));
           ++nextExpectedMethod;
         }
