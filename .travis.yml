@@ -22,7 +22,7 @@ script:
   - mkdir build
   - cd build
   - cmake ../ -DENABLE_CODECOV=ON -DENABLE_TESTS=ON -DENABLE_CPPCHECK=ON
-  - make && make cppcheck && (make coverage || (cat ./Testing/Temporary/LastTest.log))
+  - make && make cppcheck && (make coverage || (cat ./Testing/Temporary/LastTest.log && exit 1))
   - cd ..
 
 after_success:

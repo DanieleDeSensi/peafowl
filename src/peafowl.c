@@ -332,6 +332,7 @@ pfwl_dissection_info_t pfwl_dissect_from_L2(pfwl_state_t* state, const unsigned 
                                             uint32_t length, uint32_t timestamp,
                                             int datalink_type){
   pfwl_dissection_info_t r;
+  memset(&r, 0, sizeof(r));
   pfwl_parse_L2(pkt, datalink_type, &r);
   pfwl_dissect_from_L3(state, pkt + r.offset_l3, length - r.offset_l3, timestamp, &r);
   return r;
@@ -342,7 +343,6 @@ void pfwl_dissect_from_L3(pfwl_state_t* state,
                           uint32_t length,
                           uint32_t timestamp,
                           pfwl_dissection_info_t* r) {
-  memset(r, 0, sizeof(*r));
   pfwl_parse_L3_L4(state, pkt, length, timestamp, r);
   if (unlikely(r->status == PFWL_STATUS_IP_FRAGMENT || r->status < 0)) {
     return;
