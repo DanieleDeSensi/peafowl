@@ -78,37 +78,9 @@ static inline pfwl_flow_t* v4_flow_alloc() {
   return (pfwl_flow_t*)r;
 }
 
-static inline pfwl_flow_t* v6_flow_alloc() {
-  void* r;
-#if PFWL_NUMA_AWARE
-  r = numa_alloc_onnode(sizeof(ipv6_flow_t), PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
-  assert(r);
-#else
-#if PFWL_FLOW_TABLE_ALIGN_FLOWS
-  int tmp =
-      posix_memalign((void**)&r, PFWL_CACHE_LINE_SIZE, sizeof(ipv6_flow_t));
-  if (tmp) {
-    assert("Failure on posix_memalign" == 0);
-  }
-#else
-  r = malloc(sizeof(pfwl_flow_t));
-  assert(r);
-#endif
-#endif
-  return (pfwl_flow_t*)r;
-}
-
-static inline void v4_flow_free(pfwl_flow_t* flow) {
+static inline void pfwl_flow_free(pfwl_flow_t* flow) {
 #if PFWL_NUMA_AWARE
   numa_free(flow, sizeof(ipv4_flow_t));
-#else
-  free(flow);
-#endif
-}
-
-static inline void v6_flow_free(pfwl_flow_t* flow) {
-#if PFWL_NUMA_AWARE
-  numa_free(flow, sizeof(ipv6_flow_t));
 #else
   free(flow);
 #endif
@@ -404,61 +376,6 @@ void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
   debug_print("%s\n", "[flow_table.c]: Active v4 flows computation finished.");
 }
 
-#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
-pfwl_flow_DB_v6_t* pfwl_flow_table_create_v6(uint32_t size,
-                                           uint32_t max_active_v6_flows,
-                                           uint16_t num_partitions,
-                                           uint32_t start_pool_size) {
-#else
-pfwl_flow_table_t* pfwl_flow_table_create_v6(uint32_t expected_flows,
-                                             uint8_t strict,
-                                             uint16_t num_partitions) {
-#endif
-  pfwl_flow_table_t* table = NULL;
-  uint32_t size = expected_flows / PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE;
-  if (size != 0) {
-    table = (pfwl_flow_table_t*)malloc(sizeof(pfwl_flow_table_t));
-    assert(table);
-    table->table = (pfwl_flow_t*)malloc(sizeof(pfwl_flow_t) * size);
-    assert(table->table);
-    table->total_size = size;
-    table->num_partitions = num_partitions;
-    table->max_active_flows = expected_flows;
-    table->max_active_flows_strict = strict;
-#if PFWL_FLOW_TABLE_USE_MEMORY_POOL
-    table->start_pool_size = start_pool_size;
-#endif
-
-    for (uint32_t i = 0; i < table->total_size; i++) {
-      /** Creation of sentinel node. **/
-      table->table[i].next = &(table->table[i]);
-      table->table[i].prev = &(table->table[i]);
-    }
-
-#if PFWL_NUMA_AWARE
-    table->partitions = numa_alloc_onnode(
-        sizeof(pfwl_flow_DB_v6_partition_t) * table->num_partitions,
-        PFWL_NUMA_AWARE_FLOW_TABLE_NODE);
-    assert(table->partitions);
-#else
-    int tmp = posix_memalign(
-        (void**)&(table->partitions), PFWL_CACHE_LINE_SIZE,
-        sizeof(pfwl_flow_table_partition_t) * table->num_partitions);
-    if (tmp) {
-      assert("Failure on posix_memalign" == 0);
-    }
-#endif
-
-#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
-    srand((unsigned int)time(NULL));
-    table->seed = rand();
-#endif
-    pfwl_flow_table_setup_partitions(table, table->num_partitions);
-  } else
-    table = NULL;
-  return table;
-}
-
 void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db,
     uint16_t partition_id, pfwl_flow_t* to_delete) {
   to_delete->prev->next = to_delete->next;
@@ -498,7 +415,7 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db,
     v4_flow_free(to_delete);
   }
 #else
-  v4_flow_free(to_delete);
+  pfwl_flow_free(to_delete);
 #endif
 }
 
