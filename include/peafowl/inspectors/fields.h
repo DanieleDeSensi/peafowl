@@ -93,7 +93,8 @@ typedef enum{
   PFWL_FIELDS_HTTP_BODY,              ///< HTTP Body            [STRING]
   PFWL_FIELDS_HTTP_URL,               ///< HTTP URL             [STRING]
   PFWL_FIELDS_HTTP_USER_AGENT,        ///< HTTP User agent      [STRING]
-  PFWL_FIELDS_HTTP_CONTENT_TYPE,      ///< HTTP Content TYpe    [STRING]
+  PFWL_FIELDS_HTTP_CONTENT_TYPE,      ///< HTTP Content Type    [STRING]
+  PFWL_FIELDS_HTTP_HOST,      ///< HTTP Host    [STRING]
   PFWL_FIELDS_HTTP_LAST,              ///< Dummy value to indicate last HTTP field
   /** **/
   PFWL_FIELDS_NUM,                    ///< Dummy value to indicate number of fields. Must be the last field specified.

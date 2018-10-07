@@ -104,7 +104,7 @@ typedef enum pfwl_status {
                                           ///< and analyzed when all the fragments will be
                                           ///< received.
   PFWL_STATUS_IP_LAST_FRAGMENT,           ///< The received datagram allowed the library to reconstruct a fragmented
-                                          ///< datagram. In this case, identification_info->pkt_refragmented
+                                          ///< datagram. In this case, dissection_info->pkt_refragmented
                                           ///< will contain a pointer to the recomposed datagram. This pointer will be different
                                           ///< from the packet provided. The user should free() this pointer when it is no
                                           ///< more needed (e.g. after calling pfwl_parse_L3_L4(..)).
@@ -153,6 +153,7 @@ typedef struct pfwl_dissection_info {
   uint8_t direction;              ///< Direction of the packet:
                                   ///< 0: From source to dest. 1: From dest to source
                                   ///< (with respect to src and dst stored in the flow).
+                                  ///< This is only valid for TCP and UDP packets.
   pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol.
   uint16_t offset_l4;             ///< Offset where L4 packet starts.
   const unsigned char* pkt_refragmented; ///< Refragmented IP packet. If the packet was not refragmented,

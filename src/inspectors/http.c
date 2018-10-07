@@ -130,6 +130,8 @@ static pfwl_field_id_t field_to_enum(const char* fieldname, size_t fieldlen){
     return PFWL_FIELDS_HTTP_CONTENT_TYPE;
   }else if (!strncmp(fieldname, "User-Agent", fieldlen)){
     return PFWL_FIELDS_HTTP_USER_AGENT;
+  }else if (!strncmp(fieldname, "Host", fieldlen)){
+    return PFWL_FIELDS_HTTP_HOST;
   }
 
   return PFWL_FIELDS_NUM;
@@ -279,7 +281,9 @@ uint8_t check_http(const unsigned char* app_data,
   else
     x.on_body = 0;
 
-  if (required_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE] || required_fields[PFWL_FIELDS_HTTP_USER_AGENT]) { // TODO Find a simpler way to check all Header fields
+  if (required_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE] ||
+      required_fields[PFWL_FIELDS_HTTP_HOST] ||
+      required_fields[PFWL_FIELDS_HTTP_USER_AGENT]) { // TODO Find a simpler way to check all Header fields
     x.on_header_field = on_field;
     x.on_header_value = on_value;
   } else {

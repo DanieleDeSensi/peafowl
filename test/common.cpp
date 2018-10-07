@@ -50,6 +50,8 @@ std::vector<pfwl_dissection_info_t> getProtocolsWithState(const char* pcapName, 
         for(size_t i = 0; i < PFWL_FIELDS_NUM; i++){
           if(i == PFWL_FIELDS_HTTP_CONTENT_TYPE ||
              i == PFWL_FIELDS_HTTP_BODY ||
+             i == PFWL_FIELDS_HTTP_HOST ||
+             i == PFWL_FIELDS_HTTP_USER_AGENT ||
              i == PFWL_FIELDS_SIP_REQUEST_URI ||
              i == PFWL_FIELDS_SIP_METHOD){
             size_t field_len = r.protocol_fields[i].str.len;

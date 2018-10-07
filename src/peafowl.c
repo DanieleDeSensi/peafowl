@@ -342,6 +342,7 @@ void pfwl_dissect_from_L3(pfwl_state_t* state,
                           uint32_t length,
                           uint32_t timestamp,
                           pfwl_dissection_info_t* r) {
+  memset(r, 0, sizeof(*r));
   pfwl_parse_L3_L4(state, pkt, length, timestamp, r);
   if (unlikely(r->status == PFWL_STATUS_IP_FRAGMENT || r->status < 0)) {
     return;
