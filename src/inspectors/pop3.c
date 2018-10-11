@@ -48,9 +48,9 @@ static const char* const length_4_msgs[PFWL_POP3_NUM_LEN4_MSGS] = {
     "USER", "PASS", "QUIT", "STAT", "LIST", "RETR", "DELE",
     "NOOP", "RSET", "QUIT", "APOP", "UIDL", "-ERR"};
 
-uint8_t check_pop3(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
-  if (pkt_info->protocol_l4 != IPPROTO_TCP) {
+uint8_t check_pop3(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                   pfwl_flow_info_private_t* flow_info_private) {
+  if (pkt_info->l4.protocol != IPPROTO_TCP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   uint8_t i;
@@ -61,7 +61,7 @@ uint8_t check_pop3(const unsigned char* app_data, uint32_t data_length, pfwl_dis
   if (data_length >= 3) {
     for (i = 0; i < PFWL_POP3_NUM_LEN3_MSGS; i++) {
       if (strncasecmp((const char*)app_data, length_3_msgs[i], 3) == 0) {
-        if (++tracking_info->num_pop3_matched_messages == PFWL_POP3_NUM_MESSAGES_TO_MATCH) {
+        if (++flow_info_private->num_pop3_matched_messages == PFWL_POP3_NUM_MESSAGES_TO_MATCH) {
           return PFWL_PROTOCOL_MATCHES;
         } else
           return PFWL_PROTOCOL_MORE_DATA_NEEDED;
@@ -72,7 +72,7 @@ uint8_t check_pop3(const unsigned char* app_data, uint32_t data_length, pfwl_dis
   if (data_length >= 4) {
     for (i = 0; i < PFWL_POP3_NUM_LEN4_MSGS; i++) {
       if (strncasecmp((const char*)app_data, length_4_msgs[i], 4) == 0) {
-        if (++tracking_info->num_pop3_matched_messages == PFWL_POP3_NUM_MESSAGES_TO_MATCH) {
+        if (++flow_info_private->num_pop3_matched_messages == PFWL_POP3_NUM_MESSAGES_TO_MATCH) {
           return PFWL_PROTOCOL_MATCHES;
         } else
           return PFWL_PROTOCOL_MORE_DATA_NEEDED;

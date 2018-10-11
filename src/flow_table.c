@@ -147,15 +147,15 @@ struct pfwl_flow_table {
 static
 #endif
 uint8_t v4_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
-  return ((flow->addr_src.ipv4 == pkt_info->addr_src.ipv4 &&
-           flow->addr_dst.ipv4 == pkt_info->addr_dst.ipv4 &&
-           flow->port_src == pkt_info->port_src &&
-           flow->port_dst == pkt_info->port_dst) ||
-          (flow->addr_src.ipv4 == pkt_info->addr_dst.ipv4 &&
-           flow->addr_dst.ipv4 == pkt_info->addr_src.ipv4 &&
-           flow->port_src == pkt_info->port_dst &&
-           flow->port_dst == pkt_info->port_src)) &&
-         flow->l4prot == pkt_info->protocol_l4;
+  return ((flow->addr_src.ipv4 == pkt_info->l3.addr_src.ipv4 &&
+           flow->addr_dst.ipv4 == pkt_info->l3.addr_dst.ipv4 &&
+           flow->port_src == pkt_info->l4.port_src &&
+           flow->port_dst == pkt_info->l4.port_dst) ||
+          (flow->addr_src.ipv4 == pkt_info->l3.addr_dst.ipv4 &&
+           flow->addr_dst.ipv4 == pkt_info->l3.addr_src.ipv4 &&
+           flow->port_src == pkt_info->l4.port_dst &&
+           flow->port_dst == pkt_info->l4.port_src)) &&
+         flow->l4prot == pkt_info->l4.protocol;
 }
 
 #ifndef PFWL_DEBUG
@@ -169,25 +169,25 @@ uint8_t v6_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
 
   for (i = 0; i < 16; i++) {
     if (direction != 2 &&
-        pkt_info->addr_src.ipv6.s6_addr[i] == flow->addr_src.ipv6.s6_addr[i] &&
-        pkt_info->addr_dst.ipv6.s6_addr[i] == flow->addr_dst.ipv6.s6_addr[i]) {
+        pkt_info->l3.addr_src.ipv6.s6_addr[i] == flow->addr_src.ipv6.s6_addr[i] &&
+        pkt_info->l3.addr_dst.ipv6.s6_addr[i] == flow->addr_dst.ipv6.s6_addr[i]) {
       direction = 1;
     } else if (direction != 1 &&
-               pkt_info->addr_src.ipv6.s6_addr[i] == flow->addr_dst.ipv6.s6_addr[i] &&
-               pkt_info->addr_dst.ipv6.s6_addr[i] == flow->addr_src.ipv6.s6_addr[i]) {
+               pkt_info->l3.addr_src.ipv6.s6_addr[i] == flow->addr_dst.ipv6.s6_addr[i] &&
+               pkt_info->l3.addr_dst.ipv6.s6_addr[i] == flow->addr_src.ipv6.s6_addr[i]) {
       direction = 2;
     } else
       return 0;
   }
 
   if (direction == 1)
-    return flow->port_src == pkt_info->port_src &&
-           flow->port_dst == pkt_info->port_dst &&
-           flow->l4prot == pkt_info->protocol_l4;
+    return flow->port_src == pkt_info->l4.port_src &&
+           flow->port_dst == pkt_info->l4.port_dst &&
+           flow->l4prot == pkt_info->l4.protocol;
   else if (direction == 2)
-    return flow->port_src == pkt_info->port_dst &&
-           flow->port_dst == pkt_info->port_src &&
-           flow->l4prot == pkt_info->protocol_l4;
+    return flow->port_src == pkt_info->l4.port_dst &&
+           flow->port_dst == pkt_info->l4.port_src &&
+           flow->l4prot == pkt_info->l4.protocol;
   else
     return 0;
 }
@@ -196,7 +196,7 @@ uint8_t v6_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
 static
 #endif
 uint8_t flow_equals(pfwl_flow_t* flow, pfwl_dissection_info_t* pkt_info) {
-  if(pkt_info->ip_version == PFWL_IP_VERSION_4){
+  if(pkt_info->l3.protocol == PFWL_IP_VERSION_4){
     return v4_equals(flow, pkt_info);
   }else{
     return v6_equals(flow, pkt_info);
@@ -382,16 +382,16 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db,
   to_delete->next->prev = to_delete->prev;
 
   if (db->flow_cleaner_callback)
-    (*(db->flow_cleaner_callback))(to_delete->info.tracking.udata);
+    (*(db->flow_cleaner_callback))(*(to_delete->info.udata));
   --db->partitions[partition_id].partition.informations.active_flows;
-  free(to_delete->info.tracking.http_informations[0].temp_buffer);
-  free(to_delete->info.tracking.http_informations[1].temp_buffer);
-  pfwl_reordering_tcp_delete_all_fragments(&(to_delete->info.tracking));
-  if(to_delete->info.last_rebuilt_tcp_data){
-    free((void*) to_delete->info.last_rebuilt_tcp_data);
+  free(to_delete->info_private.http_informations[0].temp_buffer);
+  free(to_delete->info_private.http_informations[1].temp_buffer);
+  pfwl_reordering_tcp_delete_all_fragments(&(to_delete->info_private));
+  if(to_delete->info_private.last_rebuilt_tcp_data){
+    free((void*) to_delete->info_private.last_rebuilt_tcp_data);
   }
-  if(to_delete->info.last_rebuilt_ip_fragments){
-    free((void*) to_delete->info.last_rebuilt_ip_fragments);
+  if(to_delete->info_private.last_rebuilt_ip_fragments){
+    free((void*) to_delete->info_private.last_rebuilt_ip_fragments);
   }
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
@@ -433,11 +433,16 @@ void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_t* to_delete) 
   mc_pfwl_flow_table_delete_flow(db, 0, to_delete);
 }
 
+#define MAX(x, y) ({	       \
+      __typeof__ (x) _x = (x); \
+      __typeof__ (y) _y = (y); \
+      _x > _y ? _x : _y;       \
+})
+
 #ifndef PFWL_DEBUG
 static
 #endif
-void pfwl_flow_table_check_expiration(
-        pfwl_flow_table_t* db, uint16_t partition_id, uint32_t current_time) {
+void pfwl_flow_table_check_expiration(pfwl_flow_table_t* db, uint16_t partition_id, uint32_t current_time) {
   uint32_t i;
 #if !PFWL_USE_MTF
   ipv4_flow_t* current;
@@ -449,16 +454,18 @@ void pfwl_flow_table_check_expiration(
      * Set the last timestamp for the sentinel node in such
      * a way that we simplify the loop over the list.
      **/
-    db->table[i].last_timestamp = current_time;
+    db->table[i].info.timestamp_last[0] = current_time;
+    db->table[i].info.timestamp_last[1] = 0;
+
 #if PFWL_USE_MTF
-    while (current_time - db->table[i].prev->last_timestamp >
+    while (current_time - MAX(db->table[i].prev->info.timestamp_last[0], db->table[i].prev->info.timestamp_last[1]) >
            PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
       mc_pfwl_flow_table_delete_flow(db, partition_id, db->table[i].prev);
     }
 #else
     current = db->table[i].prev;
     while (current != &(db->table[i])) {
-      if (current_time - db->table[i].prev->last_timestamp >
+      if (current_time - db->table[i].prev->info.last_timestamp >
           PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
         mc_pfwl_flow_table_delete_flow(db, flow_cleaner_callback,
                                        partition_id, db->table[i].prev);
@@ -487,24 +494,25 @@ void print_flow(ipv4_flow_t* iterator) {
 }
 #endif
 
-void pfwl_init_flow_info_internal(pfwl_flow_info_t* flow_info,
-                          char* protocols_to_inspect,
-                          uint8_t tcp_reordering_enabled) {
+void pfwl_init_flow_info_internal(pfwl_flow_info_private_t* flow_info_private,
+                                  char* protocols_to_inspect,
+                                  uint8_t tcp_reordering_enabled) {
+  bzero(flow_info_private, sizeof(pfwl_flow_info_private_t));
   pfwl_protocol_l7_t i;
-  flow_info->possible_protocols = 0;
+  flow_info_private->possible_protocols = 0;
   for (i = 0; i < BITNSLOTS(PFWL_NUM_PROTOCOLS); i++) {
-    flow_info->possible_matching_protocols[i] = protocols_to_inspect[i];
+    flow_info_private->possible_matching_protocols[i] = protocols_to_inspect[i];
     if(protocols_to_inspect[i]){
-      ++flow_info->possible_protocols;
+      ++flow_info_private->possible_protocols;
     }
   }
 
-  flow_info->l7prot = PFWL_PROTOCOL_NOT_DETERMINED;
-  flow_info->trials = 0;
-  flow_info->tcp_reordering_enabled = tcp_reordering_enabled;
-  flow_info->last_rebuilt_tcp_data = NULL;
-  flow_info->last_rebuilt_ip_fragments = NULL;
-  bzero(&(flow_info->tracking), sizeof(pfwl_tracking_informations_t));
+  flow_info_private->l7prot = PFWL_PROTOCOL_NOT_DETERMINED;
+  flow_info_private->trials = 0;
+  flow_info_private->tcp_reordering_enabled = tcp_reordering_enabled;
+  flow_info_private->last_rebuilt_tcp_data = NULL;
+  flow_info_private->last_rebuilt_ip_fragments = NULL;
+  flow_info_private->udata_private = NULL;
 }
 
 pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
@@ -512,7 +520,8 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
   uint32_t index,
   pfwl_dissection_info_t* pkt_info,
   char* protocols_to_inspect,
-  uint8_t tcp_reordering_enabled) {
+  uint8_t tcp_reordering_enabled,
+  uint32_t timestamp) {
 
   debug_print("%s\n",
             "[flow_table.c]: "
@@ -540,9 +549,9 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
    * Expiration check is done in another place, here we need to check if
    * a SYN has been received on a connection where some RSTs where received.
    **/
-  if (iterator != head && pkt_info->protocol_l4 == IPPROTO_TCP &&
-      iterator->info.tracking.seen_rst &&
-      ((struct tcphdr*)(pkt_info->pkt_refragmented + pkt_info->offset_l4))->syn) {
+  if (iterator != head && pkt_info->l4.protocol == IPPROTO_TCP &&
+      iterator->info_private.seen_rst &&
+      ((struct tcphdr*)(pkt_info->l3.refrag_pkt + pkt_info->l3.length))->syn) {
     // Delete old flow.
     mc_pfwl_flow_table_delete_flow(db, partition_id, iterator);
     // Force the following code to create a new flow.
@@ -580,16 +589,18 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
     assert(iterator);
 
     /**Creates new flow and inserts it in the list.**/
-    iterator->addr_src = pkt_info->addr_src;
-    iterator->addr_dst = pkt_info->addr_dst;
-    iterator->port_src = pkt_info->port_src;
-    iterator->port_dst = pkt_info->port_dst;
-    iterator->l4prot = pkt_info->protocol_l4;
+    iterator->addr_src = pkt_info->l3.addr_src;
+    iterator->addr_dst = pkt_info->l3.addr_dst;
+    iterator->port_src = pkt_info->l4.port_src;
+    iterator->port_dst = pkt_info->l4.port_dst;
+    iterator->l4prot = pkt_info->l4.protocol;
     iterator->prev = head;
     iterator->next = head->next;
     iterator->prev->next = iterator;
     iterator->next->prev = iterator;
-    pfwl_init_flow_info_internal(&(iterator->info), protocols_to_inspect, tcp_reordering_enabled);
+    pfwl_init_flow_info_internal(&(iterator->info_private), protocols_to_inspect, tcp_reordering_enabled);
+    iterator->info_private.info_public = &iterator->info;
+    iterator->info.udata = &(iterator->info_private.udata_private);
 
     ++db->partitions[partition_id].partition.informations.active_flows;
   }
@@ -610,25 +621,25 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
   }
 #endif
 
-  iterator->last_timestamp = pkt_info->timestamp;
+  if(!iterator->info.timestamp_first[pkt_info->l4.direction]){
+    iterator->info.timestamp_first[pkt_info->l4.direction] = timestamp;
+  }
+  iterator->info.timestamp_last[pkt_info->l4.direction] = timestamp;
 
   if (unlikely(
-          pkt_info->timestamp -
+          timestamp -
               db->partitions[partition_id].partition.informations.last_walk >=
           PFWL_FLOW_TABLE_WALK_TIME)) {
-    pfwl_flow_table_check_expiration(db, partition_id, pkt_info->timestamp);
-    db->partitions[partition_id].partition.informations.last_walk =
-        pkt_info->timestamp;
+    pfwl_flow_table_check_expiration(db, partition_id, timestamp);
+    db->partitions[partition_id].partition.informations.last_walk = timestamp;
   }
 
-  if (memcmp(&(iterator->addr_src), &(pkt_info->addr_src), sizeof(pkt_info->addr_src)) == 0 &&
-      iterator->port_src == pkt_info->port_src) {
-    pkt_info->direction = 0;
+  if (memcmp(&(iterator->addr_src), &(pkt_info->l3.addr_src), sizeof(pkt_info->l3.addr_src)) == 0 &&
+      iterator->port_src == pkt_info->l4.port_src) {
+    pkt_info->l4.direction = 0;
   } else {
-    pkt_info->direction = 1;
+    pkt_info->l4.direction = 1;
   }
-  ++iterator->info.num_packets;
-  iterator->info.num_bytes += pkt_info->data_length_l7;
   return iterator;
 }
 
@@ -649,13 +660,15 @@ uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
 pfwl_flow_t* pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
                                                     pfwl_dissection_info_t* pkt_info,
                                                     char* protocols_to_inspect,
-                                                    uint8_t tcp_reordering_enabled) {
+                                                    uint8_t tcp_reordering_enabled,
+                                                 uint32_t timestamp) {
   return mc_pfwl_flow_table_find_or_create_flow(
       db, 0,
       pfwl_compute_v4_hash_function(db, pkt_info),
       pkt_info,
       protocols_to_inspect,
-      tcp_reordering_enabled);
+      tcp_reordering_enabled,
+        timestamp);
 }
 
 uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,

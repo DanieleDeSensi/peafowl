@@ -225,7 +225,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
 #endif
 
     real_task->input_output_task_t.L3_L4_output_task_t[i].status =
-        mc_pfwl_parse_L3_L4_header(this->state, in[i].pkt, in[i].length,
+        mc_pfwl_parse_L3_header(this->state, in[i].pkt, in[i].length,
                                     &pkt_infos, in[i].current_time, worker_id);
 
     /* To have always a consistent value temp L7 worker selection. */
@@ -238,8 +238,6 @@ void* pfwl_L3_L4_worker::svc(void* task) {
     if (likely(real_task->input_output_task_t.L3_L4_output_task_t[i].status >=
                0)) {
       if (pkt_infos.protocol_l4 != IPPROTO_TCP && pkt_infos.protocol_l4 != IPPROTO_UDP) {
-        real_task->input_output_task_t.L3_L4_output_task_t[i].status =
-            PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
         continue;
       }
 
@@ -459,7 +457,7 @@ void* pfwl_L7_worker::svc(void* task) {
       break;
     } else {
       real_task->input_output_task_t.L7_output_task_t[i].result =
-          pfwl_parse_L7_stateless(state, flow_infos, &(infos));
+          pfwl_parse_L7(state, flow_infos, &(infos));
       if (real_task->input_output_task_t.L7_output_task_t[i].result.status ==
           PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
         if (ipv4_flow != NULL) {

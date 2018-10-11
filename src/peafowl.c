@@ -328,50 +328,113 @@ void pfwl_terminate(pfwl_state_t* state) {
 }
 
 
-pfwl_dissection_info_t pfwl_dissect_from_L2(pfwl_state_t* state, const unsigned char* pkt,
-                                            uint32_t length, uint32_t timestamp,
-                                            int datalink_type){
+pfwl_dissection_info_t pfwl_dissect_from_L2(pfwl_state_t* state,
+                                            const unsigned char* pkt,
+                                            size_t length, uint32_t timestamp,
+                                            pfwl_protocol_l2_t datalink_type){
   pfwl_dissection_info_t r;
   memset(&r, 0, sizeof(r));
   pfwl_parse_L2(pkt, datalink_type, &r);
-  pfwl_dissect_from_L3(state, pkt + r.offset_l3, length - r.offset_l3, timestamp, &r);
+  pfwl_dissect_from_L3(state, pkt + r.l2.length, length - r.l2.length, timestamp, &r);
   return r;
 }
 
+pfwl_flow_t* pfwl_parse_L4_internal(pfwl_state_t* state,
+                   const unsigned char* pkt,
+                   size_t length,
+                   uint32_t current_time,
+                   pfwl_dissection_info_t* dissection_info);
+
 void pfwl_dissect_from_L3(pfwl_state_t* state,
                           const unsigned char* pkt,
-                          uint32_t length,
+                          size_t length,
                           uint32_t timestamp,
                           pfwl_dissection_info_t* r) {
-  pfwl_parse_L3_L4(state, pkt, length, timestamp, r);
+  uint8_t was_last_fragment = 0;
+  pfwl_parse_L3(state, pkt, length, timestamp, r);
   if (unlikely(r->status == PFWL_STATUS_IP_FRAGMENT || r->status < 0)) {
     return;
   }
+  if(unlikely(r->status == PFWL_STATUS_IP_LAST_FRAGMENT)){
+    was_last_fragment = 1;
+  }
+  r->status = PFWL_STATUS_OK;
+  pfwl_flow_t* flow = pfwl_parse_L4_internal(state, r->l3.refrag_pkt + r->l3.length, r->l3.refrag_pkt_len - r->l3.length, timestamp, r);
+
+  if(unlikely(r->status < 0)){
+    if(was_last_fragment){
+      free((unsigned char*) r->l3.refrag_pkt);
+      r->l3.refrag_pkt = NULL;
+      r->l3.refrag_pkt_len = 0;
+    }
+    return;
+  }
+
+  ++flow->info.num_packets[r->l4.direction];
+  flow->info.num_bytes[r->l4.direction] += r->l3.refrag_pkt_len;
+  r->flow_info = flow->info;
+  r->l7.protocol = flow->info_private.l7prot;
+
+  if(flow->info_private.last_rebuilt_ip_fragments){
+    free((void*) flow->info_private.last_rebuilt_ip_fragments);
+    flow->info_private.last_rebuilt_ip_fragments = NULL;
+  }
+
+  if(unlikely(r->status == PFWL_STATUS_TCP_OUT_OF_ORDER)){
+    if(was_last_fragment){
+      free((unsigned char*) r->l3.refrag_pkt);
+      r->l3.refrag_pkt = NULL;
+      r->l3.refrag_pkt_len = 0;
+    }
+    return;
+  }
+
+  size_t l7_length;
+  const unsigned char* l7_pkt;
+
+  if(r->l4.resegmented_pkt_len){
+    l7_length = r->l4.resegmented_pkt_len;
+    l7_pkt = r->l4.resegmented_pkt;
+    r->l7.length = l7_length;
+  }else{
+    l7_length = r->l3.refrag_pkt_len - r->l3.length - r->l4.length;
+    l7_pkt = r->l3.refrag_pkt + r->l3.length + r->l4.length;
+  }
+
+  if(was_last_fragment){
+    flow->info_private.last_rebuilt_ip_fragments = r->l3.refrag_pkt;
+  }
 
   uint8_t skip_l7 = 0;
-  uint16_t srcport = ntohs(r->port_src);
-  uint16_t dstport = ntohs(r->port_dst);
-  pfwl_l7_skipping_info_t* sk = NULL;
-  pfwl_l7_skipping_info_key_t key;
-  memset(&key, 0, sizeof(key));
-  key.l4prot = r->protocol_l4;
-  key.port = dstport;
-  HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_info_key_t), sk);
-  if (sk) {
-    skip_l7 = 1;
-    r->protocol_l7 = sk->protocol;
-  } else {
-    key.port = srcport;
-    HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_info_key_t),
-              sk);
+  if(HASH_COUNT(state->l7_skip)){
+    pfwl_l7_skipping_info_t* sk = NULL;
+    pfwl_l7_skipping_info_key_t key;
+    memset(&key, 0, sizeof(key));
+    key.l4prot = r->l4.protocol;
+    key.port = ntohs(r->l4.port_dst);
+    HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_info_key_t), sk);
     if (sk) {
       skip_l7 = 1;
-      r->protocol_l7 = sk->protocol;
+      r->l7.protocol = sk->protocol;
+    } else {
+      key.port = ntohs(r->l4.port_src);
+      HASH_FIND(hh, state->l7_skip, &key, sizeof(pfwl_l7_skipping_info_key_t),
+                sk);
+      if (sk) {
+        skip_l7 = 1;
+        r->l7.protocol = sk->protocol;
+      }
     }
   }
 
-  if (!skip_l7) {
-    if (r->protocol_l4 != IPPROTO_TCP && r->protocol_l4 != IPPROTO_UDP) {
+  if (l7_length) {
+    ++flow->info.num_packets_l7[r->l4.direction];
+    flow->info.num_bytes_l7[r->l4.direction] += l7_length;
+
+    r->flow_info.num_packets_l7[r->l4.direction] = flow->info.num_packets_l7[r->l4.direction];
+    r->flow_info.num_bytes_l7[r->l4.direction] = flow->info.num_bytes_l7[r->l4.direction];
+
+    if (r->l4.protocol != IPPROTO_TCP && r->l4.protocol != IPPROTO_UDP) {
       return;
     }
 
@@ -381,7 +444,18 @@ void pfwl_dissect_from_L3(pfwl_state_t* state,
      * by pfwl_parse_L3_L4_headers. Basically we return the status which
      * provides more informations.
      */
-    pfwl_parse_L7(state, r);
+    if(!skip_l7){
+      pfwl_parse_L7(state, l7_pkt, l7_length, timestamp, r, &flow->info_private);
+    }
+  }
+
+  if(flow->info_private.last_rebuilt_tcp_data){
+    free((void*) flow->info_private.last_rebuilt_tcp_data);
+    flow->info_private.last_rebuilt_tcp_data = NULL;
+  }
+
+  if (r->status == PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
+    pfwl_flow_table_delete_flow_later(state->flow_table, flow);
   }
   return;
 }
@@ -397,46 +471,41 @@ uint8_t pfwl_set_protocol_accuracy(pfwl_state_t *state,
   }
 }
 
-const char* const pfwl_get_error_msg(int8_t error_code) {
-  switch (error_code) {
-    case PFWL_ERROR_WRONG_IPVERSION:
-      return "ERROR: The packet is neither IPv4 nor IPv6.";
-    case PFWL_ERROR_IPSEC_NOTSUPPORTED:
-      return "ERROR: The packet is encrypted using IPSEC. "
-             "IPSEC is not supported.";
-    case PFWL_ERROR_L3_TRUNCATED_PACKET:
-      return "ERROR: The L3 packet is truncated or corrupted.";
-    case PFWL_ERROR_L4_TRUNCATED_PACKET:
-      return "ERROR: The L4 packet is truncated or corrupted.";
-    case PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED:
-      return "ERROR: The transport protocol is not supported.";
-    case PFWL_ERROR_MAX_FLOWS:
-      return "ERROR: The maximum number of active flows has been"
-             " reached. Please increase it when initializing the libray";
-    default:
-      return "ERROR: Not existing error code.";
-  }
-}
-
-const char* const pfwl_get_status_msg(int8_t status_code) {
+const char* const pfwl_get_status_msg(pfwl_status_t status_code) {
   switch (status_code) {
-    case PFWL_STATUS_OK:
-      return "STATUS: Everything is ok.";
-    case PFWL_STATUS_IP_FRAGMENT:
-      return "STATUS: The received IP datagram is a fragment of a "
-             " bigger datagram.";
-    case PFWL_STATUS_IP_LAST_FRAGMENT:
-      return "STATUS: The received IP datagram is the last fragment"
-             " of a bigger datagram. The original datagram has been"
-             " recomposed.";
-    case PFWL_STATUS_TCP_OUT_OF_ORDER:
-      return "STATUS: The received TCP segment is out of order in "
-             " its stream. It will be buffered waiting for in order"
-             " segments.";
-    case PFWL_STATUS_TCP_CONNECTION_TERMINATED:
-      return "STATUS: The TCP connection is terminated.";
-    default:
-      return "STATUS: Not existing status code.";
+  case PFWL_ERROR_L2_PARSING:
+    return "ERROR: The L2 data is unsupported, truncated or corrupted.";
+  case PFWL_ERROR_L3_PARSING:
+    return "ERROR: The L3 data is unsupported, truncated or corrupted.";
+  case PFWL_ERROR_L4_PARSING:
+    return "ERROR: The L4 data is unsupported, truncated or corrupted.";
+  case PFWL_ERROR_WRONG_IPVERSION:
+    return "ERROR: The packet is neither IPv4 nor IPv6.";
+  case PFWL_ERROR_IPSEC_NOTSUPPORTED:
+    return "ERROR: The packet is encrypted using IPSEC. "
+           "IPSEC is not supported.";
+  case PFWL_ERROR_IPV6_HDR_PARSING:
+    return "ERROR: IPv6 headers parsing.";
+  case PFWL_ERROR_MAX_FLOWS:
+    return "ERROR: The maximum number of active flows has been"
+           " reached. Please increase it when initializing the libray";
+  case PFWL_STATUS_OK:
+    return "STATUS: Everything is ok.";
+  case PFWL_STATUS_IP_FRAGMENT:
+    return "STATUS: The received IP datagram is a fragment of a "
+           " bigger datagram.";
+  case PFWL_STATUS_IP_LAST_FRAGMENT:
+    return "STATUS: The received IP datagram is the last fragment"
+           " of a bigger datagram. The original datagram has been"
+           " recomposed.";
+  case PFWL_STATUS_TCP_OUT_OF_ORDER:
+    return "STATUS: The received TCP segment is out of order in "
+           " its stream. It will be buffered waiting for in order"
+           " segments.";
+  case PFWL_STATUS_TCP_CONNECTION_TERMINATED:
+    return "STATUS: The TCP connection is terminated.";
+  default:
+    return "STATUS: Not existing status code.";
   }
 }
 
@@ -500,9 +569,81 @@ uint8_t pfwl_protocol_field_required(pfwl_state_t* state, pfwl_field_id_t field)
   }
 }
 
-void pfwl_init_flow_info(pfwl_state_t* state,
-                         pfwl_flow_info_t* flow_info){
-  pfwl_init_flow_info_internal(flow_info,
+void pfwl_init_flow_info(pfwl_state_t* state, pfwl_flow_info_private_t *flow_info_private){
+  pfwl_init_flow_info_internal(flow_info_private,
                                state->protocols_to_inspect,
                                state->tcp_reordering_enabled);
+}
+
+void pfwl_field_string_set(pfwl_field_t* fields, pfwl_field_id_t id, const unsigned char* s, size_t len){
+    fields[id].present = 1;
+    fields[id].basic.string.value = s;
+    fields[id].basic.string.length = len;
+}
+
+void pfwl_field_number_set(pfwl_field_t* fields, pfwl_field_id_t id, int64_t num){
+    fields[id].present = 1;
+    fields[id].basic.number = num;
+}
+
+void pfwl_array_push_back_string(pfwl_array_t* array,  const unsigned char* s, size_t len){
+    ((pfwl_string_t*) array->values)[array->length].value = s;
+    ((pfwl_string_t*) array->values)[array->length].length = len;
+    ++array->length;
+}
+
+void pfwl_field_array_push_back_string(pfwl_field_t* fields, pfwl_field_id_t id,  const unsigned char* s, size_t len){
+    fields[id].present = 1;
+    pfwl_array_push_back_string(&(fields[id].array), s, len);
+}
+
+uint8_t pfwl_field_string_get(pfwl_field_t* fields, pfwl_field_id_t id, pfwl_string_t* string){
+    if(fields[id].present){
+        *string = fields[id].basic.string;
+        return 0;
+    }else{
+        return 1;
+    }
+}
+
+uint8_t pfwl_field_number_get(pfwl_field_t* fields, pfwl_field_id_t id, int64_t* num){
+    if(fields[id].present){
+        *num = fields[id].basic.number;
+        return 0;
+    }else{
+        return 1;
+    }
+}
+
+uint8_t pfwl_field_array_length(pfwl_field_t* fields, pfwl_field_id_t id, size_t* length){
+    if(fields[id].present){
+        *length = fields[id].array.length;
+        return 0;
+    }else{
+        return 1;
+    }
+}
+
+uint8_t pfwl_field_array_get_pair(pfwl_field_t* fields, pfwl_field_id_t id, size_t position, pfwl_pair_t* pair){
+  if(fields[id].present){
+      *pair = ((pfwl_pair_t*) fields[id].array.values)[position];
+      return 0;
+  }else{
+      return 1;
+  }
+}
+
+uint8_t pfwl_http_get_header(pfwl_dissection_info_t* dissection_info, const char* header_name, pfwl_string_t* header_value){
+  pfwl_field_t field = dissection_info->l7.protocol_fields[PFWL_FIELDS_HTTP_HEADERS];
+  if(field.present){
+    for(size_t i = 0; i < field.array.length; i++){
+      pfwl_pair_t pair = ((pfwl_pair_t*)field.array.values)[i];
+      pfwl_string_t key = pair.first.string;
+      if(!strncasecmp(header_name, (const char*) key.value, key.length)){
+        *header_value = pair.second.string;
+        return 0;
+      }
+    }
+  }
+  return 1;
 }

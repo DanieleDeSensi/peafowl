@@ -1,7 +1,7 @@
 ## get all project files
 find_package(ClangFormat)
    
-if(!CLANG_FORMAT_FOUND)
+if(NOT CLANG_FORMAT_FOUND)
   message("clang-format not found. Please install it to run 'make clangformat'")
 endif()
 

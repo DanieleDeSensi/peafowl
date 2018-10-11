@@ -1,5 +1,5 @@
 /*
- * peafowl_l3_l4_parsing.c
+ * peafowl_l3_parsing.c
  *
  * Created on: 19/09/2012
  * =========================================================================
@@ -46,9 +46,9 @@
 #include <strings.h>
 #include <time.h>
 
-void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
+void mc_pfwl_parse_L3_header(pfwl_state_t* state,
                                 const unsigned char* p_pkt,
-                                uint32_t p_length,
+                                size_t p_length,
                                 uint32_t current_time, int tid,
                                 pfwl_dissection_info_t* dissection_info) {
   memset(dissection_info, 0, sizeof(*dissection_info));
@@ -90,7 +90,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
     if (unlikely(length < (sizeof(struct iphdr)) || tot_len > length ||
                  tot_len <= ((ip4->ihl) * 4))) {
-      dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+      dissection_info->status = PFWL_ERROR_L3_PARSING;
       return;
     }
 #endif
@@ -133,12 +133,11 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
       return;
     }
 
-    dissection_info->addr_src.ipv4 = ip4->saddr;
-    dissection_info->addr_dst.ipv4 = ip4->daddr;
+    dissection_info->l3.addr_src.ipv4 = ip4->saddr;
+    dissection_info->l3.addr_dst.ipv4 = ip4->daddr;
 
     application_offset = (ip4->ihl) * 4;
     relative_offset = application_offset;
-
     next_header = ip4->protocol;
   } else if (version == PFWL_IP_VERSION_6) { /** IPv6 **/
     ip6 = (struct ip6_hdr*)(pkt);
@@ -146,7 +145,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
         ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen) + sizeof(struct ip6_hdr);
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
     if (unlikely(tot_len > length)) {
-      dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+      dissection_info->status = PFWL_ERROR_L3_PARSING;
       return;
     }
 #endif
@@ -159,8 +158,8 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
      */
     length = tot_len;
 
-    dissection_info->addr_src.ipv6 = ip6->ip6_src;
-    dissection_info->addr_dst.ipv6 = ip6->ip6_dst;
+    dissection_info->l3.addr_src.ipv6 = ip6->ip6_src;
+    dissection_info->l3.addr_dst.ipv6 = ip6->ip6_dst;
 
     application_offset = sizeof(struct ip6_hdr);
     relative_offset = application_offset;
@@ -172,43 +171,11 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
 
   while (!stop) {
     switch (next_header) {
-      case IPPROTO_TCP: { /* TCP */
-        struct tcphdr* tcp = (struct tcphdr*)(pkt + application_offset);
-#ifdef PFWL_ENABLE_L4_TRUNCATION_PROTECTION
-        if (unlikely(application_offset + sizeof(struct tcphdr) > length ||
-                     application_offset + tcp->doff * 4 > length)) {
-          if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L4_TRUNCATED_PACKET;
-          return;
-        }
-#endif
-        dissection_info->port_src = tcp->source;
-        dissection_info->port_dst = tcp->dest;
-        dissection_info->offset_l4 = application_offset;
-        application_offset += (tcp->doff * 4);
-        stop = 1;
-      } break;
-      case IPPROTO_UDP: { /* UDP */
-        struct udphdr* udp = (struct udphdr*)(pkt + application_offset);
-#ifdef PFWL_ENABLE_L4_TRUNCATION_PROTECTION
-        if (unlikely(application_offset + sizeof(struct udphdr) > length ||
-                     application_offset + ntohs(udp->len) > length)) {
-          if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L4_TRUNCATED_PACKET;
-          return;
-        }
-#endif
-        dissection_info->port_src = udp->source;
-        dissection_info->port_dst = udp->dest;
-        dissection_info->offset_l4 = application_offset;
-        application_offset += 8;
-        stop = 1;
-      } break;
       case IPPROTO_HOPOPTS: { /* Hop by hop options */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_hbh) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          dissection_info->status = PFWL_ERROR_L3_PARSING;
           return;
         }
 #endif
@@ -220,7 +187,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
           next_header = hbh_hdr->ip6h_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
           return;
         }
       } break;
@@ -228,7 +195,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_dest) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          dissection_info->status = PFWL_ERROR_L3_PARSING;
           return;
         }
 #endif
@@ -241,7 +208,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
           next_header = dst_hdr->ip6d_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
           return;
         }
       } break;
@@ -249,7 +216,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_rthdr) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          dissection_info->status = PFWL_ERROR_L3_PARSING;
           return;
         }
 #endif
@@ -262,7 +229,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
           next_header = rt_hdr->ip6r_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
           return;
         }
       } break;
@@ -270,7 +237,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_frag) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          dissection_info->status = PFWL_ERROR_L3_PARSING;
           return;
         }
 #endif
@@ -334,7 +301,7 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
           }
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_TRANSPORT_PROTOCOL_NOTSUPPORTED;
+          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
           return;
         }
       } break;
@@ -347,13 +314,13 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
                          sizeof(struct ip6_hdr) >
                      length - application_offset)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          dissection_info->status = PFWL_ERROR_L3_PARSING;
           return;
         }
 #endif
 
-        dissection_info->addr_src.ipv6 = ip6->ip6_src;
-        dissection_info->addr_dst.ipv6 = ip6->ip6_dst;
+        dissection_info->l3.addr_src.ipv6 = ip6->ip6_src;
+        dissection_info->l3.addr_dst.ipv6 = ip6->ip6_dst;
 
         application_offset += sizeof(struct ip6_hdr);
         relative_offset = sizeof(struct ip6_hdr);
@@ -368,46 +335,42 @@ void mc_pfwl_parse_L3_L4_header(pfwl_state_t* state,
                      application_offset + ((ip4->ihl) * 4) > length ||
                      application_offset + ntohs(ip4->tot_len) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_TRUNCATED_PACKET;
+          dissection_info->status = PFWL_ERROR_L3_PARSING;
           return;
         }
 #endif
-        dissection_info->addr_src.ipv4 = ip4->saddr;
-        dissection_info->addr_dst.ipv4 = ip4->daddr;
+        dissection_info->l3.addr_src.ipv4 = ip4->saddr;
+        dissection_info->l3.addr_dst.ipv4 = ip4->daddr;
         next_header = ip4->protocol;
         tmp = (ip4->ihl) * 4;
         application_offset += tmp;
         relative_offset = tmp;
         break;
-      default:
+      case IPPROTO_TCP:  /* TCP */
+      case IPPROTO_UDP:  /* UDP */
+      default: {         /* ICMP, RSVP, etc... */
+        dissection_info->l3.length = application_offset;
+        dissection_info->l4.protocol = next_header;
         stop = 1;
-        dissection_info->offset_l4 = application_offset;
-        break;
+      }break;
     }
   }
 
-  dissection_info->protocol_l4 = next_header;
-#ifdef PFWL_ENABLE_L4_TRUNCATION_PROTECTION
-  if (unlikely(application_offset > length)) {
-    if (unlikely(pkt != p_pkt)) free(pkt);
-    dissection_info->status = PFWL_ERROR_L4_TRUNCATED_PACKET;
-    return;
-  }
-#endif
-  dissection_info->timestamp = current_time;
-  dissection_info->pkt_refragmented = pkt;
-  dissection_info->offset_l7 = application_offset;
-  dissection_info->data_length_l7 = length - application_offset;
-  dissection_info->ip_version = version;
+  dissection_info->l3.protocol = version;
+  dissection_info->l3.refrag_pkt = pkt;
+  dissection_info->l3.refrag_pkt_len = length;
   dissection_info->status = to_return;
   return;
 }
 
-void pfwl_parse_L3_L4(pfwl_state_t* state, const unsigned char* pkt, uint32_t length,
-                      uint32_t current_time, pfwl_dissection_info_t* dissection_info) {
+void pfwl_parse_L3(pfwl_state_t* state,
+                   const unsigned char* pkt,
+                   size_t length,
+                   uint32_t current_time,
+                   pfwl_dissection_info_t* dissection_info) {
   /**
    * We can pass any thread id, indeed in this case we don't
    * need lock synchronization.
    **/
-  return mc_pfwl_parse_L3_L4_header(state, pkt, length, current_time, 0, dissection_info);
+  mc_pfwl_parse_L3_header(state, pkt, length, current_time, 0, dissection_info);
 }

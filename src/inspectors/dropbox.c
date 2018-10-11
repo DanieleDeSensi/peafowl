@@ -61,10 +61,11 @@ static inline uint8_t hasDropboxFields(const char* app_data, pfwl_inspector_accu
   }
 }
 
-uint8_t check_dropbox(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields){
-  if(pkt_info->protocol_l4 == IPPROTO_UDP &&
-     pkt_info->port_src == port_dropbox && pkt_info->port_dst == port_dropbox &&
+uint8_t check_dropbox(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                   pfwl_flow_info_private_t* flow_info_private){
+  pfwl_inspector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTOCOL_DROPBOX];
+  if(pkt_info->l4.protocol == IPPROTO_UDP &&
+     pkt_info->l4.port_src == port_dropbox && pkt_info->l4.port_dst == port_dropbox &&
      data_length > 2 && hasDropboxFields((const char*) app_data, accuracy)) {
     return PFWL_PROTOCOL_MATCHES;
   }

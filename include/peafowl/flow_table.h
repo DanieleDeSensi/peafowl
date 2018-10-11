@@ -122,9 +122,11 @@ typedef struct pfwl_dns_internal_information {
 
 /********************** HTTP ************************/
 typedef struct pfwl_http_internal_informations {
-  char* temp_buffer;
+  unsigned char* temp_buffer;
   size_t temp_buffer_size;
-  uint8_t temp_buffer_dirty : 1;
+  uint8_t temp_buffer_dirty;
+  pfwl_pair_t headers[PFWL_HTTP_MAX_HEADERS];
+  size_t headers_length;
 } pfwl_http_internal_informations_t;
 /********************** HTTP (END) ************************/
 
@@ -137,20 +139,38 @@ typedef struct pfwl_ssl_internal_information {
 
 /** This must be initialized to zero before use. **/
 typedef struct pfwl_tracking_informations {
+  void* udata_private;
+
+  /************************/
+  /** Misc information.  **/
+  /************************/
+  pfwl_flow_info_t* info_public;
   /**
-   *  This data is passed to the user when a callback is invoked. It can
-   *  be used by the user to read/write flow specific informations or
-   *  informations which must be passed from one callback to another
-   *  (E.g. subprotocols informations). It is returned to the user when
-   *  pfwl_state*_identify_application_protocol() is invoked.
+   * The protocol of this flow. It can be PFWL_PROTOCOL_NOT_DETERMINED if
+   * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
+   * or the matching protocol identifier.
+   */
+  pfwl_protocol_l7_t l7prot;
+
+  /** Number of times that the library tried to guess the protocol. **/
+  uint16_t trials;
+  /** The possible number of l7 protocols that match with this flow. **/
+  uint8_t possible_protocols;
+
+  /**
+   * Contains the possible matching protocols for the flow (At the first
+   * iteration the mask contains all the active protocols. During the
+   * successive iterations we remove from the mask the protocols which
+   * surely don't match).
    **/
-  void* udata;
+  char possible_matching_protocols[BITNSLOTS(PFWL_NUM_PROTOCOLS)];
 
-  size_t num_packets; // Number of packets received for the flow
+  const unsigned char* last_rebuilt_ip_fragments; // For internal use only.
 
-  /*********************************/
-  /** TCP Tracking informations.  **/
-  /*********************************/
+  /********************************/
+  /** TCP Tracking information.  **/
+  /********************************/
+  const unsigned char* last_rebuilt_tcp_data;
   /**
    * The expected sequence numbers in the two directions.
    * (Stored in host byte order).
@@ -159,6 +179,13 @@ typedef struct pfwl_tracking_informations {
   /** A pointer to out of order segments. **/
   pfwl_reassembly_fragment_t* segments[2];
 
+  /**
+   * In this way if a flow was created when TCP reordering was enabled,
+   * we will continue doing TCP reordering for this flow also if it is
+   * disabled. Basically the change in TCP reordering enabling/disabling
+   * will be applied only to new flows.
+   */
+  uint8_t tcp_reordering_enabled : 1;
   /** Three-way handshake tracking informations. **/
   uint8_t seen_syn : 1;
   uint8_t seen_syn_ack : 1;
@@ -167,6 +194,7 @@ typedef struct pfwl_tracking_informations {
   /** Connection termination tracking informations. **/
   uint8_t seen_fin : 2;
   uint8_t seen_rst : 1;
+  uint8_t seen_fin_ack : 1;
 
   uint8_t first_packet_arrived : 2;
   uint32_t highest_ack[2];
@@ -223,47 +251,7 @@ typedef struct pfwl_tracking_informations {
   /** WhatsApp Tracking informations.  **/
   /**************************************/
   size_t whatsapp_matched_sequence;
-} pfwl_tracking_informations_t;
-
-/**
- * If stateless version is used, this structure the first time must be
- * initialized with 'pfwl_init_flow_info'.
- **/
-typedef struct pfwl_flow_info {
-  /** The possible number of l7 protocols that match with this flow. **/
-  uint8_t possible_protocols;
-
-  /**
-   * The protocol of this flow. It can be PFWL_PROTOCOL_NOT_DETERMINED if
-   * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
-   * or the matching protocol identifier.
-   */
-  pfwl_protocol_l7_t l7prot;
-
-  /** Number of times that the library tried to guess the protocol. **/
-  uint16_t trials;
-  /**
-   * Contains the possible matching protocols for the flow (At the first
-   * iteration the mask contains all the active protocols. During the
-   * successive iterations we remove from the mask the protocols which
-   * surely don't match).
-   **/
-  char possible_matching_protocols[BITNSLOTS(PFWL_NUM_PROTOCOLS)];
-
-  /**
-   * In this way if a flow was created when TCP reordering was enabled,
-   * we will continue doing TCP reordering for this flow also if it is
-   * disabled. Basically the change in TCP reordering enabling/disabling
-   * will be applied only to new flows.
-   */
-  uint8_t tcp_reordering_enabled : 1;
-  pfwl_tracking_informations_t tracking;
-  const unsigned char* last_rebuilt_ip_fragments; // For internal use only.
-  const unsigned char* last_rebuilt_tcp_data; // For internal use only.
-
-  uint64_t num_packets;
-  uint64_t num_bytes;
-} pfwl_flow_info_t;
+} pfwl_flow_info_private_t;
 
 typedef struct pfwl_flow pfwl_flow_t;
 
@@ -277,7 +265,7 @@ struct pfwl_flow {
   pfwl_flow_t* prev;
   pfwl_flow_t* next;
   pfwl_flow_info_t info;
-  uint32_t last_timestamp;
+  pfwl_flow_info_private_t info_private;
 };
 
 typedef struct pfwl_flow_table pfwl_flow_table_t;
@@ -305,7 +293,8 @@ pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db,
 pfwl_flow_t* pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
                                                  pfwl_dissection_info_t* pkt_info,
                                                  char* protocols_to_inspect,
-                                                 uint8_t tcp_reordering_enabled);
+                                                 uint8_t tcp_reordering_enabled,
+                                                 uint32_t timestamp);
 
 void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_t* to_delete);
 void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, pfwl_flow_t* to_delete);
@@ -320,9 +309,9 @@ uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
 uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,
                                       const pfwl_dissection_info_t* const pkt_info);
 
-void pfwl_init_flow_info_internal(pfwl_flow_info_t* flow_info,
-                          char* protocols_to_inspect,
-                          uint8_t tcp_reordering_enabled);
+void pfwl_init_flow_info_internal(pfwl_flow_info_private_t* flow_info_private,
+                                  char* protocols_to_inspect,
+                                  uint8_t tcp_reordering_enabled);
 
 pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t* db,
@@ -330,7 +319,8 @@ pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
     uint32_t index,
     pfwl_dissection_info_t* pkt_info,
     char* protocols_to_inspect,
-    uint8_t tcp_reordering_enabled);
+    uint8_t tcp_reordering_enabled,
+    uint32_t timestamp);
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
                                         uint16_t num_partitions);

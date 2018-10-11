@@ -50,18 +50,18 @@ inline
   uint32_t low_addr, high_addr;
   uint16_t low_port, high_port;
 
-  if (in->addr_src.ipv4 < in->addr_dst.ipv4 ||
-      (in->addr_src.ipv4 == in->addr_dst.ipv4 &&
-       in->port_src <= in->port_dst)) {
-    low_addr = in->addr_src.ipv4;
-    low_port = in->port_src;
-    high_addr = in->addr_dst.ipv4;
-    high_port = in->port_dst;
+  if (in->l3.addr_src.ipv4 < in->l3.addr_dst.ipv4 ||
+      (in->l3.addr_src.ipv4 == in->l3.addr_dst.ipv4 &&
+       in->l4.port_src <= in->l4.port_dst)) {
+    low_addr = in->l3.addr_src.ipv4;
+    low_port = in->l4.port_src;
+    high_addr = in->l3.addr_dst.ipv4;
+    high_port = in->l4.port_dst;
   } else {
-    high_addr = in->addr_src.ipv4;
-    high_port = in->port_src;
-    low_addr = in->addr_dst.ipv4;
-    low_port = in->port_dst;
+    high_addr = in->l3.addr_src.ipv4;
+    high_port = in->l4.port_src;
+    low_addr = in->l3.addr_dst.ipv4;
+    low_port = in->l4.port_dst;
   }
 
   uint32_t hval = FNV1A_32_INIT;
@@ -84,7 +84,7 @@ inline
   hval ^= ((high_addr >> 24) & 0xFF);
   PFWL_HVAL_SECOND_STEP(hval)
 
-  hval ^= in->protocol_l4;
+  hval ^= in->l4.protocol;
   PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= (low_port & 0xFF);
@@ -106,35 +106,35 @@ static void get_v6_low_high_addr_port(const pfwl_dissection_info_t* const in,
                                  uint16_t* low_port, uint16_t* high_port){
   uint8_t i = 0;
   for (i = 0; i < 16; i++) {
-    if (in->addr_src.ipv6.s6_addr[i] <
-        in->addr_dst.ipv6.s6_addr[i]) {
-      *low_addr = in->addr_src.ipv6;
-      *high_addr = in->addr_dst.ipv6;
-      *low_port = in->port_src;
-      *high_port = in->port_dst;
+    if (in->l3.addr_src.ipv6.s6_addr[i] <
+        in->l3.addr_dst.ipv6.s6_addr[i]) {
+      *low_addr = in->l3.addr_src.ipv6;
+      *high_addr = in->l3.addr_dst.ipv6;
+      *low_port = in->l4.port_src;
+      *high_port = in->l4.port_dst;
       break;
-    } else if (in->addr_src.ipv6.s6_addr[i] >
-               in->addr_dst.ipv6.s6_addr[i]) {
-      *high_addr = in->addr_src.ipv6;
-      *low_addr = in->addr_dst.ipv6;
-      *high_port = in->port_src;
-      *low_port = in->port_dst;
+    } else if (in->l3.addr_src.ipv6.s6_addr[i] >
+               in->l3.addr_dst.ipv6.s6_addr[i]) {
+      *high_addr = in->l3.addr_src.ipv6;
+      *low_addr = in->l3.addr_dst.ipv6;
+      *high_port = in->l4.port_src;
+      *low_port = in->l4.port_dst;
       break;
     }
   }
 
   /** If i==16 the addresses are equal. **/
   if (i == 16) {
-    if (in->port_src <= in->port_dst) {
-      *low_addr = in->addr_src.ipv6;
-      *high_addr = in->addr_dst.ipv6;
-      *low_port = in->port_src;
-      *high_port = in->port_dst;
+    if (in->l4.port_src <= in->l4.port_dst) {
+      *low_addr = in->l3.addr_src.ipv6;
+      *high_addr = in->l3.addr_dst.ipv6;
+      *low_port = in->l4.port_src;
+      *high_port = in->l4.port_dst;
     } else {
-      *high_addr = in->addr_src.ipv6;
-      *low_addr = in->addr_dst.ipv6;
-      *high_port = in->port_src;
-      *low_port = in->port_dst;
+      *high_addr = in->l3.addr_src.ipv6;
+      *low_addr = in->l3.addr_dst.ipv6;
+      *high_port = in->l4.port_src;
+      *low_port = in->l4.port_dst;
     }
   }
 }
@@ -161,7 +161,7 @@ uint32_t v6_fnv_hash_function(const pfwl_dissection_info_t* const in) {
     PFWL_HVAL_SECOND_STEP(hval)
   }
 
-  hval ^= in->protocol_l4;
+  hval ^= in->l4.protocol;
   PFWL_HVAL_SECOND_STEP(hval)
 
   hval ^= ((low_port >> 8) & 0xFF);
@@ -327,18 +327,18 @@ static void get_v4_key(const pfwl_dissection_info_t* const in, char* v4_key) {
   uint32_t lower_addr = 0, higher_addr = 0;
   uint16_t lower_port = 0, higher_port = 0;
 
-  if (in->addr_src.ipv4 < in->addr_dst.ipv4 ||
-      (in->addr_src.ipv4 == in->addr_dst.ipv4 &&
-       in->port_src <= in->port_dst)) {
-    lower_addr = in->addr_src.ipv4;
-    higher_addr = in->addr_dst.ipv4;
-    lower_port = in->port_src;
-    higher_port = in->port_dst;
+  if (in->l3.addr_src.ipv4 < in->l3.addr_dst.ipv4 ||
+      (in->l3.addr_src.ipv4 == in->l3.addr_dst.ipv4 &&
+       in->l4.port_src <= in->l4.port_dst)) {
+    lower_addr = in->l3.addr_src.ipv4;
+    higher_addr = in->l3.addr_dst.ipv4;
+    lower_port = in->l4.port_src;
+    higher_port = in->l4.port_dst;
   } else {
-    lower_addr = in->addr_dst.ipv4;
-    higher_addr = in->addr_src.ipv4;
-    lower_port = in->port_dst;
-    higher_port = in->port_src;
+    lower_addr = in->l3.addr_dst.ipv4;
+    higher_addr = in->l3.addr_src.ipv4;
+    lower_port = in->l4.port_dst;
+    higher_port = in->l4.port_src;
   }
 
   v4_key[0] = ((lower_addr >> 24) & 0xFF);
@@ -351,7 +351,7 @@ static void get_v4_key(const pfwl_dissection_info_t* const in, char* v4_key) {
   v4_key[6] = ((higher_addr >> 8) & 0xFF);
   v4_key[7] = (higher_addr & 0xFF);
 
-  v4_key[8] = in->protocol_l4;
+  v4_key[8] = in->l4.protocol;
 
   v4_key[9] = ((lower_port >> 8) & 0xFF);
   v4_key[10] = (lower_port & 0xFF);
@@ -381,7 +381,7 @@ static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key){
     v6_key[i + 16] = high_addr.s6_addr[i];
   }
 
-  v6_key[32] = in->protocol_l4;
+  v6_key[32] = in->l4.protocol;
 
   v6_key[33] = ((low_port >> 8) & 0xFF);
   v6_key[34] = (low_port & 0xFF);
@@ -402,18 +402,18 @@ uint32_t v6_hash_murmur3(const pfwl_dissection_info_t* const in, uint32_t seed) 
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_SIMPLE_HASH || \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
 uint32_t v4_hash_function_simple(const pfwl_dissection_info_t* const in) {
-  return in->port_src + in->port_dst + in->addr_src.ipv4 +
-         in->addr_dst.ipv4 + in->protocol_l4;
+  return in->l4.port_src + in->l4.port_dst + in->l3.addr_src.ipv4 +
+         in->l3.addr_dst.ipv4 + in->l4.protocol;
 }
 
 uint32_t v6_hash_function_simple(const pfwl_dissection_info_t* const in) {
   uint8_t i;
   uint32_t partsrc = 0, partdst = 0;
   for (i = 0; i < 16; i++) {
-    partsrc += in->addr_src.ipv6.s6_addr[i];
-    partdst += in->addr_dst.ipv6.s6_addr[i];
+    partsrc += in->l3.addr_src.ipv6.s6_addr[i];
+    partdst += in->l3.addr_dst.ipv6.s6_addr[i];
   }
-  return in->port_src + in->port_dst + partsrc + partdst + in->protocol_l4;
+  return in->l4.port_src + in->l4.port_dst + partsrc + partdst + in->l4.protocol;
 }
 
 #endif

@@ -6,18 +6,18 @@
 TEST(MPLS, Generic) {
     std::vector<uint> protocols;
     uint icmp_packets = 0;
-    for(auto r : getProtocols("./pcaps/mpls_one.cap", protocols)){
-      if(r.protocol_l4 == IPPROTO_ICMP){
+    getProtocols("./pcaps/mpls_one.cap", protocols, NULL, [&](pfwl_dissection_info_t r){
+      if(r.l4.protocol == IPPROTO_ICMP){
         ++icmp_packets;
       }
-    }
+    });
     EXPECT_EQ(icmp_packets, (uint) 5);
 
     icmp_packets = 0;
-    for(auto r : getProtocols("./pcaps/mpls_two.pcap", protocols)){
-      if(r.protocol_l4 == IPPROTO_ICMP){
+    getProtocols("./pcaps/mpls_two.pcap", protocols, NULL, [&](pfwl_dissection_info_t r){
+      if(r.l4.protocol == IPPROTO_ICMP){
         ++icmp_packets;
       }
-    }
+    });
     EXPECT_EQ(icmp_packets, (uint) 5);
 }

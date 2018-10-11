@@ -51,13 +51,13 @@ static uint8_t is_hangout_tcp_port(uint16_t port) {
     return 0;
 }
 
-uint8_t check_hangout(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
-                      pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields){
+uint8_t check_hangout(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                      pfwl_flow_info_private_t* flow_info_private){
   if((data_length > 24)) {
     if(
-       ((pkt_info->protocol_l4 == IPPROTO_UDP) && (is_hangout_udp_port(pkt_info->port_src) || is_hangout_udp_port(pkt_info->port_dst)))
+       ((pkt_info->l4.protocol == IPPROTO_UDP) && (is_hangout_udp_port(pkt_info->l4.port_src) || is_hangout_udp_port(pkt_info->l4.port_dst)))
        ||
-       ((pkt_info->protocol_l4 == IPPROTO_TCP) && (is_hangout_tcp_port(pkt_info->port_src) || is_hangout_tcp_port(pkt_info->port_dst)))) {
+       ((pkt_info->l4.protocol == IPPROTO_TCP) && (is_hangout_tcp_port(pkt_info->l4.port_src) || is_hangout_tcp_port(pkt_info->l4.port_dst)))) {
       return PFWL_PROTOCOL_MATCHES;
     }
   }

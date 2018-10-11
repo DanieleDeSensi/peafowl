@@ -88,7 +88,7 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
             if (num_found != 2) continue;
           }
           if (server_len + i + 3 < payload_len) {
-            char* server_name = (char*)&payload[i + 4];
+            unsigned char* server_name = (unsigned char*) &payload[i + 4];
             uint8_t begin = 0, j, num_dots, len;
             while (begin < server_len) {
               if (!npfwl_isprint(server_name[begin]))
@@ -108,9 +108,7 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
             }
             if (num_dots >= 2) {
               if (len > 0 && required_fields[PFWL_FIELDS_SSL_CERTIFICATE]) {
-                    pfwl_field_t* cert = &(t->protocol_fields[PFWL_FIELDS_SSL_CERTIFICATE]);
-                    cert->str.s = &server_name[begin];
-                    cert->str.len = len;
+                  pfwl_field_string_set(t->l7.protocol_fields, PFWL_FIELDS_SSL_CERTIFICATE , &server_name[begin], len);
               }
               return 2;
             }
@@ -151,8 +149,8 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                     return 0;
                   if (extension_id == 0) {
                     u_int begin = 0, len;
-                    char* server_name =
-                        (char*)&payload[offset + extension_offset];
+                    unsigned char* server_name =
+                        (unsigned char*)&payload[offset + extension_offset];
                     if (payload[offset + extension_offset + 2] ==
                         0x00)  // host_name
                       begin = +5;
@@ -169,9 +167,7 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                       return 0; /* bad ssl */
                     }
                     if (len > 0 && required_fields[PFWL_FIELDS_SSL_CERTIFICATE]) {
-                          pfwl_field_t* cert = &(t->protocol_fields[PFWL_FIELDS_SSL_CERTIFICATE]);
-                          cert->str.s = &server_name[begin];
-                          cert->str.len = len;
+                        pfwl_field_string_set(t->l7.protocol_fields, PFWL_FIELDS_SSL_CERTIFICATE , &server_name[begin], len);
                     }
                     return 2;
                   }
@@ -203,47 +199,48 @@ static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
   return 0;
 }
 
-uint8_t check_ssl(const unsigned char* payload,
-                  uint32_t data_length,
+uint8_t check_ssl(pfwl_state_t* state,
+                  const unsigned char* payload,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t *required_fields) {
-  if (pkt_info->protocol_l4 != IPPROTO_TCP) {
+                  pfwl_flow_info_private_t* flow_info_private) {
+  if (pkt_info->l4.protocol != IPPROTO_TCP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
+  pfwl_inspector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTOCOL_SSL];
+  uint8_t* required_fields = state->fields_to_extract;
   int res;
-  debug_print("Checking ssl with size %d, direction %d\n", data_length,
-              pkt_info->direction);
-  if (tracking_info->ssl_information[pkt_info->direction].pkt_buffer == NULL) {
+  debug_print("Checking ssl with size %ld, direction %d\n", data_length,
+              pkt_info->l4.direction);
+  if (flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer == NULL) {
     res = detectSSLFromCertificate((uint8_t*)payload, data_length,
                                    pkt_info, accuracy, required_fields);
     debug_print("Result %d\n", res);
     if (res > 0) {
       if (res == 3) {
-        tracking_info->ssl_information[pkt_info->direction].pkt_buffer =
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer =
             (uint8_t*)malloc(data_length);
-        memcpy(tracking_info->ssl_information[pkt_info->direction].pkt_buffer, payload,
+        memcpy(flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer, payload,
                data_length);
-        tracking_info->ssl_information[pkt_info->direction].pkt_size = data_length;
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size = data_length;
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
       return PFWL_PROTOCOL_MATCHES;
     }
   } else {
-    tracking_info->ssl_information[pkt_info->direction].pkt_buffer = (uint8_t*)realloc(
-        tracking_info->ssl_information[pkt_info->direction].pkt_buffer,
-        tracking_info->ssl_information[pkt_info->direction].pkt_size + data_length);
-    memcpy(tracking_info->ssl_information[pkt_info->direction].pkt_buffer +
-               tracking_info->ssl_information[pkt_info->direction].pkt_size,
+    flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer = (uint8_t*)realloc(
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer,
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size + data_length);
+    memcpy(flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer +
+               flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
            payload, data_length);
-    tracking_info->ssl_information[pkt_info->direction].pkt_size += data_length;
+    flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size += data_length;
     res =
-        detectSSLFromCertificate(tracking_info->ssl_information[pkt_info->direction].pkt_buffer,
-                                 tracking_info->ssl_information[pkt_info->direction].pkt_size,
+        detectSSLFromCertificate(flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer,
+                                 flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
                                  pkt_info, accuracy, required_fields);
     debug_print("Checked %d bytes and result %d\n",
-                tracking_info->ssl_information[pkt_info->direction].pkt_size, res);
+                flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size, res);
     if (res > 0) {
       if (res == 3) {
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;

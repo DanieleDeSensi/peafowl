@@ -39,9 +39,9 @@
     if (PFWL_DEBUG_SKYPE) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
-uint8_t check_skype(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
-                    pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields) {
-  if (pkt_info->protocol_l4 != IPPROTO_UDP) {
+uint8_t check_skype(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                    pfwl_flow_info_private_t* flow_info_private) {
+  if (pkt_info->l4.protocol != IPPROTO_UDP) {
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   if (((data_length == 3) && ((app_data[2] & 0x0F) == 0x0d)) ||

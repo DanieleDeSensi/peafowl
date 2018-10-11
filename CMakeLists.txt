@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(peafowl)
+project(peafowl VERSION 1.0.0)
 set (CMAKE_BUILD_TYPE Release)
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_C_STANDARD 11)
@@ -17,6 +17,8 @@ option (ENABLE_CLANGFORMAT "Enables clang-format formatting" OFF)
 option (ENABLE_DOCS "Enables documentation generation" OFF)
 
 add_compile_options(-Wall -finline-functions -O3)
+
+find_package(PCAP)
 
 # This must be the first thing done, since COVERAGE_COMPILER_FLAGS must be used by all the targets
 ###########
@@ -48,8 +50,12 @@ endif (ENABLE_CPPCHECK)
 # Testing #
 ###########
 if (ENABLE_TESTS)
-    enable_testing()
-    add_subdirectory(test) 
+    if (NOT PCAP_FOUND)
+        message(FATAL_ERROR "libpcap needs to be installed to run tests")
+    else()
+        enable_testing()
+        add_subdirectory(test) 
+    endif (NOT PCAP_FOUND)
 endif (ENABLE_TESTS)
 
 ###########

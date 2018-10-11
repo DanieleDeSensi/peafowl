@@ -47,7 +47,10 @@
 #include <string.h>
 #include <strings.h>
 #include <time.h>
+
+#ifdef HAVE_PCAP
 #include <pcap.h>
+#endif
 
 #ifndef PFWL_DEBUG_L2
 #define PFWL_DEBUG_L2 0
@@ -231,19 +234,9 @@ static inline uint8_t getBits(uint16_t x, int p, int n){
   return (x >> (p+1-n)) & ~(~0 << n);
 }
 
-/**
- * Parses the datalink header.
- * @brief pfwl_parse_L2
- * @param packet A pointer to the packet.
- * @param datalink_type The datalink type, as defined by libpcap. This can be
- * obtained by calling pcap_datalink(...) on a PCAP handle.
- * If you do not use libpcap to capture packets, a list of allowed datalink_type
- * values can be found with 'man pcap-linktype'.
- * @param The result of the dissection. It will be filled by this call.
- */
-void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissection_info_t* r) {
+void pfwl_parse_L2(const unsigned char* packet, pfwl_protocol_l2_t datalink_type, pfwl_dissection_info_t* r) {
   // check parameters
-  if(!packet){
+  if(!packet || datalink_type == PFWL_DLT_NOT_SUPPORTED){
     r->status = PFWL_ERROR_L2_PARSING;
     return;
   }
@@ -265,7 +258,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
   // check the datalink type to cast properly datalink header
   switch(datalink_type) {
   /** IEEE 802.3 Ethernet - 1 **/
-  case DLT_EN10MB:
+  case PFWL_DLT_EN10MB:
     debug_print("%s\n", "Datalink type: Ethernet\n");
     ether_header = (struct ether_header*)(packet);
     // set datalink offset
@@ -283,7 +276,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
     break;
 
     /** Linux Cooked Capture - 113 **/
-  case DLT_LINUX_SLL:
+  case PFWL_DLT_LINUX_SLL:
     debug_print("%s\n", "Datalink type: Linux Cooked\n");
     type = (packet[dlink_offset + 14] << 8) + packet[dlink_offset + 15];
     dlink_offset = 16;
@@ -295,7 +288,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
       to match the correct total bytes of the pkt
    **/
     /** Radiotap link-layer - 127 **/
-  case DLT_IEEE802_11_RADIO: {
+  case PFWL_DLT_IEEE802_11_RADIO: {
     debug_print("%s\n", "Datalink type: Radiotap\n");
     radiotap_header = (struct radiotap_hdr *) packet;
     radiotap_len = radiotap_header->len;
@@ -354,7 +347,7 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
     break;
   }
 
-  case DLT_IEEE802_11: {
+  case PFWL_DLT_IEEE802_11: {
 
     wifi_header = (struct wifi_hdr*)(packet + radiotap_len);
     //uint8_t ts;   // TYPE/SUBTYPE (the following 3 getBits)
@@ -388,48 +381,70 @@ void pfwl_parse_L2(const unsigned char* packet, int datalink_type, pfwl_dissecti
   }
 
     /** LINKTYPE_IEEE802_5 - 6 **/
-  case DLT_IEEE802:
+  case PFWL_DLT_IEEE802:
     debug_print("%s\n", "Datalink type: Tokenring\n");
     dlink_offset = TOKENRING_SIZE;
     break;
 
     /** LINKTYPE_SLIP - 8 **/
-  case DLT_SLIP:
+  case PFWL_DLT_SLIP:
     debug_print("%s\n", "Datalink type: Slip\n");
     dlink_offset = SLIPHDR_SIZE;
     break;
 
     /** LINKTYPE_PPP - 09 **/
-  case DLT_PPP:
+  case PFWL_DLT_PPP:
     debug_print("%s\n", "Datalink type: PPP\n");
     dlink_offset = PPPHDR_SIZE;
     break;
 
     /** LINKTYPE_FDDI - 10 **/
-  case DLT_FDDI:
+  case PFWL_DLT_FDDI:
     debug_print("%s\n", "Datalink type: FDDI\n");
     dlink_offset = FDDIHDR_SIZE;
     break;
 
     /** LINKTYPE_RAW - 101 **/
-  case DLT_RAW:
+  case PFWL_DLT_RAW:
     debug_print("%s\n", "Datalink type: Raw\n");
     dlink_offset = RAWHDR_SIZE;
     break;
 
     /** LINKTYPE_LOOP - 108 **/
-  case DLT_LOOP:
+  case PFWL_DLT_LOOP:
     /** LINKTYPE_NULL - 0 **/
-  case DLT_NULL:
+  case PFWL_DLT_NULL:
     debug_print("%s\n", "Datalink type: Loop or Null\n");
     dlink_offset = LOOPHDR_SIZE;
     break;
-
   default:
-    perror("unsupported interface type\n");
+    r->status = PFWL_ERROR_L2_PARSING;
     break;
   }
 
   dlink_offset = pfwl_check_dtype(packet, type, dlink_offset);
-  r->offset_l3 = dlink_offset;
+  r->l2.length = dlink_offset;
 }
+
+#ifdef HAVE_PCAP
+pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int dlt){
+  switch(dlt){
+  case DLT_EN10MB            : return PFWL_DLT_EN10MB;
+  case DLT_LINUX_SLL         : return PFWL_DLT_LINUX_SLL;
+  case DLT_IEEE802_11_RADIO  : return PFWL_DLT_IEEE802_11_RADIO;
+  case DLT_IEEE802_11        : return PFWL_DLT_IEEE802_11;
+  case DLT_IEEE802           : return PFWL_DLT_IEEE802;
+  case DLT_SLIP              : return PFWL_DLT_SLIP;
+  case DLT_PPP               : return PFWL_DLT_PPP;
+  case DLT_FDDI              : return PFWL_DLT_FDDI;
+  case DLT_RAW               : return PFWL_DLT_RAW;
+  case DLT_LOOP              : return PFWL_DLT_LOOP;
+  case DLT_NULL              : return PFWL_DLT_NULL;
+  default                    : return PFWL_DLT_NOT_SUPPORTED;
+  }
+}
+#else
+pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int) {
+    fprintf(stderr, "To use the pfwl_convert_pcap_dlt call, libpcap needs to be installed");
+}
+#endif

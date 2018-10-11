@@ -69,7 +69,7 @@ struct dns_header {
    #param uint16_t
    #param int
    #param int
-   @return n bit from position p of number x 
+   @return n bit from position p of number x
 **/
 static inline uint8_t getBits(uint16_t x, int p, int n)
 {
@@ -91,7 +91,7 @@ uint16_t get_NS_len(const unsigned char* p)
   do {
     q += (*q + 1); // move the pointer of *q value +1
   } while((*q != 0xc0) && (*q != 0x00));
-  
+
   return (uint16_t) (q - p);
 }
 
@@ -126,22 +126,22 @@ static uint8_t isResponse(struct dns_header* dns_header, uint8_t* is_name_server
   /* Check the RCODE value */
   rcode = getBits(dns_header->flags, 3, 4);
   switch(rcode) {
-   case 0:
+  case 0:
     dns_info->rCode = NO_ERR;
     break;
-   case 1:
+  case 1:
     dns_info->rCode = FMT_ERR;
     break;
-   case 2:
+  case 2:
     dns_info->rCode = SRV_FAIL;
     break;
-   case 3:
+  case 3:
     dns_info->rCode = NAME_ERR;
     break;
-   case 4:
+  case 4:
     dns_info->rCode = NOT_IMPL;
     break;
-   case 5:
+  case 5:
     dns_info->rCode = REFUSED;
     break;
   }
@@ -165,8 +165,8 @@ static uint8_t isResponse(struct dns_header* dns_header, uint8_t* is_name_server
     }
     /**
        Note:
-       ANCOUNT = 0 && NSCOUNT = 0 
-       means the name server is already extracted 
+       ANCOUNT = 0 && NSCOUNT = 0
+       means the name server is already extracted
        from the corresponding query
     **/
   }
@@ -174,31 +174,33 @@ static uint8_t isResponse(struct dns_header* dns_header, uint8_t* is_name_server
 }
 
 
-uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields)
+uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                  pfwl_flow_info_private_t* flow_info_private)
 {
+  pfwl_inspector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTOCOL_DNS];
+  uint8_t* required_fields = state->fields_to_extract;
   // check param
   if(!app_data)
     return PFWL_PROTOCOL_NO_MATCHES;
   if(!data_length)
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
-  
+
   /* DNS port (53) */
-  if((pkt_info->port_dst == port_dns || pkt_info->port_src == port_dns) &&
+  if((pkt_info->l4.port_dst == port_dns || pkt_info->l4.port_src == port_dns) &&
      data_length >= 12) {
 
     uint8_t is_valid = -1;
     uint8_t is_name_server = 0, is_auth_server = 0;
     uint16_t data_len = 0, type;
     struct dns_header* dns_header = (struct dns_header*)(app_data);
-    pfwl_dns_internal_information_t* dns_info = &tracking_info->dns_informations;
-    pfwl_field_t* extracted_fields = pkt_info->protocol_fields;
+    pfwl_dns_internal_information_t* dns_info = &flow_info_private->dns_informations;
+    pfwl_field_t* extracted_fields = pkt_info->l7.protocol_fields;
 
     // pointer to beginning of queries section
     const unsigned char* pq = app_data + sizeof(struct dns_header);
 
     // init
-    memset(&(tracking_info->dns_informations), 0, sizeof(tracking_info->dns_informations));
+    memset(&(flow_info_private->dns_informations), 0, sizeof(flow_info_private->dns_informations));
 
     // set to host byte order
     dns_header->tr_id = ntohs(dns_header->tr_id);
@@ -207,7 +209,7 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_diss
     dns_header->answ_count = ntohs(dns_header->answ_count);
     dns_header->auth_rrs = ntohs(dns_header->auth_rrs);
     dns_header->add_rrs = ntohs(dns_header->add_rrs);
-    
+
     /**
        QR == 0 is a QUERY
     **/
@@ -216,17 +218,15 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_diss
       (isQuery(dns_header) != 0) ? (is_valid = 0) : (is_valid = 1);
       // set QTYPE
       if(is_valid) dns_info->Type = QUERY;
-      
+
       /** check accuracy type for fields parsing **/
       if(accuracy == PFWL_INSPECTOR_ACCURACY_HIGH && is_valid) {
-	// check name server field
-  if(required_fields[PFWL_FIELDS_DNS_NAME_SRV]) {
-    pfwl_field_t* name_srv = &(extracted_fields[PFWL_FIELDS_DNS_NAME_SRV]);
-	  const char* temp = (const char*)(pq + 1);
-	    char* r = strchr((const char*)pq + 1, '\0');
-      name_srv->str.s = temp;
-      name_srv->str.len = r - temp;
-	}
+        // check name server field
+        if(required_fields[PFWL_FIELDS_DNS_NAME_SRV]) {
+          const unsigned char* temp = (const unsigned char*)(pq + 1);
+          const char* r = strchr((const char*)pq + 1, '\0');
+          pfwl_field_string_set(extracted_fields, PFWL_FIELDS_DNS_NAME_SRV, temp, (const unsigned char*) r - temp);
+        }
       }
     }
     /**
@@ -235,91 +235,83 @@ uint8_t check_dns(const unsigned char* app_data, uint32_t data_length, pfwl_diss
     if((dns_header->flags & FMASK) == 0x8000) {
       // check isAnswer
       (isResponse(dns_header,
-		  &is_name_server,
-		  &is_auth_server,
-		  dns_info) != 0) ? (is_valid = 0) : (is_valid = 1);
+                  &is_name_server,
+                  &is_auth_server,
+                  dns_info) != 0) ? (is_valid = 0) : (is_valid = 1);
       // set QTYPE
       if(is_valid) dns_info->Type = ANSWER;
 
       /** check accuracy type for fields parsing **/
       if(accuracy == PFWL_INSPECTOR_ACCURACY_HIGH && is_valid){
-	// sfhift of Query section
-	uint8_t i = 0;
-	const char* temp = (const char*)(pq);
-	char* r = strchr((const char*)pq, '\0');
-	pq += (r - temp + 1) + 4; // end of Name + Type(2) + Class(2)
-	
-	// check name server IP
-  if(required_fields[PFWL_FIELDS_DNS_NS_IP_1] && is_name_server) {
-	  
-	  /**
-	     Note:
-	     In case of answer count > 1, we consider (for now) only the first two sections
-	  **/
+        // sfhift of Query section
+        uint8_t i = 0;
+        const unsigned char* temp = (const unsigned char*)(pq);
+        char* r = strchr((const char*)pq, '\0');
+        pq += ((const unsigned char*) r - temp + 1) + 4; // end of Name + Type(2) + Class(2)
 
-	  do{
-      pfwl_field_t* name_srv_IP = &(extracted_fields[PFWL_FIELDS_DNS_NS_IP_1 + i]);
-	    // Answer section
-	    if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
+        // check name server IP
+        if(required_fields[PFWL_FIELDS_DNS_NS_IP_1] && is_name_server) {
 
-	    // Answer Type
-	    type = pq[1] + (pq[0] << 8);
-	    dns_info->aType = type;
-	    
-	    pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
-	    data_len = pq[1] + (pq[0] << 8);
-	    pq += 2; // shift data length(2)
-	    
-	    // update s and len for the field
-	    if(dns_info->aType != CNAME) {
-        name_srv_IP->str.s = (const char*) pq;
-        name_srv_IP->str.len = data_len;
-	    }
-	    // decrement number of answer sections found
-	    --dns_header->answ_count;
-	    i++;
-	    pq += data_len;
-	  }while(dns_header->answ_count > 0 && i < 2);
-	}
-	// check auth server
-  if(required_fields[PFWL_FIELDS_DNS_AUTH_SRV] && is_auth_server) {
-    pfwl_field_t* auth_srv = &(extracted_fields[PFWL_FIELDS_DNS_AUTH_SRV]);
+          /**
+         Note:
+         In case of answer count > 1, we consider (for now) only the first two sections
+      **/
 
-	  /* /\** No Answer field(s) present: skip the query section and point to Authority fields **\/ */
-	  /* if(!is_name_server) pq += (extracted_fields_dns[PFWL_FIELDS_DNS_NAME_SRV].len + 4); */
+          do{
+            // Answer section
+            if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
 
-	  /** Answer field(s) present: skip all these sections **/
-	  if(is_name_server) {
-	    while(dns_header->answ_count) {
-	      pq += 10; // NPTR(2) + TYPE(2) + CLASS(2) + TTL(4)
-	      data_len = pq[1] + (pq[0] << 8);
-	      pq += 2; // Data LEN(2)
-	      pq += data_len;
-	      --dns_header->answ_count;
-	    }
-	  }
-	  /* PARSE AUTHORITY FIELDS */
-	  if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
+            // Answer Type
+            type = pq[1] + (pq[0] << 8);
+            dns_info->aType = type;
 
-	  // Auth Type
-	  type = pq[1] + (pq[0] << 8);
-	  dns_info->authType = type;
-	  
-	  pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
-	  data_len = pq[1] + (pq[0] << 8);
-	  pq += 2; // Data LEN(2)
-	  
-	  if(type == SOA) {
-	    // update s and len for the field
-      auth_srv->str.s = (const char*) (pq + 1);
-      auth_srv->str.len = get_NS_len(pq);
-	  }
-	  else {
-	    // update s and len for the field
-      auth_srv->str.s = (const char*) pq;
-      auth_srv->str.len = data_len;
-	  }
-	}
+            pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
+            data_len = pq[1] + (pq[0] << 8);
+            pq += 2; // shift data length(2)
+
+            // update s and len for the field
+            if(dns_info->aType != CNAME) {
+              pfwl_field_string_set(extracted_fields, PFWL_FIELDS_DNS_NS_IP_1 + i, pq, data_len);
+            }
+            // decrement number of answer sections found
+            --dns_header->answ_count;
+            i++;
+            pq += data_len;
+          }while(dns_header->answ_count > 0 && i < 2);
+        }
+        // check auth server
+        if(required_fields[PFWL_FIELDS_DNS_AUTH_SRV] && is_auth_server) {
+          /* /\** No Answer field(s) present: skip the query section and point to Authority fields **\/ */
+          /* if(!is_name_server) pq += (extracted_fields_dns[PFWL_FIELDS_DNS_NAME_SRV].len + 4); */
+
+          /** Answer field(s) present: skip all these sections **/
+          if(is_name_server) {
+            while(dns_header->answ_count) {
+              pq += 10; // NPTR(2) + TYPE(2) + CLASS(2) + TTL(4)
+              data_len = pq[1] + (pq[0] << 8);
+              pq += 2; // Data LEN(2)
+              pq += data_len;
+              --dns_header->answ_count;
+            }
+          }
+          /* PARSE AUTHORITY FIELDS */
+          if(*pq == 0xc0) pq += 2; // Name is just a pointer of Name in query section
+
+          // Auth Type
+          type = pq[1] + (pq[0] << 8);
+          dns_info->authType = type;
+
+          pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
+          data_len = pq[1] + (pq[0] << 8);
+          pq += 2; // Data LEN(2)
+
+          if(type == SOA) {
+            pfwl_field_string_set(extracted_fields, PFWL_FIELDS_DNS_AUTH_SRV , pq + 1, get_NS_len(pq));
+          }
+          else {
+            pfwl_field_string_set(extracted_fields, PFWL_FIELDS_DNS_AUTH_SRV , pq, data_len);
+          }
+        }
       }
     }
     if(!is_valid)

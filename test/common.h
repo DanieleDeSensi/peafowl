@@ -25,18 +25,12 @@ class Pcap{
 private:
     pcap_t* _handle;
 public:
-    int _datalink_type;
+    pfwl_protocol_l2_t _datalink_type;
     Pcap(const char* pcapName);
 
     std::pair<const u_char*, unsigned long> getNextPacket();
 };
 
-std::vector<pfwl_dissection_info_t> getProtocols(const char* pcapName,
-                  std::vector<uint>& protocols);
-
-std::vector<pfwl_dissection_info_t> getProtocolsWithState(const char* pcapName,
-                           std::vector<uint>& protocols,
-                           pfwl_state_t* state);
-
+void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state = NULL, std::function< void(pfwl_dissection_info_t) > lambda = [](pfwl_dissection_info_t){});
 
 #endif // PEAFOWL_TEST_COMMON

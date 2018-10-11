@@ -29,18 +29,18 @@
 #include <peafowl/peafowl.h>
 #include <peafowl/inspectors/inspectors.h>
 
-uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info, pfwl_inspector_accuracy_t accuracy, uint8_t *required_fields){
+uint8_t check_imap(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                   pfwl_flow_info_private_t* flow_info_private){
   uint16_t i = 0;
   uint16_t space_pos = 0;
   uint16_t command_start = 0;
   uint8_t saw_command = 0;
 
-  if(pkt_info->protocol_l4 != IPPROTO_TCP){
+  if(pkt_info->l4.protocol != IPPROTO_TCP){
     return PFWL_PROTOCOL_NO_MATCHES;
   }
   
-  if (tracking_info->imap_starttls == 2) {
+  if (flow_info_private->imap_starttls == 2) {
     return PFWL_PROTOCOL_MATCHES;
   }
 
@@ -50,10 +50,10 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
                              && (app_data[1] == 'O' || app_data[1] == 'o')
                              && (app_data[2] == 'N' || app_data[2] == 'n')
                              && (app_data[3] == 'E' || app_data[3] == 'e'))) {
-      tracking_info->imap_stage += 1;
+      flow_info_private->imap_stage += 1;
       saw_command = 1;
     } else {
-      if (tracking_info->imap_stage < 4) {
+      if (flow_info_private->imap_stage < 4) {
         // search for the first space character (end of the tag)
         while (i < 20 && i < data_length) {
           if (i > 0 && app_data[i] == ' ') {
@@ -98,14 +98,14 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
         if ((app_data[command_start] == 'O' || app_data[command_start] == 'o')
             && (app_data[command_start + 1] == 'K' || app_data[command_start + 1] == 'k')
             && app_data[command_start + 2] == ' ') {
-          tracking_info->imap_stage += 1;
-          if (tracking_info->imap_starttls == 1)
-            tracking_info->imap_starttls = 2;
+          flow_info_private->imap_stage += 1;
+          if (flow_info_private->imap_starttls == 1)
+            flow_info_private->imap_starttls = 2;
           saw_command = 1;
         } else if ((app_data[command_start] == 'U' || app_data[command_start] == 'u')
                    && (app_data[command_start + 1] == 'I' || app_data[command_start + 1] == 'i')
                    && (app_data[command_start + 2] == 'D' || app_data[command_start + 2] == 'd')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -120,7 +120,7 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 7] == 'I' || app_data[command_start + 7] == 'i')
             && (app_data[command_start + 8] == 'T' || app_data[command_start + 8] == 't')
             && (app_data[command_start + 9] == 'Y' || app_data[command_start + 9] == 'y')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -133,8 +133,8 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 5] == 'T' || app_data[command_start + 5] == 't')
             && (app_data[command_start + 6] == 'L' || app_data[command_start + 6] == 'l')
             && (app_data[command_start + 7] == 'S' || app_data[command_start + 7] == 's')) {
-          tracking_info->imap_stage += 1;
-          tracking_info->imap_starttls = 1;
+          flow_info_private->imap_stage += 1;
+          flow_info_private->imap_starttls = 1;
           saw_command = 1;
         }
       }
@@ -144,35 +144,35 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 2] == 'G' || app_data[command_start + 2] == 'g')
             && (app_data[command_start + 3] == 'I' || app_data[command_start + 3] == 'i')
             && (app_data[command_start + 4] == 'N' || app_data[command_start + 4] == 'n')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'F' || app_data[command_start] == 'f')
                    && (app_data[command_start + 1] == 'E' || app_data[command_start + 1] == 'e')
                    && (app_data[command_start + 2] == 'T' || app_data[command_start + 2] == 't')
                    && (app_data[command_start + 3] == 'C' || app_data[command_start + 3] == 'c')
                    && (app_data[command_start + 4] == 'H' || app_data[command_start + 4] == 'h')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'F' || app_data[command_start] == 'f')
                    && (app_data[command_start + 1] == 'L' || app_data[command_start + 1] == 'l')
                    && (app_data[command_start + 2] == 'A' || app_data[command_start + 2] == 'a')
                    && (app_data[command_start + 3] == 'G' || app_data[command_start + 3] == 'g')
                    && (app_data[command_start + 4] == 'S' || app_data[command_start + 4] == 's')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'C' || app_data[command_start] == 'c')
                    && (app_data[command_start + 1] == 'H' || app_data[command_start + 1] == 'h')
                    && (app_data[command_start + 2] == 'E' || app_data[command_start + 2] == 'e')
                    && (app_data[command_start + 3] == 'C' || app_data[command_start + 3] == 'c')
                    && (app_data[command_start + 4] == 'K' || app_data[command_start + 4] == 'k')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'S' || app_data[command_start] == 's')
                    && (app_data[command_start + 1] == 'T' || app_data[command_start + 1] == 't')
                    && (app_data[command_start + 2] == 'O' || app_data[command_start + 2] == 'o')
                    && (app_data[command_start + 3] == 'R' || app_data[command_start + 3] == 'r')
                    && (app_data[command_start + 4] == 'E' || app_data[command_start + 4] == 'e')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -189,7 +189,7 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 9] == 'A' || app_data[command_start + 9] == 'a')
             && (app_data[command_start + 10] == 'T' || app_data[command_start + 10] == 't')
             && (app_data[command_start + 11] == 'E' || app_data[command_start + 11] == 'e')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -203,7 +203,7 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 6] == 'A' || app_data[command_start + 6] == 'a')
             && (app_data[command_start + 7] == 'C' || app_data[command_start + 7] == 'c')
             && (app_data[command_start + 8] == 'E' || app_data[command_start + 8] == 'e')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -212,25 +212,25 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 1] == 'S' || app_data[command_start + 1] == 's')
             && (app_data[command_start + 2] == 'U' || app_data[command_start + 2] == 'u')
             && (app_data[command_start + 3] == 'B' || app_data[command_start + 3] == 'b')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'L' || app_data[command_start] == 'l')
                    && (app_data[command_start + 1] == 'I' || app_data[command_start + 1] == 'i')
                    && (app_data[command_start + 2] == 'S' || app_data[command_start + 2] == 's')
                    && (app_data[command_start + 3] == 'T' || app_data[command_start + 3] == 't')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'N' || app_data[command_start] == 'n')
                    && (app_data[command_start + 1] == 'O' || app_data[command_start + 1] == 'o')
                    && (app_data[command_start + 2] == 'O' || app_data[command_start + 2] == 'o')
                    && (app_data[command_start + 3] == 'P' || app_data[command_start + 3] == 'p')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'I' || app_data[command_start] == 'i')
                    && (app_data[command_start + 1] == 'D' || app_data[command_start + 1] == 'd')
                    && (app_data[command_start + 2] == 'L' || app_data[command_start + 2] == 'l')
                    && (app_data[command_start + 3] == 'E' || app_data[command_start + 3] == 'e')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -241,7 +241,7 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
             && (app_data[command_start + 3] == 'E' || app_data[command_start + 3] == 'e')
             && (app_data[command_start + 4] == 'C' || app_data[command_start + 4] == 'c')
             && (app_data[command_start + 5] == 'T' || app_data[command_start + 5] == 't')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'E' || app_data[command_start] == 'e')
                    && (app_data[command_start + 1] == 'X' || app_data[command_start + 1] == 'x')
@@ -249,7 +249,7 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
                    && (app_data[command_start + 3] == 'S' || app_data[command_start + 3] == 's')
                    && (app_data[command_start + 4] == 'T' || app_data[command_start + 4] == 't')
                    && (app_data[command_start + 5] == 'S' || app_data[command_start + 5] == 's')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         } else if ((app_data[command_start] == 'A' || app_data[command_start] == 'a')
                    && (app_data[command_start + 1] == 'P' || app_data[command_start + 1] == 'p')
@@ -257,7 +257,7 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
                    && (app_data[command_start + 3] == 'E' || app_data[command_start + 3] == 'e')
                    && (app_data[command_start + 4] == 'N' || app_data[command_start + 4] == 'n')
                    && (app_data[command_start + 5] == 'D' || app_data[command_start + 5] == 'd')) {
-          tracking_info->imap_stage += 1;
+          flow_info_private->imap_stage += 1;
           saw_command = 1;
         }
       }
@@ -265,14 +265,14 @@ uint8_t check_imap(const unsigned char* app_data, uint32_t data_length, pfwl_dis
     }
 
     if (saw_command == 1) {
-      if (tracking_info->imap_stage == 3 || tracking_info->imap_stage == 5) {
+      if (flow_info_private->imap_stage == 3 || flow_info_private->imap_stage == 5) {
         return PFWL_PROTOCOL_MATCHES;
       }
     }
   }
 
   if (data_length > 1 && app_data[data_length - 1] == ' ') {
-    tracking_info->imap_stage = 4;
+    flow_info_private->imap_stage = 4;
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
 
@@ -281,7 +281,7 @@ imap_excluded:
   // skip over possible authentication hashes etc. that cannot be identified as imap commands or responses
   // if the packet count is low enough and at least one command or response was seen before
   if ((data_length >= 2 && ntohs(get_u16(app_data, data_length - 2)) == 0x0d0a)
-      && tracking_info->num_packets < 6 && tracking_info->imap_stage >= 1) {
+      && flow_info_private->info_public->num_packets_l7[0] + flow_info_private->info_public->num_packets_l7[1]  < 6 && flow_info_private->imap_stage >= 1) {
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
 

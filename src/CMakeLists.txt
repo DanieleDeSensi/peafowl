@@ -4,7 +4,12 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 file(GLOB SOURCES "*.cpp" "*.c" "inspectors/*.cpp" "inspectors/*.c")
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/worker.cpp" "${CMAKE_SOURCE_DIR}/src/peafowl_mc.cpp")
-#add_definitions(-g -O0)
+
+if (PCAP_FOUND)
+  include_directories($PCAP_INCLUDE_DIR)
+  add_definitions(-DHAVE_PCAP)
+endif(PCAP_FOUND)
+
 
 ####################
 # Parallel version #
@@ -27,8 +32,15 @@ if (ENABLE_PARALLEL)
   target_link_libraries(peafowl ${CMAKE_THREAD_LIBS_INIT})
 endif (ENABLE_PARALLEL)
 
-install(TARGETS peafowl DESTINATION /usr/lib)
-install(TARGETS peafowl_static DESTINATION /usr/lib)
+
+install(TARGETS peafowl 
+        LIBRARY DESTINATION /usr/lib)
+
+install(TARGETS peafowl_static 
+        ARCHIVE DESTINATION /usr/lib)
+
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/peafowl
+        DESTINATION /usr/include)
 
 ####################
 # Uninstall target #

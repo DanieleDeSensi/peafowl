@@ -66,7 +66,7 @@ static void match_found(string::size_type position, trie::value_type const &matc
   cout << "Matched '" << match.second << "' at " << position << endl;
 }
 
-void body_cb(const char* app_data, u_int32_t data_length, void** flow_specific_user_data){
+void body_cb(const unsigned char* app_data, u_int32_t data_length, void** flow_specific_user_data){
   if(*flow_specific_user_data==NULL){
     if(scanner_pool->mc_pop(flow_specific_user_data)==false){
       *flow_specific_user_data=new byte_scanner(*my_trie, match_found);
@@ -190,25 +190,25 @@ int main(int argc, char **argv){
 
 
 
-    scanner_pool=new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE);
+    scanner_pool = new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE);
     scanner_pool->init();
     for(uint i=0; i<SCANNER_POOL_SIZE; i++){
       scanner_pool->push(new byte_scanner(t, match_found));
     }
 
     pfwl_state_t* state=pfwl_init();
+    pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
     pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
     pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
 
     uint i,j;
     for(j=0; j<num_iterations; j++){
       for(i=0; i<num_packets; i++){
-        pfwl_dissection_info_t r = pfwl_dissect_from_L2(state, packets[i], sizes[i], 0, pcap_datalink(handle));
-        if(r.protocol_l7 == PFWL_PROTOCOL_HTTP){
-          size_t body_length = r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.len;
-          if(body_length){
-            const char* body = r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.s;
-            body_cb(body, body_length, r.user_flow_data);
+        pfwl_dissection_info_t r = pfwl_dissect_from_L2(state, packets[i], sizes[i], 0, dlt);
+        if(r.l7.protocol == PFWL_PROTOCOL_HTTP){
+          pfwl_string_t field;
+          if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_HTTP_BODY, &field)){
+            body_cb(field.value, field.length, r.flow_info.udata);
           }
         }
       }

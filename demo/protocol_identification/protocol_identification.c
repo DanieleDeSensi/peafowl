@@ -61,17 +61,17 @@ int main(int argc, char** argv){
   struct pcap_pkthdr header;
 
   pfwl_dissection_info_t r;
+  pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
   u_int32_t protocols[PFWL_NUM_PROTOCOLS];
   memset(protocols, 0, sizeof(protocols));
   u_int32_t unknown=0;
 
   while((packet=pcap_next(handle, &header))!=NULL){
-    r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), pcap_datalink(handle));
+    r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt);
 
-    if(r.protocol_l4 == IPPROTO_TCP ||
-       r.protocol_l4 == IPPROTO_UDP){
-      if(r.protocol_l7 < PFWL_NUM_PROTOCOLS){
-        ++protocols[r.protocol_l7];
+    if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
+      if(r.l7.protocol < PFWL_NUM_PROTOCOLS){
+        ++protocols[r.l7.protocol];
       }else{
         ++unknown;
       }

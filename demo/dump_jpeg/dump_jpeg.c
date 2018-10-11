@@ -1,4 +1,4 @@
-/*
+/**
  * demo_jpeg.c
  *
  * This demo application dumps on the disk all the jpeg images carried by HTTP packets
@@ -42,93 +42,89 @@
 #include <unistd.h>
 #include <errno.h>
 
-#ifndef ETHERTYPE_IPV6
-#define	ETHERTYPE_IPV6		0x86dd		/* IP protocol version 6 */
-#endif
-
-
 #define MAX_FILENAME_SIZE 128
 
 void flow_delete_cb(void* flow_specific_user_data){
-	if(flow_specific_user_data){
-		fclose((FILE*) flow_specific_user_data);
-	}
+  if(flow_specific_user_data){
+    fclose((FILE*) flow_specific_user_data);
+  }
 }
 
-
 int main(int argc, char** argv){
-	if(argc!=2){
-		fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
-		return -1;
-	}
+  if(argc!=2){
+    fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
+    return -1;
+  }
 
   pfwl_state_t *state = pfwl_init();
-	pfwl_set_flow_cleaner_callback(state, &flow_delete_cb);
-  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_CONTENT_TYPE);
+  pfwl_set_flow_cleaner_callback(state, &flow_delete_cb);
+  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_HEADERS);
   pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
 
-	pcap_t *handle; /* Session handle */
-	struct pcap_pkthdr header; /* The header that pcap gives us */
-	const u_char *packet; /* The actual packet */
+  pcap_t *handle; /* Session handle */
+  struct pcap_pkthdr header; /* The header that pcap gives us */
+  const u_char *packet; /* The actual packet */
 
-	char errbuf[PCAP_ERRBUF_SIZE];
-	bzero(errbuf, PCAP_ERRBUF_SIZE);
-	printf("Open offline.\n");
+  char errbuf[PCAP_ERRBUF_SIZE];
+  bzero(errbuf, PCAP_ERRBUF_SIZE);
+  printf("Open offline.\n");
   handle = pcap_open_offline(argv[1], errbuf);
-	if(!handle){
-		bzero(errbuf, PCAP_ERRBUF_SIZE);
-		printf("Open live %s.\n", argv[1]);
-		handle=pcap_open_live(argv[1],  65535, 1, 1000, errbuf);
-	}
+  if(!handle){
+    bzero(errbuf, PCAP_ERRBUF_SIZE);
+    printf("Open live %s.\n", argv[1]);
+    handle=pcap_open_live(argv[1],  65535, 1, 1000, errbuf);
+  }
 
-	if(handle==NULL){
-		fprintf(stderr, "Couldn't open device %s: %s\n", argv[1], errbuf);
-		return (2);
-	}
+  if(handle==NULL){
+    fprintf(stderr, "Couldn't open device %s: %s\n", argv[1], errbuf);
+    return (2);
+  }
 
-	pcap_setnonblock(handle, 0, errbuf);
+  pcap_setnonblock(handle, 0, errbuf);
 
-	/* Grab a packet */
+  /* Grab a packet */
   while((packet = pcap_next(handle, &header)) != NULL){
-    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state,(const u_char*) packet, header.caplen, time(NULL), pcap_datalink(handle));
-    if(r.protocol_l7 == PFWL_PROTOCOL_HTTP){
-      if((*r.user_flow_data == NULL) &&
-         r.protocol_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.len &&
-         (strncmp((char*) r.protocol_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.s, "image/jpeg", r.protocol_fields[PFWL_FIELDS_HTTP_CONTENT_TYPE].str.len) == 0)){
+    pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
+    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state,(const u_char*) packet, header.caplen, time(NULL), dlt);
+    if(r.l7.protocol == PFWL_PROTOCOL_HTTP){
+      pfwl_string_t field;
+      if((*r.flow_info.udata == NULL) &&
+         !pfwl_http_get_header(&r, "Content-Type", &field) &&
+         (strncmp((char*) field.value, "image/jpeg", field.length) == 0)){
         struct in_addr src, dst;
-        src.s_addr = r.addr_src.ipv4;
-        dst.s_addr = r.addr_dst.ipv4;
+        src.s_addr = r.l3.addr_src.ipv4;
+        dst.s_addr = r.l3.addr_dst.ipv4;
         char src_string[64];
         strcpy(src_string, inet_ntoa(src));
         char dst_string[64];
         strcpy(dst_string, inet_ntoa(dst));
 
         char filename[MAX_FILENAME_SIZE];
-        sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32".jpeg", src_string, ntohs(r.port_src), dst_string, ntohs(r.port_dst), r.timestamp);
+        sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%ld.jpeg", src_string, ntohs(r.l4.port_src), dst_string, ntohs(r.l4.port_dst), time(NULL));
 
         u_int32_t j=0;
         /** File already exists. **/
         while(access(filename, F_OK)!=-1){
-          sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%"PRIu32"_%"PRIu32".jpeg", src_string, ntohs(r.port_src), dst_string, ntohs(r.port_dst), r.timestamp, ++j);
+          sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%ld_%d.jpeg", src_string, ntohs(r.l4.port_src), dst_string, ntohs(r.l4.port_dst), time(NULL), ++j);
         }
-        *r.user_flow_data = fopen(filename, "w");
-        assert(*r.user_flow_data);
+        *r.flow_info.udata = fopen(filename, "w");
+        assert(*r.flow_info.udata);
       }
 
-      if(r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.len && *r.user_flow_data){
+      if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_HTTP_BODY, &field) && *r.flow_info.udata){
         u_int32_t i;
-        for(i = 0; i< r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.len; ++i)
-          fputc(r.protocol_fields[PFWL_FIELDS_HTTP_BODY].str.s[i], ((FILE*) *r.user_flow_data));
+        for(i = 0; i < field.length; ++i)
+          fputc(field.value[i], ((FILE*) *r.flow_info.udata));
 
-        assert(fclose(((FILE*) *r.user_flow_data))==0);
-        *r.user_flow_data = NULL;
+        fclose(((FILE*) *r.flow_info.udata));
+        *r.flow_info.udata = NULL;
       }
     }
 
-	}
-	/* And close the session */
-	pcap_close(handle);
+  }
+  /* And close the session */
+  pcap_close(handle);
 
-	pfwl_terminate(state);
-	return 0;
+  pfwl_terminate(state);
+  return 0;
 }

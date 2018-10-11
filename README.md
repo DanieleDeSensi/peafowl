@@ -31,16 +31,7 @@ To correctly identify the protocol also when its data is split among multiple IP
 and to avoid the possibility of evasion attacks, if required, the framework can perform IP defragmentation and 
 TCP stream reassembly.
 
-Peafowl also provide the possibility to exploit the parallelism of current multicore machines, splitting the
-processing load among the available cores. This feature is particularly useful when some complex processing
-is required on the content of the packets (e.g. complex pattern matching, audio/video processing, etc...).
-This possibility have been implemented by using [FastFlow](http://calvados.di.unipi.it/dokuwiki/doku.php?id=ffnamespace:about),
-a parallel programming framework for multicore platforms based upon non-blocking lock-free/fence-free 
-synchronization mechanisms.
-
-
 **If you use Peafowl for scientific purposes, please cite our paper:**
-
 *"Deep Packet Inspection on Commodity Hardware using FastFlow"*, M. Danelutto, L. Deri, D. De Sensi, M. Torquati
 
 
@@ -165,10 +156,7 @@ linking lib/libdpi.a.
 
 The API is based on 3 main calls:
 
-+ ```pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS)```:
-used to initialize the state of the framework. It requires the size of the tables that the framework will use
-and the maximum number of flows that the framework should manage. When this number of flows is reached, the 
-framework will add no other flows to the table. This call returns an handle to the framework, which will
++ ```pfwl_init()```: used to initialize the state of the framework. This call returns an handle to the framework, which will
 be required as parameter for most of the framework calls;
 
 + ```pfwl_get_protocol(state, packet, length, timestamp)```:
@@ -184,10 +172,8 @@ defragmentation please refer to the documentation in ["src/peafowl.h"](src/peafo
 
 Multicore version
 ------------------------------------------------------------------------------------------------------------------ 
-You can take advantage of the multicore version by including the ["src/peafowl_mc.h"](src/peafowl_mc.h) header and by 
-linking lib/libmcdpi.a. Since the user manual for the multicore version of Peafowl is not yet available,
-you can look at [this](demo/protocol_identification_mc/protocol_identification.cpp) simple demo file.
-If you  need more informations about how to use it, contact me at d.desensi.software@gmail.com or read the [Thesis](Thesis.pdf). 
+A multicore version of Peafowl was available on pre 1.0.0 version of Peafowl. It is not available at the moment
+but will be back in Peafowl v1.1.0
 
 Demo application
 ---------------------------------------------------------------------------------------------------------------------
@@ -201,8 +187,7 @@ This application can be easily modified to read packet from the network instead 
  *
  *  Given a .pcap file, it identifies the protocol of all the packets contained in it.
  *
- *  Created on: 12/11/2012
- *  Author: Daniele De Sensi
+ *  Author: Daniele De Sensi (d.desensi.software@gmail.com)
  */
 
 #include <peafowl.h>
@@ -226,8 +211,7 @@ int main(int argc, char** argv){
     }
     char* pcap_filename=argv[1];
     char errbuf[PCAP_ERRBUF_SIZE];
-
-    pfwl_library_state_t* state = pfwl_init();
+    
     pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
 
     if(handle==NULL){
@@ -243,11 +227,11 @@ int main(int argc, char** argv){
     memset(protocols, 0, sizeof(protocols));
     u_int32_t unknown=0;
 
+  pfwl_library_state_t* state = pfwl_init();
     while((packet=pcap_next(handle, &header))!=NULL){
         r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), pcap_datalink(handle));
 
-        if(r.protocol.l4prot == IPPROTO_TCP ||
-           r.protocol.l4prot == IPPROTO_UDP){
+        if(r.protocol.l4prot == IPPROTO_TCP || r.protocol.l4prot == IPPROTO_UDP){
             if(r.protocol.l7prot < PFWL_NUM_PROTOCOLS){
                 ++protocols[r.protocol.l7prot];
             }else{
@@ -258,7 +242,6 @@ int main(int argc, char** argv){
         }
 
     }
-
     pfwl_terminate(state);
 
     if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
@@ -311,14 +294,12 @@ enum protocols{
 2) Create a new inspector, by implementing a C function with the following signature and semantic:
 
 ```C
-uint8_t check_telnet(pfwl_library_state_t* state,    // The state of the library
-                      pfwl_pkt_infos_t* pkt,          // The parsed information about the current packet
-                      const unsigned char* app_data, // A pointer to the beginning of the 
-                                                     // application (layer 7) data
-                      uint32_t data_length,         // The lenght of the application data
-                      pfwl_tracking_informations_t* t // Information about the current state of the 
-                                                     // connection to which the packet belongs to
-                      );
+uint8_t check_telnet(pfwl_state_t* state,                         ///< The state of the library.
+                   const unsigned char* app_data,                 ///< A pointer to the beginning of the 
+                                                                  ///< application (layer 7) data.     
+                   uint32_t data_length,                          ///< The lenght of the application data.
+                   pfwl_dissection_info_t* dissection_info,       ///< Dissection data collected up to L4.
+                   pfwl_tracking_informations_t* tracking_info);  ///< Information about the flow of the packet.
 ```
 The function declaration must be put in ```include/peafowl/inspectors/inspectors.h```, while its definition can be put 
 in a new source file in inspectors folder (e.g. ```src/inspectors/telnet.c```).
@@ -541,20 +522,13 @@ their own flow informations also the informations needed by the framework to ide
 
 A more detailed description can be found in the thesis which lead to the development of this framework: [Thesis.pdf](Thesis.pdf)
 
-Advanced usage
-================================================================================================================
-Details on how to add new protocols and on different configuration parameters can be found in [README_ADVANCED.md](README_ADVANCED.md)
-
-Export to Prometheus DB
-================================================================================================================
-Dependencies:
-- libcurl: e.g. apt-get install libcurl4-openssl-dev
 
 Configuration
 ================================================================================================================
 Default parameters are suited for many cases. Different configuration parameters can be modified in "config.h" 
 file. The most important are the following:
 
++ PFWL_HTTP_MAX_HEADERS: The maximum number of headers that can be extracted for a single HTTP packet [default = 256].
 + PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE: Default value for the average bucket size of the flow table.
 + PFWL_DEFAULT_EXPECTED_FLOWS: Default value for the expected flows
 + PFWL_CACHE_LINE_SIZE: Size of L1 cache line

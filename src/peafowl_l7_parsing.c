@@ -51,7 +51,7 @@
     if (PFWL_DEBUG) fprintf(stderr, fmt, __VA_ARGS__); \
   } while (0)
 
-static const pfwl_protocol_l7_t const
+static const pfwl_protocol_l7_t
     pfwl_well_known_ports_association_tcp[PFWL_MAX_UINT_16 + 1] =
         {[0 ... PFWL_MAX_UINT_16] = PFWL_PROTOCOL_UNKNOWN,
          [port_dns] = PFWL_PROTOCOL_DNS,
@@ -72,7 +72,7 @@ static const pfwl_protocol_l7_t const
          [port_hangout_19309] = PFWL_PROTOCOL_HANGOUT,
          [port_ssh] = PFWL_PROTOCOL_SSH,};
 
-static const pfwl_protocol_l7_t const
+static const pfwl_protocol_l7_t
     pfwl_well_known_ports_association_udp[PFWL_MAX_UINT_16 + 1] =
         {[0 ... PFWL_MAX_UINT_16] = PFWL_PROTOCOL_UNKNOWN,
          [port_dns] = PFWL_PROTOCOL_DNS,
@@ -99,7 +99,7 @@ typedef struct{
   pfwl_dissector dissector;
 }pfwl_protocol_descriptor_t;
 
-static const pfwl_protocol_descriptor_t const protocols_descriptors[PFWL_NUM_PROTOCOLS] =
+static const pfwl_protocol_descriptor_t  protocols_descriptors[PFWL_NUM_PROTOCOLS] =
   {
     [PFWL_PROTOCOL_DHCP]     = {"DHCP"    , check_dhcp    },
     [PFWL_PROTOCOL_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  },
@@ -123,152 +123,59 @@ static const pfwl_protocol_descriptor_t const protocols_descriptors[PFWL_NUM_PRO
     [PFWL_PROTOCOL_SPOTIFY]  = {"Spotify" , check_spotify },
 };
 
-void pfwl_parse_L7(pfwl_state_t* state, pfwl_dissection_info_t *dissection_info) {
-  pfwl_flow_info_t* flow_info = NULL;
-  pfwl_flow_t* flow = NULL;
-
-  flow = pfwl_flow_table_find_or_create_flow(state->flow_table, dissection_info,
-                                             state->protocols_to_inspect, state->tcp_reordering_enabled);
-
-  if (unlikely(flow == NULL)) {
-    dissection_info->status = PFWL_ERROR_MAX_FLOWS;
-    return;
+void pfwl_parse_L7(pfwl_state_t* state, const unsigned char* pkt, size_t length,
+                   uint32_t timestamp, pfwl_dissection_info_t *dissection_info,
+                   pfwl_flow_info_private_t* flow_info_private) {
+  // In this case, this function has been directly called by the user.
+  if(!dissection_info->l3.refrag_pkt){
+    dissection_info->l3.refrag_pkt = pkt;
+    dissection_info->l3.refrag_pkt_len = length;
+    dissection_info->l3.length = 0;
+    dissection_info->l4.length = 0;
   }
+  dissection_info->l7.length = length;
 
-  flow_info = &(flow->info);
-
-  if(flow_info->last_rebuilt_ip_fragments){
-    free((void*) flow_info->last_rebuilt_ip_fragments);
-    flow_info->last_rebuilt_ip_fragments = NULL;
-  }
-
-  if(dissection_info->status == PFWL_STATUS_IP_LAST_FRAGMENT){
-    flow_info->last_rebuilt_ip_fragments = dissection_info->pkt_refragmented;
-  }
-
-  dissection_info->status = PFWL_STATUS_OK;
-  pfwl_parse_L7_stateless(state, dissection_info, flow_info);
-
-  if (dissection_info->status == PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
-    pfwl_flow_table_delete_flow_later(state->flow_table, flow);
-  }
-}
-
-void pfwl_parse_L7_stateless(pfwl_state_t* state, pfwl_dissection_info_t *identification_info, pfwl_flow_info_t* flow) {
-  identification_info->status = PFWL_STATUS_OK;
-  identification_info->user_flow_data = &(flow->tracking.udata);
   pfwl_protocol_l7_t i;
-
   uint8_t check_result = PFWL_PROTOCOL_NO_MATCHES;
   const pfwl_protocol_l7_t* well_known_ports;
-  const unsigned char* app_data = identification_info->pkt_refragmented + identification_info->offset_l7;
-  uint32_t data_length = identification_info->data_length_l7;
-  pfwl_tcp_reordering_reordered_segment_t seg;
-  seg.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
-  seg.data = NULL;
-  seg.connection_terminated = 0;
 
-  if(data_length){
-    ++flow->tracking.num_packets;
-  }
-
-  if (flow->l7prot < PFWL_PROTOCOL_NOT_DETERMINED) {
-    identification_info->protocol_l7 = flow->l7prot;
-    if (identification_info->protocol_l4 == IPPROTO_TCP) {
-      if (flow->tcp_reordering_enabled) {
-        seg = pfwl_reordering_tcp_track_connection(identification_info, &(flow->tracking));
-
-        if (seg.status == PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
-          identification_info->status = PFWL_STATUS_TCP_OUT_OF_ORDER;
-          return;
-        } else if (seg.status == PFWL_TCP_REORDERING_STATUS_REBUILT) {
-          app_data = seg.data;
-          data_length = seg.data_length;
-          if(flow->last_rebuilt_tcp_data){
-            free((void*) flow->last_rebuilt_tcp_data);
-          }
-          flow->last_rebuilt_tcp_data = app_data;
-        }
-      } else {
-        seg.connection_terminated = pfwl_reordering_tcp_track_connection_light(identification_info, &(flow->tracking));
-      }
-    }
-
-    pfwl_tracking_informations_t* t = &(flow->tracking);
-    if (flow->l7prot < PFWL_NUM_PROTOCOLS && state->fields_to_extract_num[flow->l7prot]) {
-      pfwl_protocol_descriptor_t descr = protocols_descriptors[flow->l7prot];
-      (*(descr.dissector))(app_data, data_length, identification_info, t, state->inspectors_accuracy[flow->l7prot], state->fields_to_extract);
-    }
-
-    if (seg.connection_terminated) {
-      identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
+  if (flow_info_private->l7prot < PFWL_NUM_PROTOCOLS) {
+    if (state->fields_to_extract_num[flow_info_private->l7prot]) {
+      pfwl_protocol_descriptor_t descr = protocols_descriptors[flow_info_private->l7prot];
+      (*(descr.dissector))(state, pkt, length, dissection_info, flow_info_private);
     }
     return;
-  } else if (flow->l7prot == PFWL_PROTOCOL_NOT_DETERMINED) {
-    if (identification_info->protocol_l4 == IPPROTO_TCP && state->active_protocols > 0) {
+  } else if (flow_info_private->l7prot == PFWL_PROTOCOL_NOT_DETERMINED) {
+    if (dissection_info->l4.protocol == IPPROTO_TCP && state->active_protocols > 0) {
       well_known_ports = pfwl_well_known_ports_association_tcp;
-      if (flow->tcp_reordering_enabled) {
-        seg = pfwl_reordering_tcp_track_connection(identification_info, &(flow->tracking));
-
-        if (seg.status == PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
-          identification_info->status = PFWL_STATUS_TCP_OUT_OF_ORDER;
-          identification_info->protocol_l7 = PFWL_PROTOCOL_UNKNOWN;
-          return;
-        } else if (seg.status == PFWL_TCP_REORDERING_STATUS_REBUILT) {
-          app_data = seg.data;
-          data_length = seg.data_length;
-          if(flow->last_rebuilt_tcp_data){
-            free((void*) flow->last_rebuilt_tcp_data);
-          }
-          flow->last_rebuilt_tcp_data = app_data;
-        }
-      } else {
-        if (pfwl_reordering_tcp_track_connection_light(identification_info, &(flow->tracking)))
-          identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
-      }
-    } else if (identification_info->protocol_l4 == IPPROTO_UDP &&
-               state->active_protocols > 0) {
+    } else if (dissection_info->l4.protocol == IPPROTO_UDP && state->active_protocols > 0) {
       well_known_ports = pfwl_well_known_ports_association_udp;
     } else {
-      return;
-    }
-
-    /**
-     * If we have no payload we don't do anything. We already
-     * invoked the TCP reordering to update the connection state.
-     */
-    if (data_length == 0) {
-      identification_info->protocol_l7 = flow->l7prot;
       return;
     }
 
     pfwl_protocol_l7_t first_protocol_to_check;
     pfwl_protocol_l7_t checked_protocols = 0;
 
-    if ((first_protocol_to_check = well_known_ports[identification_info->port_src]) ==
+    if ((first_protocol_to_check = well_known_ports[dissection_info->l4.port_src]) ==
             PFWL_PROTOCOL_UNKNOWN &&
-        (first_protocol_to_check = well_known_ports[identification_info->port_dst]) ==
+        (first_protocol_to_check = well_known_ports[dissection_info->l4.port_dst]) ==
             PFWL_PROTOCOL_UNKNOWN) {
       first_protocol_to_check = 0;
     }
 
     for (i = first_protocol_to_check; checked_protocols < PFWL_NUM_PROTOCOLS;
          i = (i + 1) % PFWL_NUM_PROTOCOLS, ++checked_protocols) {
-      if (BITTEST(flow->possible_matching_protocols, i)) {
+      if (BITTEST(flow_info_private->possible_matching_protocols, i)) {
         pfwl_protocol_descriptor_t descr = protocols_descriptors[i];
-        pfwl_tracking_informations_t* t = &(flow->tracking);
-        check_result = (*(descr.dissector))(app_data, data_length, identification_info, t, state->inspectors_accuracy[i], state->fields_to_extract);
+        check_result = (*(descr.dissector))(state, pkt, length, dissection_info, flow_info_private);
         if (check_result == PFWL_PROTOCOL_MATCHES) {
-          flow->l7prot = i;
-          identification_info->protocol_l7 = flow->l7prot;
-
-          if (seg.connection_terminated) {
-            identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
-          }
+          flow_info_private->l7prot = i;
+          dissection_info->l7.protocol = flow_info_private->l7prot;
           return;
         } else if (check_result == PFWL_PROTOCOL_NO_MATCHES) {
-          BITCLEAR(flow->possible_matching_protocols, i);
-          --(flow->possible_protocols);
+          BITCLEAR(flow_info_private->possible_matching_protocols, i);
+          --(flow_info_private->possible_protocols);
         }
       }
     }
@@ -278,36 +185,28 @@ void pfwl_parse_L7_stateless(pfwl_state_t* state, pfwl_dissection_info_t *identi
      * ambiguity after the maximum number of trials, then the
      * library was unable to identify the protocol.
      **/
-    if (flow->possible_protocols == 0 ||
+    if (flow_info_private->possible_protocols == 0 ||
         (state->max_trials != 0 &&
-         unlikely(++flow->trials == state->max_trials))) {
-      flow->l7prot = PFWL_PROTOCOL_UNKNOWN;
+         unlikely(++flow_info_private->trials == state->max_trials))) {
+      flow_info_private->l7prot = PFWL_PROTOCOL_UNKNOWN;
     }
   }
 
-  identification_info->protocol_l7 = flow->l7prot;
+  dissection_info->l7.protocol = flow_info_private->l7prot;
 
-  if(flow->last_rebuilt_tcp_data){
-    free((void*) flow->last_rebuilt_tcp_data);
-    flow->last_rebuilt_tcp_data = NULL;
-  }
-
-  if (seg.connection_terminated) {
-    identification_info->status = PFWL_STATUS_TCP_CONNECTION_TERMINATED;
-  }
   return;
 }
 
 pfwl_protocol_l7_t pfwl_guess_protocol(pfwl_dissection_info_t identification_info) {
   pfwl_protocol_l7_t r = PFWL_PROTOCOL_UNKNOWN;
-  if (identification_info.protocol_l4 == IPPROTO_TCP) {
-    r = pfwl_well_known_ports_association_tcp[identification_info.port_src];
+  if (identification_info.l4.protocol == IPPROTO_TCP) {
+    r = pfwl_well_known_ports_association_tcp[identification_info.l4.port_src];
     if (r == PFWL_PROTOCOL_UNKNOWN)
-      r = pfwl_well_known_ports_association_tcp[identification_info.port_dst];
-  } else if (identification_info.protocol_l4 == IPPROTO_UDP) {
-    r = pfwl_well_known_ports_association_udp[identification_info.port_src];
+      r = pfwl_well_known_ports_association_tcp[identification_info.l4.port_dst];
+  } else if (identification_info.l4.protocol == IPPROTO_UDP) {
+    r = pfwl_well_known_ports_association_udp[identification_info.l4.port_src];
     if (r == PFWL_PROTOCOL_UNKNOWN)
-      r = pfwl_well_known_ports_association_udp[identification_info.port_dst];
+      r = pfwl_well_known_ports_association_udp[identification_info.l4.port_dst];
   } else {
     r = PFWL_PROTOCOL_UNKNOWN;
   }

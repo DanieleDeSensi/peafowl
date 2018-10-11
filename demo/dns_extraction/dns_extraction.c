@@ -70,27 +70,22 @@ int main(int argc, char** argv){
   /* pfwl_protocol_field_add(state, PFWL_FIELDS_DNS_NS_IP_1); */
   // Authoritative Server Name field
   /* pfwl_protocol_field_add(state, PFWL_FIELDS_DNS_AUTH_SRV); */
+  pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
 
   while((packet = pcap_next(handle, &header)) != NULL){
-    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), pcap_datalink(handle));
-
-    if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
-       r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].str.len){
-      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NAME_SRV].str.s;
-      size_t field_len = r.protocol_fields[PFWL_FIELDS_SIP_REQUEST_URI].str.len;
-      printf("Name Server detected: %.*s\n", (int) field_len, field_value);
+    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt);
+    pfwl_string_t field;
+    if(r.l7.protocol == PFWL_PROTOCOL_DNS &&
+       !pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_DNS_NAME_SRV, &field)){
+      printf("Name Server detected: %.*s\n", (int) field.length, field.value);
     }
-    if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
-       r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].str.len){
-      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].str.s;
-      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_NS_IP_1].str.len;
-      printf("IP address of Name Server: %.*s\n", (int) field_len, field_value);
+    if(r.l7.protocol == PFWL_PROTOCOL_DNS &&
+       !pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_DNS_NS_IP_1, &field)){
+      printf("IP address of Name Server: %.*s\n", (int) field.length, field.value);
     }
-    if(r.protocol_l7 == PFWL_PROTOCOL_DNS &&
-       r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].str.len){
-      const char* field_value = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].str.s;
-      size_t field_len = r.protocol_fields[PFWL_FIELDS_DNS_AUTH_SRV].str.len;
-      printf("Authoritative Server detected: %.*s\n", (int) field_len, field_value);
+    if(r.l7.protocol == PFWL_PROTOCOL_DNS &&
+       !pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_DNS_AUTH_SRV, &field)){
+      printf("Authoritative Server detected: %.*s\n", (int) field.length, field.value);
     }
   }
   return 0;

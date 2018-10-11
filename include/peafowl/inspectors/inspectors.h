@@ -34,149 +34,119 @@
 #include <peafowl/flow_table.h>
 #include "protocols_identifiers.h"
 
-uint8_t check_dhcp(const unsigned char* app_data,
-                   uint32_t data_length,
-                   pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info,
-                   pfwl_inspector_accuracy_t accuracy,
-                   uint8_t* required_fields);
+void pfwl_field_string_set(pfwl_field_t* fields, pfwl_field_id_t id, const unsigned char* s, size_t len);
+void pfwl_field_number_set(pfwl_field_t* fields, pfwl_field_id_t id, int64_t num);
 
-uint8_t check_dhcpv6(const unsigned char* app_data,
-                     uint32_t data_length,
+/**
+ * @brief pfwl_array_push_back Pushes a string into an array. The call
+ * assumes there is space left in the array. The caller must guarantee that.
+ * @param array The array.
+ * @param s The string value.
+ * @param len The string length.
+ */
+void pfwl_array_push_back_string(pfwl_array_t* array, const unsigned char* s, size_t len);
+
+void pfwl_field_array_push_back_string(pfwl_field_t* fields, pfwl_field_id_t id, const unsigned char* s, size_t len);
+void pfwl_field_array_get_length(pfwl_field_t* fields, pfwl_field_id_t id);
+
+uint8_t check_dhcp(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length,
+                   pfwl_dissection_info_t* pkt_info,
+                   pfwl_flow_info_private_t* flow_info_private);
+
+uint8_t check_dhcpv6(pfwl_state_t* state, const unsigned char* app_data,
+                     size_t data_length,
                      pfwl_dissection_info_t* pkt_info,
-                     pfwl_tracking_informations_t* tracking_info,
-                     pfwl_inspector_accuracy_t accuracy,
-                     uint8_t* required_fields);
+                     pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_bgp(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_bgp(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_dns(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_mdns(const unsigned char* app_data,
-                   uint32_t data_length,
+uint8_t check_mdns(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length,
                    pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info,
-                   pfwl_inspector_accuracy_t accuracy,
-                   uint8_t* required_fields);
+                   pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_ntp(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_ntp(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_http(const unsigned char* app_data,
-                   uint32_t data_length,
+uint8_t check_http(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length,
                    pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info,
-                   pfwl_inspector_accuracy_t accuracy,
-                   uint8_t* required_fields);
+                   pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_sip(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_sip(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_skype(const unsigned char* app_data,
-                    uint32_t data_length,
+uint8_t check_skype(pfwl_state_t* state, const unsigned char* app_data,
+                    size_t data_length,
                     pfwl_dissection_info_t* pkt_info,
-                    pfwl_tracking_informations_t* tracking_info,
-                    pfwl_inspector_accuracy_t accuracy,
-                    uint8_t* required_fields);
+                    pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_rtp(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_rtp(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_ssh(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_ssh(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_smtp(const unsigned char* app_data,
-                   uint32_t data_length,
+uint8_t check_smtp(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length,
                    pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info,
-                   pfwl_inspector_accuracy_t accuracy,
-                   uint8_t* required_fields);
+                   pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_pop3(const unsigned char* app_data,
-                   uint32_t data_length,
+uint8_t check_pop3(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length,
                    pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info,
-                   pfwl_inspector_accuracy_t accuracy,
-                   uint8_t* required_fields);
+                   pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_ssl(const unsigned char* app_data,
-                  uint32_t data_length,
+uint8_t check_ssl(pfwl_state_t* state, const unsigned char* app_data,
+                  size_t data_length,
                   pfwl_dissection_info_t* pkt_info,
-                  pfwl_tracking_informations_t* tracking_info,
-                  pfwl_inspector_accuracy_t accuracy,
-                  uint8_t* required_fields);
+                  pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_hangout(const unsigned char* app_data,
-                      uint32_t data_length,
+uint8_t check_hangout(pfwl_state_t* state, const unsigned char* app_data,
+                      size_t data_length,
                       pfwl_dissection_info_t* pkt_info,
-                      pfwl_tracking_informations_t* tracking_info,
-                      pfwl_inspector_accuracy_t accuracy,
-                      uint8_t* required_fields);
+                      pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_whatsapp(const unsigned char* app_data,
-                       uint32_t data_length,
+uint8_t check_whatsapp(pfwl_state_t* state, const unsigned char* app_data,
+                       size_t data_length,
                        pfwl_dissection_info_t* pkt_info,
-                       pfwl_tracking_informations_t* tracking_info,
-                       pfwl_inspector_accuracy_t accuracy,
-                       uint8_t* required_fields);
+                       pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_telegram(const unsigned char* app_data,
-                       uint32_t data_length,
+uint8_t check_telegram(pfwl_state_t* state, const unsigned char* app_data,
+                       size_t data_length,
                        pfwl_dissection_info_t* pkt_info,
-                       pfwl_tracking_informations_t* tracking_info,
-                       pfwl_inspector_accuracy_t accuracy,
-                       uint8_t* required_fields);
+                       pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_imap(const unsigned char* app_data,
-                   uint32_t data_length,
+uint8_t check_imap(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length,
                    pfwl_dissection_info_t* pkt_info,
-                   pfwl_tracking_informations_t* tracking_info,
-                   pfwl_inspector_accuracy_t accuracy,
-                   uint8_t* required_fields);
+                   pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_dropbox(const unsigned char* app_data,
-                      uint32_t data_length,
+uint8_t check_dropbox(pfwl_state_t* state, const unsigned char* app_data,
+                      size_t data_length,
                       pfwl_dissection_info_t* pkt_info,
-                      pfwl_tracking_informations_t* tracking_info,
-                      pfwl_inspector_accuracy_t accuracy,
-                      uint8_t* required_fields);
+                      pfwl_flow_info_private_t* flow_info_private);
 
-uint8_t check_spotify(const unsigned char* app_data,
-                      uint32_t data_length,
+uint8_t check_spotify(pfwl_state_t* state, const unsigned char* app_data,
+                      size_t data_length,
                       pfwl_dissection_info_t* pkt_info,
-                      pfwl_tracking_informations_t* tracking_info,
-                      pfwl_inspector_accuracy_t accuracy,
-                      uint8_t* required_fields);
-
-uint8_t invoke_callbacks_http(pfwl_state_t* state, pfwl_dissection_info_t* pkt,
-                              const unsigned char* app_data,
-                              uint32_t data_length,
-                              pfwl_tracking_informations_t* tracking);
+                      pfwl_flow_info_private_t* flow_info_private);
 
 #endif /* INSPECTORS_H_ */

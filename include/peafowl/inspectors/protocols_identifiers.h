@@ -32,38 +32,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PFWL_IP_VERSION_4 0x4
-#define PFWL_IP_VERSION_6 0x6
-
-enum protocols {
-  PFWL_PROTOCOL_DNS = 0,
-  PFWL_PROTOCOL_MDNS,
-  PFWL_PROTOCOL_DHCP,
-  PFWL_PROTOCOL_DHCPv6,
-  PFWL_PROTOCOL_NTP,
-  PFWL_PROTOCOL_SIP,
-  PFWL_PROTOCOL_RTP,
-  PFWL_PROTOCOL_SSH,
-  PFWL_PROTOCOL_SKYPE,
-  PFWL_PROTOCOL_HTTP,
-  PFWL_PROTOCOL_BGP,
-  PFWL_PROTOCOL_SMTP,
-  PFWL_PROTOCOL_POP3,
-  PFWL_PROTOCOL_IMAP,
-  PFWL_PROTOCOL_SSL,
-  PFWL_PROTOCOL_HANGOUT,
-  PFWL_PROTOCOL_WHATSAPP,
-  PFWL_PROTOCOL_TELEGRAM,
-  PFWL_PROTOCOL_DROPBOX,
-  PFWL_PROTOCOL_SPOTIFY,
-  PFWL_NUM_PROTOCOLS,
-  PFWL_PROTOCOL_NOT_DETERMINED,
-  PFWL_PROTOCOL_UNKNOWN
-};
-
-typedef uint8_t pfwl_protocol_l7_t;
-typedef uint8_t pfwl_protocol_l4_t;
-
 /**
  *  Inspectors must catch all the possible packet types during the message
  *exchange.

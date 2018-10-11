@@ -61,7 +61,7 @@ typedef struct pfwl_tcp_reordering_reordered_segment {
  * @param victim
  */
 void pfwl_reordering_tcp_delete_all_fragments(
-    pfwl_tracking_informations_t* victim);
+    pfwl_flow_info_private_t* victim);
 
 /**
  * Tracks the TCP connection.
@@ -89,7 +89,7 @@ void pfwl_reordering_tcp_delete_all_fragments(
  *         segment.
  */
 pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
-    pfwl_dissection_info_t* pkt, pfwl_tracking_informations_t* tracking);
+    pfwl_dissection_info_t* pkt, pfwl_flow_info_private_t* tracking);
 
 /**
  * Only checks if the connection terminates.
@@ -99,7 +99,7 @@ pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
  * @return 1 if the connection is terminated, 0 otherwise.
  */
 uint8_t pfwl_reordering_tcp_track_connection_light(
-    pfwl_dissection_info_t* pkt, pfwl_tracking_informations_t* tracking);
+    pfwl_dissection_info_t* pkt, pfwl_flow_info_private_t* tracking);
 
 #ifdef __cplusplus
 }
