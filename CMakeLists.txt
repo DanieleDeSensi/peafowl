@@ -8,8 +8,6 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/"
 ###########
 # Options #
 ###########
-option (ENABLE_PARALLEL "Enables parallel processing" OFF)
-option (ENABLE_PROMETHEUS "Enables the support for export to Prometheus DB" OFF)
 option (ENABLE_TESTS "Enables testing" OFF)
 option (ENABLE_CPPCHECK "Enables cppcheck checks" OFF)
 option (ENABLE_CODECOV "Enables code coverage reports" OFF)

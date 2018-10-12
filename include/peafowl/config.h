@@ -4,15 +4,15 @@
  * =========================================================================
  * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -73,12 +73,12 @@
 #endif
 #endif
 
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__cplusplus)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+    defined(__cplusplus)
 #define PFWL_USE_INLINING 1
 #else
 #error "A compiler which supports at least C99 is needed"
 #endif
-
 
 /*******************************************************************/
 /*                    Protocol specific macros.                    */
@@ -107,15 +107,17 @@
 #endif
 
 #define PFWL_IPv4_FRAGMENTATION_DEFAULT_TABLE_SIZE 512
-#define PFWL_IPv4_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT 102400 /* 100K */
-#define PFWL_IPv4_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                    \
+#define PFWL_IPv4_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT 102400 /* 100K \
+                                                                      */
+#define PFWL_IPv4_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                   \
   10240000 /* 10M. If each host fills its memory limit, we can support up to \
               1000 hosts. */
 #define PFWL_IPv4_FRAGMENTATION_DEFAULT_REASSEMBLY_TIMEOUT 30
 
 #define PFWL_IPv6_FRAGMENTATION_DEFAULT_TABLE_SIZE 512
-#define PFWL_IPv6_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT 102400 /* 100K */
-#define PFWL_IPv6_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                    \
+#define PFWL_IPv6_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT 102400 /* 100K \
+                                                                      */
+#define PFWL_IPv6_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                   \
   10240000 /* 10M. If each host fills its memory limit, we can support up to \
               1000 hosts. */
 #define PFWL_IPv6_FRAGMENTATION_DEFAULT_REASSEMBLY_TIMEOUT 60

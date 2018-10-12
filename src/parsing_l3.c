@@ -5,15 +5,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,13 +24,13 @@
  * SOFTWARE.
  * =========================================================================
  */
-#include <peafowl/peafowl.h>
 #include <peafowl/config.h>
 #include <peafowl/flow_table.h>
 #include <peafowl/hash_functions.h>
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/ipv4_reassembly.h>
 #include <peafowl/ipv6_reassembly.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/tcp_stream_management.h>
 #include <peafowl/utils.h>
 
@@ -46,14 +46,15 @@
 #include <strings.h>
 #include <time.h>
 
-void mc_pfwl_parse_L3_header(pfwl_state_t* state,
-                                const unsigned char* p_pkt,
-                                size_t p_length,
-                                uint32_t current_time, int tid,
-                                pfwl_dissection_info_t* dissection_info) {
+pfwl_status_t mc_pfwl_parse_L3_header(pfwl_state_t* state,
+                                      const unsigned char* p_pkt,
+                                      size_t p_length, uint32_t current_time,
+                                      int tid,
+                                      pfwl_dissection_info_t* dissection_info) {
   memset(dissection_info, 0, sizeof(*dissection_info));
-  dissection_info->status = PFWL_STATUS_OK;
-  if (unlikely(p_length == 0)) return;
+  if (unlikely(p_length == 0)) {
+    return PFWL_STATUS_OK;
+  }
   uint8_t version;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   version = (p_pkt[0] >> 4) & 0x0F;
@@ -63,10 +64,8 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
 #error "Please fix <bits/endian.h>"
 #endif
 
-  unsigned char* pkt = (unsigned char*) p_pkt;
+  unsigned char* pkt = (unsigned char*)p_pkt;
   uint32_t length = p_length;
-  uint16_t offset;
-  uint8_t more_fragments;
 
   /** Offset starting from the beginning of p_pkt. **/
   uint32_t application_offset;
@@ -83,15 +82,14 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
   struct ip6_hdr* ip6 = NULL;
   struct iphdr* ip4 = NULL;
 
-  if (version == PFWL_IP_VERSION_4) { /** IPv4 **/
+  if (version == PFWL_PROTO_L3_IPV4) { /** IPv4 **/
     ip4 = (struct iphdr*)(p_pkt);
     uint16_t tot_len = ntohs(ip4->tot_len);
 
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
     if (unlikely(length < (sizeof(struct iphdr)) || tot_len > length ||
                  tot_len <= ((ip4->ihl) * 4))) {
-      dissection_info->status = PFWL_ERROR_L3_PARSING;
-      return;
+      return PFWL_ERROR_L3_PARSING;
     }
 #endif
     /**
@@ -102,11 +100,13 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
      */
     length = tot_len;
 
-    offset = ntohs(ip4->frag_off);
+    uint16_t offset = ntohs(ip4->frag_off);
+    uint8_t more_fragments;
     if (unlikely((offset & PFWL_IPv4_FRAGMENTATION_MF))) {
       more_fragments = 1;
-    } else
+    } else {
       more_fragments = 0;
+    }
 
     /*
      * Offset is in 8-byte blocks. Multiplying by 8 correspond to a
@@ -119,18 +119,16 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
       pkt = (unsigned char*)p_pkt;
     } else if (state->ipv4_frag_state != NULL) {
       pkt = pfwl_reordering_manage_ipv4_fragment(state->ipv4_frag_state, p_pkt,
-                                                current_time, offset,
-                                                more_fragments, tid);
+                                                 current_time, offset,
+                                                 more_fragments, tid);
       if (pkt == NULL) {
-        dissection_info->status = PFWL_STATUS_IP_FRAGMENT;
-        return;
+        return PFWL_STATUS_IP_FRAGMENT;
       }
-      to_return = PFWL_STATUS_IP_LAST_FRAGMENT;
+      to_return = PFWL_STATUS_IP_DATA_REBUILT;
       ip4 = (struct iphdr*)(pkt);
       length = ntohs(((struct iphdr*)(pkt))->tot_len);
     } else {
-      dissection_info->status = PFWL_STATUS_IP_FRAGMENT;
-      return;
+      return PFWL_STATUS_IP_FRAGMENT;
     }
 
     dissection_info->l3.addr_src.ipv4 = ip4->saddr;
@@ -139,14 +137,13 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
     application_offset = (ip4->ihl) * 4;
     relative_offset = application_offset;
     next_header = ip4->protocol;
-  } else if (version == PFWL_IP_VERSION_6) { /** IPv6 **/
+  } else if (version == PFWL_PROTO_L3_IPV6) { /** IPv6 **/
     ip6 = (struct ip6_hdr*)(pkt);
     uint16_t tot_len =
         ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen) + sizeof(struct ip6_hdr);
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
     if (unlikely(tot_len > length)) {
-      dissection_info->status = PFWL_ERROR_L3_PARSING;
-      return;
+      return PFWL_ERROR_L3_PARSING;
     }
 #endif
 
@@ -165,8 +162,7 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
     relative_offset = application_offset;
     next_header = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
   } else {
-    dissection_info->status = PFWL_ERROR_WRONG_IPVERSION;
-    return;
+    return PFWL_ERROR_WRONG_IPVERSION;
   }
 
   while (!stop) {
@@ -175,8 +171,7 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_hbh) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_PARSING;
-          return;
+          return PFWL_ERROR_L3_PARSING;
         }
 #endif
         if (likely(version == 6)) {
@@ -187,16 +182,14 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
           next_header = hbh_hdr->ip6h_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
-          return;
+          return PFWL_ERROR_IPV6_HDR_PARSING;
         }
       } break;
       case IPPROTO_DSTOPTS: { /* Destination options */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_dest) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_PARSING;
-          return;
+          return PFWL_ERROR_L3_PARSING;
         }
 #endif
         if (likely(version == 6)) {
@@ -208,16 +201,14 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
           next_header = dst_hdr->ip6d_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
-          return;
+          return PFWL_ERROR_IPV6_HDR_PARSING;
         }
       } break;
       case IPPROTO_ROUTING: { /* Routing header */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_rthdr) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_PARSING;
-          return;
+          return PFWL_ERROR_L3_PARSING;
         }
 #endif
         if (likely(version == 6)) {
@@ -229,16 +220,14 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
           next_header = rt_hdr->ip6r_nxt;
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
-          return;
+          return PFWL_ERROR_IPV6_HDR_PARSING;
         }
       } break;
       case IPPROTO_FRAGMENT: { /* Fragment header */
 #ifdef PFWL_ENABLE_L3_TRUNCATION_PROTECTION
         if (unlikely(application_offset + sizeof(struct ip6_frag) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_PARSING;
-          return;
+          return PFWL_ERROR_L3_PARSING;
         }
 #endif
         if (likely(version == 6)) {
@@ -282,11 +271,10 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
             if (to_delete) free(to_delete);
 
             if (pkt == NULL) {
-              dissection_info->status = PFWL_STATUS_IP_FRAGMENT;
-              return;
+              return PFWL_STATUS_IP_FRAGMENT;
             }
 
-            to_return = PFWL_STATUS_IP_LAST_FRAGMENT;
+            to_return = PFWL_STATUS_IP_DATA_REBUILT;
             next_header = IPPROTO_IPV6;
             length = ((struct ip6_hdr*)(pkt))->ip6_ctlun.ip6_un1.ip6_un1_plen +
                      sizeof(struct ip6_hdr);
@@ -296,13 +284,11 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
              **/
             application_offset = relative_offset = 0;
           } else {
-            dissection_info->status = PFWL_STATUS_IP_FRAGMENT;
-            return;
+            return PFWL_STATUS_IP_FRAGMENT;
           }
         } else {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_IPV6_HDR_PARSING;
-          return;
+          return PFWL_ERROR_IPV6_HDR_PARSING;
         }
       } break;
       case IPPROTO_IPV6: /** 6in4 and 6in6 tunneling **/
@@ -314,8 +300,7 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
                          sizeof(struct ip6_hdr) >
                      length - application_offset)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_PARSING;
-          return;
+          return PFWL_ERROR_L3_PARSING;
         }
 #endif
 
@@ -335,8 +320,7 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
                      application_offset + ((ip4->ihl) * 4) > length ||
                      application_offset + ntohs(ip4->tot_len) > length)) {
           if (unlikely(pkt != p_pkt)) free(pkt);
-          dissection_info->status = PFWL_ERROR_L3_PARSING;
-          return;
+          return PFWL_ERROR_L3_PARSING;
         }
 #endif
         dissection_info->l3.addr_src.ipv4 = ip4->saddr;
@@ -346,31 +330,32 @@ void mc_pfwl_parse_L3_header(pfwl_state_t* state,
         application_offset += tmp;
         relative_offset = tmp;
         break;
-      case IPPROTO_TCP:  /* TCP */
-      case IPPROTO_UDP:  /* UDP */
-      default: {         /* ICMP, RSVP, etc... */
+      case IPPROTO_TCP: /* TCP */
+      case IPPROTO_UDP: /* UDP */
+      default: {        /* ICMP, RSVP, etc... */
         dissection_info->l3.length = application_offset;
         dissection_info->l4.protocol = next_header;
         stop = 1;
-      }break;
+      } break;
     }
   }
 
   dissection_info->l3.protocol = version;
-  dissection_info->l3.refrag_pkt = pkt;
-  dissection_info->l3.refrag_pkt_len = length;
-  dissection_info->status = to_return;
-  return;
+  if (to_return == PFWL_STATUS_IP_DATA_REBUILT) {
+    dissection_info->l3.refrag_pkt = pkt;
+    dissection_info->l3.refrag_pkt_len = length;
+  }
+  dissection_info->l3.payload_length = length - dissection_info->l3.length;
+  return to_return;
 }
 
-void pfwl_parse_L3(pfwl_state_t* state,
-                   const unsigned char* pkt,
-                   size_t length,
-                   uint32_t current_time,
-                   pfwl_dissection_info_t* dissection_info) {
+pfwl_status_t pfwl_dissect_L3(pfwl_state_t* state, const unsigned char* pkt,
+                              size_t length, uint32_t current_time,
+                              pfwl_dissection_info_t* dissection_info) {
   /**
    * We can pass any thread id, indeed in this case we don't
    * need lock synchronization.
    **/
-  mc_pfwl_parse_L3_header(state, pkt, length, current_time, 0, dissection_info);
+  return mc_pfwl_parse_L3_header(state, pkt, length, current_time, 0,
+                                 dissection_info);
 }

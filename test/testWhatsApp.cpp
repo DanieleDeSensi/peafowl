@@ -6,5 +6,5 @@
 TEST(WhatsappTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/whatsapp.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_WHATSAPP], (uint) 134);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_WHATSAPP], (uint) 134);
 }

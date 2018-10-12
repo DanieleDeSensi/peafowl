@@ -4,15 +4,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -28,17 +28,17 @@
  * Created by max197616 (https://github.com/max197616) and based on
  * nDPI's SSL dissector.
  **/
-#include <peafowl/peafowl.h>
 #include <peafowl/flow_table.h>
 #include <peafowl/inspectors/inspectors.h>
+#include <peafowl/peafowl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define PFWL_DEBUG_SSL 0
-#define debug_print(fmt, ...)                             \
-  do {                                                    \
+#define debug_print(fmt, ...)                              \
+  do {                                                     \
     if (PFWL_DEBUG_SSL) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
@@ -47,14 +47,14 @@
 #define npfwl_isdigit(ch) ((ch) >= '0' && (ch) <= '9')
 #define npfwl_isspace(ch) (((ch) >= '\t' && (ch) <= '\r') || ((ch) == ' '))
 #define npfwl_isprint(ch) ((ch) >= 0x20 && (ch) <= 0x7e)
-#define npfwl_ispunct(ch)                                           \
+#define npfwl_ispunct(ch)                                          \
   (((ch) >= '!' && (ch) <= '/') || ((ch) >= ':' && (ch) <= '@') || \
    ((ch) >= '[' && (ch) <= '`') || ((ch) >= '{' && (ch) <= '~'))
 
 static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                              pfwl_dissection_info_t* t,
-                             pfwl_inspector_accuracy_t accuracy,
-                             uint8_t *required_fields) {
+                             pfwl_dissector_accuracy_t accuracy,
+                             uint8_t* required_fields) {
   if (payload[0] == 0x16 /* Handshake */) {
     uint16_t total_len = (payload[3] << 8) + payload[4] + 5 /* SSL Header */;
     uint8_t handshake_protocol = payload[5]; /* handshake protocol a bit
@@ -88,7 +88,7 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
             if (num_found != 2) continue;
           }
           if (server_len + i + 3 < payload_len) {
-            unsigned char* server_name = (unsigned char*) &payload[i + 4];
+            unsigned char* server_name = (unsigned char*)&payload[i + 4];
             uint8_t begin = 0, j, num_dots, len;
             while (begin < server_len) {
               if (!npfwl_isprint(server_name[begin]))
@@ -107,8 +107,10 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
               }
             }
             if (num_dots >= 2) {
-              if (len > 0 && required_fields[PFWL_FIELDS_SSL_CERTIFICATE]) {
-                  pfwl_field_string_set(t->l7.protocol_fields, PFWL_FIELDS_SSL_CERTIFICATE , &server_name[begin], len);
+              if (len > 0 && required_fields[PFWL_FIELDS_L7_SSL_CERTIFICATE]) {
+                pfwl_field_string_set(t->l7.protocol_fields,
+                                      PFWL_FIELDS_L7_SSL_CERTIFICATE,
+                                      &server_name[begin], len);
               }
               return 2;
             }
@@ -166,8 +168,11 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                     if (len > total_len) {
                       return 0; /* bad ssl */
                     }
-                    if (len > 0 && required_fields[PFWL_FIELDS_SSL_CERTIFICATE]) {
-                        pfwl_field_string_set(t->l7.protocol_fields, PFWL_FIELDS_SSL_CERTIFICATE , &server_name[begin], len);
+                    if (len > 0 &&
+                        required_fields[PFWL_FIELDS_L7_SSL_CERTIFICATE]) {
+                      pfwl_field_string_set(t->l7.protocol_fields,
+                                            PFWL_FIELDS_L7_SSL_CERTIFICATE,
+                                            &server_name[begin], len);
                     }
                     return 2;
                   }
@@ -186,12 +191,13 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
 
 static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
                                     pfwl_dissection_info_t* t,
-                                    pfwl_inspector_accuracy_t accuracy,
-                                    uint8_t *required_fields) {
+                                    pfwl_dissector_accuracy_t accuracy,
+                                    uint8_t* required_fields) {
   if ((payload_len > 9) &&
       (payload[0] ==
        0x16 /* consider only specific SSL packets (handshake) */)) {
-    int rc = getSSLcertificate(payload, payload_len, t, accuracy, required_fields);
+    int rc =
+        getSSLcertificate(payload, payload_len, t, accuracy, required_fields);
     if (rc > 0) {
       return rc;
     }
@@ -199,48 +205,53 @@ static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
   return 0;
 }
 
-uint8_t check_ssl(pfwl_state_t* state,
-                  const unsigned char* payload,
-                  size_t data_length,
-                  pfwl_dissection_info_t* pkt_info,
+uint8_t check_ssl(pfwl_state_t* state, const unsigned char* payload,
+                  size_t data_length, pfwl_dissection_info_t* pkt_info,
                   pfwl_flow_info_private_t* flow_info_private) {
-  if (pkt_info->l4.protocol != IPPROTO_TCP) {
-    return PFWL_PROTOCOL_NO_MATCHES;
-  }
-  pfwl_inspector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTOCOL_SSL];
+  pfwl_dissector_accuracy_t accuracy =
+      state->inspectors_accuracy[PFWL_PROTO_L7_SSL];
   uint8_t* required_fields = state->fields_to_extract;
   int res;
-  debug_print("Checking ssl with size %ld, direction %d\n", data_length,
+  debug_print("Checking ssl with size %lu, direction %d\n", data_length,
               pkt_info->l4.direction);
-  if (flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer == NULL) {
-    res = detectSSLFromCertificate((uint8_t*)payload, data_length,
-                                   pkt_info, accuracy, required_fields);
+  if (flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer ==
+      NULL) {
+    res = detectSSLFromCertificate((uint8_t*)payload, data_length, pkt_info,
+                                   accuracy, required_fields);
     debug_print("Result %d\n", res);
     if (res > 0) {
       if (res == 3) {
         flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer =
             (uint8_t*)malloc(data_length);
-        memcpy(flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer, payload,
-               data_length);
-        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size = data_length;
+        memcpy(flow_info_private->ssl_information[pkt_info->l4.direction]
+                   .pkt_buffer,
+               payload, data_length);
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size =
+            data_length;
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
       return PFWL_PROTOCOL_MATCHES;
     }
   } else {
-    flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer = (uint8_t*)realloc(
+    flow_info_private->ssl_information[pkt_info->l4.direction]
+        .pkt_buffer = (uint8_t*)realloc(
         flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer,
-        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size + data_length);
-    memcpy(flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer +
-               flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
-           payload, data_length);
-    flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size += data_length;
-    res =
-        detectSSLFromCertificate(flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer,
-                                 flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
-                                 pkt_info, accuracy, required_fields);
-    debug_print("Checked %d bytes and result %d\n",
-                flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size, res);
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size +
+            data_length);
+    memcpy(
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer +
+            flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
+        payload, data_length);
+    flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size +=
+        data_length;
+    res = detectSSLFromCertificate(
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer,
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
+        pkt_info, accuracy, required_fields);
+    debug_print(
+        "Checked %d bytes and result %d\n",
+        flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size,
+        res);
     if (res > 0) {
       if (res == 3) {
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;

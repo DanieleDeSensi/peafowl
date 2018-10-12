@@ -1,6 +1,6 @@
 #include "common.h"
 
-Pcap::Pcap(const char* pcapName):_handle(NULL), _datalink_type(PFWL_DLT_NOT_SUPPORTED){
+Pcap::Pcap(const char* pcapName):_handle(NULL), _datalink_type(PFWL_PROTO_L2_NUM){
   char errbuf[PCAP_ERRBUF_SIZE];
   _handle = pcap_open_offline(pcapName, errbuf);
 
@@ -10,6 +10,10 @@ Pcap::Pcap(const char* pcapName):_handle(NULL), _datalink_type(PFWL_DLT_NOT_SUPP
   }
 
   _datalink_type = pfwl_convert_pcap_dlt(pcap_datalink(_handle));
+}
+
+Pcap::~Pcap(){
+  pcap_close(_handle);
 }
 
 std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
@@ -29,24 +33,24 @@ std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
   }
 }
 
-void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state, std::function< void(pfwl_dissection_info_t) > lambda){
+void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state, std::function< void(pfwl_status_t, pfwl_dissection_info_t) > lambda){
   bool terminate = false;
   if(!state){
     state = pfwl_init();
     terminate = true;
   }
   protocols.clear();
-  protocols.resize(PFWL_NUM_PROTOCOLS + 1); // +1 to store unknown protocols
+  protocols.resize(PFWL_PROTO_L7_NUM + 1); // +1 to store unknown protocols
 
   Pcap pcap(pcapName);
   pfwl_dissection_info_t r;
   std::pair<const u_char*, unsigned long> pkt;
 
   while((pkt = pcap.getNextPacket()).first != NULL){
-    r = pfwl_dissect_from_L2(state, pkt.first, pkt.second, time(NULL), pcap._datalink_type);
-    lambda(r);
+    pfwl_status_t status = pfwl_dissect_from_L2(state, pkt.first, pkt.second, time(NULL), pcap._datalink_type, &r);
+    lambda(status, r);
     if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
-      if(r.l7.protocol > PFWL_NUM_PROTOCOLS){r.l7.protocol = PFWL_NUM_PROTOCOLS;}
+      if(r.l7.protocol > PFWL_PROTO_L7_NUM){r.l7.protocol = PFWL_PROTO_L7_NUM;}
       ++protocols[r.l7.protocol];
     }
   }

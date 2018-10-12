@@ -4,15 +4,15 @@
  * =========================================================================
  * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -23,7 +23,6 @@
  * SOFTWARE.
  * =========================================================================
  */
-
 
 #ifndef MP_PFWL_API_H_
 #define MP_PFWL_API_H_
@@ -124,7 +123,8 @@ typedef void(mc_pfwl_processing_result_callback)(
  *                            zeroed and then filled by the user.
  * @return A pointer to the state of the library.
  */
-mc_pfwl_state_t* mc_pfwl_init(mc_pfwl_parallelism_details_t parallelism_details);
+mc_pfwl_state_t* mc_pfwl_init(
+    mc_pfwl_parallelism_details_t parallelism_details);
 
 /**
  * Sets the reading and processing callbacks. It can be done only after
@@ -139,8 +139,7 @@ mc_pfwl_state_t* mc_pfwl_init(mc_pfwl_parallelism_details_t parallelism_details)
  *                              the callbacks.
  */
 void mc_pfwl_set_core_callbacks(
-    mc_pfwl_state_t* state,
-    mc_pfwl_packet_reading_callback* reading_callback,
+    mc_pfwl_state_t* state, mc_pfwl_packet_reading_callback* reading_callback,
     mc_pfwl_processing_result_callback* processing_callback, void* user_data);
 
 #ifdef ENABLE_RECONFIGURATION
@@ -150,7 +149,7 @@ void mc_pfwl_set_core_callbacks(
  * @param p The reconfiguration parameters.
  */
 void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t* state,
-                                  nornir::Parameters* p);
+                                   nornir::Parameters* p);
 #endif
 
 /**
@@ -207,8 +206,7 @@ uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t* state, uint32_t flows_v4,
  *         updated. 0 if the state has not
  *         been changed because a problem happened.
  */
-uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state,
-                              uint16_t max_trials);
+uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state, uint16_t max_trials);
 
 /**
  * Enable IPv4 defragmentation.
@@ -221,7 +219,7 @@ uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state,
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t* state,
-                                         uint16_t table_size);
+                                          uint16_t table_size);
 
 /**
  * Enable IPv6 defragmentation.
@@ -234,7 +232,7 @@ uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t* state,
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_state_t* state,
-                                         uint16_t table_size);
+                                          uint16_t table_size);
 
 /**
  * Sets the amount of memory that a single host can use for IPv4
@@ -384,7 +382,7 @@ uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_state_t* state);
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t* state,
-                               pfwl_protocol_l7_t protocol);
+                                pfwl_protocol_l7_t protocol);
 
 /**
  * Disable a protocol inspector.
@@ -396,7 +394,7 @@ uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t* state,
  *         been changed because a problem happened.
  */
 uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t* state,
-                                pfwl_protocol_l7_t protocol);
+                                 pfwl_protocol_l7_t protocol);
 
 /**
  * Enable all the protocol inspector.
@@ -451,8 +449,8 @@ pfwl_protocol_l7_t mc_pfwl_get_protocol_id(const char* const string);
  *         the state has not been changed because a problem
  *         happened.
  */
-uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_state_t* state,
-                                         pfwl_flow_cleaner_callback_t* cleaner);
+uint8_t mc_pfwl_set_flow_cleaner_callback(
+    mc_pfwl_state_t* state, pfwl_flow_cleaner_callback_t* cleaner);
 
 /**
  * Sets callbacks informations. When a protocol is identified the
@@ -483,8 +481,8 @@ uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_state_t* state,
  *
  **/
 uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_state_t* state,
-                                       pfwl_http_callbacks_t* callbacks,
-                                       void* user_data);
+                                        pfwl_http_callbacks_t* callbacks,
+                                        void* user_data);
 
 /**
  * Remove the internal structure used to store callbacks informations.

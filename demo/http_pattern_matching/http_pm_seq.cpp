@@ -199,16 +199,18 @@ int main(int argc, char **argv){
     pfwl_state_t* state=pfwl_init();
     pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
     pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
-    pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
+    pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY);
 
     uint i,j;
     for(j=0; j<num_iterations; j++){
       for(i=0; i<num_packets; i++){
-        pfwl_dissection_info_t r = pfwl_dissect_from_L2(state, packets[i], sizes[i], 0, dlt);
-        if(r.l7.protocol == PFWL_PROTOCOL_HTTP){
-          pfwl_string_t field;
-          if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_HTTP_BODY, &field)){
-            body_cb(field.value, field.length, r.flow_info.udata);
+        pfwl_dissection_info_t r;
+        if(pfwl_dissect_from_L2(state, packets[i], sizes[i], 0, dlt, &r) >= PFWL_STATUS_OK){
+          if(r.l7.protocol == PFWL_PROTO_L7_HTTP){
+            pfwl_string_t field;
+            if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_HTTP_BODY, &field)){
+              body_cb(field.value, field.length, r.flow_info.udata);
+            }
           }
         }
       }

@@ -6,5 +6,5 @@
 TEST(SpotifyTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/spotify.pcapng", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_SPOTIFY], (uint) 437);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_SPOTIFY], (uint) 437);
 }

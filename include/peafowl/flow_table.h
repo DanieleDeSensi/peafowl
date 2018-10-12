@@ -4,15 +4,15 @@
  * =========================================================================
  * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -27,9 +27,11 @@
 #ifndef FLOW_TABLE_H_
 #define FLOW_TABLE_H_
 
-#include <peafowl/peafowl.h>
 #include <peafowl/config.h>
 #include <peafowl/external/utils/uthash.h>
+#include <peafowl/inspectors/http_parser_joyent.h>
+#include <peafowl/peafowl.h>
+#include <peafowl/reassembly.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,7 +90,7 @@ typedef enum {
 typedef struct {
   const char* name;
   pfwl_field_t value;
-  UT_hash_handle hh;         /* makes this structure hashable */
+  UT_hash_handle hh; /* makes this structure hashable */
 } pfwl_sip_indexed_field_t;
 
 typedef struct pfwl_sip_internal_information {
@@ -112,13 +114,13 @@ typedef struct pfwl_sip_internal_information {
 
 /********************** DNS ************************/
 typedef struct pfwl_dns_internal_information {
-  uint8_t Type;     // query type (0 query 1 answer)
-  uint8_t aType;    // host answer type
-  uint8_t authType; // authoritative answer type
-  uint8_t rCode;    // response type to the query (0-5)
-  
+  uint8_t Type;      // query type (0 query 1 answer)
+  uint8_t aType;     // host answer type
+  uint8_t authType;  // authoritative answer type
+  uint8_t rCode;     // response type to the query (0-5)
+
 } pfwl_dns_internal_information_t;
-  /******************** DNS (end) ******************/
+/******************** DNS (end) ******************/
 
 /********************** HTTP ************************/
 typedef struct pfwl_http_internal_informations {
@@ -137,14 +139,17 @@ typedef struct pfwl_ssl_internal_information {
 } pfwl_ssl_internal_information_t;
 /********************** SSL (END) ************************/
 
+typedef struct pfwl_flow pfwl_flow_t;
+
 /** This must be initialized to zero before use. **/
-typedef struct pfwl_tracking_informations {
+typedef struct pfwl_flow_info_private {
   void* udata_private;
 
   /************************/
   /** Misc information.  **/
   /************************/
-  pfwl_flow_info_t* info_public;
+  const pfwl_flow_info_t* info_public;
+  pfwl_flow_t* flow;
   /**
    * The protocol of this flow. It can be PFWL_PROTOCOL_NOT_DETERMINED if
    * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
@@ -163,9 +168,9 @@ typedef struct pfwl_tracking_informations {
    * successive iterations we remove from the mask the protocols which
    * surely don't match).
    **/
-  char possible_matching_protocols[BITNSLOTS(PFWL_NUM_PROTOCOLS)];
+  char possible_matching_protocols[BITNSLOTS(PFWL_PROTO_L7_NUM)];
 
-  const unsigned char* last_rebuilt_ip_fragments; // For internal use only.
+  const unsigned char* last_rebuilt_ip_fragments;  // For internal use only.
 
   /********************************/
   /** TCP Tracking information.  **/
@@ -253,8 +258,6 @@ typedef struct pfwl_tracking_informations {
   size_t whatsapp_matched_sequence;
 } pfwl_flow_info_private_t;
 
-typedef struct pfwl_flow pfwl_flow_t;
-
 struct pfwl_flow {
   pfwl_ip_addr_t addr_src;
   pfwl_ip_addr_t addr_dst;
@@ -272,9 +275,9 @@ typedef struct pfwl_flow_table pfwl_flow_table_t;
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
 pfwl_flow_table_t* pfwl_flow_table_create(uint32_t size,
-                                           uint32_t max_active_v4_flows,
-                                           uint16_t num_partitions,
-                                           uint32_t start_pool_size);
+                                          uint32_t max_active_v4_flows,
+                                          uint16_t num_partitions,
+                                          uint32_t start_pool_size);
 
 #else
 pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
@@ -282,51 +285,51 @@ pfwl_flow_table_t* pfwl_flow_table_create(uint32_t expected_flows,
                                           uint16_t num_partitions);
 #endif
 
-void pflw_flow_table_set_flow_cleaner_callback(pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback);
+void pflw_flow_table_set_flow_cleaner_callback(
+    pfwl_flow_table_t* db, pfwl_flow_cleaner_callback_t* flow_cleaner_callback);
 
 void pfwl_flow_table_delete(pfwl_flow_table_t* db);
 
-pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db,
-                                       uint32_t index,
+pfwl_flow_t* pfwl_flow_table_find_flow(pfwl_flow_table_t* db, uint32_t index,
                                        pfwl_dissection_info_t* pkt_info);
 
-pfwl_flow_t* pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t* db,
-                                                 pfwl_dissection_info_t* pkt_info,
-                                                 char* protocols_to_inspect,
-                                                 uint8_t tcp_reordering_enabled,
-                                                 uint32_t timestamp);
+pfwl_flow_t* pfwl_flow_table_find_or_create_flow(
+    pfwl_flow_table_t* db, pfwl_dissection_info_t* pkt_info,
+    char* protocols_to_inspect, uint8_t tcp_reordering_enabled,
+    uint32_t timestamp, uint8_t syn);
 
 void pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, pfwl_flow_t* to_delete);
-void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, pfwl_flow_t* to_delete);
+void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db,
+                                       pfwl_flow_t* to_delete);
 
 /**
  * They are used directly only in mc_dpi. Should never be used directly
  * by the user.
  **/
-uint32_t pfwl_compute_v4_hash_function(pfwl_flow_table_t* db,
-                                      const pfwl_dissection_info_t* const pkt_info);
+uint32_t pfwl_compute_v4_hash_function(
+    pfwl_flow_table_t* db, const pfwl_dissection_info_t* const pkt_info);
 
-uint32_t pfwl_compute_v6_hash_function(pfwl_flow_table_t* db,
-                                      const pfwl_dissection_info_t* const pkt_info);
+uint32_t pfwl_compute_v6_hash_function(
+    pfwl_flow_table_t* db, const pfwl_dissection_info_t* const pkt_info);
 
 void pfwl_init_flow_info_internal(pfwl_flow_info_private_t* flow_info_private,
                                   char* protocols_to_inspect,
                                   uint8_t tcp_reordering_enabled);
 
 pfwl_flow_t* mc_pfwl_flow_table_find_or_create_flow(
-    pfwl_flow_table_t* db,
-    uint16_t partition_id,
-    uint32_t index,
-    pfwl_dissection_info_t* pkt_info,
-    char* protocols_to_inspect,
-    uint8_t tcp_reordering_enabled,
-    uint32_t timestamp);
+    pfwl_flow_table_t* db, uint16_t partition_id, uint32_t index,
+    pfwl_dissection_info_t* pkt_info, char* protocols_to_inspect,
+    uint8_t tcp_reordering_enabled, uint32_t timestamp, uint8_t syn);
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t* table,
-                                        uint16_t num_partitions);
+                                      uint16_t num_partitions);
 
-void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db, uint16_t partition_id, pfwl_flow_t* to_delete);
-void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db, uint16_t partition_id, pfwl_flow_t* to_delete);
+void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t* db,
+                                    uint16_t partition_id,
+                                    pfwl_flow_t* to_delete);
+void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t* db,
+                                          uint16_t partition_id,
+                                          pfwl_flow_t* to_delete);
 
 #ifdef __cplusplus
 }

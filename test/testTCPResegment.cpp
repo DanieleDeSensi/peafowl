@@ -19,7 +19,7 @@ TEST(TCPResegmentation, Generic) {
       std::vector<uint> protocols;
       pfwl_state* state = pfwl_init();
       getProtocols(filenames[i], protocols, state);
-      EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], expected_http_packets[i]);
+      EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], expected_http_packets[i]);
 
       pfwl_terminate(state);
     }
@@ -30,7 +30,7 @@ TEST(TCPResegmentation, Generic) {
       pfwl_state* state = pfwl_init();
       pfwl_tcp_reordering_disable(state);
       getProtocols(filenames[i], protocols, state);
-      EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], expected_http_packets_without_reordering[i]);
+      EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], expected_http_packets_without_reordering[i]);
 
       pfwl_terminate(state);
     }

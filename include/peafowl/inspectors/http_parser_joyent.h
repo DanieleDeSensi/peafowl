@@ -305,7 +305,7 @@ struct http_parser {
   /** PUBLIC **/
   void *data; /* A pointer to get hook to the "connection" or "socket" object */
 #ifdef PFWL_EXTENSION
-  pfwl_field_t* extracted_fields;
+  pfwl_field_t *extracted_fields;
   uint8_t *required_fields;
   uint8_t copy; /**
                  * If 1, indicates to the callback to copy the content passed

@@ -11,7 +11,7 @@ TEST(GenericTest, Timestamps) {
   uint8_t check_timestamp = 1;
   uint8_t direction;
   uint8_t slept = 0;
-  getProtocols("./pcaps/http-jpeg.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/http-jpeg.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(last_timestamp && check_timestamp && r.l4.direction == direction){
       EXPECT_TRUE(r.flow_info.timestamp_last[direction] - r.flow_info.timestamp_first[direction] == 2 ||
                   r.flow_info.timestamp_last[direction] - r.flow_info.timestamp_first[direction] == 3);
@@ -30,7 +30,7 @@ TEST(GenericTest, BytesAndPackets) {
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t packet_id = 1; // Starts from one for a simple comparison with wireshark output
-  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(packet_id == 3){
       // src -> dst
       EXPECT_EQ(r.flow_info.num_bytes[0], 88);

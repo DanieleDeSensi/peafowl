@@ -4,15 +4,15 @@
  * =========================================================================
  * Copyright (c) 2012-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,12 +24,11 @@
  * =========================================================================
  */
 
-
 #ifndef WORKER_HPP_
 #define WORKER_HPP_
 
-#include <peafowl/peafowl.h>
 #include <peafowl/config.h>
+#include <peafowl/peafowl.h>
 #include <peafowl/peafowl_mc.h>
 
 #include <ff/farm.hpp>
@@ -42,8 +41,8 @@ typedef ff::ff_node ffnode;
 #endif
 
 #define PFWL_DEBUG_MP_WORKER 0
-#define worker_debug_print(fmt, ...)                            \
-  do {                                                          \
+#define worker_debug_print(fmt, ...)                             \
+  do {                                                           \
     if (PFWL_DEBUG_MP_WORKER) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
@@ -69,9 +68,10 @@ typedef struct L7_output_task {
   void* user_pointer;
 } L7_output_task_struct;
 
-#define PFWL_CACHE_LINES_PADDING_REQUIRED(size)                 \
-  (size % PFWL_CACHE_LINE_SIZE == 0 ? 0 : PFWL_CACHE_LINE_SIZE - \
-                                             (size % PFWL_CACHE_LINE_SIZE))
+#define PFWL_CACHE_LINES_PADDING_REQUIRED(size) \
+  (size % PFWL_CACHE_LINE_SIZE == 0             \
+       ? 0                                      \
+       : PFWL_CACHE_LINE_SIZE - (size % PFWL_CACHE_LINE_SIZE))
 
 typedef struct mc_pfwl_task {
   union input_output_task {
@@ -101,10 +101,9 @@ class pfwl_L3_L4_emitter : public ffnode {
   char padding2[PFWL_CACHE_LINE_SIZE];
 
  public:
-  pfwl_L3_L4_emitter(pfwl_state_t* state,
-                    mc_pfwl_packet_reading_callback** cb, void** user_data,
-                    uint8_t* terminating, uint16_t proc_id,
-                    ff::SWSR_Ptr_Buffer* tasks_pool);
+  pfwl_L3_L4_emitter(pfwl_state_t* state, mc_pfwl_packet_reading_callback** cb,
+                     void** user_data, uint8_t* terminating, uint16_t proc_id,
+                     ff::SWSR_Ptr_Buffer* tasks_pool);
   ~pfwl_L3_L4_emitter();
 #ifdef ENABLE_RECONFIGURATION
   void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
@@ -128,8 +127,8 @@ class pfwl_L3_L4_worker : public ffnode {
 
  public:
   pfwl_L3_L4_worker(pfwl_state_t* state, uint16_t worker_id,
-                   uint16_t num_L7_workers, uint16_t proc_id,
-                   uint32_t v4_table_size, uint32_t v6_table_size);
+                    uint16_t num_L7_workers, uint16_t proc_id,
+                    uint32_t v4_table_size, uint32_t v6_table_size);
   ~pfwl_L3_L4_worker();
 
   int svc_init();
@@ -193,7 +192,7 @@ class pfwl_L7_emitter : public ffnode {
 
  public:
   pfwl_L7_emitter(pfwl_L7_scheduler* lb, uint16_t num_L7_workers,
-                 uint16_t proc_id);
+                  uint16_t proc_id);
   ~pfwl_L7_emitter();
   int svc_init();
   void* svc(void* task);
@@ -221,8 +220,7 @@ class pfwl_L7_worker : public ffnode {
   char padding2[PFWL_CACHE_LINE_SIZE];
 
  public:
-  pfwl_L7_worker(pfwl_state_t* state, uint16_t worker_id,
-                uint16_t proc_id);
+  pfwl_L7_worker(pfwl_state_t* state, uint16_t worker_id, uint16_t proc_id);
   ~pfwl_L7_worker();
 
   int svc_init();
@@ -240,7 +238,7 @@ class pfwl_L7_collector : public ffnode {
 
  public:
   pfwl_L7_collector(mc_pfwl_processing_result_callback** cb, void** user_data,
-                   uint16_t* proc_id, ff::SWSR_Ptr_Buffer* tasks_pool);
+                    uint16_t* proc_id, ff::SWSR_Ptr_Buffer* tasks_pool);
   ~pfwl_L7_collector();
 
   int svc_init();
@@ -257,10 +255,10 @@ class pfwl_collapsed_emitter : public dpi::pfwl_L7_emitter {
 
  public:
   pfwl_collapsed_emitter(mc_pfwl_packet_reading_callback** cb, void** user_data,
-                        uint8_t* terminating, ff::SWSR_Ptr_Buffer* tasks_pool,
-                        pfwl_state_t* state, uint16_t num_L7_workers,
-                        uint32_t v4_table_size, uint32_t v6_table_size,
-                        pfwl_L7_scheduler* lb, uint16_t proc_id);
+                         uint8_t* terminating, ff::SWSR_Ptr_Buffer* tasks_pool,
+                         pfwl_state_t* state, uint16_t num_L7_workers,
+                         uint32_t v4_table_size, uint32_t v6_table_size,
+                         pfwl_L7_scheduler* lb, uint16_t proc_id);
   ~pfwl_collapsed_emitter();
   int svc_init();
   void* svc(void*);
@@ -268,6 +266,6 @@ class pfwl_collapsed_emitter : public dpi::pfwl_L7_emitter {
   void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
 };
-}
+}  // namespace dpi
 
 #endif /* WORKER_HPP_ */

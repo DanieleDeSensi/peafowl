@@ -7,25 +7,25 @@
 TEST(HTTPTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/http.cap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 36);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 36);
     getProtocols("./pcaps/http-jpeg.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 16);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 16);
     getProtocols("./pcaps/skype-irc.cap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 14);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 14);
     getProtocols("./pcaps/whatsapp.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 4);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 4);
     getProtocols("./pcaps/6in4tunnel.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 7);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 7);
     getProtocols("./pcaps/dropbox.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 14);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 14);
     getProtocols("./pcaps/spotify.pcapng", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 10);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 10);
     getProtocols("./pcaps/http-2.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 8);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 8);
     getProtocols("./pcaps/http-2-out-of-order.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 9);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 9);
     getProtocols("./pcaps/http-segmented.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 20);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 20);
 }
 
 TEST(HTTPTest, TCPDuplicates){
@@ -34,7 +34,7 @@ TEST(HTTPTest, TCPDuplicates){
   pfwl_tcp_reordering_disable(state);
   getProtocols("./pcaps/http.cap", protocols, state);
   // Two TCP segments retransmitted. So it counts 37 rather than 35
-  EXPECT_EQ(protocols[PFWL_PROTOCOL_HTTP], (uint) 38);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 38);
 }
 
 TEST(HTTPTest, ContentType) {
@@ -45,12 +45,12 @@ TEST(HTTPTest, ContentType) {
   unsigned char last_bytes[] = {0x7d, 0x6c, 0xfa, 0xf7, 0xd9, 0x9b, 0xfd, 0x53, 0xea, 0x9f, 0x73, 0xfc, 0x8f, 0xec, 0xf7, 0x36, 0x7f, 0x59, 0x9f, 0xff, 0xd9};
   std::vector<uint> protocols;
   pfwl_state_t* state = pfwl_init();
-  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_HEADERS);
-  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
+  pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_HEADERS);
+  pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY);
   bool ctFound = false;
   bool bodyFound = false;
-  getProtocols("./pcaps/http-jpeg.pcap", protocols, state, [&](pfwl_dissection_info_t r){
-  if(r.l7.protocol == PFWL_PROTOCOL_HTTP){
+  getProtocols("./pcaps/http-jpeg.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+  if(r.l7.protocol == PFWL_PROTO_L7_HTTP){
     pfwl_string_t field;
     if((*r.flow_info.udata == NULL) &&
        !pfwl_http_get_header(&r, "Content-Type", &field) &&
@@ -59,7 +59,7 @@ TEST(HTTPTest, ContentType) {
       *r.flow_info.udata = (void*) 1;
     }
 
-    if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_HTTP_BODY, &field) &&
+    if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_HTTP_BODY, &field) &&
        *r.flow_info.udata){
       bodyFound = true;
       for(size_t i = 0; i < sizeof(first_bytes); ++i){
@@ -83,12 +83,12 @@ TEST(HTTPTest, ContentType2) {
     for(auto filename : filenames){
       std::vector<uint> protocols;
       pfwl_state_t* state = pfwl_init();
-      pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_HEADERS);
-      pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
+      pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_HEADERS);
+      pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY);
       bool cTypeFound = false, bodyFound = false, uAgentFound = false, hostFound = false;
       size_t packet_id = 1; // Just simpler to compare with Wireshark dissection, where packets start from 1
-      getProtocols(filename, protocols, state, [&](pfwl_dissection_info_t r){
-        if(r.l7.protocol == PFWL_PROTOCOL_HTTP){
+      getProtocols(filename, protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+        if(r.l7.protocol == PFWL_PROTO_L7_HTTP){
           // Content type
           pfwl_string_t field;
           if(!pfwl_http_get_header(&r, "Content-Type", &field)){
@@ -109,7 +109,7 @@ TEST(HTTPTest, ContentType2) {
           }
 
           // Body
-          if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_HTTP_BODY, &field)){
+          if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_HTTP_BODY, &field)){
             size_t body_packet_id;
             if(strstr(filename, "out-of-order")){
               body_packet_id = 5;

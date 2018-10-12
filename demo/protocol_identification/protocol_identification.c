@@ -42,52 +42,47 @@
 #include <assert.h>
 
 int main(int argc, char** argv){
-  if(argc!=2){
+  if(argc != 2){
     fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
     return -1;
   }
-  char* pcap_filename=argv[1];
+  char* pcap_filename = argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
+  const u_char* packet;
+  uint32_t protocols[PFWL_PROTO_L7_NUM];
+  struct pcap_pkthdr header;
+  memset(protocols, 0, sizeof(protocols));
+  uint32_t unknown = 0;
 
-  pfwl_state_t* state = pfwl_init();
-  pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
-
-  if(handle==NULL){
+  pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
+  if(handle == NULL){
     fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
     return (2);
   }
 
-  const u_char* packet;
-  struct pcap_pkthdr header;
-
+  pfwl_state_t* state = pfwl_init();
   pfwl_dissection_info_t r;
   pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
-  u_int32_t protocols[PFWL_NUM_PROTOCOLS];
-  memset(protocols, 0, sizeof(protocols));
-  u_int32_t unknown=0;
-
-  while((packet=pcap_next(handle, &header))!=NULL){
-    r = pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt);
-
-    if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
-      if(r.l7.protocol < PFWL_NUM_PROTOCOLS){
-        ++protocols[r.l7.protocol];
+  while((packet = pcap_next(handle, &header))!=NULL){
+    if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &r) >= PFWL_STATUS_OK){
+      if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
+        if(r.l7.protocol < PFWL_PROTO_L7_NUM){
+          ++protocols[r.l7.protocol];
+        }else{
+          ++unknown;
+        }
       }else{
         ++unknown;
       }
-    }else{
-      ++unknown;
     }
   }
-
   pfwl_terminate(state);
 
   if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
-  for(size_t i = 0; i < PFWL_NUM_PROTOCOLS; i++){
+  for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
     if(protocols[i] > 0){
-      printf("%s packets: %"PRIu32"\n", pfwl_get_protocol_string(i), protocols[i]);
+      printf("%s packets: %"PRIu32"\n", pfwl_get_L7_protocol_name(i), protocols[i]);
     }
   }
   return 0;
 }
-

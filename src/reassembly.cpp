@@ -5,15 +5,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -34,8 +34,8 @@
 #include <string.h>
 
 void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
-                              pfwl_reassembly_timer_t** tail,
-                              pfwl_reassembly_timer_t* timer) {
+                               pfwl_reassembly_timer_t** tail,
+                               pfwl_reassembly_timer_t* timer) {
   if (*tail) {
     (*tail)->next = timer;
     timer->prev = (*tail);
@@ -49,8 +49,8 @@ void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
 }
 
 void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t** head,
-                                 pfwl_reassembly_timer_t** tail,
-                                 pfwl_reassembly_timer_t* timer) {
+                                  pfwl_reassembly_timer_t** tail,
+                                  pfwl_reassembly_timer_t* timer) {
   if (timer->prev)
     timer->prev->next = timer->next;
   else
@@ -88,11 +88,12 @@ uint32_t pfwl_reassembly_fragment_length(uint32_t offset, uint32_t end) {
 #ifndef PFWL_DEBUG
 static
 #endif
-pfwl_reassembly_fragment_t* pfwl_reassembly_create_fragment(uint32_t offset, uint32_t end,
-                                   const unsigned char* ptr) {
+    pfwl_reassembly_fragment_t*
+    pfwl_reassembly_create_fragment(uint32_t offset, uint32_t end,
+                                    const unsigned char* ptr) {
   pfwl_reassembly_fragment_t* fragment;
-  fragment =
-      (pfwl_reassembly_fragment_t*)calloc(1, sizeof(pfwl_reassembly_fragment_t));
+  fragment = (pfwl_reassembly_fragment_t*)calloc(
+      1, sizeof(pfwl_reassembly_fragment_t));
   if (unlikely(fragment == NULL)) {
     free(fragment);
     return NULL;
@@ -254,8 +255,8 @@ uint8_t pfwl_reassembly_ip_check_train_of_contiguous_fragments(
 }
 
 int32_t pfwl_reassembly_ip_compact_fragments(pfwl_reassembly_fragment_t* head,
-                                            unsigned char** where,
-                                            uint32_t len) {
+                                             unsigned char** where,
+                                             uint32_t len) {
   /* Copy the data portions of all fragments into the new buffer. */
   uint32_t count = 0;
   while (head != NULL) {

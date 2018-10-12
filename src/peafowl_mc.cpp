@@ -5,15 +5,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -41,8 +41,8 @@
 #include <vector>
 
 #define PFWL_DEBUG_MC_API 1
-#define debug_print(fmt, ...)                                \
-  do {                                                       \
+#define debug_print(fmt, ...)                                 \
+  do {                                                        \
     if (PFWL_DEBUG_MC_API) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
@@ -111,7 +111,7 @@ static inline
 #endif
     void
     mc_pfwl_create_double_farm(mc_pfwl_state_t* state, uint32_t size_v4,
-                              uint32_t size_v6) {
+                               uint32_t size_v6) {
   uint16_t last_mapped = 0;
   /******************************************/
   /*         Create the first farm.         */
@@ -122,8 +122,8 @@ static inline
   assert(tmp);
   state->L3_L4_farm =
       new (tmp) ff::ff_ofarm(false, PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
-                             PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE, false,
-                             state->available_processors, true);
+                             PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
+                             false, state->available_processors, true);
   tmp = malloc(sizeof(dpi::pfwl_L3_L4_emitter));
   assert(tmp);
   state->L3_L4_emitter = new (tmp) dpi::pfwl_L3_L4_emitter(
@@ -135,10 +135,10 @@ static inline
 #else
   tmp = malloc(sizeof(ff::ff_farm<>));
   assert(tmp);
-  state->L3_L4_farm =
-      new (tmp) ff::ff_farm<>(false, PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
-                              PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE,
-                              false, state->available_processors, true);
+  state->L3_L4_farm = new (tmp)
+      ff::ff_farm<>(false, PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE,
+                    PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE, false,
+                    state->available_processors, true);
   tmp = malloc(sizeof(dpi::pfwl_L3_L4_emitter));
   assert(tmp);
   state->L3_L4_emitter = new (tmp) dpi::pfwl_L3_L4_emitter(
@@ -233,7 +233,7 @@ static inline
 #endif
     void
     mc_pfwl_create_single_farm(mc_pfwl_state_t* state, uint32_t size_v4,
-                              uint32_t size_v6) {
+                               uint32_t size_v6) {
   uint16_t last_mapped = 0;
   state->single_farm = new ff::ff_farm<dpi::pfwl_L7_scheduler>(
       false, PFWL_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE,
@@ -252,8 +252,8 @@ static inline
 
   state->single_farm_workers = new std::vector<ff::ff_node*>;
   for (uint16_t i = 0; i < state->single_farm_active_workers; i++) {
-    dpi::pfwl_L7_worker* w = new dpi::pfwl_L7_worker(state->sequential_state, i,
-                                                   state->mapping[last_mapped]);
+    dpi::pfwl_L7_worker* w = new dpi::pfwl_L7_worker(
+        state->sequential_state, i, state->mapping[last_mapped]);
     assert(w);
     state->single_farm_workers->push_back(w);
     last_mapped = (last_mapped + 1) % state->available_processors;
@@ -304,8 +304,8 @@ mc_pfwl_state_t* mc_pfwl_init_stateful(
     uint32_t max_active_v6_flows,
     mc_pfwl_parallelism_details_t parallelism_details) {
   mc_pfwl_state_t* state = NULL;
-  if(posix_memalign((void**)&state, PFWL_CACHE_LINE_SIZE,
-                 sizeof(mc_pfwl_state_t) + PFWL_CACHE_LINE_SIZE)){
+  if (posix_memalign((void**)&state, PFWL_CACHE_LINE_SIZE,
+                     sizeof(mc_pfwl_state_t) + PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
   bzero(state, sizeof(mc_pfwl_state_t));
@@ -368,8 +368,8 @@ mc_pfwl_state_t* mc_pfwl_init_stateful(
 /******************************/
 #if PFWL_MULTICORE_USE_TASKS_POOL
   void* tmp = NULL;
-  if(posix_memalign((void**)&tmp, PFWL_CACHE_LINE_SIZE,
-                 sizeof(ff::SWSR_Ptr_Buffer) + PFWL_CACHE_LINE_SIZE)){
+  if (posix_memalign((void**)&tmp, PFWL_CACHE_LINE_SIZE,
+                     sizeof(ff::SWSR_Ptr_Buffer) + PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
   state->tasks_pool =
@@ -462,8 +462,7 @@ void mc_pfwl_terminate(mc_pfwl_state_t* state) {
 }
 
 void mc_pfwl_set_core_callbacks(
-    mc_pfwl_state_t* state,
-    mc_pfwl_packet_reading_callback* reading_callback,
+    mc_pfwl_state_t* state, mc_pfwl_packet_reading_callback* reading_callback,
     mc_pfwl_processing_result_callback* processing_callback, void* user_data) {
   state->reading_callback = reading_callback;
   state->processing_callback = processing_callback;
@@ -472,7 +471,7 @@ void mc_pfwl_set_core_callbacks(
 
 #ifdef ENABLE_RECONFIGURATION
 void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t* state,
-                                  nornir::Parameters* p) {
+                                   nornir::Parameters* p) {
   state->adp_params = p;
 }
 #endif
@@ -525,18 +524,16 @@ void mc_pfwl_wait_end(mc_pfwl_state_t* state) {
   state->is_running = 0;
 }
 
-uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t* state,
-                                   uint32_t flows_v4,
-                                   uint32_t flows_v6,
-                                   uint8_t strict){
+uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t* state, uint32_t flows_v4,
+                                   uint32_t flows_v6, uint8_t strict) {
   if (state->is_running) {
     return 0;
   }
-  return pfwl_set_expected_flows(state->sequential_state, flows_v4, flows_v6, strict);
+  return pfwl_set_expected_flows(state->sequential_state, flows_v4, flows_v6,
+                                 strict);
 }
 
-uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state,
-                              uint16_t max_trials) {
+uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state, uint16_t max_trials) {
   if (state->is_running) {
     return 0;
   }
@@ -546,22 +543,22 @@ uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state,
 }
 
 uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t* state,
-                                         uint16_t table_size) {
+                                          uint16_t table_size) {
   if (state->is_running) {
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv4_fragmentation_enable(state->sequential_state, table_size);
+  r = pfwl_defragmentation_enable_ipv4(state->sequential_state, table_size);
   return r;
 }
 
 uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_state_t* state,
-                                         uint16_t table_size) {
+                                          uint16_t table_size) {
   if (state->is_running) {
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv6_fragmentation_enable(state->sequential_state, table_size);
+  r = pfwl_defragmentation_enable_ipv6(state->sequential_state, table_size);
   return r;
 }
 
@@ -571,8 +568,8 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv4_fragmentation_set_per_host_memory_limit(state->sequential_state,
-                                                       per_host_memory_limit);
+  r = pfwl_defragmentation_set_per_host_memory_limit_ipv4(
+      state->sequential_state, per_host_memory_limit);
   return r;
 }
 
@@ -582,8 +579,8 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv6_fragmentation_set_per_host_memory_limit(state->sequential_state,
-                                                       per_host_memory_limit);
+  r = pfwl_defragmentation_set_per_host_memory_limit_ipv6(
+      state->sequential_state, per_host_memory_limit);
   return r;
 }
 
@@ -593,8 +590,8 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv4_fragmentation_set_total_memory_limit(state->sequential_state,
-                                                    total_memory_limit);
+  r = pfwl_defragmentation_set_total_memory_limit_ipv4(state->sequential_state,
+                                                       total_memory_limit);
   return r;
 }
 
@@ -604,8 +601,8 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv6_fragmentation_set_total_memory_limit(state->sequential_state,
-                                                    total_memory_limit);
+  r = pfwl_defragmentation_set_total_memory_limit_ipv6(state->sequential_state,
+                                                       total_memory_limit);
   return r;
 }
 
@@ -615,8 +612,8 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv4_fragmentation_set_reassembly_timeout(state->sequential_state,
-                                                    timeout_seconds);
+  r = pfwl_defragmentation_set_reassembly_timeout_ipv4(state->sequential_state,
+                                                       timeout_seconds);
   return r;
 }
 
@@ -626,8 +623,8 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv6_fragmentation_set_reassembly_timeout(state->sequential_state,
-                                                    timeout_seconds);
+  r = pfwl_defragmentation_set_reassembly_timeout_ipv6(state->sequential_state,
+                                                       timeout_seconds);
   return r;
 }
 
@@ -636,7 +633,7 @@ uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_state_t* state) {
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv4_fragmentation_disable(state->sequential_state);
+  r = pfwl_defragmentation_disable_ipv4(state->sequential_state);
   return r;
 }
 
@@ -645,7 +642,7 @@ uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_state_t* state) {
     return 0;
   }
   uint8_t r;
-  r = pfwl_ipv6_fragmentation_disable(state->sequential_state);
+  r = pfwl_defragmentation_disable_ipv6(state->sequential_state);
   return r;
 }
 
@@ -668,19 +665,19 @@ uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_state_t* state) {
 }
 
 uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t* state,
-                               pfwl_protocol_l7_t protocol) {
-  if (state->is_running) {
-    return 0;
-  }
-  return pfwl_enable_protocol(state->sequential_state, protocol);
-}
-
-uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t* state,
                                 pfwl_protocol_l7_t protocol) {
   if (state->is_running) {
     return 0;
   }
-  return pfwl_disable_protocol(state->sequential_state, protocol);
+  return pfwl_protocol_l7_enable(state->sequential_state, protocol);
+}
+
+uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t* state,
+                                 pfwl_protocol_l7_t protocol) {
+  if (state->is_running) {
+    return 0;
+  }
+  return pfwl_protocol_l7_disable(state->sequential_state, protocol);
 }
 
 uint8_t mc_pfwl_inspect_all(mc_pfwl_state_t* state) {
@@ -688,7 +685,7 @@ uint8_t mc_pfwl_inspect_all(mc_pfwl_state_t* state) {
     return 0;
   }
   uint8_t r;
-  r = pfwl_inspect_all(state->sequential_state);
+  r = pfwl_protocol_l7_enable_all(state->sequential_state);
   return r;
 }
 
@@ -697,12 +694,12 @@ uint8_t mc_pfwl_inspect_nothing(mc_pfwl_state_t* state) {
     return 0;
   }
   uint8_t r;
-  r = pfwl_inspect_nothing(state->sequential_state);
+  r = pfwl_protocol_l7_disable_all(state->sequential_state);
   return r;
 }
 
-uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_state_t* state,
-                                         pfwl_flow_cleaner_callback_t* cleaner) {
+uint8_t mc_pfwl_set_flow_cleaner_callback(
+    mc_pfwl_state_t* state, pfwl_flow_cleaner_callback_t* cleaner) {
   if (state->is_running) {
     return 0;
   }
@@ -712,14 +709,14 @@ uint8_t mc_pfwl_set_flow_cleaner_callback(mc_pfwl_state_t* state,
 }
 
 uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_state_t* state,
-                                       pfwl_http_callbacks_t* callbacks,
-                                       void* user_data) {
+                                        pfwl_http_callbacks_t* callbacks,
+                                        void* user_data) {
   if (state->is_running) {
     return 0;
   }
   uint8_t r;
   r = pfwl_http_activate_callbacks(state->sequential_state, callbacks,
-                                  user_data);
+                                   user_data);
   return r;
 }
 
@@ -733,13 +730,13 @@ uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_state_t* state) {
 }
 
 const char** const mc_pfwl_get_protocol_strings() {
-  return pfwl_get_protocols_strings();
+  return pfwl_get_L7_protocols_names();
 }
 
 const char* const mc_pfwl_get_protocol_string(pfwl_protocol_l7_t protocol) {
-  return pfwl_get_protocol_string(protocol);
+  return pfwl_get_L7_protocol_name(protocol);
 }
 
 pfwl_protocol_l7_t mc_pfwl_get_protocol_id(const char* const string) {
-  return pfwl_get_protocol_id(string);
+  return pfwl_get_L7_protocol_id(string);
 }

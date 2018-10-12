@@ -8,7 +8,7 @@ TEST(L3Dissection, 4in4) {
   std::vector<uint> protocols;
   size_t packet_id = 1;
   size_t icmp_packets = 0;
-  getProtocols("./pcaps/L3/4in4.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/4in4.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     struct sockaddr_in src, dst;
     inet_pton(AF_INET, "1.1.1.1", &(src.sin_addr));
     inet_pton(AF_INET, "2.2.2.2", &(dst.sin_addr));
@@ -32,7 +32,7 @@ TEST(L3Dissection, 4in6){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/4in6.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/4in6.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in src, dst;
       inet_pton(AF_INET, "70.55.213.211", &(src.sin_addr));
@@ -52,7 +52,7 @@ TEST(L3Dissection, 6in4){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/6in4.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/6in4.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in6 src, dst;
       inet_pton(AF_INET6, "2002:4637:d5d3:0000:0000:0000:4637:d5d3", &(src.sin6_addr));
@@ -74,7 +74,7 @@ TEST(L3Dissection, ipv6_hdr_dstopts){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/ipv6_hdr_dstopt.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/ipv6_hdr_dstopt.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in6 src, dst;
       inet_pton(AF_INET6, "2a01:0e35:8bd9:8bb0:a0a7:ea9c:74e8:d397", &(src.sin6_addr));
@@ -97,7 +97,7 @@ TEST(L3Dissection, ipv6_hdr_hopbyhop){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/ipv6_hdr_hopbyhop.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/ipv6_hdr_hopbyhop.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in6 src, dst;
       inet_pton(AF_INET6, "fe80:0000:0000:0000:021b:63ff:fe94:b10e", &(src.sin6_addr));
@@ -119,7 +119,7 @@ TEST(L3Dissection, ipv6_hdr_routing){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/ipv6_hdr_routing.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/ipv6_hdr_routing.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in6 src, dst;
       inet_pton(AF_INET6, "3001:0000:0000:0000:0200:10ff:fe10:1181", &(src.sin6_addr));
@@ -141,7 +141,7 @@ TEST(L3Dissection, rsvp){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/rsvp.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/rsvp.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in src, dst;
       inet_pton(AF_INET, "10.1.24.4", &(src.sin_addr));
@@ -163,11 +163,11 @@ TEST(L3Dissection, truncated){
   for(auto filename : truncated_files){
     pfwl_state_t* state = pfwl_init();
     std::vector<uint> protocols;
-    getProtocols(filename, protocols, state, [&](pfwl_dissection_info_t r){
+    getProtocols(filename, protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
       if(strstr(filename, "_ip.pcap") || strstr(filename, "_icmp.pcap")){
-        EXPECT_EQ(r.status, PFWL_ERROR_L3_PARSING);
+        EXPECT_EQ(status, PFWL_ERROR_L3_PARSING);
       }else{
-        EXPECT_EQ(r.status, PFWL_ERROR_L4_PARSING);
+        EXPECT_EQ(status, PFWL_ERROR_L4_PARSING);
       }
     });
 
@@ -179,7 +179,7 @@ TEST(L3Dissection, igmp){
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
   size_t id = 0;
-  getProtocols("./pcaps/L3/igmp.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/L3/igmp.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(id == 0){
       struct sockaddr_in src, dst;
       inet_pton(AF_INET, "192.168.2.5", &(src.sin_addr));

@@ -58,8 +58,8 @@ int main(int argc, char** argv){
 
   pfwl_state_t *state = pfwl_init();
   pfwl_set_flow_cleaner_callback(state, &flow_delete_cb);
-  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_HEADERS);
-  pfwl_protocol_field_add(state, PFWL_FIELDS_HTTP_BODY);
+  pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_HEADERS);
+  pfwl_field_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY);
 
   pcap_t *handle; /* Session handle */
   struct pcap_pkthdr header; /* The header that pcap gives us */
@@ -85,42 +85,43 @@ int main(int argc, char** argv){
   /* Grab a packet */
   while((packet = pcap_next(handle, &header)) != NULL){
     pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
-    pfwl_dissection_info_t r = pfwl_dissect_from_L2(state,(const u_char*) packet, header.caplen, time(NULL), dlt);
-    if(r.l7.protocol == PFWL_PROTOCOL_HTTP){
-      pfwl_string_t field;
-      if((*r.flow_info.udata == NULL) &&
-         !pfwl_http_get_header(&r, "Content-Type", &field) &&
-         (strncmp((char*) field.value, "image/jpeg", field.length) == 0)){
-        struct in_addr src, dst;
-        src.s_addr = r.l3.addr_src.ipv4;
-        dst.s_addr = r.l3.addr_dst.ipv4;
-        char src_string[64];
-        strcpy(src_string, inet_ntoa(src));
-        char dst_string[64];
-        strcpy(dst_string, inet_ntoa(dst));
+    pfwl_dissection_info_t r;
+    if(pfwl_dissect_from_L2(state,(const u_char*) packet, header.caplen, time(NULL), dlt, &r) >= PFWL_STATUS_OK){
+      if(r.l7.protocol == PFWL_PROTO_L7_HTTP){
+        pfwl_string_t field;
+        if((*r.flow_info.udata == NULL) &&
+           !pfwl_http_get_header(&r, "Content-Type", &field) &&
+           (strncmp((char*) field.value, "image/jpeg", field.length) == 0)){
+          struct in_addr src, dst;
+          src.s_addr = r.l3.addr_src.ipv4;
+          dst.s_addr = r.l3.addr_dst.ipv4;
+          char src_string[64];
+          strcpy(src_string, inet_ntoa(src));
+          char dst_string[64];
+          strcpy(dst_string, inet_ntoa(dst));
 
-        char filename[MAX_FILENAME_SIZE];
-        sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%ld.jpeg", src_string, ntohs(r.l4.port_src), dst_string, ntohs(r.l4.port_dst), time(NULL));
+          char filename[MAX_FILENAME_SIZE];
+          sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%ld.jpeg", src_string, ntohs(r.l4.port_src), dst_string, ntohs(r.l4.port_dst), time(NULL));
 
-        u_int32_t j=0;
-        /** File already exists. **/
-        while(access(filename, F_OK)!=-1){
-          sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%ld_%d.jpeg", src_string, ntohs(r.l4.port_src), dst_string, ntohs(r.l4.port_dst), time(NULL), ++j);
+          u_int32_t j=0;
+          /** File already exists. **/
+          while(access(filename, F_OK)!=-1){
+            sprintf(filename, "%s:%"PRIu16"_to_%s:%"PRIu16"_at_%ld_%d.jpeg", src_string, ntohs(r.l4.port_src), dst_string, ntohs(r.l4.port_dst), time(NULL), ++j);
+          }
+          *r.flow_info.udata = fopen(filename, "w");
+          assert(*r.flow_info.udata);
         }
-        *r.flow_info.udata = fopen(filename, "w");
-        assert(*r.flow_info.udata);
-      }
 
-      if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_HTTP_BODY, &field) && *r.flow_info.udata){
-        u_int32_t i;
-        for(i = 0; i < field.length; ++i)
-          fputc(field.value[i], ((FILE*) *r.flow_info.udata));
+        if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_HTTP_BODY, &field) && *r.flow_info.udata){
+          u_int32_t i;
+          for(i = 0; i < field.length; ++i)
+            fputc(field.value[i], ((FILE*) *r.flow_info.udata));
 
-        fclose(((FILE*) *r.flow_info.udata));
-        *r.flow_info.udata = NULL;
+          fclose(((FILE*) *r.flow_info.udata));
+          *r.flow_info.udata = NULL;
+        }
       }
     }
-
   }
   /* And close the session */
   pcap_close(handle);

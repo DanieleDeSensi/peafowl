@@ -50,7 +50,7 @@
 
 int datalink_type=0;
 
-u_int32_t protocols[PFWL_NUM_PROTOCOLS];
+u_int32_t protocols[PFWL_PROTO_L7_NUM];
 u_int32_t unknown=0;
 
 typedef struct{
@@ -124,7 +124,7 @@ void processing_cb(mc_pfwl_processing_result_t* processing_result, void* callbac
 	pfwl_dissection_info_t r = processing_result->result;
     if(r.protocol.l4prot == IPPROTO_TCP ||
        r.protocol.l4prot == IPPROTO_UDP){
-        if(r.protocol.l7prot < PFWL_NUM_PROTOCOLS){
+        if(r.protocol.l7prot < PFWL_PROTO_L7_NUM){
             ++protocols[r.protocol.l7prot];
         }else{
             ++unknown;
@@ -184,8 +184,8 @@ int main(int argc, char** argv){
 
 
 	if (unknown > 0) printf("Unknown packets: %" PRIu32 "\n", unknown);
-    for(size_t i = 0; i < PFWL_NUM_PROTOCOLS; i++){
-        if (protocols[i] > 0) printf("%s packets: %" PRIu32 "\n", pfwl_get_protocol_string(i), protocols[i]);
+    for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+        if (protocols[i] > 0) printf("%s packets: %" PRIu32 "\n", pfwl_get_L7_protocol_name(i), protocols[i]);
     }
 	return 0;
 }

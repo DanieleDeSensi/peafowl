@@ -11,30 +11,30 @@ static size_t nextExpectedMethod = 0;
 TEST(SIPTest, Generic) {
   std::vector<uint> protocols;
   getProtocols("./pcaps/sip-rtp.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 102);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 102);
   getProtocols("./pcaps/whatsapp.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 6);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 6);
   getProtocols("./pcaps/dropbox.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 140);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 140);
 }
 
 TEST(SIPTest, CallbackRequestURI){
   std::vector<uint> protocols;
   pfwl_state_t* state = pfwl_init();
-  pfwl_protocol_field_add(state, PFWL_FIELDS_SIP_REQUEST_URI);
-  pfwl_protocol_field_add(state, PFWL_FIELDS_SIP_METHOD);
+  pfwl_field_add_L7(state, PFWL_FIELDS_L7_SIP_REQUEST_URI);
+  pfwl_field_add_L7(state, PFWL_FIELDS_L7_SIP_METHOD);
 
-  getProtocols("./pcaps/sip-rtp.pcap", protocols, state, [&](pfwl_dissection_info_t r){
-    if(r.l7.protocol == PFWL_PROTOCOL_SIP){
+  getProtocols("./pcaps/sip-rtp.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    if(r.l7.protocol == PFWL_PROTO_L7_SIP){
       pfwl_string_t field;
-      if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_SIP_REQUEST_URI, &field)){
+      if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_SIP_REQUEST_URI, &field)){
         EXPECT_TRUE(!strncmp((const char*) field.value, expectedRequestURIs[nextExpectedURI], field.length));
         ++nextExpectedURI;
-      }else if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_SIP_METHOD, &field)){
+      }else if(!pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_SIP_METHOD, &field)){
         EXPECT_TRUE(!strncmp((const char*) field.value, expectedMethods[nextExpectedMethod], field.length));
         ++nextExpectedMethod;
       }
     }
   });
-  EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 102);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 102);
 }

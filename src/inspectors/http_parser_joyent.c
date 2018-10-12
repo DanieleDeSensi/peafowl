@@ -1262,7 +1262,7 @@ size_t http_parser_execute(http_parser *parser,
               }
               break;
 
-            /* connection */
+              /* connection */
 
             case h_matching_connection:
               parser->index++;
@@ -1274,7 +1274,7 @@ size_t http_parser_execute(http_parser *parser,
               }
               break;
 
-            /* proxy-connection */
+              /* proxy-connection */
 
             case h_matching_proxy_connection:
               parser->index++;
@@ -1286,7 +1286,7 @@ size_t http_parser_execute(http_parser *parser,
               }
               break;
 
-            /* content-length */
+              /* content-length */
 
             case h_matching_content_length:
               parser->index++;
@@ -1298,7 +1298,7 @@ size_t http_parser_execute(http_parser *parser,
               }
               break;
 
-            /* transfer-encoding */
+              /* transfer-encoding */
 
             case h_matching_transfer_encoding:
               parser->index++;
@@ -1310,7 +1310,7 @@ size_t http_parser_execute(http_parser *parser,
               }
               break;
 
-            /* upgrade */
+              /* upgrade */
 
             case h_matching_upgrade:
               parser->index++;
@@ -1365,7 +1365,7 @@ size_t http_parser_execute(http_parser *parser,
           break;
         }
 
-      /* FALLTHROUGH */
+        /* FALLTHROUGH */
 
       case s_header_value_start: {
         MARK(header_value);

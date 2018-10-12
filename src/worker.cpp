@@ -5,15 +5,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -48,10 +48,11 @@ static inline
   mc_pfwl_task_t* r;
 #if PFWL_NUMA_AWARE
   r = (mc_pfwl_task_t*)numa_alloc_onnode(sizeof(mc_pfwl_task_t),
-                                        PFWL_NUMA_AWARE_TASKS_NODE);
+                                         PFWL_NUMA_AWARE_TASKS_NODE);
 #else
 #if PFWL_MULTICORE_ALIGN_TASKS
-  if(posix_memalign((void**)&r, PFWL_CACHE_LINE_SIZE, sizeof(mc_pfwl_task_t))){
+  if (posix_memalign((void**)&r, PFWL_CACHE_LINE_SIZE,
+                     sizeof(mc_pfwl_task_t))) {
     throw std::runtime_error("posix_memalign failed.");
   }
 #else
@@ -81,10 +82,10 @@ static inline
 /*                      L3_L4 nodes.                 */
 /*****************************************************/
 pfwl_L3_L4_emitter::pfwl_L3_L4_emitter(pfwl_state_t* state,
-                                     mc_pfwl_packet_reading_callback** cb,
-                                     void** user_data, uint8_t* terminating,
-                                     uint16_t proc_id,
-                                     ff::SWSR_Ptr_Buffer* tasks_pool)
+                                       mc_pfwl_packet_reading_callback** cb,
+                                       void** user_data, uint8_t* terminating,
+                                       uint16_t proc_id,
+                                       ff::SWSR_Ptr_Buffer* tasks_pool)
     : state(state),
       cb(cb),
       user_data(user_data),
@@ -156,28 +157,28 @@ pfwl_L3_L4_emitter::~pfwl_L3_L4_emitter() { ; }
 
 #ifdef ENABLE_RECONFIGURATION
 void pfwl_L3_L4_emitter::notifyRethreading(size_t oldNumWorkers,
-                                          size_t newNumWorkers) {
+                                           size_t newNumWorkers) {
   worker_debug_print("%s\n", "[mc_pfwl_api.cpp]: Changing v4 table partitions");
   pfwl_flow_table_setup_partitions_v4((pfwl_flow_DB_v4_t*)state->db4,
-                                     newNumWorkers);
+                                      newNumWorkers);
   worker_debug_print("%s\n", "[mc_pfwl_api.cpp]: Changing v6 table partitions");
   pfwl_flow_table_setup_partitions_v6((pfwl_flow_DB_v6_t*)state->db6,
-                                     newNumWorkers);
+                                      newNumWorkers);
 }
 #endif
 
-pfwl_L3_L4_worker::pfwl_L3_L4_worker(pfwl_state_t* state,
-                                   uint16_t worker_id, uint16_t num_L7_workers,
-                                   uint16_t proc_id, uint32_t v4_table_size,
-                                   uint32_t v6_table_size)
+pfwl_L3_L4_worker::pfwl_L3_L4_worker(pfwl_state_t* state, uint16_t worker_id,
+                                     uint16_t num_L7_workers, uint16_t proc_id,
+                                     uint32_t v4_table_size,
+                                     uint32_t v6_table_size)
     : state(state),
       v4_table_size(v4_table_size),
       v6_table_size(v6_table_size),
       worker_id(worker_id),
       proc_id(proc_id) {
-  if(posix_memalign(
-      (void**)&in, PFWL_CACHE_LINE_SIZE,
-      sizeof(L3_L4_input_task_struct) * PFWL_MULTICORE_DEFAULT_GRAIN_SIZE)){
+  if (posix_memalign((void**)&in, PFWL_CACHE_LINE_SIZE,
+                     sizeof(L3_L4_input_task_struct) *
+                         PFWL_MULTICORE_DEFAULT_GRAIN_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
   v4_worker_table_size = ceil((float)v4_table_size / (float)(num_L7_workers));
@@ -188,7 +189,7 @@ pfwl_L3_L4_worker::~pfwl_L3_L4_worker() { free(in); }
 
 #ifdef ENABLE_RECONFIGURATION
 void pfwl_L3_L4_worker::notifyRethreading(size_t oldNumWorkers,
-                                         size_t newNumWorkers) {
+                                          size_t newNumWorkers) {
   v4_worker_table_size = ceil((float)v4_table_size / (float)(newNumWorkers));
   v6_worker_table_size = ceil((float)v6_table_size / (float)(newNumWorkers));
   worker_debug_print(
@@ -226,7 +227,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
 
     real_task->input_output_task_t.L3_L4_output_task_t[i].status =
         mc_pfwl_parse_L3_header(this->state, in[i].pkt, in[i].length,
-                                    &pkt_infos, in[i].current_time, worker_id);
+                                &pkt_infos, in[i].current_time, worker_id);
 
     /* To have always a consistent value temp L7 worker selection. */
     real_task->input_output_task_t.L3_L4_output_task_t[i].hash_result = 0;
@@ -237,7 +238,8 @@ void* pfwl_L3_L4_worker::svc(void* task) {
 
     if (likely(real_task->input_output_task_t.L3_L4_output_task_t[i].status >=
                0)) {
-      if (pkt_infos.protocol_l4 != IPPROTO_TCP && pkt_infos.protocol_l4 != IPPROTO_UDP) {
+      if (pkt_infos.protocol_l4 != IPPROTO_TCP &&
+          pkt_infos.protocol_l4 != IPPROTO_UDP) {
         continue;
       }
 
@@ -245,10 +247,10 @@ void* pfwl_L3_L4_worker::svc(void* task) {
                  PFWL_STATUS_IP_FRAGMENT)) {
         real_task->input_output_task_t.L3_L4_output_task_t[i].pkt_infos =
             pkt_infos;
-        if (pkt_infos.ip_version == PFWL_IP_VERSION_4) {
+        if (pkt_infos.ip_version == PFWL_PROTO_L3_IPV4) {
           real_task->input_output_task_t.L3_L4_output_task_t[i].hash_result =
-              pfwl_compute_v4_hash_function((pfwl_flow_DB_v4*)this->state->flow_table,
-                                           &pkt_infos);
+              pfwl_compute_v4_hash_function(
+                  (pfwl_flow_DB_v4*)this->state->flow_table, &pkt_infos);
           real_task->input_output_task_t.L3_L4_output_task_t[i]
               .destination_worker =
               real_task->input_output_task_t.L3_L4_output_task_t[i]
@@ -257,7 +259,7 @@ void* pfwl_L3_L4_worker::svc(void* task) {
         } else {
           real_task->input_output_task_t.L3_L4_output_task_t[i].hash_result =
               pfwl_compute_v6_hash_function((pfwl_flow_DB_v6*)this->state->db6,
-                                           &pkt_infos);
+                                            &pkt_infos);
           real_task->input_output_task_t.L3_L4_output_task_t[i]
               .destination_worker =
               real_task->input_output_task_t.L3_L4_output_task_t[i]
@@ -270,7 +272,8 @@ void* pfwl_L3_L4_worker::svc(void* task) {
   return real_task;
 }
 
-pfwl_L3_L4_collector::pfwl_L3_L4_collector(uint16_t proc_id) : proc_id(proc_id) {
+pfwl_L3_L4_collector::pfwl_L3_L4_collector(uint16_t proc_id)
+    : proc_id(proc_id) {
   ;
 }
 
@@ -290,24 +293,24 @@ void* pfwl_L3_L4_collector::svc(void* task) { return task; }
 /*******************************************************************/
 
 pfwl_L7_emitter::pfwl_L7_emitter(pfwl_L7_scheduler* lb, uint16_t num_L7_workers,
-                               uint16_t proc_id)
+                                 uint16_t proc_id)
     : proc_id(proc_id), lb(lb) {
-  if(posix_memalign((void**)&partially_filled_sizes, PFWL_CACHE_LINE_SIZE,
-                 (sizeof(uint) * num_L7_workers) + PFWL_CACHE_LINE_SIZE)){
+  if (posix_memalign((void**)&partially_filled_sizes, PFWL_CACHE_LINE_SIZE,
+                     (sizeof(uint) * num_L7_workers) + PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
   bzero(partially_filled_sizes, sizeof(uint) * num_L7_workers);
 
-  if(posix_memalign(
-      (void**)&partially_filled, PFWL_CACHE_LINE_SIZE,
-      (sizeof(mc_pfwl_task_t) * num_L7_workers) + PFWL_CACHE_LINE_SIZE)){
+  if (posix_memalign(
+          (void**)&partially_filled, PFWL_CACHE_LINE_SIZE,
+          (sizeof(mc_pfwl_task_t) * num_L7_workers) + PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
   bzero(partially_filled, sizeof(mc_pfwl_task_t) * num_L7_workers);
 
-  if(posix_memalign(
-      (void**)&waiting_tasks, PFWL_CACHE_LINE_SIZE,
-      (sizeof(mc_pfwl_task_t*) * num_L7_workers * 2) + PFWL_CACHE_LINE_SIZE)){
+  if (posix_memalign((void**)&waiting_tasks, PFWL_CACHE_LINE_SIZE,
+                     (sizeof(mc_pfwl_task_t*) * num_L7_workers * 2) +
+                         PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
 
@@ -385,12 +388,12 @@ void* pfwl_L7_emitter::svc(void* task) {
 }
 
 pfwl_L7_worker::pfwl_L7_worker(pfwl_state_t* state, uint16_t worker_id,
-                             uint16_t proc_id)
+                               uint16_t proc_id)
     : state(state), worker_id(worker_id), proc_id(proc_id) {
-  if(posix_memalign(
-      (void**)&this->temp, PFWL_CACHE_LINE_SIZE,
-      (sizeof(L3_L4_output_task_struct) * PFWL_MULTICORE_DEFAULT_GRAIN_SIZE) +
-          PFWL_CACHE_LINE_SIZE)){
+  if (posix_memalign((void**)&this->temp, PFWL_CACHE_LINE_SIZE,
+                     (sizeof(L3_L4_output_task_struct) *
+                      PFWL_MULTICORE_DEFAULT_GRAIN_SIZE) +
+                         PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
 }
@@ -436,7 +439,7 @@ void* pfwl_L7_worker::svc(void* task) {
         temp[i + 1].pkt_infos.pkt + temp[i + 1].pkt_infos.l7offset, 0, 0);
 #endif
 
-    if (infos.ip_version == PFWL_IP_VERSION_4) {
+    if (infos.ip_version == PFWL_PROTO_L3_IPV4) {
       ipv4_flow = mc_pfwl_flow_table_find_or_create_flow(
           state, this->worker_id, temp[i].hash_result, &(infos));
       if (ipv4_flow) flow_infos = &(ipv4_flow->infos);
@@ -451,27 +454,27 @@ void* pfwl_L7_worker::svc(void* task) {
     if (unlikely(flow_infos == NULL)) {
       real_task->input_output_task_t.L7_output_task_t[i].result.status =
           PFWL_ERROR_MAX_FLOWS;
-      if (unlikely(l3_status == PFWL_STATUS_IP_LAST_FRAGMENT)) {
+      if (unlikely(l3_status == PFWL_STATUS_IP_DATA_REBUILT)) {
         free((unsigned char*)infos.pkt);
       }
       break;
     } else {
       real_task->input_output_task_t.L7_output_task_t[i].result =
-          pfwl_parse_L7(state, flow_infos, &(infos));
+          pfwl_dissect_L7(state, flow_infos, &(infos));
       if (real_task->input_output_task_t.L7_output_task_t[i].result.status ==
           PFWL_STATUS_TCP_CONNECTION_TERMINATED) {
         if (ipv4_flow != NULL) {
           mc_pfwl_flow_table_delete_flow((pfwl_flow_table_t*)state->flow_table,
-                                           state->flow_cleaner_callback,
-                                           this->worker_id, ipv4_flow);
+                                         state->flow_cleaner_callback,
+                                         this->worker_id, ipv4_flow);
         } else {
           mc_pfwl_flow_table_delete_flow((pfwl_flow_table_t*)state->db6,
-                                           state->flow_cleaner_callback,
-                                           this->worker_id, ipv6_flow);
+                                         state->flow_cleaner_callback,
+                                         this->worker_id, ipv6_flow);
         }
       }
 
-      if (unlikely(l3_status == PFWL_STATUS_IP_LAST_FRAGMENT)) {
+      if (unlikely(l3_status == PFWL_STATUS_IP_DATA_REBUILT)) {
         free((unsigned char*)infos.pkt);
       }
     }
@@ -480,12 +483,9 @@ void* pfwl_L7_worker::svc(void* task) {
 }
 
 pfwl_L7_collector::pfwl_L7_collector(mc_pfwl_processing_result_callback** cb,
-                                   void** user_data, uint16_t* proc_id,
-                                   ff::SWSR_Ptr_Buffer* tasks_pool)
-    : cb(cb),
-      user_data(user_data),
-      proc_id(proc_id),
-      tasks_pool(tasks_pool) {
+                                     void** user_data, uint16_t* proc_id,
+                                     ff::SWSR_Ptr_Buffer* tasks_pool)
+    : cb(cb), user_data(user_data), proc_id(proc_id), tasks_pool(tasks_pool) {
   ;
 }
 
@@ -531,15 +531,15 @@ pfwl_L7_collector::~pfwl_L7_collector() {
 }
 
 pfwl_collapsed_emitter::pfwl_collapsed_emitter(
-    mc_pfwl_packet_reading_callback** cb, void** user_data, uint8_t* terminating,
-    ff::SWSR_Ptr_Buffer* tasks_pool, pfwl_state_t* state,
+    mc_pfwl_packet_reading_callback** cb, void** user_data,
+    uint8_t* terminating, ff::SWSR_Ptr_Buffer* tasks_pool, pfwl_state_t* state,
     uint16_t num_L7_workers, uint32_t v4_table_size, uint32_t v6_table_size,
     pfwl_L7_scheduler* lb, uint16_t proc_id)
     : pfwl_L7_emitter(lb, num_L7_workers, proc_id), proc_id(proc_id) {
   L3_L4_emitter = new dpi::pfwl_L3_L4_emitter(state, cb, user_data, terminating,
-                                             proc_id, tasks_pool);
+                                              proc_id, tasks_pool);
   L3_L4_worker = new dpi::pfwl_L3_L4_worker(state, 0, num_L7_workers, proc_id,
-                                           v4_table_size, v6_table_size);
+                                            v4_table_size, v6_table_size);
 }
 
 pfwl_collapsed_emitter::~pfwl_collapsed_emitter() {
@@ -549,7 +549,7 @@ pfwl_collapsed_emitter::~pfwl_collapsed_emitter() {
 
 #ifdef ENABLE_RECONFIGURATION
 void pfwl_collapsed_emitter::notifyRethreading(size_t oldNumWorkers,
-                                              size_t newNumWorkers) {
+                                               size_t newNumWorkers) {
   L3_L4_emitter->notifyRethreading(oldNumWorkers, newNumWorkers);
   L3_L4_worker->notifyRethreading(oldNumWorkers, newNumWorkers);
 }
@@ -575,4 +575,4 @@ void* pfwl_collapsed_emitter::svc(void* task) {
     return pfwl_L7_emitter::svc(r);
   }
 }
-}
+}  // namespace dpi

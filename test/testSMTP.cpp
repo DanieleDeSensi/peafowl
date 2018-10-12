@@ -6,5 +6,5 @@
 TEST(SMTPTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/smtp.pcap", protocols);
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_SMTP], (uint) 47);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_SMTP], (uint) 47);
 }

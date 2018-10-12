@@ -5,15 +5,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -102,12 +102,12 @@ inline
 }
 
 static void get_v6_low_high_addr_port(const pfwl_dissection_info_t* const in,
-                                 struct in6_addr* low_addr, struct in6_addr* high_addr,
-                                 uint16_t* low_port, uint16_t* high_port){
+                                      struct in6_addr* low_addr,
+                                      struct in6_addr* high_addr,
+                                      uint16_t* low_port, uint16_t* high_port) {
   uint8_t i = 0;
   for (i = 0; i < 16; i++) {
-    if (in->l3.addr_src.ipv6.s6_addr[i] <
-        in->l3.addr_dst.ipv6.s6_addr[i]) {
+    if (in->l3.addr_src.ipv6.s6_addr[i] < in->l3.addr_dst.ipv6.s6_addr[i]) {
       *low_addr = in->l3.addr_src.ipv6;
       *high_addr = in->l3.addr_dst.ipv6;
       *low_port = in->l4.port_src;
@@ -144,8 +144,9 @@ static void get_v6_low_high_addr_port(const pfwl_dissection_info_t* const in,
 inline
 #endif
 #endif
-/** FNV-1a 32-bit hash function. **/
-uint32_t v6_fnv_hash_function(const pfwl_dissection_info_t* const in) {
+    /** FNV-1a 32-bit hash function. **/
+    uint32_t
+    v6_fnv_hash_function(const pfwl_dissection_info_t* const in) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -360,7 +361,8 @@ static void get_v4_key(const pfwl_dissection_info_t* const in, char* v4_key) {
   v4_key[12] = (higher_port & 0xFF);
 }
 
-uint32_t v4_hash_murmur3(const pfwl_dissection_info_t* const in, uint32_t seed) {
+uint32_t v4_hash_murmur3(const pfwl_dissection_info_t* const in,
+                         uint32_t seed) {
   char v4_key[13];
   get_v4_key(in, v4_key);
   uint32_t result;
@@ -368,7 +370,7 @@ uint32_t v4_hash_murmur3(const pfwl_dissection_info_t* const in, uint32_t seed) 
   return result;
 }
 
-static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key){
+static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -390,7 +392,8 @@ static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key){
   v6_key[36] = (high_port & 0xFF);
 }
 
-uint32_t v6_hash_murmur3(const pfwl_dissection_info_t* const in, uint32_t seed) {
+uint32_t v6_hash_murmur3(const pfwl_dissection_info_t* const in,
+                         uint32_t seed) {
   char v6_key[37];
   get_v6_key(in, v6_key);
   uint32_t result;
@@ -413,7 +416,8 @@ uint32_t v6_hash_function_simple(const pfwl_dissection_info_t* const in) {
     partsrc += in->l3.addr_src.ipv6.s6_addr[i];
     partdst += in->l3.addr_dst.ipv6.s6_addr[i];
   }
-  return in->l4.port_src + in->l4.port_dst + partsrc + partdst + in->l4.protocol;
+  return in->l4.port_src + in->l4.port_dst + partsrc + partdst +
+         in->l4.protocol;
 }
 
 #endif

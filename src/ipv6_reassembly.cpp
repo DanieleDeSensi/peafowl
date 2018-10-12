@@ -5,15 +5,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -43,8 +43,8 @@
 
 #define PFWL_DEBUG_FRAGMENTATION_v6 0
 
-#define debug_print(fmt, ...)                                          \
-  do {                                                                 \
+#define debug_print(fmt, ...)                                           \
+  do {                                                                  \
     if (PFWL_DEBUG_FRAGMENTATION_v6) fprintf(stderr, fmt, __VA_ARGS__); \
   } while (0)
 
@@ -202,8 +202,8 @@ static
 #endif
     /**  Shift-Add-XOR hash. **/
     uint16_t
-    pfwl_ipv6_fragmentation_hash_function(pfwl_ipv6_fragmentation_state_t* state,
-                                         struct in6_addr addr) {
+    pfwl_ipv6_fragmentation_hash_function(
+        pfwl_ipv6_fragmentation_state_t* state, struct in6_addr addr) {
   uint16_t h = 0;
   uint8_t i;
 
@@ -262,7 +262,7 @@ static
 #endif
     void
     pfwl_ipv6_fragmentation_delete_flow(pfwl_ipv6_fragmentation_state_t* state,
-                                       pfwl_ipv6_fragmentation_flow_t* flow) {
+                                        pfwl_ipv6_fragmentation_flow_t* flow) {
   pfwl_reassembly_fragment_t *frag, *temp_frag;
 
   pfwl_ipv6_fragmentation_source_t* source = flow->source;
@@ -272,7 +272,7 @@ static
 
   /* Stop the timer and delete it. */
   pfwl_reassembly_delete_timer(&(state->timer_head), &(state->timer_tail),
-                              &(flow->timer));
+                               &(flow->timer));
 
   /* Release all fragment data. */
   frag = flow->fragments;
@@ -348,7 +348,7 @@ static
   flow->timer.expiration_time = current_time + state->timeout;
   flow->timer.data = flow;
   pfwl_reassembly_add_timer(&(state->timer_head), &(state->timer_tail),
-                           &(flow->timer));
+                            &(flow->timer));
   /* Fragments will be added later. */
   flow->fragments = NULL;
   flow->unfragmentable = NULL;
@@ -499,8 +499,8 @@ unsigned char* pfwl_reordering_manage_ipv6_fragment(
   }
   debug_print("%s\n", "Source found or created.");
 
-  debug_print("Total memory occupied: %d\n", state->total_used_mem);
-  debug_print("Source memory occupied: %d\n", state->total_used_mem);
+  debug_print("Total memory occupied: %u\n", state->total_used_mem);
+  debug_print("Source memory occupied: %u\n", state->total_used_mem);
 
   /**
    * If I exceeded the source limit, then delete flows from that
@@ -613,8 +613,8 @@ unsigned char* pfwl_reordering_manage_ipv6_fragment(
 
   uint32_t bytes_removed;
   uint32_t bytes_inserted;
-  pfwl_reassembly_insert_fragment(&(flow->fragments), fragmentable_start, offset,
-                                 end, &bytes_removed, &bytes_inserted);
+  pfwl_reassembly_insert_fragment(&(flow->fragments), fragmentable_start,
+                                  offset, end, &bytes_removed, &bytes_inserted);
 
   state->total_used_mem += bytes_inserted;
   state->total_used_mem -= bytes_removed;

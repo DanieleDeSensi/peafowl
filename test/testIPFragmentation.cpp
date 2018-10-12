@@ -6,12 +6,12 @@
 static void test4in4(bool defrag){
   pfwl_state_t* state = pfwl_init();
   if(!defrag){
-    pfwl_ipv4_fragmentation_disable(state);
-    pfwl_ipv6_fragmentation_disable(state);
+    pfwl_defragmentation_disable_ipv4(state);
+    pfwl_defragmentation_disable_ipv6(state);
   }
   std::vector<uint> protocols;
   uint icmp_packets = 0;
-  getProtocols("./pcaps/ip_fragmentation/4in4_outer.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/ip_fragmentation/4in4_outer.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(r.l4.protocol == IPPROTO_ICMP){
       ++icmp_packets;
     }
@@ -27,13 +27,13 @@ static void test4in4(bool defrag){
 static void test6in6(bool defrag, const char* filename, size_t pkt_to_check){
   pfwl_state_t* state = pfwl_init();
   if(!defrag){
-    pfwl_ipv4_fragmentation_disable(state);
-    pfwl_ipv6_fragmentation_disable(state);
+    pfwl_defragmentation_disable_ipv4(state);
+    pfwl_defragmentation_disable_ipv6(state);
   }
   std::vector<uint> protocols;
   bool checked = false;
   size_t packet_id = 1;
-  getProtocols(filename, protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols(filename, protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(packet_id == pkt_to_check){
       checked = true;
       if(defrag){
@@ -65,12 +65,12 @@ static void test6in6(bool defrag, const char* filename, size_t pkt_to_check){
 static void testGeneric(bool defrag){
   pfwl_state_t* state = pfwl_init();
   if(!defrag){
-    pfwl_ipv4_fragmentation_disable(state);
-    pfwl_ipv6_fragmentation_disable(state);
+    pfwl_defragmentation_disable_ipv4(state);
+    pfwl_defragmentation_disable_ipv6(state);
   }
   std::vector<uint> protocols;
   size_t packet_id = 1;
-  getProtocols("./pcaps/ip_fragmentation/correct_1.pcap", protocols, state, [&](pfwl_dissection_info_t r){
+  getProtocols("./pcaps/ip_fragmentation/correct_1.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(packet_id == 23){
       uint expected_port_src = 0;
       uint expected_port_dst = 0;
@@ -85,9 +85,9 @@ static void testGeneric(bool defrag){
     ++packet_id;
   });
   if(defrag){
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 1);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 1);
   }else{
-    EXPECT_EQ(protocols[PFWL_PROTOCOL_SIP], (uint) 0);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 0);
   }
   pfwl_terminate(state);
 }

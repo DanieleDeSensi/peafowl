@@ -4,15 +4,15 @@
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of
- * this software and associated documentation files (the "Software"), to deal in
- * the Software without restriction, including without limitation the rights to
- * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
- * of the Software, and to permit persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,10 +24,10 @@
  * =========================================================================
  */
 
-#include <peafowl/peafowl.h>
 #include <peafowl/flow_table.h>
 #include <peafowl/inspectors/http_parser_joyent.h>
 #include <peafowl/inspectors/inspectors.h>
+#include <peafowl/peafowl.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -36,8 +36,8 @@
 
 #define PFWL_DEBUG_HTTP 0
 
-#define debug_print(fmt, ...)                              \
-  do {                                                     \
+#define debug_print(fmt, ...)                               \
+  do {                                                      \
     if (PFWL_DEBUG_HTTP) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
@@ -50,11 +50,11 @@
 #ifndef PFWL_DEBUG
 static
 #endif
-uint8_t pfwl_http_manage_pdu_reassembly(http_parser* parser,
-                                    const char* at,
+    uint8_t
+    pfwl_http_manage_pdu_reassembly(http_parser* parser, const char* at,
                                     size_t length,
                                     pfwl_http_internal_informations_t* infos) {
-  if(infos->temp_buffer_dirty){
+  if (infos->temp_buffer_dirty) {
     free(infos->temp_buffer);
     infos->temp_buffer = NULL;
     infos->temp_buffer_size = 0;
@@ -72,7 +72,7 @@ uint8_t pfwl_http_manage_pdu_reassembly(http_parser* parser,
       free(infos->temp_buffer);
       return 2;
     }
-    infos->temp_buffer = (unsigned char*) tmp;
+    infos->temp_buffer = (unsigned char*)tmp;
     memcpy(infos->temp_buffer + infos->temp_buffer_size, at, length);
     infos->temp_buffer_size += length;
   }
@@ -93,11 +93,14 @@ uint8_t pfwl_http_manage_pdu_reassembly(http_parser* parser,
 #ifndef PFWL_DEBUG
 static
 #endif
-int on_url(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos = (pfwl_http_internal_informations_t*) parser->data;
-  const unsigned char* real_data = (const unsigned char*) at;
+    int
+    on_url(http_parser* parser, const char* at, size_t length) {
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
+  const unsigned char* real_data = (const unsigned char*)at;
   size_t real_length = length;
-  uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
+  uint8_t segmentation_result =
+      pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
   if (segmentation_result == 0) {
     return 0;
   } else if (segmentation_result == 2) {
@@ -108,18 +111,22 @@ int on_url(http_parser* parser, const char* at, size_t length) {
     infos->temp_buffer_dirty = 1;
   }
 
-  pfwl_field_string_set(parser->extracted_fields, PFWL_FIELDS_HTTP_URL, real_data, real_length);
+  pfwl_field_string_set(parser->extracted_fields, PFWL_FIELDS_L7_HTTP_URL,
+                        real_data, real_length);
   return 0;
 }
 
 #ifndef PFWL_DEBUG
 static
 #endif
-int on_field(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos = (pfwl_http_internal_informations_t*)parser->data;
-  const unsigned char* real_data = (const unsigned char*) at;
+    int
+    on_field(http_parser* parser, const char* at, size_t length) {
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
+  const unsigned char* real_data = (const unsigned char*)at;
   size_t real_length = length;
-  uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
+  uint8_t segmentation_result =
+      pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
   if (segmentation_result == 0) {
     return 0;
   } else if (segmentation_result == 2) {
@@ -130,8 +137,8 @@ int on_field(http_parser* parser, const char* at, size_t length) {
     infos->temp_buffer_dirty = 1;
   }
 
-  if(infos->headers_length == PFWL_HTTP_MAX_HEADERS){
-      return 1;
+  if (infos->headers_length == PFWL_HTTP_MAX_HEADERS) {
+    return 1;
   }
   infos->headers[infos->headers_length].first.string.value = real_data;
   infos->headers[infos->headers_length].first.string.length = real_length;
@@ -142,11 +149,14 @@ int on_field(http_parser* parser, const char* at, size_t length) {
 #ifndef PFWL_DEBUG
 static
 #endif
-int on_value(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos = (pfwl_http_internal_informations_t*) parser->data;
-  const unsigned char* real_data = (const unsigned char*) at;
+    int
+    on_value(http_parser* parser, const char* at, size_t length) {
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
+  const unsigned char* real_data = (const unsigned char*)at;
   size_t real_length = length;
-  uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
+  uint8_t segmentation_result =
+      pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
   if (segmentation_result == 0) {
     return 0;
   } else if (segmentation_result == 2) {
@@ -166,11 +176,14 @@ int on_value(http_parser* parser, const char* at, size_t length) {
 #ifndef PFWL_DEBUG
 static
 #endif
-int on_body(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos = (pfwl_http_internal_informations_t*) parser->data;
-  const unsigned char* real_data = (const unsigned char*) at;
+    int
+    on_body(http_parser* parser, const char* at, size_t length) {
+  pfwl_http_internal_informations_t* infos =
+      (pfwl_http_internal_informations_t*)parser->data;
+  const unsigned char* real_data = (const unsigned char*)at;
   size_t real_length = length;
-  uint8_t segmentation_result = pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
+  uint8_t segmentation_result =
+      pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
   if (segmentation_result == 0) {
     return 0;
   } else if (segmentation_result == 2) {
@@ -181,7 +194,8 @@ int on_body(http_parser* parser, const char* at, size_t length) {
     infos->temp_buffer_dirty = 1;
   }
 
-  pfwl_field_string_set(parser->extracted_fields, PFWL_FIELDS_HTTP_BODY, real_data, real_length);
+  pfwl_field_string_set(parser->extracted_fields, PFWL_FIELDS_L7_HTTP_BODY,
+                        real_data, real_length);
   return 0;
 }
 
@@ -190,14 +204,9 @@ int on_body(http_parser* parser, const char* at, size_t length) {
  * derived from host address so the user can include this identification
  * in its callback.
  */
-uint8_t check_http(pfwl_state_t* state,
-                   const unsigned char* app_data,
-                   size_t data_length,
-                   pfwl_dissection_info_t* pkt_info,
+uint8_t check_http(pfwl_state_t* state, const unsigned char* app_data,
+                   size_t data_length, pfwl_dissection_info_t* pkt_info,
                    pfwl_flow_info_private_t* flow_info_private) {
-  if (pkt_info->l4.protocol != IPPROTO_TCP) {
-    return PFWL_PROTOCOL_NO_MATCHES;
-  }
   debug_print("%s\n", "-------------------------------------------");
   debug_print("%s\n", "[http.c] Executing HTTP inspector...");
 
@@ -222,17 +231,17 @@ uint8_t check_http(pfwl_state_t* state,
 
   http_parser_settings x = {0};
 
-  if (required_fields[PFWL_FIELDS_HTTP_URL])
+  if (required_fields[PFWL_FIELDS_L7_HTTP_URL])
     x.on_url = on_url;
   else
     x.on_url = 0;
 
-  if (required_fields[PFWL_FIELDS_HTTP_BODY])
+  if (required_fields[PFWL_FIELDS_L7_HTTP_BODY])
     x.on_body = on_body;
   else
     x.on_body = 0;
 
-  if (required_fields[PFWL_FIELDS_HTTP_HEADERS]) {
+  if (required_fields[PFWL_FIELDS_L7_HTTP_HEADERS]) {
     x.on_header_field = on_field;
     x.on_header_value = on_value;
   } else {
@@ -245,24 +254,35 @@ uint8_t check_http(pfwl_state_t* state,
   x.on_message_complete = 0;
 
   flow_info_private->http_informations->headers_length = 0;
-  memset(flow_info_private->http_informations->headers, 0, sizeof(flow_info_private->http_informations->headers));
+  memset(flow_info_private->http_informations->headers, 0,
+         sizeof(flow_info_private->http_informations->headers));
 
   http_parser_execute(parser, &x, (const char*)app_data, data_length);
 
   if (parser->http_errno == HPE_OK) {
     debug_print("%s\n", "[http.c] HTTP matches");
-    pfwl_field_number_set(parser->extracted_fields, PFWL_FIELDS_HTTP_VERSION_MAJOR, parser->http_major);
-    pfwl_field_number_set(parser->extracted_fields, PFWL_FIELDS_HTTP_VERSION_MINOR, parser->http_minor);
-    pfwl_field_number_set(parser->extracted_fields, PFWL_FIELDS_HTTP_MSG_TYPE, parser->type);
-    if (parser->type == HTTP_REQUEST){
-      pfwl_field_number_set(parser->extracted_fields, PFWL_FIELDS_HTTP_METHOD, parser->method);
-    }else{
-      pfwl_field_number_set(parser->extracted_fields, PFWL_FIELDS_HTTP_STATUS_CODE, parser->status_code);
+    pfwl_field_number_set(parser->extracted_fields,
+                          PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,
+                          parser->http_major);
+    pfwl_field_number_set(parser->extracted_fields,
+                          PFWL_FIELDS_L7_HTTP_VERSION_MINOR,
+                          parser->http_minor);
+    pfwl_field_number_set(parser->extracted_fields,
+                          PFWL_FIELDS_L7_HTTP_MSG_TYPE, parser->type);
+    if (parser->type == HTTP_REQUEST) {
+      pfwl_field_number_set(parser->extracted_fields,
+                            PFWL_FIELDS_L7_HTTP_METHOD, parser->method);
+    } else {
+      pfwl_field_number_set(parser->extracted_fields,
+                            PFWL_FIELDS_L7_HTTP_STATUS_CODE,
+                            parser->status_code);
     }
-    if(flow_info_private->http_informations->headers_length){
-        parser->extracted_fields[PFWL_FIELDS_HTTP_HEADERS].present = 1;
-        parser->extracted_fields[PFWL_FIELDS_HTTP_HEADERS].array.values = flow_info_private->http_informations->headers;
-        parser->extracted_fields[PFWL_FIELDS_HTTP_HEADERS].array.length = flow_info_private->http_informations->headers_length;
+    if (flow_info_private->http_informations->headers_length) {
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].present = 1;
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].array.values =
+          flow_info_private->http_informations->headers;
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].array.length =
+          flow_info_private->http_informations->headers_length;
     }
     return PFWL_PROTOCOL_MATCHES;
   } else {
