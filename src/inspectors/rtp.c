@@ -6,16 +6,17 @@
  * =========================================================================
  *  Copyright (C) 2012-2019, Daniele De Sensi (d.desensi.software@gmail.com)
  *  Copyright (C) 2016, Lorenzo Mangani (lorenzo.mangani@gmail.com), QXIP BV
+ *  Copyright (C) 2018, Michele Campus (michelecampus5@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -27,8 +28,8 @@
  * =========================================================================
  */
 
-#include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
+#include <peafowl/inspectors/inspectors.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -39,79 +40,161 @@
     if (PFWL_DEBUG_RTP) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
-static uint8_t isValidMSRTPType(uint8_t payloadType) {
-  switch (payloadType) {
-    case 0:   /* G.711 u-Law */
-    case 3:   /* GSM 6.10 */
-    case 4:   /* G.723.1  */
-    case 8:   /* G.711 A-Law */
-    case 9:   /* G.722 */
-    case 13:  /* Comfort Noise */
-    case 18:  /* G.729 */
-    case 34:  /* H.263 [MS-H26XPF] */
-    case 96:  /* Dynamic RTP */
-    case 97:  /* Redundant Audio Data Payload */
-    case 101: /* DTMF */
-    case 103: /* SILK Narrowband */
-    case 104: /* SILK Wideband */
-    case 111: /* Siren */
-    case 112: /* G.722.1 */
-    case 114: /* RT Audio Wideband */
-    case 115: /* RT Audio Narrowband */
-    case 116: /* G.726 */
-    case 117: /* G.722 */
-    case 118: /* Comfort Noise Wideband */
-    case 121: /* RT Video */
-    case 122: /* H.264 [MS-H264PF] */
-    case 123: /* H.264 FEC [MS-H264PF] */
-    case 127: /* x-data */
-      return (1 /* RTP */);
-      break;
+#define SIZE 24
+typedef enum {
+    G_711_U_Law        = 0,
+    GSM_6_10           = 3,
+    G_723_1            = 4,
+    G_711_A_Law        = 8,
+    G_722              = 9,
+    Comfort_Noise      = 13,
+    G_729              = 18,
+    H_263              = 34,
+    Dynamic_RTP        = 96,
+    RADP               = 97,
+    DTMF               = 101,
+    SILK_Narrow        = 103,
+    SILK_Wide          = 104,
+    Siren              = 111,
+    G_722_1            = 112,
+    RT_Audio_Wide      = 114,
+    RT_Audio_Narrow    = 115,
+    G_726              = 116,
+    G_722b             = 117,
+    Comfort_Noise_Wide = 118,
+    RT_Video           = 121,
+    H_264              = 122,
+    H_264_FEC          = 123,
+    X_data             = 127,
+} RTPpayloadType;
 
-    case 200: /* RTCP PACKET SENDER */
-    case 201: /* RTCP PACKET RECEIVER */
-    case 202: /* RTCP Source Description */
-    case 203: /* RTCP Bye */
-      return (2 /* RTCP */);
-      break;
+/* typedef enum { */
+/*     RTCP_SENDER    = 200, */
+/*     RTCP_RECEIVER  = 201, */
+/*     RTCP_SRC_DESCR = 202, */
+/*     RTCP_BYE       = 203, */
+/* }RTCPpayloadType; */
 
+struct rtp_header {
+    #if __BYTE_ORDER == __LITTLE_ENDIAN
+    // 2 bytes
+    uint8_t CC:4;
+    uint8_t extension:1;
+    uint8_t padding:1;
+    uint8_t version:2;
+    // 1 byte
+    uint8_t pType:7;
+    uint8_t marker:1;
+    #elif __BYTE_ORDER == __BIG_ENDIAN
+    // 2 bytes
+    uint8_t version:2;
+    uint8_t padding:1;
+    uint8_t extension:1;
+    uint8_t CC:4;
+    // 1 byte
+    uint8_t marker:1;
+    uint8_t pType:7;
+    #else
+    #endif
+    uint16_t seq_num;
+    uint32_t timestamp;
+    uint32_t SSRC;
+};
+
+static int8_t isValid_PaylodType(uint8_t PT)
+{
+    switch(PT) {
+
+    case G_711_U_Law:
+        return G_711_U_Law;
+    case GSM_6_10:
+        return GSM_6_10;
+    case G_723_1:
+        return G_723_1;
+    case G_711_A_Law:
+        return G_711_A_Law;
+    case G_722:
+        return G_722;
+    case Comfort_Noise:
+        return Comfort_Noise;
+    case G_729:
+        return G_729;
+    case H_263:
+        return H_263;
+    case Dynamic_RTP:
+        return Dynamic_RTP;
+    case RADP:
+        return RADP;
+    case DTMF:
+        return DTMF;
+    case SILK_Narrow:
+        return SILK_Narrow;
+    case SILK_Wide:
+        return SILK_Wide;
+    case Siren:
+        return Siren;
+    case G_722_1:
+        return G_722_1;
+    case RT_Audio_Wide:
+        return RT_Audio_Wide;
+    case RT_Audio_Narrow:
+        return RT_Audio_Narrow;
+    case G_726:
+        return G_726;
+    case G_722b:
+        return G_722b;
+    case Comfort_Noise_Wide:
+        return Comfort_Noise_Wide;
+    case RT_Video:
+        return RT_Video;
+    case H_264:
+        return H_264;
+    case H_264_FEC:
+        return H_264_FEC;
+    case X_data:
+        return X_data;
     default:
-      return (0);
-  }
+        return -1;
+    }
 }
 
-uint8_t check_rtp(pfwl_state_t* state, const unsigned char* app_data,
-                  size_t data_length, pfwl_dissection_info_t* pkt_info,
-                  pfwl_flow_info_private_t* flow_info_private) {
-  if (data_length < 2 || pkt_info->l4.port_dst <= 1024 ||
-      pkt_info->l4.port_src <= 1024) {
-    return PFWL_PROTOCOL_NO_MATCHES;
-  }
 
-  uint8_t data_type = app_data[1] & 0x7F;
-  // TODO: Accede ad app_data[8] senza controllare che la lunghezza di app_data
-  // (data_length) sia almeno 8
-  uint32_t* ssid = (uint32_t*)&app_data[8];
+uint8_t check_rtp(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
+                  pfwl_flow_info_private_t* flow_info_private)
+{
+    pfwl_dissector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTO_L7_RTP];
 
-  if (data_length >= 12) {
-    if ((app_data[0] & 0xFF) == 0x80 ||
-        (app_data[0] & 0xFF) == 0xA0) /* RTP magic byte[1] */
-    {
-      uint8_t payloadType;
-      if (((data_type < 72) || (data_type > 76)) &&
-          ((data_type <= 34) || ((data_type >= 96) && (data_type <= 127))) &&
-          (*ssid != 0)) {
-        return PFWL_PROTOCOL_MATCHES;
-      }
+    if(!app_data)
+        return -1;
 
-      else if ((payloadType = isValidMSRTPType(app_data[1] & 0xFF)) &&
-               (payloadType == 1)) {
-        return PFWL_PROTOCOL_MATCHES;
-      }
-    } else {
-      return PFWL_PROTOCOL_MORE_DATA_NEEDED;
+    if(pkt_info->l4.protocol != IPPROTO_UDP) {
+        return PFWL_PROTOCOL_NO_MATCHES;
     }
-  }
+    if(data_length < 2 ||
+       ntohs(pkt_info->l4.port_dst) <= 1024 ||
+       ntohs(pkt_info->l4.port_src) <= 1024) {
+        return PFWL_PROTOCOL_NO_MATCHES;
+    }
 
-  return PFWL_PROTOCOL_NO_MATCHES;
+    if(data_length >= 12) {
+        if((app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0) { /* RTP magic byte[1] */
+            int8_t pType = 0;
+            struct rtp_header *rtp = (struct rtp_header*) app_data;
+
+            if(rtp->version == 2) { // check Version
+                if(rtp->marker == 0 || rtp->marker == 1) { // check Marker
+                    pType = isValid_PaylodType(rtp->pType); // check Payload Type
+                    if(pType != -1) {
+                        if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
+                            // TODO extract fields
+                        }
+                        else return PFWL_PROTOCOL_MATCHES;
+                    }
+                    else return PFWL_PROTOCOL_NO_MATCHES;
+                }
+            }
+        }
+        else return PFWL_PROTOCOL_MORE_DATA_NEEDED;
+    }
+    return PFWL_PROTOCOL_NO_MATCHES;
 }
