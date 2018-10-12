@@ -832,14 +832,14 @@ pfwl_protocol_l7_t pfwl_guess_protocol(
  * @param   status_code The status code.
  * @return  The status message.
  */
-const char* const pfwl_get_status_msg(pfwl_status_t status_code);
+const char* pfwl_get_status_msg(pfwl_status_t status_code);
 
 /**
  * Returns the string represetation of a protocol.
  * @param   protocol The protocol identifier.
  * @return  The string representation of the protocol with id 'protocol'.
  */
-const char* const pfwl_get_L7_protocol_name(pfwl_protocol_l7_t protocol);
+const char* pfwl_get_L7_protocol_name(pfwl_protocol_l7_t protocol);
 
 /**
  * Returns the protocol id corresponding to a protocol string.

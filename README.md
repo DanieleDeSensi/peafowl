@@ -127,6 +127,25 @@ At the moment, data and metadata extraction is supported for the following proto
   </tr>
 <table>
 
+How it works
+================================================================================================================
+To identify the application protocol, packets are classified in bidirectional sets of packets all sharing the 
+same:
+
++ Source IP and Destination IP addressess
++ Source and Destination Ports
++ Layer4 protocol (TCP or UDP)
+
+These sets are called "flows" and for each of them the framework stores some data into an hash table. These
+informations are mantained for all the duration the TCP connection or until the flow is active. If we receive
+no packets for a flow for a given amount of time (30 seconds by default), the corresponding data will be removed
+from the table.
+
+The framework also performs IP defragmentation and TCP stream reassembly, in such a way that the protocol is 
+correctly identified also when its data is split among multiple fragments or segments. Moreover, this is useful
+to avoid evasion attacks that use IP fragmentation and TCP segmentation.
+
+A more detailed (but outdated) description can be found in the thesis which lead to the development of this framework: [Thesis.pdf](Thesis.pdf)
 
 Usage
 ================================================================================================================
@@ -410,7 +429,7 @@ $ make test
 If you implemented the support for some other protocols please let me know so I can add them to the framework.
 
 Adding data extraction capabilities to existing protocol inspectors
-----------------------------------------------------------------------------------------------------------------
+================================================================================================================
 As we said before, beside protocol identification, is possible to seamlessly provide data and metadata carried
 by the protocols to the application that uses the framework. To add this capability to existing 
 inspector you need to follow some simple steps. For example, let us assume that POP3 dissector is available
@@ -472,27 +491,6 @@ if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &dissecti
 }
 ```
 
-How it works
-================================================================================================================
-To identify the application protocol, packets are classified in bidirectional sets of packets all sharing the 
-same:
-
-+ Source IP and Destination IP addressess
-+ Source and Destination Ports
-+ Layer4 protocol (TCP or UDP)
-
-These sets are called "flows" and for each of them the framework stores some data into an hash table. These
-informations are mantained for all the duration the TCP connection or until the flow is active. If we receive
-no packets for a flow for a given amount of time (30 seconds by default), the corresponding data will be removed
-from the table.
-
-The framework also performs IP defragmentation and TCP stream reassembly, in such a way that the protocol is 
-correctly identified also when its data is split among multiple fragments or segments. Moreover, this is useful
-to avoid evasion attacks that use IP fragmentation and TCP segmentation.
-
-A more detailed (but outdated) description can be found in the thesis which lead to the development of this framework: [Thesis.pdf](Thesis.pdf)
-
-
 Configuration
 ================================================================================================================
 Different configuration parameters can be modified in "config.h" file. The most important are the following:
@@ -543,3 +541,8 @@ The following people contributed to Peafowl:
 I would like to thank Prof. Marco Danelutto, Dr. Luca Deri and Dr. Massimo Torquati for their essential help and
 valuable advices.
 
+Disclaimer
+================================================================================================================
+The authors of Peafowl are strongly against any form of censorship.
+Please make sure that you respect the privacy of users and you have proper authorization to listen, 
+capture and inspect network traffic.  
