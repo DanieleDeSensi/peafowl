@@ -1,0 +1,2 @@
+- PFWL_STATUS_IP_LAST_FRAGMENT with that thing that the user should free etc.. is not very intuitive. Better to manage it somehow in the library. Same for PFWL_STATUS_TCP_CONNECTION_TERMINATED.
+- In cmake compile demos and l2 parsing only if libpcap is present

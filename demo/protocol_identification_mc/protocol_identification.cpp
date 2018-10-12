@@ -3,31 +3,31 @@
  *
  * Given a .pcap file, it identifies the protocol of all the packets contained in it.
  *
- * Created on: 12/11/2012
- *
+ * Created on: 19/09/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
-#include <mc_api.h>
+#include <peafowl/peafowl_mc.h>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <time.h>
@@ -50,7 +50,7 @@
 
 int datalink_type=0;
 
-u_int32_t protocols[DPI_NUM_PROTOCOLS];
+u_int32_t protocols[PFWL_PROTO_L7_NUM];
 u_int32_t unknown=0;
 
 typedef struct{
@@ -70,13 +70,13 @@ typedef struct{
  *                        pkt=NULL, otherwise the behaviour is not
  *                        defined.
  */
-mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
+mc_pfwl_packet_reading_result_t reading_cb(void* callback_data){
 	pcap_t *handle = ((reading_cb_data*) callback_data)->handle;
 	size_t ip_offset = ((reading_cb_data*) callback_data)->ip_offset;
 	struct pcap_pkthdr header;
 	bool goodpacket = false;
 
-	mc_dpi_packet_reading_result_t res;
+	mc_pfwl_packet_reading_result_t res;
 	do{
 			const u_char* packet = pcap_next(handle, &header);
 		res.pkt = NULL;
@@ -120,11 +120,11 @@ mc_dpi_packet_reading_result_t reading_cb(void* callback_data){
  * @param callback_data       A pointer to user specified data (e.g.
  *                            network socket).
  */
-void processing_cb(mc_dpi_processing_result_t* processing_result, void* callback_data){
-	dpi_identification_result_t r = processing_result->result;
+void processing_cb(mc_pfwl_processing_result_t* processing_result, void* callback_data){
+	pfwl_dissection_info_t r = processing_result->result;
     if(r.protocol.l4prot == IPPROTO_TCP ||
        r.protocol.l4prot == IPPROTO_UDP){
-        if(r.protocol.l7prot < DPI_NUM_PROTOCOLS){
+        if(r.protocol.l7prot < PFWL_PROTO_L7_NUM){
             ++protocols[r.protocol.l7prot];
         }else{
             ++unknown;
@@ -144,10 +144,10 @@ int main(int argc, char** argv){
 	char* pcap_filename=argv[1];
 	char errbuf[PCAP_ERRBUF_SIZE];
 
-	mc_dpi_parallelism_details_t par;
+	mc_pfwl_parallelism_details_t par;
 	memset(&par, 0, sizeof(par));
 	par.available_processors = AVAILABLE_PROCESSORS;
-	mc_dpi_library_state_t* state = mc_dpi_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS, par);
+	mc_pfwl_state_t* state = mc_pfwl_init_stateful(SIZE_IPv4_FLOW_TABLE, SIZE_IPv6_FLOW_TABLE, MAX_IPv4_ACTIVE_FLOWS, MAX_IPv6_ACTIVE_FLOWS, par);
 	pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
 
 	if(handle==NULL){
@@ -176,16 +176,16 @@ int main(int argc, char** argv){
 	reading_cb_data cbd;
 	cbd.handle = handle;
 	cbd.ip_offset = ip_offset;
-    mc_dpi_set_core_callbacks(state, reading_cb, processing_cb, (void*) &cbd);
-	mc_dpi_run(state);
+    mc_pfwl_set_core_callbacks(state, reading_cb, processing_cb, (void*) &cbd);
+	mc_pfwl_run(state);
 
-	mc_dpi_wait_end(state);
-	mc_dpi_terminate(state);
+	mc_pfwl_wait_end(state);
+	mc_pfwl_terminate(state);
 
 
 	if (unknown > 0) printf("Unknown packets: %" PRIu32 "\n", unknown);
-    for(size_t i = 0; i < DPI_NUM_PROTOCOLS; i++){
-        if (protocols[i] > 0) printf("%s packets: %" PRIu32 "\n", dpi_get_protocol_string(i), protocols[i]);
+    for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+        if (protocols[i] > 0) printf("%s packets: %" PRIu32 "\n", pfwl_get_L7_protocol_name(i), protocols[i]);
     }
 	return 0;
 }

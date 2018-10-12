@@ -3,15 +3,8 @@
  **/
 #include "common.h"
 
-TEST(SkypeTest, DeprecatedCalls) {
-    std::vector<uint> tcpProtocols;
-    std::vector<uint> udpProtocols;
-    getProtocolsOld("./pcaps/skype-irc.cap", tcpProtocols, udpProtocols);
-    EXPECT_EQ(udpProtocols[DPI_PROTOCOL_UDP_SKYPE], (uint) 326);
-}
-
 TEST(SkypeTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/skype-irc.cap", protocols);
-    EXPECT_EQ(protocols[DPI_PROTOCOL_SKYPE], (uint) 326);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_SKYPE], (uint) 326);
 }

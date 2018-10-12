@@ -8,27 +8,27 @@
  * specified by a command line parameter) inside the HTTP body using a certain number
  * of cores (specified by the user).
  *
- * Created on: 29/08/2013
- *
+ * Created on: 19/09/2012
  * =========================================================================
- *  Copyright (C) 2012-2013, Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
- *  This file is part of Peafowl.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
  *
- *  Peafowl is free software: you can redistribute it and/or
- *  modify it under the terms of the Lesser GNU General Public
- *  License as published by the Free Software Foundation, either
- *  version 3 of the License, or (at your option) any later version.
-
- *  Peafowl is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  Lesser GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- *  You should have received a copy of the Lesser GNU General Public
- *  License along with Peafowl.
- *  If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * =========================================================================
  */
 
@@ -45,7 +45,8 @@
 #include "pattern_matching_lib/trie.h"
 #include "pattern_matching_lib/signatures.h"
 /** Starting with demo-only includes. **/
-#include <mc_api.h>
+#include <peafowl/config.h>
+#include <peafowl/peafowl_mc.h>
 #include <ff/mapping_utils.hpp>
 #include <ff/ubuffer.hpp>
 #include <pcap.h>
@@ -69,8 +70,8 @@ typedef struct pcap_packets_memory{
 	u_int32_t next_packet_to_sent;
 }pcap_packets_memory_t;
 
-mc_dpi_packet_reading_result_t reading_cb(void* user_data){
-	mc_dpi_packet_reading_result_t r;
+mc_pfwl_packet_reading_result_t reading_cb(void* user_data){
+	mc_pfwl_packet_reading_result_t r;
 
 	pcap_packets_memory_t* packets=(pcap_packets_memory_t*) user_data;
 
@@ -88,7 +89,7 @@ mc_dpi_packet_reading_result_t reading_cb(void* user_data){
 	return r;
 }
 
-void processing_cb(mc_dpi_processing_result_t* processing_result, void* user_data){
+void processing_cb(mc_pfwl_processing_result_t* processing_result, void* user_data){
 	;
 }
 
@@ -97,7 +98,7 @@ static void match_found(string::size_type position, trie::value_type const &matc
 	cout << "Matched '" << match.second << "' at " << position << endl;
 }
 
-void body_cb(dpi_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, dpi_pkt_infos_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
+void body_cb(pfwl_http_message_informations_t* http_informations, const u_char* app_data, u_int32_t data_length, pfwl_pkt_info_t* pkt, void** flow_specific_user_data, void* user_data, u_int8_t last){
 	if(*flow_specific_user_data==NULL){
 		if(scanner_pool->mc_pop(flow_specific_user_data)==false){
             *flow_specific_user_data=new byte_scanner(*(static_cast<trie*>(user_data)), match_found);
@@ -171,12 +172,12 @@ int main(int argc, char **argv){
 		pcap_t *handle;
 		char errbuf[PCAP_ERRBUF_SIZE];
 
-		mc_dpi_parallelism_details_t details;
-		bzero(&details, sizeof(mc_dpi_parallelism_details_t));
+		mc_pfwl_parallelism_details_t details;
+		bzero(&details, sizeof(mc_pfwl_parallelism_details_t));
 		details.available_processors=num_workers;
 		details.mapping=mapping;
 
-		mc_dpi_library_state_t* state=mc_dpi_init_stateful(32767, 32767, 1000000, 1000000, details);
+		mc_pfwl_state_t* state=mc_pfwl_init_stateful(32767, 32767, 1000000, 1000000, details);
 
 		printf("Open offline.\n");
 		handle=pcap_open_offline(input_file_name, errbuf);
@@ -250,7 +251,9 @@ int main(int argc, char **argv){
 
 
 	        size_t len = header.caplen - ip_offset - virtual_offset;
-			posix_memalign((void**) &(packets[num_packets]), DPI_CACHE_LINE_SIZE, sizeof(unsigned char)*len);
+			if(posix_memalign((void**) &(packets[num_packets]), PFWL_CACHE_LINE_SIZE, sizeof(unsigned char)*len)){
+				throw std::runtime_error("posix_memalign failure.");
+			}
 			assert(packets[num_packets]);
 			memcpy(packets[num_packets], packet + ip_offset + virtual_offset, len);
 			sizes[num_packets] = len;
@@ -270,18 +273,18 @@ int main(int argc, char **argv){
 		for(uint i=0; i<SCANNER_POOL_SIZE; i++){
 			scanner_pool->push(new byte_scanner(t, match_found));
 		}
-        mc_dpi_set_core_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
-		mc_dpi_set_flow_cleaner_callback(state, &flow_cleaner);
-		dpi_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
-		mc_dpi_http_activate_callbacks(state, &callback, (void*)(&t));
+    mc_pfwl_set_core_callbacks(state, &reading_cb, &processing_cb, (void*) &x);
+		mc_pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
+		pfwl_http_callbacks_t callback={0, 0, 0, 0, 0, &body_cb};
+		mc_pfwl_http_activate_callbacks(state, &callback, (void*)(&t));
 		timer scan_timer;
 		scan_timer.start();
-		mc_dpi_run(state);
+		mc_pfwl_run(state);
 
 
-		mc_dpi_wait_end(state);
+		mc_pfwl_wait_end(state);
 		std::cout << "++++Ended" << std::endl;
-		mc_dpi_print_stats(state);
+		mc_pfwl_print_stats(state);
 		scan_timer.stop();
 
 		byte_scanner* bs;
@@ -290,7 +293,7 @@ int main(int argc, char **argv){
 			delete bs;
 		}
 		/* And close the session */
-		mc_dpi_terminate(state);
+		mc_pfwl_terminate(state);
 		delete scanner_pool;
 
 		full_timer.stop();

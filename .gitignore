@@ -5,7 +5,7 @@
 *.gcda
 *.gcno
 proc.out
-/src/external/*
+/src/external/nornir/*
 /test/googletest/*
 cppcheck-report.xml
 demo/dump_jpeg/dump_jpeg
@@ -25,4 +25,4 @@ test/testSMTP
 test/testSSL
 test/testSkype
 test/testUtils
-
+test/testSkipL7
