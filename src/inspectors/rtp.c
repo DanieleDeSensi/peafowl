@@ -99,7 +99,7 @@ struct rtp_header {
     uint16_t seq_num;
     uint32_t timestamp;
     uint32_t SSRC;
-}__attribute__(packed);
+}__attribute__((packed));
 
 static int8_t is_valid_payload_type(uint8_t PT)
 {
