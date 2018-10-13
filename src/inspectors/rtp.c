@@ -140,12 +140,6 @@ uint8_t check_rtp(pfwl_state_t* state, const unsigned char* app_data, size_t dat
 {
     pfwl_dissector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTO_L7_RTP];
 
-    if(!app_data)
-        return -1;
-
-    if(pkt_info->l4.protocol != IPPROTO_UDP) {
-        return PFWL_PROTOCOL_NO_MATCHES;
-    }
     if(data_length < 2 ||
        ntohs(pkt_info->l4.port_dst) <= 1024 ||
        ntohs(pkt_info->l4.port_src) <= 1024) {
