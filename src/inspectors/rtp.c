@@ -76,7 +76,7 @@ typedef enum {
 /* }RTCPpayloadType; */
 
 struct rtp_header {
-    #if __BYTE_ORDER == __LITTLE_ENDIAN
+#if __BYTE_ORDER == __LITTLE_ENDIAN
     // 2 bytes
     uint8_t CC:4;
     uint8_t extension:1;
@@ -85,7 +85,7 @@ struct rtp_header {
     // 1 byte
     uint8_t pType:7;
     uint8_t marker:1;
-    #elif __BYTE_ORDER == __BIG_ENDIAN
+#elif __BYTE_ORDER == __BIG_ENDIAN
     // 2 bytes
     uint8_t version:2;
     uint8_t padding:1;
@@ -94,65 +94,41 @@ struct rtp_header {
     // 1 byte
     uint8_t marker:1;
     uint8_t pType:7;
-    #else
-    #endif
+#else
+#endif
     uint16_t seq_num;
     uint32_t timestamp;
     uint32_t SSRC;
-};
+}__attribute__(packed);
 
-static int8_t isValid_PaylodType(uint8_t PT)
+static int8_t is_valid_payload_type(uint8_t PT)
 {
     switch(PT) {
-
     case G_711_U_Law:
-        return G_711_U_Law;
     case GSM_6_10:
-        return GSM_6_10;
     case G_723_1:
-        return G_723_1;
     case G_711_A_Law:
-        return G_711_A_Law;
     case G_722:
-        return G_722;
     case Comfort_Noise:
-        return Comfort_Noise;
     case G_729:
-        return G_729;
     case H_263:
-        return H_263;
     case Dynamic_RTP:
-        return Dynamic_RTP;
     case RADP:
-        return RADP;
     case DTMF:
-        return DTMF;
     case SILK_Narrow:
-        return SILK_Narrow;
     case SILK_Wide:
-        return SILK_Wide;
     case Siren:
-        return Siren;
     case G_722_1:
-        return G_722_1;
     case RT_Audio_Wide:
-        return RT_Audio_Wide;
     case RT_Audio_Narrow:
-        return RT_Audio_Narrow;
     case G_726:
-        return G_726;
     case G_722b:
-        return G_722b;
     case Comfort_Noise_Wide:
-        return Comfort_Noise_Wide;
     case RT_Video:
-        return RT_Video;
     case H_264:
-        return H_264;
     case H_264_FEC:
-        return H_264_FEC;
     case X_data:
-        return X_data;
+        return PT;
     default:
         return -1;
     }
@@ -183,7 +159,7 @@ uint8_t check_rtp(pfwl_state_t* state, const unsigned char* app_data, size_t dat
 
             if(rtp->version == 2) { // check Version
                 if(rtp->marker == 0 || rtp->marker == 1) { // check Marker
-                    pType = isValid_PaylodType(rtp->pType); // check Payload Type
+                    pType = is_valid_payload_type(rtp->pType); // check Payload Type
                     if(pType != -1) {
                         if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
                             // TODO extract fields
