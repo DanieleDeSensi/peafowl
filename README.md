@@ -85,6 +85,9 @@ The supported protocols are:
     <td>RTP</td><td>4/5</td>
   </tr>
   <tr>
+    <td>RTCP</td><td>4/5</td>
+  </tr>
+  <tr>
     <td>Skype</td><td>3/5</td>
   </tr>
   <tr>
