@@ -94,7 +94,6 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
     }
 
     if(data_length >= 4) {
-        /* if((app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0) { /\* RTP magic byte[1] *\/ */
         int8_t pType = 0;
         struct rtcp_header *rtcp = (struct rtcp_header*) app_data;
 
@@ -109,7 +108,5 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
             else return PFWL_PROTOCOL_NO_MATCHES;
         }
     }
-    /* else return PFWL_PROTOCOL_MORE_DATA_NEEDED; */
-    /* } */
     return PFWL_PROTOCOL_NO_MATCHES;
 }
