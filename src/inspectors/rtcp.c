@@ -39,17 +39,33 @@
     if (PFWL_DEBUG_RTP) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
-#define SIZE 4
+
 typedef enum {
     RTCP_SENDER    = 200,
     RTCP_RECEIVER  = 201,
     RTCP_SRC_DESCR = 202,
     RTCP_BYE       = 203,
+    RTCP_APP       = 204,
 }RTCPpayloadType;
 
+
 struct rtcp_header {
-    //TOD
+#if __BYTE_ORDER == __BIG_ENDIAN
+	uint8_t version:2;
+	uint8_t padding:1;
+	uint8_t rc:5;
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+	uint8_t rc:5;
+	uint8_t padding:1;
+	uint8_t version:2;
+#endif
+    uint8_t pType;
+	uint16_t length;
+
 }__attribute__((packed));
+
+#define rtcp_header_get_length(head) ntohs((head)->length)
+
 
 static int8_t is_valid_payload_type(uint8_t PT)
 {
@@ -58,6 +74,7 @@ static int8_t is_valid_payload_type(uint8_t PT)
     case RTCP_RECEIVER:
     case RTCP_SRC_DESCR:
     case RTCP_BYE:
+    case RTCP_APP:
         return PT;
     default:
         return -1;
@@ -70,31 +87,29 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
 {
     pfwl_dissector_accuracy_t accuracy = state->inspectors_accuracy[PFWL_PROTO_L7_RTCP];
 
-    /* if(data_length < 2 || */
-    /*    ntohs(pkt_info->l4.port_dst) <= 1024 || */
-    /*    ntohs(pkt_info->l4.port_src) <= 1024) { */
-    /*     return PFWL_PROTOCOL_NO_MATCHES; */
-    /* } */
+    if(data_length < 4 ||
+       ntohs(pkt_info->l4.port_dst) <= 1024 ||
+       ntohs(pkt_info->l4.port_src) <= 1024) {
+        return PFWL_PROTOCOL_NO_MATCHES;
+    }
 
-    /* if(data_length >= 12) { */
-    /*     if((app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0) { /\* RTP magic byte[1] *\/ */
-    /*         int8_t pType = 0; */
-    /*         struct rtp_header *rtp = (struct rtp_header*) app_data; */
+    if(data_length >= 4) {
+        /* if((app_data[0] & 0xFF) == 0x80 || (app_data[0] & 0xFF) == 0xA0) { /\* RTP magic byte[1] *\/ */
+        int8_t pType = 0;
+        struct rtcp_header *rtcp = (struct rtcp_header*) app_data;
 
-    /*         if(rtp->version == 2) { // check Version */
-    /*             if(rtp->marker == 0 || rtp->marker == 1) { // check Marker */
-    /*                 pType = is_valid_payload_type(rtp->pType); // check Payload Type */
-    /*                 if(pType != -1) { */
-    /*                     if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) { */
-    /*                         // TODO extract fields */
-    /*                     } */
-    /*                     else return PFWL_PROTOCOL_MATCHES; */
-    /*                 } */
-    /*                 else return PFWL_PROTOCOL_NO_MATCHES; */
-    /*             } */
-    /*         } */
-    /*     } */
-    /*     else return PFWL_PROTOCOL_MORE_DATA_NEEDED; */
+        if(rtcp->version == 2) { // check Version
+            pType = is_valid_payload_type(rtcp->pType); // check Payload Type
+            if(pType != -1) {
+                if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
+                    // TODO extract fields
+                }
+                else return PFWL_PROTOCOL_MATCHES;
+            }
+            else return PFWL_PROTOCOL_NO_MATCHES;
+        }
+    }
+    /* else return PFWL_PROTOCOL_MORE_DATA_NEEDED; */
     /* } */
-    /* return PFWL_PROTOCOL_NO_MATCHES; */
+    return PFWL_PROTOCOL_NO_MATCHES;
 }

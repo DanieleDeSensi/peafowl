@@ -168,6 +168,7 @@ typedef enum {
   PFWL_PROTO_L7_NTP,       ///< NTP
   PFWL_PROTO_L7_SIP,       ///< SIP
   PFWL_PROTO_L7_RTP,       ///< RTP
+  PFWL_PROTO_L7_RTCP,      ///< RTCP
   PFWL_PROTO_L7_SSH,       ///< SSH
   PFWL_PROTO_L7_SKYPE,     ///< Skype
   PFWL_PROTO_L7_HTTP,      ///< HTTP

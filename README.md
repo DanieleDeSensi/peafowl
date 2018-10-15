@@ -314,14 +314,14 @@ For example, if you want to add the support for the Telnet protocol:
 
 ```C
 /** Protocols. **/
-enum protocols{
+typedef enum{
   PFWL_PROTO_L7_HTTP = 0,
   PFWL_PROTO_L7_BGP,
   PFWL_PROTO_L7_SMTP,
   PFWL_PROTO_L7_POP3,
   PFWL_PROTO_L7_TELNET, // <--- Insert this line right before 'PFWL_NUM_PROTOCOLS' to assign an identifier to the new protocol
   PFWL_PROTO_L7_NUM
-};
+}pfwl_protocol_l7_t;
 ```
 
 2) Create a new inspector, by implementing a C function with the following signature and semantic:
