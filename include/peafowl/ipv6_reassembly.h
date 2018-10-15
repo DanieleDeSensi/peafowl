@@ -40,8 +40,8 @@ typedef struct pfwl_ipv6_fragmentation_state pfwl_ipv6_fragmentation_state_t;
  * @param table_size  The size of the table used to store the fragments.
  * @return            A pointer to the IPv6 defragmentation handle.
  */
-pfwl_ipv6_fragmentation_state_t* pfwl_reordering_enable_ipv6_fragmentation(
-    uint16_t table_size);
+pfwl_ipv6_fragmentation_state_t *
+pfwl_reordering_enable_ipv6_fragmentation(uint16_t table_size);
 
 /**
  * Sets the maximum amount of memory that can be used to store
@@ -52,7 +52,7 @@ pfwl_ipv6_fragmentation_state_t* pfwl_reordering_enable_ipv6_fragmentation(
  *                               same source.
  */
 void pfwl_reordering_ipv6_fragmentation_set_per_host_memory_limit(
-    pfwl_ipv6_fragmentation_state_t* frag_state,
+    pfwl_ipv6_fragmentation_state_t *frag_state,
     uint32_t per_host_memory_limit);
 
 /**
@@ -62,7 +62,7 @@ void pfwl_reordering_ipv6_fragmentation_set_per_host_memory_limit(
  * @param total_memory_limit   The global memory limit.
  */
 void pfwl_reordering_ipv6_fragmentation_set_total_memory_limit(
-    pfwl_ipv6_fragmentation_state_t* frag_state, uint32_t total_memory_limit);
+    pfwl_ipv6_fragmentation_state_t *frag_state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum amount of time (seconds) which can elapse before the
@@ -71,14 +71,14 @@ void pfwl_reordering_ipv6_fragmentation_set_total_memory_limit(
  * @param timeout_seconds   The timeout (seconds).
  */
 void pfwl_reordering_ipv6_fragmentation_set_reassembly_timeout(
-    pfwl_ipv6_fragmentation_state_t* frag_state, uint8_t timeout_seconds);
+    pfwl_ipv6_fragmentation_state_t *frag_state, uint8_t timeout_seconds);
 
 /**
  * Disables the IPv6 fragmentation and deallocates the handle.
  * @param frag_state  A pointer to the IPv6 defragmentation handle.
  */
 void pfwl_reordering_disable_ipv6_fragmentation(
-    pfwl_ipv6_fragmentation_state_t* frag_state);
+    pfwl_ipv6_fragmentation_state_t *frag_state);
 
 /**
  * Reassemble the IP datagram if it is fragmented.
@@ -111,10 +111,10 @@ void pfwl_reordering_disable_ipv6_fragmentation(
  * from data. The user should free() this pointer when it is no more
  * needed.
  */
-unsigned char* pfwl_reordering_manage_ipv6_fragment(
-    pfwl_ipv6_fragmentation_state_t* state,
-    const unsigned char* unfragmentable_start, uint16_t unfragmentable_size,
-    const unsigned char* fragmentable_start, uint16_t fragmentable_size,
+unsigned char *pfwl_reordering_manage_ipv6_fragment(
+    pfwl_ipv6_fragmentation_state_t *state,
+    const unsigned char *unfragmentable_start, uint16_t unfragmentable_size,
+    const unsigned char *fragmentable_start, uint16_t fragmentable_size,
     uint16_t offset, uint8_t more_fragments, uint32_t identification,
     uint8_t next_header, uint32_t current_time, int tid);
 

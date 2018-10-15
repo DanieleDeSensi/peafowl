@@ -26,7 +26,7 @@
  */
 #include <peafowl/hash_functions.h>
 
-#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH || \
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_FNV_HASH ||                           \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
 
 #define FNV1A_32_INIT 0x811c9dc5
@@ -35,7 +35,7 @@
 #if !defined(__GNUC__)
 #define PFWL_HVAL_SECOND_STEP(hval) hval *= FNV_32_PRIME;
 #else
-#define PFWL_HVAL_SECOND_STEP(hval) \
+#define PFWL_HVAL_SECOND_STEP(hval)                                            \
   hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
 #endif
 
@@ -46,7 +46,7 @@ inline
 #endif
     /** FNV-1a 32-bit hash function. **/
     uint32_t
-    v4_fnv_hash_function(const pfwl_dissection_info_t* const in) {
+    v4_fnv_hash_function(const pfwl_dissection_info_t *const in) {
   uint32_t low_addr, high_addr;
   uint16_t low_port, high_port;
 
@@ -101,10 +101,10 @@ inline
   return hval;
 }
 
-static void get_v6_low_high_addr_port(const pfwl_dissection_info_t* const in,
-                                      struct in6_addr* low_addr,
-                                      struct in6_addr* high_addr,
-                                      uint16_t* low_port, uint16_t* high_port) {
+static void get_v6_low_high_addr_port(const pfwl_dissection_info_t *const in,
+                                      struct in6_addr *low_addr,
+                                      struct in6_addr *high_addr,
+                                      uint16_t *low_port, uint16_t *high_port) {
   uint8_t i = 0;
   for (i = 0; i < 16; i++) {
     if (in->l3.addr_src.ipv6.s6_addr[i] < in->l3.addr_dst.ipv6.s6_addr[i]) {
@@ -146,7 +146,7 @@ inline
 #endif
     /** FNV-1a 32-bit hash function. **/
     uint32_t
-    v6_fnv_hash_function(const pfwl_dissection_info_t* const in) {
+    v6_fnv_hash_function(const pfwl_dissection_info_t *const in) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -179,7 +179,7 @@ inline
 }
 #endif
 
-#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH || \
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH ||                       \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
 
 //-----------------------------------------------------------------------------
@@ -212,7 +212,7 @@ typedef unsigned __int64 uint64_t;
 
 // Other compilers
 
-#else  // defined(_MSC_VER)
+#else // defined(_MSC_VER)
 
 #include <stdint.h>
 
@@ -231,15 +231,19 @@ inline uint64_t rotl64(uint64_t x, int8_t r) {
 
 #define BIG_CONSTANT(x) (x##LLU)
 
-#endif  // !defined(_MSC_VER)
+#endif // !defined(_MSC_VER)
 
 //-----------------------------------------------------------------------------
 // Block read - if your platform needs to do endian-swapping or can only
 // handle aligned reads, do the conversion here
 
-FORCE_INLINE uint32_t getblock(const uint32_t* p, int i) { return p[i]; }
+FORCE_INLINE uint32_t getblock(const uint32_t *p, int i) {
+  return p[i];
+}
 
-FORCE_INLINE uint64_t getblock(const uint64_t* p, int i) { return p[i]; }
+FORCE_INLINE uint64_t getblock(const uint64_t *p, int i) {
+  return p[i];
+}
 
 //-----------------------------------------------------------------------------
 // Finalization mix - force all bits of a hash block to avalanche
@@ -268,8 +272,8 @@ FORCE_INLINE uint64_t fmix(uint64_t k) {
 
 //-----------------------------------------------------------------------------
 
-void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
-  const uint8_t* data = (const uint8_t*)key;
+void MurmurHash3_x86_32(const void *key, int len, uint32_t seed, void *out) {
+  const uint8_t *data = (const uint8_t *) key;
   const int nblocks = len / 4;
 
   uint32_t h1 = seed;
@@ -280,7 +284,7 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
   //----------
   // body
 
-  const uint32_t* blocks = (const uint32_t*)(data + nblocks * 4);
+  const uint32_t *blocks = (const uint32_t *) (data + nblocks * 4);
 
   for (int i = -nblocks; i; i++) {
     uint32_t k1 = getblock(blocks, i);
@@ -297,21 +301,21 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
   //----------
   // tail
 
-  const uint8_t* tail = (const uint8_t*)(data + nblocks * 4);
+  const uint8_t *tail = (const uint8_t *) (data + nblocks * 4);
 
   uint32_t k1 = 0;
 
   switch (len & 3) {
-    case 3:
-      k1 ^= tail[2] << 16;
-    case 2:
-      k1 ^= tail[1] << 8;
-    case 1:
-      k1 ^= tail[0];
-      k1 *= c1;
-      k1 = ROTL32(k1, 15);
-      k1 *= c2;
-      h1 ^= k1;
+  case 3:
+    k1 ^= tail[2] << 16;
+  case 2:
+    k1 ^= tail[1] << 8;
+  case 1:
+    k1 ^= tail[0];
+    k1 *= c1;
+    k1 = ROTL32(k1, 15);
+    k1 *= c2;
+    h1 ^= k1;
   };
 
   //----------
@@ -321,10 +325,10 @@ void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out) {
 
   h1 = fmix(h1);
 
-  *(uint32_t*)out = h1;
+  *(uint32_t *) out = h1;
 }
 
-static void get_v4_key(const pfwl_dissection_info_t* const in, char* v4_key) {
+static void get_v4_key(const pfwl_dissection_info_t *const in, char *v4_key) {
   uint32_t lower_addr = 0, higher_addr = 0;
   uint16_t lower_port = 0, higher_port = 0;
 
@@ -361,7 +365,7 @@ static void get_v4_key(const pfwl_dissection_info_t* const in, char* v4_key) {
   v4_key[12] = (higher_port & 0xFF);
 }
 
-uint32_t v4_hash_murmur3(const pfwl_dissection_info_t* const in,
+uint32_t v4_hash_murmur3(const pfwl_dissection_info_t *const in,
                          uint32_t seed) {
   char v4_key[13];
   get_v4_key(in, v4_key);
@@ -370,7 +374,7 @@ uint32_t v4_hash_murmur3(const pfwl_dissection_info_t* const in,
   return result;
 }
 
-static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key) {
+static void get_v6_key(const pfwl_dissection_info_t *const in, char *v6_key) {
   struct in6_addr low_addr, high_addr;
   uint16_t low_port, high_port;
   get_v6_low_high_addr_port(in, &low_addr, &high_addr, &low_port, &high_port);
@@ -392,7 +396,7 @@ static void get_v6_key(const pfwl_dissection_info_t* const in, char* v6_key) {
   v6_key[36] = (high_port & 0xFF);
 }
 
-uint32_t v6_hash_murmur3(const pfwl_dissection_info_t* const in,
+uint32_t v6_hash_murmur3(const pfwl_dissection_info_t *const in,
                          uint32_t seed) {
   char v6_key[37];
   get_v6_key(in, v6_key);
@@ -402,14 +406,14 @@ uint32_t v6_hash_murmur3(const pfwl_dissection_info_t* const in,
 }
 #endif
 
-#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_SIMPLE_HASH || \
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_SIMPLE_HASH ||                        \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_simple(const pfwl_dissection_info_t* const in) {
+uint32_t v4_hash_function_simple(const pfwl_dissection_info_t *const in) {
   return in->l4.port_src + in->l4.port_dst + in->l3.addr_src.ipv4 +
          in->l3.addr_dst.ipv4 + in->l4.protocol;
 }
 
-uint32_t v6_hash_function_simple(const pfwl_dissection_info_t* const in) {
+uint32_t v6_hash_function_simple(const pfwl_dissection_info_t *const in) {
   uint8_t i;
   uint32_t partsrc = 0, partdst = 0;
   for (i = 0; i < 16; i++) {
@@ -422,10 +426,10 @@ uint32_t v6_hash_function_simple(const pfwl_dissection_info_t* const in) {
 
 #endif
 
-#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH || \
+#if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_BKDR_HASH ||                          \
     PFWL_ACTIVATE_ALL_HASH_FUNCTIONS_CODE == 1
-uint32_t v4_hash_function_bkdr(const pfwl_dissection_info_t* const in) {
-  uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
+uint32_t v4_hash_function_bkdr(const pfwl_dissection_info_t *const in) {
+  uint32_t seed = 131; // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
   char v4_key[13];
   get_v4_key(in, v4_key);
@@ -436,8 +440,8 @@ uint32_t v4_hash_function_bkdr(const pfwl_dissection_info_t* const in) {
   return (hash & 0x7FFFFFFF);
 }
 
-uint32_t v6_hash_function_bkdr(const pfwl_dissection_info_t* const in) {
-  uint32_t seed = 131;  // 31 131 1313 13131 131313 etc..
+uint32_t v6_hash_function_bkdr(const pfwl_dissection_info_t *const in) {
+  uint32_t seed = 131; // 31 131 1313 13131 131313 etc..
   uint32_t hash = 0;
 
   char v6_key[37];

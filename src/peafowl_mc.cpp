@@ -34,69 +34,70 @@
 #include <ff/mapping_utils.hpp>
 #include <ff/pipeline.hpp>
 
-#include <float.h>
-#include <stddef.h>
 #include <cmath>
+#include <float.h>
 #include <iostream>
+#include <stddef.h>
 #include <vector>
 
 #define PFWL_DEBUG_MC_API 1
-#define debug_print(fmt, ...)                                 \
-  do {                                                        \
-    if (PFWL_DEBUG_MC_API) fprintf(stdout, fmt, __VA_ARGS__); \
+#define debug_print(fmt, ...)                                                  \
+  do {                                                                         \
+    if (PFWL_DEBUG_MC_API)                                                     \
+      fprintf(stdout, fmt, __VA_ARGS__);                                       \
   } while (0)
 
 #define PFWL_MULTICORE_STATUS_UPDATER_TID 1
 
 typedef struct mc_pfwl_library_state {
-  pfwl_state_t* sequential_state;
-  ff::SWSR_Ptr_Buffer* tasks_pool;
+  pfwl_state_t *sequential_state;
+  ff::SWSR_Ptr_Buffer *tasks_pool;
 
   uint8_t parallel_module_type;
   /******************************************************/
   /*                     Callbacks                      */
   /******************************************************/
-  mc_pfwl_packet_reading_callback* reading_callback;
-  mc_pfwl_processing_result_callback* processing_callback;
-  void* read_process_callbacks_user_data;
+  mc_pfwl_packet_reading_callback *reading_callback;
+  mc_pfwl_processing_result_callback *processing_callback;
+  void *read_process_callbacks_user_data;
 
   uint8_t terminating;
   uint8_t is_running;
 
   uint16_t available_processors;
-  unsigned int* mapping;
+  unsigned int *mapping;
   /******************************************************/
   /*                 Nodes for single farm.             */
   /******************************************************/
-  ff::ff_farm<dpi::pfwl_L7_scheduler>* single_farm;
-  std::vector<ff::ff_node*>* single_farm_workers;
-  dpi::pfwl_collapsed_emitter* single_farm_emitter;
-  dpi::pfwl_L7_collector* single_farm_collector;
+  ff::ff_farm<dpi::pfwl_L7_scheduler> *single_farm;
+  std::vector<ff::ff_node *> *single_farm_workers;
+  dpi::pfwl_collapsed_emitter *single_farm_emitter;
+  dpi::pfwl_L7_collector *single_farm_collector;
   uint16_t collector_proc_id;
 
   uint16_t single_farm_active_workers;
 #ifdef ENABLE_RECONFIGURATION
-  nornir::ManagerFarm<dpi::pfwl_L7_scheduler>* mf;
-  nornir::Parameters* adp_params;
+  nornir::ManagerFarm<dpi::pfwl_L7_scheduler> *mf;
+  nornir::Parameters *adp_params;
 #endif
 
   /******************************************************/
   /*                 Nodes for double farm.             */
   /******************************************************/
-  dpi::pfwl_L3_L4_emitter* L3_L4_emitter;
+  dpi::pfwl_L3_L4_emitter *L3_L4_emitter;
 #if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ORDERED_FARM
-  ff::ff_ofarm* L3_L4_farm;
+  ff::ff_ofarm *L3_L4_farm;
 #else
-  ff::ff_farm<>* L3_L4_farm;
+  ff::ff_farm<> *L3_L4_farm;
 #endif
-  std::vector<ff::ff_node*>* L3_L4_workers;
-  dpi::pfwl_L3_L4_collector* L3_L4_collector;
+  std::vector<ff::ff_node *> *L3_L4_workers;
+  dpi::pfwl_L3_L4_collector *L3_L4_collector;
 
-  dpi::pfwl_L7_emitter* L7_emitter;
-  ff::ff_farm<dpi::pfwl_L7_scheduler>* L7_farm;
-  std::vector<ff::ff_node*>* L7_workers;
-  dpi::pfwl_L7_collector* L7_collector;
-  ff::ff_pipeline* pipeline;
+  dpi::pfwl_L7_emitter *L7_emitter;
+  ff::ff_farm<dpi::pfwl_L7_scheduler> *L7_farm;
+  std::vector<ff::ff_node *> *L7_workers;
+  dpi::pfwl_L7_collector *L7_collector;
+  ff::ff_pipeline *pipeline;
   uint16_t double_farm_L3_L4_active_workers;
   uint16_t double_farm_L7_active_workers;
   /******************************************************/
@@ -110,13 +111,13 @@ typedef struct mc_pfwl_library_state {
 static inline
 #endif
     void
-    mc_pfwl_create_double_farm(mc_pfwl_state_t* state, uint32_t size_v4,
+    mc_pfwl_create_double_farm(mc_pfwl_state_t *state, uint32_t size_v4,
                                uint32_t size_v6) {
   uint16_t last_mapped = 0;
   /******************************************/
   /*         Create the first farm.         */
   /******************************************/
-  void* tmp;
+  void *tmp;
 #if PFWL_MULTICORE_L3_L4_FARM_TYPE == PFWL_MULTICORE_L3_L4_ORDERED_FARM
   tmp = malloc(sizeof(ff::ff_ofarm));
   assert(tmp);
@@ -152,11 +153,11 @@ static inline
 #endif
 #endif
 
-  state->L3_L4_workers = new std::vector<ff::ff_node*>;
+  state->L3_L4_workers = new std::vector<ff::ff_node *>;
   for (uint i = 0; i < state->double_farm_L3_L4_active_workers; i++) {
     tmp = malloc(sizeof(dpi::pfwl_L3_L4_worker));
     assert(tmp);
-    dpi::pfwl_L3_L4_worker* w1 = new (tmp) dpi::pfwl_L3_L4_worker(
+    dpi::pfwl_L3_L4_worker *w1 = new (tmp) dpi::pfwl_L3_L4_worker(
         state->sequential_state, i, (state->double_farm_L7_active_workers),
         state->mapping[last_mapped], size_v4, size_v6);
     state->L3_L4_workers->push_back(w1);
@@ -194,11 +195,11 @@ static inline
   last_mapped = (last_mapped + 1) % state->available_processors;
   state->L7_farm->add_emitter(state->L7_emitter);
 
-  state->L7_workers = new std::vector<ff::ff_node*>;
+  state->L7_workers = new std::vector<ff::ff_node *>;
   for (uint i = 0; i < state->double_farm_L7_active_workers; i++) {
     tmp = malloc(sizeof(dpi::pfwl_L7_worker));
     assert(tmp);
-    dpi::pfwl_L7_worker* w2 = new (tmp) dpi::pfwl_L7_worker(
+    dpi::pfwl_L7_worker *w2 = new (tmp) dpi::pfwl_L7_worker(
         state->sequential_state, i, state->mapping[last_mapped]);
     state->L7_workers->push_back(w2);
     last_mapped = (last_mapped + 1) % state->available_processors;
@@ -232,7 +233,7 @@ static inline
 static inline
 #endif
     void
-    mc_pfwl_create_single_farm(mc_pfwl_state_t* state, uint32_t size_v4,
+    mc_pfwl_create_single_farm(mc_pfwl_state_t *state, uint32_t size_v4,
                                uint32_t size_v6) {
   uint16_t last_mapped = 0;
   state->single_farm = new ff::ff_farm<dpi::pfwl_L7_scheduler>(
@@ -250,9 +251,9 @@ static inline
   last_mapped = (last_mapped + 1) % state->available_processors;
   state->single_farm->add_emitter(state->single_farm_emitter);
 
-  state->single_farm_workers = new std::vector<ff::ff_node*>;
+  state->single_farm_workers = new std::vector<ff::ff_node *>;
   for (uint16_t i = 0; i < state->single_farm_active_workers; i++) {
-    dpi::pfwl_L7_worker* w = new dpi::pfwl_L7_worker(
+    dpi::pfwl_L7_worker *w = new dpi::pfwl_L7_worker(
         state->sequential_state, i, state->mapping[last_mapped]);
     assert(w);
     state->single_farm_workers->push_back(w);
@@ -272,7 +273,7 @@ static inline
 static inline ssize_t get_num_cores() {
   ssize_t n;
 #if defined(_WIN32)
-  n = 2;  // Not yet implemented
+  n = 2; // Not yet implemented
 #else
   n = 0;
 #if defined(__linux__)
@@ -286,7 +287,7 @@ static inline ssize_t get_num_cores() {
 #pragma message("ff_realNumCores not supported on this platform")
   return 1;
 #endif
-  FILE* f;
+  FILE *f;
   f = popen(inspect, "r");
   if (f) {
     if (fscanf(f, "%ld", &n) == EOF) {
@@ -295,16 +296,17 @@ static inline ssize_t get_num_cores() {
     pclose(f);
   } else
     perror("popen");
-#endif  // _WIN32
+#endif // _WIN32
   return n;
 }
 
-mc_pfwl_state_t* mc_pfwl_init_stateful(
-    uint32_t size_v4, uint32_t size_v6, uint32_t max_active_v4_flows,
-    uint32_t max_active_v6_flows,
-    mc_pfwl_parallelism_details_t parallelism_details) {
-  mc_pfwl_state_t* state = NULL;
-  if (posix_memalign((void**)&state, PFWL_CACHE_LINE_SIZE,
+mc_pfwl_state_t *
+mc_pfwl_init_stateful(uint32_t size_v4, uint32_t size_v6,
+                      uint32_t max_active_v4_flows,
+                      uint32_t max_active_v6_flows,
+                      mc_pfwl_parallelism_details_t parallelism_details) {
+  mc_pfwl_state_t *state = NULL;
+  if (posix_memalign((void **) &state, PFWL_CACHE_LINE_SIZE,
                      sizeof(mc_pfwl_state_t) + PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
@@ -347,15 +349,13 @@ mc_pfwl_state_t* mc_pfwl_init_stateful(
   if (parallelism_form == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
     assert(state->double_farm_L3_L4_active_workers > 0 &&
            state->double_farm_L7_active_workers > 0);
-    debug_print("%s\n",
-                "[mc_pfwl_peafowl.cpp]: A pipeline of two "
-                "farms will be activated.");
+    debug_print("%s\n", "[mc_pfwl_peafowl.cpp]: A pipeline of two "
+                        "farms will be activated.");
     hash_table_partitions = state->double_farm_L7_active_workers;
   } else {
     assert(state->single_farm_active_workers > 0);
-    debug_print("%s\n",
-                "[mc_pfwl_peafowl.cpp]: Only one farm will "
-                "be activated.");
+    debug_print("%s\n", "[mc_pfwl_peafowl.cpp]: Only one farm will "
+                        "be activated.");
     hash_table_partitions = state->single_farm_active_workers;
   }
 
@@ -367,8 +367,8 @@ mc_pfwl_state_t* mc_pfwl_init_stateful(
 /*   Create the tasks pool.   */
 /******************************/
 #if PFWL_MULTICORE_USE_TASKS_POOL
-  void* tmp = NULL;
-  if (posix_memalign((void**)&tmp, PFWL_CACHE_LINE_SIZE,
+  void *tmp = NULL;
+  if (posix_memalign((void **) &tmp, PFWL_CACHE_LINE_SIZE,
                      sizeof(ff::SWSR_Ptr_Buffer) + PFWL_CACHE_LINE_SIZE)) {
     throw std::runtime_error("posix_memalign failed.");
   }
@@ -389,7 +389,7 @@ mc_pfwl_state_t* mc_pfwl_init_stateful(
   return state;
 }
 
-void mc_pfwl_print_stats(mc_pfwl_state_t* state) {
+void mc_pfwl_print_stats(mc_pfwl_state_t *state) {
   if (state) {
     if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
       state->pipeline->ffStats(std::cout);
@@ -404,7 +404,7 @@ void mc_pfwl_print_stats(mc_pfwl_state_t* state) {
   }
 }
 
-void mc_pfwl_terminate(mc_pfwl_state_t* state) {
+void mc_pfwl_terminate(mc_pfwl_state_t *state) {
   if (likely(state)) {
     if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
       state->L3_L4_emitter->~pfwl_L3_L4_emitter();
@@ -418,9 +418,9 @@ void mc_pfwl_terminate(mc_pfwl_state_t* state) {
       free(state->L3_L4_collector);
 
       while (!state->L3_L4_workers->empty()) {
-        ((dpi::pfwl_L3_L4_worker*)state->L3_L4_workers->back())
+        ((dpi::pfwl_L3_L4_worker *) state->L3_L4_workers->back())
             ->~pfwl_L3_L4_worker();
-        free((dpi::pfwl_L3_L4_worker*)state->L3_L4_workers->back());
+        free((dpi::pfwl_L3_L4_worker *) state->L3_L4_workers->back());
         state->L3_L4_workers->pop_back();
       }
       delete state->L3_L4_workers;
@@ -432,8 +432,8 @@ void mc_pfwl_terminate(mc_pfwl_state_t* state) {
       free(state->L7_collector);
 
       while (!state->L7_workers->empty()) {
-        ((dpi::pfwl_L7_worker*)state->L7_workers->back())->~pfwl_L7_worker();
-        free((dpi::pfwl_L7_worker*)state->L7_workers->back());
+        ((dpi::pfwl_L7_worker *) state->L7_workers->back())->~pfwl_L7_worker();
+        free((dpi::pfwl_L7_worker *) state->L7_workers->back());
         state->L7_workers->pop_back();
       }
       delete state->L7_workers;
@@ -445,7 +445,7 @@ void mc_pfwl_terminate(mc_pfwl_state_t* state) {
       delete state->single_farm;
       delete state->single_farm_collector;
       while (!state->single_farm_workers->empty()) {
-        delete (dpi::pfwl_L7_worker*)state->single_farm_workers->back();
+        delete (dpi::pfwl_L7_worker *) state->single_farm_workers->back();
         state->single_farm_workers->pop_back();
       }
       delete state->single_farm_workers;
@@ -462,21 +462,21 @@ void mc_pfwl_terminate(mc_pfwl_state_t* state) {
 }
 
 void mc_pfwl_set_core_callbacks(
-    mc_pfwl_state_t* state, mc_pfwl_packet_reading_callback* reading_callback,
-    mc_pfwl_processing_result_callback* processing_callback, void* user_data) {
+    mc_pfwl_state_t *state, mc_pfwl_packet_reading_callback *reading_callback,
+    mc_pfwl_processing_result_callback *processing_callback, void *user_data) {
   state->reading_callback = reading_callback;
   state->processing_callback = processing_callback;
   state->read_process_callbacks_user_data = user_data;
 }
 
 #ifdef ENABLE_RECONFIGURATION
-void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t* state,
-                                   nornir::Parameters* p) {
+void mc_pfwl_set_reconf_parameters(mc_pfwl_library_state_t *state,
+                                   nornir::Parameters *p) {
   state->adp_params = p;
 }
 #endif
 
-void mc_pfwl_run(mc_pfwl_state_t* state) {
+void mc_pfwl_run(mc_pfwl_state_t *state) {
   // Real start
   debug_print("%s\n", "[mc_pfwl_peafowl.cpp]: Run preparation...");
   state->is_running = 1;
@@ -490,7 +490,7 @@ void mc_pfwl_run(mc_pfwl_state_t* state) {
       state->mf = new nornir::ManagerFarm<dpi::pfwl_L7_scheduler>(
           state->single_farm, *(state->adp_params));
       state->mf->start();
-    } catch (std::exception& e) {
+    } catch (std::exception &e) {
       assert("Exception thrown by ManagerFarm" == NULL);
     }
 #else
@@ -505,7 +505,7 @@ void mc_pfwl_run(mc_pfwl_state_t* state) {
  * Wait the end of the data processing.
  * @param state A pointer to the state of the library.
  */
-void mc_pfwl_wait_end(mc_pfwl_state_t* state) {
+void mc_pfwl_wait_end(mc_pfwl_state_t *state) {
   if (state->parallel_module_type == MC_PFWL_PARALLELISM_FORM_DOUBLE_FARM) {
     state->pipeline->wait();
   } else {
@@ -524,7 +524,7 @@ void mc_pfwl_wait_end(mc_pfwl_state_t* state) {
   state->is_running = 0;
 }
 
-uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t* state, uint32_t flows_v4,
+uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t *state, uint32_t flows_v4,
                                    uint32_t flows_v6, uint8_t strict) {
   if (state->is_running) {
     return 0;
@@ -533,7 +533,7 @@ uint8_t mc_pfwl_set_expected_flows(mc_pfwl_state_t* state, uint32_t flows_v4,
                                  strict);
 }
 
-uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state, uint16_t max_trials) {
+uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t *state, uint16_t max_trials) {
   if (state->is_running) {
     return 0;
   }
@@ -542,7 +542,7 @@ uint8_t mc_pfwl_set_max_trials(mc_pfwl_state_t* state, uint16_t max_trials) {
   return r;
 }
 
-uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t* state,
+uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t *state,
                                           uint16_t table_size) {
   if (state->is_running) {
     return 0;
@@ -552,7 +552,7 @@ uint8_t mc_pfwl_ipv4_fragmentation_enable(mc_pfwl_state_t* state,
   return r;
 }
 
-uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_state_t* state,
+uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_state_t *state,
                                           uint16_t table_size) {
   if (state->is_running) {
     return 0;
@@ -563,7 +563,7 @@ uint8_t mc_pfwl_ipv6_fragmentation_enable(mc_pfwl_state_t* state,
 }
 
 uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
-    mc_pfwl_state_t* state, uint32_t per_host_memory_limit) {
+    mc_pfwl_state_t *state, uint32_t per_host_memory_limit) {
   if (state->is_running) {
     return 0;
   }
@@ -574,7 +574,7 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_per_host_memory_limit(
 }
 
 uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
-    mc_pfwl_state_t* state, uint32_t per_host_memory_limit) {
+    mc_pfwl_state_t *state, uint32_t per_host_memory_limit) {
   if (state->is_running) {
     return 0;
   }
@@ -584,8 +584,9 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_per_host_memory_limit(
   return r;
 }
 
-uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
-    mc_pfwl_state_t* state, uint32_t total_memory_limit) {
+uint8_t
+mc_pfwl_ipv4_fragmentation_set_total_memory_limit(mc_pfwl_state_t *state,
+                                                  uint32_t total_memory_limit) {
   if (state->is_running) {
     return 0;
   }
@@ -595,8 +596,9 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_total_memory_limit(
   return r;
 }
 
-uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
-    mc_pfwl_state_t* state, uint32_t total_memory_limit) {
+uint8_t
+mc_pfwl_ipv6_fragmentation_set_total_memory_limit(mc_pfwl_state_t *state,
+                                                  uint32_t total_memory_limit) {
   if (state->is_running) {
     return 0;
   }
@@ -606,8 +608,9 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_total_memory_limit(
   return r;
 }
 
-uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
-    mc_pfwl_state_t* state, uint8_t timeout_seconds) {
+uint8_t
+mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(mc_pfwl_state_t *state,
+                                                  uint8_t timeout_seconds) {
   if (state->is_running) {
     return 0;
   }
@@ -617,8 +620,9 @@ uint8_t mc_pfwl_ipv4_fragmentation_set_reassembly_timeout(
   return r;
 }
 
-uint8_t mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(
-    mc_pfwl_state_t* state, uint8_t timeout_seconds) {
+uint8_t
+mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(mc_pfwl_state_t *state,
+                                                  uint8_t timeout_seconds) {
   if (state->is_running) {
     return 0;
   }
@@ -628,7 +632,7 @@ uint8_t mc_pfwl_ipv6_fragmentation_set_reassembly_timeout(
   return r;
 }
 
-uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -637,7 +641,7 @@ uint8_t mc_pfwl_ipv4_fragmentation_disable(mc_pfwl_state_t* state) {
   return r;
 }
 
-uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -646,7 +650,7 @@ uint8_t mc_pfwl_ipv6_fragmentation_disable(mc_pfwl_state_t* state) {
   return r;
 }
 
-uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -655,7 +659,7 @@ uint8_t mc_pfwl_tcp_reordering_enable(mc_pfwl_state_t* state) {
   return r;
 }
 
-uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -664,7 +668,7 @@ uint8_t mc_pfwl_tcp_reordering_disable(mc_pfwl_state_t* state) {
   return r;
 }
 
-uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t* state,
+uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t *state,
                                 pfwl_protocol_l7_t protocol) {
   if (state->is_running) {
     return 0;
@@ -672,7 +676,7 @@ uint8_t mc_pfwl_enable_protocol(mc_pfwl_state_t* state,
   return pfwl_protocol_l7_enable(state->sequential_state, protocol);
 }
 
-uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t* state,
+uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t *state,
                                  pfwl_protocol_l7_t protocol) {
   if (state->is_running) {
     return 0;
@@ -680,7 +684,7 @@ uint8_t mc_pfwl_disable_protocol(mc_pfwl_state_t* state,
   return pfwl_protocol_l7_disable(state->sequential_state, protocol);
 }
 
-uint8_t mc_pfwl_inspect_all(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_inspect_all(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -689,7 +693,7 @@ uint8_t mc_pfwl_inspect_all(mc_pfwl_state_t* state) {
   return r;
 }
 
-uint8_t mc_pfwl_inspect_nothing(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_inspect_nothing(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -698,8 +702,9 @@ uint8_t mc_pfwl_inspect_nothing(mc_pfwl_state_t* state) {
   return r;
 }
 
-uint8_t mc_pfwl_set_flow_cleaner_callback(
-    mc_pfwl_state_t* state, pfwl_flow_cleaner_callback_t* cleaner) {
+uint8_t
+mc_pfwl_set_flow_cleaner_callback(mc_pfwl_state_t *state,
+                                  pfwl_flow_cleaner_callback_t *cleaner) {
   if (state->is_running) {
     return 0;
   }
@@ -708,9 +713,9 @@ uint8_t mc_pfwl_set_flow_cleaner_callback(
   return r;
 }
 
-uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_state_t* state,
-                                        pfwl_http_callbacks_t* callbacks,
-                                        void* user_data) {
+uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_state_t *state,
+                                        pfwl_http_callbacks_t *callbacks,
+                                        void *user_data) {
   if (state->is_running) {
     return 0;
   }
@@ -720,7 +725,7 @@ uint8_t mc_pfwl_http_activate_callbacks(mc_pfwl_state_t* state,
   return r;
 }
 
-uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_state_t* state) {
+uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_state_t *state) {
   if (state->is_running) {
     return 0;
   }
@@ -729,14 +734,14 @@ uint8_t mc_pfwl_http_disable_callbacks(mc_pfwl_state_t* state) {
   return r;
 }
 
-const char** const mc_pfwl_get_protocol_strings() {
+const char **const mc_pfwl_get_protocol_strings() {
   return pfwl_get_L7_protocols_names();
 }
 
-const char* const mc_pfwl_get_protocol_string(pfwl_protocol_l7_t protocol) {
+const char *const mc_pfwl_get_protocol_string(pfwl_protocol_l7_t protocol) {
   return pfwl_get_L7_protocol_name(protocol);
 }
 
-pfwl_protocol_l7_t mc_pfwl_get_protocol_id(const char* const string) {
+pfwl_protocol_l7_t mc_pfwl_get_protocol_id(const char *const string) {
   return pfwl_get_L7_protocol_id(string);
 }

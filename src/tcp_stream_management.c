@@ -39,13 +39,14 @@
 #include <strings.h>
 
 #define PFWL_DEBUG_TCP_REORDERING 0
-#define debug_print(fmt, ...)                                         \
-  do {                                                                \
-    if (PFWL_DEBUG_TCP_REORDERING) fprintf(stdout, fmt, __VA_ARGS__); \
+#define debug_print(fmt, ...)                                                  \
+  do {                                                                         \
+    if (PFWL_DEBUG_TCP_REORDERING)                                             \
+      fprintf(stdout, fmt, __VA_ARGS__);                                       \
   } while (0)
 
 void pfwl_reordering_tcp_delete_all_fragments(
-    pfwl_flow_info_private_t* victim) {
+    pfwl_flow_info_private_t *victim) {
   if (victim) {
     pfwl_reassembly_fragment_t *frag = victim->segments[0], *temp_frag;
 
@@ -71,7 +72,7 @@ static
 #endif
     uint32_t
     pfwl_reordering_tcp_length_contiguous_segments(
-        pfwl_reassembly_fragment_t* head) {
+        pfwl_reassembly_fragment_t *head) {
   uint32_t r = 0;
   uint32_t last_end = head->offset;
   while (head) {
@@ -97,11 +98,11 @@ static
 #endif
     void
     pfwl_reordering_tcp_group_contiguous_segments(
-        pfwl_reassembly_fragment_t** head, unsigned char** where) {
+        pfwl_reassembly_fragment_t **head, unsigned char **where) {
   /* Copy the data portions of all segments into the new buffer. */
   uint32_t offset = 0, last_end = (*head)->offset;
-  pfwl_reassembly_fragment_t* fragment = *head;
-  pfwl_reassembly_fragment_t* tmp;
+  pfwl_reassembly_fragment_t *fragment = *head;
+  pfwl_reassembly_fragment_t *tmp;
   while (fragment != NULL && fragment->offset == last_end) {
     uint32_t fragment_length =
         pfwl_reassembly_fragment_length(fragment->offset, fragment->end);
@@ -115,7 +116,8 @@ static
     fragment = tmp;
   }
   *head = fragment;
-  if (fragment) fragment->prev = NULL;
+  if (fragment)
+    fragment->prev = NULL;
 }
 
 /**
@@ -139,7 +141,7 @@ static
 #endif
     uint8_t
     pfwl_reordering_tcp_is_new_segment(uint32_t seqnum,
-                                       pfwl_flow_info_private_t* tracking,
+                                       pfwl_flow_info_private_t *tracking,
                                        uint8_t direction) {
   uint32_t lowest = tracking->expected_seq_num[direction];
   uint32_t highest = lowest + PFWL_TCP_MAX_IN_TRAVEL_DATA;
@@ -157,10 +159,10 @@ static
 #endif
     void
     pfwl_reordering_tcp_analyze_out_of_order(
-        const unsigned char* pkt, pfwl_dissection_info_t* dissection_info,
-        pfwl_flow_info_private_t* tracking, uint32_t received_seq_num) {
+        const unsigned char *pkt, pfwl_dissection_info_t *dissection_info,
+        pfwl_flow_info_private_t *tracking, uint32_t received_seq_num) {
   uint32_t end = received_seq_num + dissection_info->l4.payload_length;
-  struct tcphdr* tcph = (struct tcphdr*)(pkt);
+  struct tcphdr *tcph = (struct tcphdr *) (pkt);
 
   if (tcph->rst == 1) {
     tracking->seen_rst = 1;
@@ -170,7 +172,7 @@ static
    * reordering is not implemented at the moment.
    **/
   uint32_t dummy;
-  pfwl_reassembly_fragment_t* frag;
+  pfwl_reassembly_fragment_t *frag;
 
   if (dissection_info->l4.payload_length == 0) {
     debug_print("%s\n", "The segment has no payload");
@@ -220,8 +222,8 @@ static
 #endif
     pfwl_tcp_reordering_reordered_segment_t
     pfwl_reordering_tcp_analyze_sequence_numbers(
-        const unsigned char* pkt, pfwl_dissection_info_t* dissection_info,
-        pfwl_flow_info_private_t* tracking) {
+        const unsigned char *pkt, pfwl_dissection_info_t *dissection_info,
+        pfwl_flow_info_private_t *tracking) {
 
   pfwl_tcp_reordering_reordered_segment_t to_return;
   to_return.data = NULL;
@@ -229,7 +231,7 @@ static
   to_return.connection_terminated = 0;
   to_return.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
 
-  struct tcphdr* tcph = (struct tcphdr*)(pkt);
+  struct tcphdr *tcph = (struct tcphdr *) (pkt);
   uint32_t received_seq_num = ntohl(tcph->seq);
   uint32_t expected_seq_num =
       tracking->expected_seq_num[dissection_info->l4.direction];
@@ -292,12 +294,12 @@ static
           pfwl_reordering_tcp_length_contiguous_segments(
               tracking->segments[dissection_info->l4.direction]) +
           pkt_length;
-      unsigned char* buffer =
-          (unsigned char*)malloc(sizeof(char) * (new_length));
+      unsigned char *buffer =
+          (unsigned char *) malloc(sizeof(char) * (new_length));
       assert(buffer);
 
       memcpy(buffer, pkt + dissection_info->l4.length, pkt_length);
-      unsigned char* where = buffer + pkt_length;
+      unsigned char *where = buffer + pkt_length;
       pfwl_reordering_tcp_group_contiguous_segments(
           &(tracking->segments[dissection_info->l4.direction]), &where);
 
@@ -315,8 +317,7 @@ static
   } else if (pfwl_reordering_tcp_is_new_segment(
                  received_seq_num, tracking, dissection_info->l4.direction)) {
     /** Out of order segment. **/
-    debug_print("Received out of order segment. Expected: %" PRIu32
-                ""
+    debug_print("Received out of order segment. Expected: %" PRIu32 ""
                 " Received: %" PRIu32 "\n",
                 expected_seq_num, received_seq_num);
     to_return.status = PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER;
@@ -338,9 +339,9 @@ static
 }
 
 uint8_t pfwl_reordering_tcp_track_connection_light(
-    const unsigned char* pkt, pfwl_dissection_info_t* dissection_info,
-    pfwl_flow_info_private_t* tracking) {
-  struct tcphdr* tcph = (struct tcphdr*)pkt;
+    const unsigned char *pkt, pfwl_dissection_info_t *dissection_info,
+    pfwl_flow_info_private_t *tracking) {
+  struct tcphdr *tcph = (struct tcphdr *) pkt;
   if (tcph->fin == 1) {
     SET_BIT(tracking->seen_fin, dissection_info->l4.direction);
   }
@@ -362,21 +363,21 @@ uint8_t pfwl_reordering_tcp_track_connection_light(
   return 0;
 }
 
-pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
-    pfwl_dissection_info_t* dissection_info, pfwl_flow_info_private_t* tracking,
-    const unsigned char* pkt) {
+pfwl_tcp_reordering_reordered_segment_t
+pfwl_reordering_tcp_track_connection(pfwl_dissection_info_t *dissection_info,
+                                     pfwl_flow_info_private_t *tracking,
+                                     const unsigned char *pkt) {
   pfwl_tcp_reordering_reordered_segment_t to_return;
   to_return.data = NULL;
   to_return.data_length = 0;
   to_return.connection_terminated = 0;
   to_return.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
 
-  struct tcphdr* tcph = (struct tcphdr*)pkt;
+  struct tcphdr *tcph = (struct tcphdr *) pkt;
 
   if (tracking->seen_ack) {
-    debug_print("%s\n",
-                "Connection already established, check "
-                "sequence numbers");
+    debug_print("%s\n", "Connection already established, check "
+                        "sequence numbers");
 
     return pfwl_reordering_tcp_analyze_sequence_numbers(pkt, dissection_info,
                                                         tracking);
@@ -387,8 +388,7 @@ pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
         ntohl(tcph->seq) + 1;
 
     debug_print("%s\n", "Syn received.");
-    debug_print("Chosen sequence number: %" PRIu32
-                " for direction: "
+    debug_print("Chosen sequence number: %" PRIu32 " for direction: "
                 "%d\n",
                 tracking->expected_seq_num[dissection_info->l4.direction],
                 dissection_info->l4.direction);
@@ -402,8 +402,7 @@ pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
         ntohl(tcph->seq) + 1;
 
     debug_print("%s\n", "SynAck received.");
-    debug_print("Chosen sequence number: %" PRIu32
-                " for direction: "
+    debug_print("Chosen sequence number: %" PRIu32 " for direction: "
                 "%d\n",
                 tracking->expected_seq_num[dissection_info->l4.direction],
                 dissection_info->l4.direction);

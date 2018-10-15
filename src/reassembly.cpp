@@ -33,9 +33,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
-                               pfwl_reassembly_timer_t** tail,
-                               pfwl_reassembly_timer_t* timer) {
+void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t **head,
+                               pfwl_reassembly_timer_t **tail,
+                               pfwl_reassembly_timer_t *timer) {
   if (*tail) {
     (*tail)->next = timer;
     timer->prev = (*tail);
@@ -48,9 +48,9 @@ void pfwl_reassembly_add_timer(pfwl_reassembly_timer_t** head,
   }
 }
 
-void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t** head,
-                                  pfwl_reassembly_timer_t** tail,
-                                  pfwl_reassembly_timer_t* timer) {
+void pfwl_reassembly_delete_timer(pfwl_reassembly_timer_t **head,
+                                  pfwl_reassembly_timer_t **tail,
+                                  pfwl_reassembly_timer_t *timer) {
   if (timer->prev)
     timer->prev->next = timer->next;
   else
@@ -88,11 +88,11 @@ uint32_t pfwl_reassembly_fragment_length(uint32_t offset, uint32_t end) {
 #ifndef PFWL_DEBUG
 static
 #endif
-    pfwl_reassembly_fragment_t*
+    pfwl_reassembly_fragment_t *
     pfwl_reassembly_create_fragment(uint32_t offset, uint32_t end,
-                                    const unsigned char* ptr) {
-  pfwl_reassembly_fragment_t* fragment;
-  fragment = (pfwl_reassembly_fragment_t*)calloc(
+                                    const unsigned char *ptr) {
+  pfwl_reassembly_fragment_t *fragment;
+  fragment = (pfwl_reassembly_fragment_t *) calloc(
       1, sizeof(pfwl_reassembly_fragment_t));
   if (unlikely(fragment == NULL)) {
     free(fragment);
@@ -105,7 +105,7 @@ static
   fragment->tcp_fin = 0;
 
   uint32_t length = pfwl_reassembly_fragment_length(offset, end);
-  fragment->ptr = (unsigned char*)malloc(sizeof(unsigned char) * (length));
+  fragment->ptr = (unsigned char *) malloc(sizeof(unsigned char) * (length));
 
   if (unlikely(fragment->ptr == NULL)) {
     free(fragment);
@@ -115,10 +115,11 @@ static
   return fragment;
 }
 
-pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
-    pfwl_reassembly_fragment_t** head, const unsigned char* data,
-    uint32_t offset, uint32_t end, uint32_t* bytes_removed,
-    uint32_t* bytes_inserted) {
+pfwl_reassembly_fragment_t *
+pfwl_reassembly_insert_fragment(pfwl_reassembly_fragment_t **head,
+                                const unsigned char *data, uint32_t offset,
+                                uint32_t end, uint32_t *bytes_removed,
+                                uint32_t *bytes_inserted) {
   pfwl_reassembly_fragment_t *prev, *next, *iterator, *tmp;
   uint32_t fragment_start = 0;
   *bytes_removed = 0;
@@ -194,7 +195,8 @@ pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
         (*head) = iterator->next;
       }
 
-      if (iterator->next != NULL) iterator->next->prev = iterator->prev;
+      if (iterator->next != NULL)
+        iterator->next->prev = iterator->prev;
 
       tmp = iterator->next;
 
@@ -225,7 +227,8 @@ pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
   /** Insert the new fragment in the list. **/
   tmp = pfwl_reassembly_create_fragment(offset, end, data + fragment_start);
 
-  if (unlikely(tmp == NULL)) return NULL;
+  if (unlikely(tmp == NULL))
+    return NULL;
 
   (*bytes_inserted) += pfwl_reassembly_fragment_length(offset, end);
 
@@ -236,26 +239,29 @@ pfwl_reassembly_fragment_t* pfwl_reassembly_insert_fragment(
   else
     (*head) = tmp;
 
-  if (next) next->prev = tmp;
+  if (next)
+    next->prev = tmp;
   return tmp;
 }
 
 uint8_t pfwl_reassembly_ip_check_train_of_contiguous_fragments(
-    pfwl_reassembly_fragment_t* head) {
-  if (!head) return 0;
+    pfwl_reassembly_fragment_t *head) {
+  if (!head)
+    return 0;
   uint16_t offset = 0;
 
   /* Check all fragment offsets to see if they connect. */
   while (head) {
-    if (head->offset > offset) return 0;
+    if (head->offset > offset)
+      return 0;
     offset = head->end;
     head = head->next;
   }
   return 1;
 }
 
-int32_t pfwl_reassembly_ip_compact_fragments(pfwl_reassembly_fragment_t* head,
-                                             unsigned char** where,
+int32_t pfwl_reassembly_ip_compact_fragments(pfwl_reassembly_fragment_t *head,
+                                             unsigned char **where,
                                              uint32_t len) {
   /* Copy the data portions of all fragments into the new buffer. */
   uint32_t count = 0;

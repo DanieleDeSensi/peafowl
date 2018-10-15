@@ -41,18 +41,19 @@ typedef ff::ff_node ffnode;
 #endif
 
 #define PFWL_DEBUG_MP_WORKER 0
-#define worker_debug_print(fmt, ...)                             \
-  do {                                                           \
-    if (PFWL_DEBUG_MP_WORKER) fprintf(stdout, fmt, __VA_ARGS__); \
+#define worker_debug_print(fmt, ...)                                           \
+  do {                                                                         \
+    if (PFWL_DEBUG_MP_WORKER)                                                  \
+      fprintf(stdout, fmt, __VA_ARGS__);                                       \
   } while (0)
 
 namespace dpi {
 
 typedef struct L3_L4_input_task {
-  const unsigned char* pkt;
+  const unsigned char *pkt;
   uint32_t length;
   uint32_t current_time;
-  void* user_pointer;
+  void *user_pointer;
 } L3_L4_input_task_struct;
 
 typedef struct L3_L4_output_task {
@@ -60,18 +61,17 @@ typedef struct L3_L4_output_task {
   uint16_t destination_worker;
   uint8_t status;
   pfwl_pkt_info_t pkt_infos;
-  void* user_pointer;
+  void *user_pointer;
 } L3_L4_output_task_struct;
 
 typedef struct L7_output_task {
   pfwl_dissection_info_t result;
-  void* user_pointer;
+  void *user_pointer;
 } L7_output_task_struct;
 
-#define PFWL_CACHE_LINES_PADDING_REQUIRED(size) \
-  (size % PFWL_CACHE_LINE_SIZE == 0             \
-       ? 0                                      \
-       : PFWL_CACHE_LINE_SIZE - (size % PFWL_CACHE_LINE_SIZE))
+#define PFWL_CACHE_LINES_PADDING_REQUIRED(size)                                \
+  (size % PFWL_CACHE_LINE_SIZE == 0 ? 0 : PFWL_CACHE_LINE_SIZE -               \
+                                              (size % PFWL_CACHE_LINE_SIZE))
 
 typedef struct mc_pfwl_task {
   union input_output_task {
@@ -89,34 +89,34 @@ typedef struct mc_pfwl_task {
 /*****************************************************/
 
 class pfwl_L3_L4_emitter : public ffnode {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_state_t* const state;
-  mc_pfwl_packet_reading_callback** const cb;
-  void** user_data;
-  uint8_t* terminating;
+  pfwl_state_t *const state;
+  mc_pfwl_packet_reading_callback **const cb;
+  void **user_data;
+  uint8_t *terminating;
   const uint16_t proc_id;
-  ff::SWSR_Ptr_Buffer* tasks_pool;
+  ff::SWSR_Ptr_Buffer *tasks_pool;
   uint8_t initialized;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- public:
-  pfwl_L3_L4_emitter(pfwl_state_t* state, mc_pfwl_packet_reading_callback** cb,
-                     void** user_data, uint8_t* terminating, uint16_t proc_id,
-                     ff::SWSR_Ptr_Buffer* tasks_pool);
+public:
+  pfwl_L3_L4_emitter(pfwl_state_t *state, mc_pfwl_packet_reading_callback **cb,
+                     void **user_data, uint8_t *terminating, uint16_t proc_id,
+                     ff::SWSR_Ptr_Buffer *tasks_pool);
   ~pfwl_L3_L4_emitter();
 #ifdef ENABLE_RECONFIGURATION
   void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
   int svc_init();
-  void* svc(void*);
+  void *svc(void *);
 };
 
 class pfwl_L3_L4_worker : public ffnode {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_state_t* const state;
-  L3_L4_input_task_struct* in;
+  pfwl_state_t *const state;
+  L3_L4_input_task_struct *in;
   const uint32_t v4_table_size;
   const uint32_t v6_table_size;
   uint32_t v4_worker_table_size;
@@ -125,30 +125,30 @@ class pfwl_L3_L4_worker : public ffnode {
   const uint16_t proc_id;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- public:
-  pfwl_L3_L4_worker(pfwl_state_t* state, uint16_t worker_id,
+public:
+  pfwl_L3_L4_worker(pfwl_state_t *state, uint16_t worker_id,
                     uint16_t num_L7_workers, uint16_t proc_id,
                     uint32_t v4_table_size, uint32_t v6_table_size);
   ~pfwl_L3_L4_worker();
 
   int svc_init();
-  void* svc(void*);
+  void *svc(void *);
 #ifdef ENABLE_RECONFIGURATION
   void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
 };
 
 class pfwl_L3_L4_collector : public ffnode {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
   const uint16_t proc_id;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- public:
+public:
   pfwl_L3_L4_collector(uint16_t proc_id);
 
   int svc_init();
-  void* svc(void*);
+  void *svc(void *);
 };
 
 /*****************************************************/
@@ -156,20 +156,21 @@ class pfwl_L3_L4_collector : public ffnode {
 /*****************************************************/
 
 class pfwl_L7_scheduler : public ff::ff_loadbalancer {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
   int victim;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- protected:
+protected:
   inline size_t selectworker() {
     worker_debug_print("[worker.hpp]: select_worker: %u\n", victim);
     return victim;
   }
 
- public:
+public:
   pfwl_L7_scheduler(int max_num_workers)
-      : ff_loadbalancer(max_num_workers), victim(0) {}
+      : ff_loadbalancer(max_num_workers), victim(0) {
+  }
 
   void set_victim(int v) {
     victim = v;
@@ -178,24 +179,24 @@ class pfwl_L7_scheduler : public ff::ff_loadbalancer {
 };
 
 class pfwl_L7_emitter : public ffnode {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  mc_pfwl_task_t* partially_filled;
-  uint* partially_filled_sizes;
-  mc_pfwl_task_t** waiting_tasks;
+  mc_pfwl_task_t *partially_filled;
+  uint *partially_filled_sizes;
+  mc_pfwl_task_t **waiting_tasks;
   uint16_t waiting_tasks_size;
   const uint16_t proc_id;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- protected:
-  pfwl_L7_scheduler* const lb;
+protected:
+  pfwl_L7_scheduler *const lb;
 
- public:
-  pfwl_L7_emitter(pfwl_L7_scheduler* lb, uint16_t num_L7_workers,
+public:
+  pfwl_L7_emitter(pfwl_L7_scheduler *lb, uint16_t num_L7_workers,
                   uint16_t proc_id);
   ~pfwl_L7_emitter();
   int svc_init();
-  void* svc(void* task);
+  void *svc(void *task);
 };
 
 static inline void sleepns(unsigned long ns) {
@@ -206,66 +207,66 @@ static inline void sleepns(unsigned long ns) {
 static inline unsigned long getns() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  return (unsigned long)(tv.tv_sec * 1e6 + tv.tv_usec) * 1000;
+  return (unsigned long) (tv.tv_sec * 1e6 + tv.tv_usec) * 1000;
 }
 
 class pfwl_L7_worker : public ffnode {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_state_t* const state;
-  L3_L4_output_task_struct* temp;
+  pfwl_state_t *const state;
+  L3_L4_output_task_struct *temp;
   const uint16_t worker_id;
   const uint16_t proc_id;
 
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- public:
-  pfwl_L7_worker(pfwl_state_t* state, uint16_t worker_id, uint16_t proc_id);
+public:
+  pfwl_L7_worker(pfwl_state_t *state, uint16_t worker_id, uint16_t proc_id);
   ~pfwl_L7_worker();
 
   int svc_init();
-  void* svc(void*);
+  void *svc(void *);
 };
 
 class pfwl_L7_collector : public ffnode {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  mc_pfwl_processing_result_callback** const cb;
-  void** user_data;
-  uint16_t* proc_id;
-  ff::SWSR_Ptr_Buffer* tasks_pool;
+  mc_pfwl_processing_result_callback **const cb;
+  void **user_data;
+  uint16_t *proc_id;
+  ff::SWSR_Ptr_Buffer *tasks_pool;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- public:
-  pfwl_L7_collector(mc_pfwl_processing_result_callback** cb, void** user_data,
-                    uint16_t* proc_id, ff::SWSR_Ptr_Buffer* tasks_pool);
+public:
+  pfwl_L7_collector(mc_pfwl_processing_result_callback **cb, void **user_data,
+                    uint16_t *proc_id, ff::SWSR_Ptr_Buffer *tasks_pool);
   ~pfwl_L7_collector();
 
   int svc_init();
-  void* svc(void*);
+  void *svc(void *);
 };
 
 class pfwl_collapsed_emitter : public dpi::pfwl_L7_emitter {
- private:
+private:
   char padding1[PFWL_CACHE_LINE_SIZE];
-  pfwl_L3_L4_emitter* L3_L4_emitter;
-  pfwl_L3_L4_worker* L3_L4_worker;
+  pfwl_L3_L4_emitter *L3_L4_emitter;
+  pfwl_L3_L4_worker *L3_L4_worker;
   uint16_t proc_id;
   char padding2[PFWL_CACHE_LINE_SIZE];
 
- public:
-  pfwl_collapsed_emitter(mc_pfwl_packet_reading_callback** cb, void** user_data,
-                         uint8_t* terminating, ff::SWSR_Ptr_Buffer* tasks_pool,
-                         pfwl_state_t* state, uint16_t num_L7_workers,
+public:
+  pfwl_collapsed_emitter(mc_pfwl_packet_reading_callback **cb, void **user_data,
+                         uint8_t *terminating, ff::SWSR_Ptr_Buffer *tasks_pool,
+                         pfwl_state_t *state, uint16_t num_L7_workers,
                          uint32_t v4_table_size, uint32_t v6_table_size,
-                         pfwl_L7_scheduler* lb, uint16_t proc_id);
+                         pfwl_L7_scheduler *lb, uint16_t proc_id);
   ~pfwl_collapsed_emitter();
   int svc_init();
-  void* svc(void*);
+  void *svc(void *);
 #ifdef ENABLE_RECONFIGURATION
   void notifyRethreading(size_t oldNumWorkers, size_t newNumWorkers);
 #endif
 };
-}  // namespace dpi
+} // namespace dpi
 
 #endif /* WORKER_HPP_ */
