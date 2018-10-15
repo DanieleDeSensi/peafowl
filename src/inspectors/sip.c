@@ -167,86 +167,87 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
 
   for (i = 0; i < len; i++) {
     switch (st) {
-      case URI_BEGIN:
+    case URI_BEGIN:
 
-        if (s[i] == ':') {
-          first_offset = i;
-          st = URI_USER;
-        }
-        break;
+      if (s[i] == ':') {
+        first_offset = i;
+        st = URI_USER;
+      }
+      break;
 
-      case URI_USER:
-        // user_offset = i;
-        if (s[i] == '@') {
-          host_offset = i;
-          st = URI_HOST;
-          user->basic.string.value =
-              (const unsigned char *)s + (first_offset + 1);
-          user->basic.string.length = (i - first_offset - 1);
-          foundUser = 1;
-          foundAtValue = 1;
-        } else if (s[i] == ':') {
-          st = URI_PASSWORD;
-          user->basic.string.value =
-              (const unsigned char *)s + (first_offset + 1);
-          user->basic.string.length = (i - first_offset - 1);
-          foundUser = 1;
-        } else if (s[i] == ';' || s[i] == '?' || s[i] == '&') {
-          user->basic.string.value =
-              (const unsigned char *)s + (first_offset + 1);
-          user->basic.string.length = (i - first_offset - 1);
-          st = URI_PARAM;
-          foundUser = 1;
-        }
-        break;
+    case URI_USER:
+      // user_offset = i;
+      if (s[i] == '@') {
+        host_offset = i;
+        st = URI_HOST;
+        user->basic.string.value =
+            (const unsigned char *) s + (first_offset + 1);
+        user->basic.string.length = (i - first_offset - 1);
+        foundUser = 1;
+        foundAtValue = 1;
+      } else if (s[i] == ':') {
+        st = URI_PASSWORD;
+        user->basic.string.value =
+            (const unsigned char *) s + (first_offset + 1);
+        user->basic.string.length = (i - first_offset - 1);
+        foundUser = 1;
+      } else if (s[i] == ';' || s[i] == '?' || s[i] == '&') {
+        user->basic.string.value =
+            (const unsigned char *) s + (first_offset + 1);
+        user->basic.string.length = (i - first_offset - 1);
+        st = URI_PARAM;
+        foundUser = 1;
+      }
+      break;
 
-      case URI_PASSWORD:
-        // password_offset = i;
-        if (s[i] == '@') {
-          host_offset = i;
-          st = URI_HOST;
-          foundAtValue = 1;
-        }
-        break;
+    case URI_PASSWORD:
+      // password_offset = i;
+      if (s[i] == '@') {
+        host_offset = i;
+        st = URI_HOST;
+        foundAtValue = 1;
+      }
+      break;
 
-      case URI_PARAM:
-        if (s[i] == '@') {
-          host_offset = i;
-          st = URI_HOST;
-          foundAtValue = 1;
-        }
-        if (s[i] == '>') st = URI_HOST_END;
-        break;
+    case URI_PARAM:
+      if (s[i] == '@') {
+        host_offset = i;
+        st = URI_HOST;
+        foundAtValue = 1;
+      }
+      if (s[i] == '>')
+        st = URI_HOST_END;
+      break;
 
-      case URI_HOST:
-        if (s[i] == '[')
-          st = URI_HOST_IPV6;
-        else if (s[i] == ':' || s[i] == '>' || s[i] == ';' || s[i] == ' ') {
-          st = URI_HOST_END;
-          domain->basic.string.value =
-              (const unsigned char *)s + host_offset + 1;
-          domain->basic.string.length = (i - host_offset - 1);
-          foundHost = 1;
-        }
-        break;
+    case URI_HOST:
+      if (s[i] == '[')
+        st = URI_HOST_IPV6;
+      else if (s[i] == ':' || s[i] == '>' || s[i] == ';' || s[i] == ' ') {
+        st = URI_HOST_END;
+        domain->basic.string.value =
+            (const unsigned char *) s + host_offset + 1;
+        domain->basic.string.length = (i - host_offset - 1);
+        foundHost = 1;
+      }
+      break;
 
-      case URI_HOST_IPV6:
-        if (s[i] == ']') {
-          domain->basic.string.value =
-              (const unsigned char *)s + host_offset + 1;
-          domain->basic.string.length = (i - host_offset - 1);
-          foundHost = 1;
-          st = URI_HOST_END;
-        }
-        break;
+    case URI_HOST_IPV6:
+      if (s[i] == ']') {
+        domain->basic.string.value =
+            (const unsigned char *) s + host_offset + 1;
+        domain->basic.string.length = (i - host_offset - 1);
+        foundHost = 1;
+        st = URI_HOST_END;
+      }
+      break;
 
-      case URI_HOST_END:
-        st = URI_END;
-        break;
+    case URI_HOST_END:
+      st = URI_END;
+      break;
 
-      default:
-        i = len;
-        break;
+    default:
+      i = len;
+      break;
     }
   }
 
@@ -258,14 +259,14 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
     user->basic.string.length = 0;
   else if (foundAtValue == 0 && foundUser == 1) {
     domain->basic.string.value =
-        (const unsigned char *)user->basic.string.value;
+        (const unsigned char *) user->basic.string.value;
     domain->basic.string.length = user->basic.string.length;
 
     /*and after set to 0 */
     user->basic.string.length = 0;
   }
   if (foundUser == 0 && foundHost == 0) {
-    domain->basic.string.value = (const unsigned char *)s + first_offset + 1;
+    domain->basic.string.value = (const unsigned char *) s + first_offset + 1;
     domain->basic.string.length = (len - first_offset);
   }
 
@@ -304,21 +305,22 @@ uint8_t getTag(pfwl_field_t *hname, const unsigned char *uri, int len) {
 
   for (i = 0; i < len; i++) {
     switch (st) {
-      case ST_TAG:
-        if (((i + 4) < len) && (uri[i] == 't' || uri[i] == 'T') &&
-            (uri[i + 2] == 'g' || uri[i + 2] == 'G') && uri[i + 3] == '=') {
-          first_offset = i + 4;
-          st = ST_END;
-        }
-        break;
+    case ST_TAG:
+      if (((i + 4) < len) && (uri[i] == 't' || uri[i] == 'T') &&
+          (uri[i + 2] == 'g' || uri[i + 2] == 'G') && uri[i + 3] == '=') {
+        first_offset = i + 4;
+        st = ST_END;
+      }
+      break;
 
-      case ST_END:
-        last_offset = i;
-        if (uri[i] == ';') st = ST_OFF;
-        break;
+    case ST_END:
+      last_offset = i;
+      if (uri[i] == ';')
+        st = ST_OFF;
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
 
@@ -326,7 +328,8 @@ uint8_t getTag(pfwl_field_t *hname, const unsigned char *uri, int len) {
     return 0;
   }
 
-  if ((last_offset - first_offset) < 5) return 0;
+  if ((last_offset - first_offset) < 5)
+    return 0;
 
   set_hname(hname, (last_offset - first_offset), uri + first_offset);
   return 1;
@@ -339,7 +342,7 @@ int isValidIp4Address(pfwl_field_t *mip) {
 
   if (mip->basic.string.value == NULL || mip->basic.string.length > 16)
     return 0;
-  snprintf(ipAddress, 17, "%.*s", (int)mip->basic.string.length,
+  snprintf(ipAddress, 17, "%.*s", (int) mip->basic.string.length,
            mip->basic.string.value);
 
   result = inet_pton(AF_INET, ipAddress, &(sa.sin_addr));
@@ -360,34 +363,34 @@ int parseSdpCLine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
   for (i = 0; i < len; i++) {
     switch (st) {
-      case ST_NETTYPE:
-        if (data[i] == ' ') {
-          st = ST_ADDRTYPE;
-          last_offset = i;
-        }
-        break;
+    case ST_NETTYPE:
+      if (data[i] == ' ') {
+        st = ST_ADDRTYPE;
+        last_offset = i;
+      }
+      break;
 
-      case ST_ADDRTYPE:
-        if (data[i] == ' ') {
-          st = ST_CONNECTIONADRESS;
-          last_offset = i;
-        }
+    case ST_ADDRTYPE:
+      if (data[i] == ' ') {
+        st = ST_CONNECTIONADRESS;
+        last_offset = i;
+      }
 
-        break;
-      case ST_CONNECTIONADRESS:
-        mp->media_ip.basic.string.value =
-            (const unsigned char *)(char *)data + last_offset + 1;
-        mp->media_ip.basic.string.length = len - last_offset - 3;
-        if (mp->rtcp_ip.basic.string.length == 0) {
-          mp->rtcp_ip.basic.string.length = mp->media_ip.basic.string.length;
-          mp->rtcp_ip.basic.string.value =
-              (const unsigned char *)mp->media_ip.basic.string.value;
-        }
-        st = ST_END;
-        break;
+      break;
+    case ST_CONNECTIONADRESS:
+      mp->media_ip.basic.string.value =
+          (const unsigned char *) (char *) data + last_offset + 1;
+      mp->media_ip.basic.string.length = len - last_offset - 3;
+      if (mp->rtcp_ip.basic.string.length == 0) {
+        mp->rtcp_ip.basic.string.length = mp->media_ip.basic.string.length;
+        mp->rtcp_ip.basic.string.value =
+            (const unsigned char *) mp->media_ip.basic.string.value;
+      }
+      st = ST_END;
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
 
@@ -406,40 +409,41 @@ int parseSdpMLine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
   for (i = 0; i < len; i++) {
     switch (st) {
-      case ST_TYPE:
-        if (data[i] == ' ') {
-          st = ST_PORT;
-          last_offset = i;
-        }
-        break;
+    case ST_TYPE:
+      if (data[i] == ' ') {
+        st = ST_PORT;
+        last_offset = i;
+      }
+      break;
 
-      case ST_PORT:
-        if (data[i] == ' ') {
-          st = ST_AVP;
-          mp->media_port = atoi((char *)data + last_offset);
-          if (mp->rtcp_port == 0) mp->rtcp_port = mp->media_port + 1;
-          last_offset = i;
-        }
-        break;
+    case ST_PORT:
+      if (data[i] == ' ') {
+        st = ST_AVP;
+        mp->media_port = atoi((char *) data + last_offset);
+        if (mp->rtcp_port == 0)
+          mp->rtcp_port = mp->media_port + 1;
+        last_offset = i;
+      }
+      break;
 
-      case ST_AVP:
-        if (data[i] == ' ') {
-          st = ST_CODEC;
-          last_offset = i;
-        }
-        break;
+    case ST_AVP:
+      if (data[i] == ' ') {
+        st = ST_CODEC;
+        last_offset = i;
+      }
+      break;
 
-      case ST_CODEC:
-        if (data[i] == ' ') {
-          st = ST_END;
-          mp->prio_codec = atoi((char *)data + last_offset);
-          last_offset = i;
-          return 1;
-        }
-        break;
+    case ST_CODEC:
+      if (data[i] == ' ') {
+        st = ST_END;
+        mp->prio_codec = atoi((char *) data + last_offset);
+        last_offset = i;
+        return 1;
+      }
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
 
@@ -458,40 +462,40 @@ int parseSdpALine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
   for (i = 0; i < len; i++) {
     switch (st) {
-      case ST_START:
-        if (data[i] == ' ') {
-          mp->rtcp_port = atoi((char *)data);
-          st = ST_PROTO;
-          last_offset = i;
-        }
-        break;
+    case ST_START:
+      if (data[i] == ' ') {
+        mp->rtcp_port = atoi((char *) data);
+        st = ST_PROTO;
+        last_offset = i;
+      }
+      break;
 
-      case ST_PROTO:
-        if (data[i] == ' ') {
-          st = ST_TYPE;
-          last_offset = i;
-        }
-        break;
+    case ST_PROTO:
+      if (data[i] == ' ') {
+        st = ST_TYPE;
+        last_offset = i;
+      }
+      break;
 
-      case ST_TYPE:
-        if (data[i] == ' ') {
-          st = ST_IP;
-          last_offset = i;
-        }
-        break;
+    case ST_TYPE:
+      if (data[i] == ' ') {
+        st = ST_IP;
+        last_offset = i;
+      }
+      break;
 
-      case ST_IP:
-        st = ST_END;
-        mp->rtcp_ip.basic.string.value =
-            (const unsigned char *)(const char *)data + last_offset + 1;
-        mp->rtcp_ip.basic.string.length = len - last_offset - 3;
-        st = ST_END;
-        return 1;
+    case ST_IP:
+      st = ST_END;
+      mp->rtcp_ip.basic.string.value =
+          (const unsigned char *) (const char *) data + last_offset + 1;
+      mp->rtcp_ip.basic.string.length = len - last_offset - 3;
+      st = ST_END;
+      return 1;
 
-        break;
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
 
@@ -510,29 +514,29 @@ int parseSdpARtpMapLine(pfwl_sip_codecmap_t *cp, const unsigned char *data,
 
   for (i = 0; i < len; i++) {
     switch (st) {
-      case ST_START:
-        if (data[i] == ' ') {
-          cp->id = atoi((char *)data);
-          st = ST_NAME;
-          last_offset = i;
-        }
-        break;
+    case ST_START:
+      if (data[i] == ' ') {
+        cp->id = atoi((char *) data);
+        st = ST_NAME;
+        last_offset = i;
+      }
+      break;
 
-      case ST_NAME:
-        if (data[i] == '/') {
-          st = ST_RATE;
-          snprintf(cp->name, sizeof(cp->name), "%.*s", (i - last_offset) - 1,
-                   data + last_offset + 1);
-          last_offset = i;
-        }
-        break;
+    case ST_NAME:
+      if (data[i] == '/') {
+        st = ST_RATE;
+        snprintf(cp->name, sizeof(cp->name), "%.*s", (i - last_offset) - 1,
+                 data + last_offset + 1);
+        last_offset = i;
+      }
+      break;
 
-      case ST_RATE:
-        st = ST_END;
-        cp->rate = atoi((char *)data + last_offset + 1);
-        return 0;
-      default:
-        break;
+    case ST_RATE:
+      st = ST_END;
+      cp->rate = atoi((char *) data + last_offset + 1);
+      return 0;
+    default:
+      break;
     }
   }
   return 1;
@@ -541,10 +545,10 @@ int parseSdpARtpMapLine(pfwl_sip_codecmap_t *cp, const unsigned char *data,
 int addMediaObject(pfwl_sip_miprtcpstatic_t *mp, pfwl_field_t *mediaIp,
                    int mediaPort, pfwl_field_t *rtcpIp, int rtcpPort) {
   mp->media_ip_len =
-      snprintf(mp->media_ip_s, 30, "%.*s", (int)mediaIp->basic.string.length,
+      snprintf(mp->media_ip_s, 30, "%.*s", (int) mediaIp->basic.string.length,
                mediaIp->basic.string.value);
   mp->rtcp_ip_len =
-      snprintf(mp->rtcp_ip_s, 30, "%.*s", (int)rtcpIp->basic.string.length,
+      snprintf(mp->rtcp_ip_s, 30, "%.*s", (int) rtcpIp->basic.string.length,
                rtcpIp->basic.string.value);
   mp->media_port = mediaPort;
   mp->rtcp_port = rtcpPort > 0 ? rtcpPort : (mediaPort + 1);
@@ -599,10 +603,12 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
       last_offset = offset;
       offset = (c + 2) - body;
 
-      if (contentLength < offset) break;
+      if (contentLength < offset)
+        break;
 
-      tmp = (const unsigned char *)(body + last_offset);
-      if (strlen((const char *)tmp) < 4) continue;
+      tmp = (const unsigned char *) (body + last_offset);
+      if (strlen((const char *) tmp) < 4)
+        continue;
 
       /* c=IN IP4 10.0.0.1 */
       if ((*tmp == 'c' && *(tmp + 1) == '=')) {
@@ -621,7 +627,8 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
 
   if (tmpmp.media_ip.basic.string.length == 0 ||
       !isValidIp4Address(&tmpmp.media_ip) ||
-      !strncmp((const char *)tmpmp.media_ip.basic.string.value, "0.0.0.0", 7)) {
+      !strncmp((const char *) tmpmp.media_ip.basic.string.value, "0.0.0.0",
+               7)) {
     return -1;
   }
 
@@ -629,7 +636,7 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
   if (tmpmp.rtcp_ip.basic.string.length == 0) {
     tmpmp.rtcp_ip.basic.string.length = tmpmp.media_ip.basic.string.length;
     tmpmp.rtcp_ip.basic.string.value =
-        (const unsigned char *)tmpmp.media_ip.basic.string.value;
+        (const unsigned char *) tmpmp.media_ip.basic.string.value;
   }
 
   // miprtcpstatic_t
@@ -658,7 +665,8 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
         return -1;
       }
 
-      if (strlen((const char *)tmp) < 4) continue;
+      if (strlen((const char *) tmp) < 4)
+        continue;
 
       /* m=audio 3000 RTP/AVP 8 0 18 101 */
       if ((*tmp == 'm' && *(tmp + 1) == '=')) {
@@ -674,14 +682,16 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
       /* a=rtcp:53020 IN IP4 126.16.64.4 */
       else if ((*tmp == 'a' && *(tmp + 1) == '=') &&
                !memcmp(tmp + 2, "rtpmap:", 7)) {
-        if (psip->cdm_count >= PFWL_SIP_MAX_MEDIA_HOSTS) break;
+        if (psip->cdm_count >= PFWL_SIP_MAX_MEDIA_HOSTS)
+          break;
         cdm = &psip->cdm[psip->cdm_count];
         parseSdpARtpMapLine(cdm, tmp + 9, (offset - last_offset - 7));
         psip->cdm_count++;
       }
     }
 
-    if (psip->mrp_size >= PFWL_SIP_MAX_MEDIA_HOSTS) break;
+    if (psip->mrp_size >= PFWL_SIP_MAX_MEDIA_HOSTS)
+      break;
   }
 
   return 1;
@@ -706,7 +716,8 @@ int parseVQRtcpXR(const unsigned char *body,
       offset = (c + 2) - body;
       tmp = (body + last_offset);
 
-      if (strlen((const char *)tmp) < 4) continue;
+      if (strlen((const char *) tmp) < 4)
+        continue;
 
       /* CallID: */
       if (required_fields[PFWL_FIELDS_L7_SIP_RTCPXR_CALLID]) {
@@ -784,7 +795,7 @@ uint8_t splitCSeq(pfwl_sip_internal_information_t *sipStruct, const char *s,
 
     pfwl_field_t *cSeqMethodString =
         &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING]);
-    cSeqMethodString->basic.string.value = (const unsigned char *)pch;
+    cSeqMethodString->basic.string.value = (const unsigned char *) pch;
     cSeqMethodString->basic.string.length = (len - mylen);
 
     sipStruct->cSeqMethod = getMethodType(pch++, (len - mylen));
@@ -858,7 +869,7 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
         else
           header_offset = CONTENTLENGTH_LEN;
 
-        psip->contentLength = atoi((const char *)tmp + header_offset + 1);
+        psip->contentLength = atoi((const char *) tmp + header_offset + 1);
         continue;
       }
     }
@@ -906,7 +917,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
 
   sip_info->responseCode = 0;
 
-  tmp = (const char *)app_data;
+  tmp = (const char *) app_data;
 
   if (!memcmp("SIP/2.0 ", tmp, 8)) {
     // Extract Response code's reason
@@ -917,13 +928,13 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       }
     }
     // TODO: Check if reason/responsecode are valid!
-    sip_info->responseCode = atoi((const char *)tmp + 8);
+    sip_info->responseCode = atoi((const char *) tmp + 8);
     sip_info->isRequest = 0;
 
     if (required_fields[PFWL_FIELDS_L7_SIP_REASON]) {
       pfwl_field_t *reasonField =
           &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_REASON]);
-      reasonField->basic.string.value = (const unsigned char *)tmp + 12;
+      reasonField->basic.string.value = (const unsigned char *) tmp + 12;
       reasonField->basic.string.length = reason - (tmp + 13);
     }
   } else {
@@ -977,13 +988,13 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       if ((pch = strchr(tmp + 1, ' ')) != NULL) {
         pfwl_field_t *methodString =
             &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_METHOD]);
-        methodString->basic.string.value = (const unsigned char *)tmp;
+        methodString->basic.string.value = (const unsigned char *) tmp;
         methodString->basic.string.length = (pch - tmp);
 
         if ((ped = strchr(pch + 1, ' ')) != NULL) {
           pfwl_field_t *requestURI =
               &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_REQUEST_URI]);
-          requestURI->basic.string.value = (const unsigned char *)pch + 1;
+          requestURI->basic.string.value = (const unsigned char *) pch + 1;
           requestURI->basic.string.length = (ped - pch - 1);
 
           /* extract user */
@@ -1008,7 +1019,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       last_offset = offset;
       offset = (c + 2) - app_data;
 
-      tmp = ((const char *)app_data + last_offset);
+      tmp = ((const char *) app_data + last_offset);
 
       /* BODY */
       if (contentLength > 0 && (offset - last_offset) == 2) {
@@ -1032,7 +1043,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           pfwl_field_t *callId =
               &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_CALLID]);
           set_hname(callId, (offset - last_offset - CALLID_LEN),
-                    (unsigned char *)tmp + CALLID_LEN);
+                    (unsigned char *) tmp + CALLID_LEN);
         }
         continue;
       }
@@ -1055,8 +1066,8 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
             required_fields[PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING]) {
           pfwl_field_t *cSeq = &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_CSEQ]);
           set_hname(cSeq, (offset - last_offset - CSEQ_LEN),
-                    (unsigned char *)tmp + CSEQ_LEN);
-          splitCSeq(sip_info, (const char *)cSeq->basic.string.value,
+                    (unsigned char *) tmp + CSEQ_LEN);
+          splitCSeq(sip_info, (const char *) cSeq->basic.string.value,
                     cSeq->basic.string.length, extracted_fields_sip);
         }
       }
@@ -1087,7 +1098,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
         if (required_fields[PFWL_FIELDS_L7_SIP_VIA]) {
           pfwl_field_t *via = &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_VIA]);
           set_hname(via, (offset - last_offset - VIA_LEN),
-                    (unsigned char *)tmp + VIA_LEN);
+                    (unsigned char *) tmp + VIA_LEN);
         }
         continue;
       } else if (parseContact && ((*tmp == 'm' && *(tmp + 1) == ':') ||
@@ -1104,7 +1115,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
             header_offset = CONTACT_LEN;
 
           set_hname(contactURI, (offset - last_offset - header_offset),
-                    (unsigned char *)tmp + header_offset);
+                    (unsigned char *) tmp + header_offset);
         }
         continue;
       } else if ((*tmp == 'f' && *(tmp + 1) == ':') ||
@@ -1128,7 +1139,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           else
             header_offset = FROM_LEN;
           set_hname(fromURI, (offset - last_offset - FROM_LEN),
-                    (unsigned char *)tmp + FROM_LEN);
+                    (unsigned char *) tmp + FROM_LEN);
 
           if (!fromURI->basic.string.length == 0 &&
               getTag(fromTag, fromURI->basic.string.value,
@@ -1160,7 +1171,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
             header_offset = TO_LEN;
 
           if (set_hname(toURI, (offset - last_offset - header_offset),
-                        (unsigned char *)tmp + header_offset)) {
+                        (unsigned char *) tmp + header_offset)) {
             if (!toURI->basic.string.length == 0 &&
                 getTag(toTag, toURI->basic.string.value,
                        toURI->basic.string.length)) {
@@ -1188,7 +1199,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                (*(tmp + 13) == 'i' || *(tmp + 13) == 'I') &&
                *(tmp + PPREFERREDIDENTITY_LEN) == ':')) {
             set_hname(pidURI, (offset - last_offset - PPREFERREDIDENTITY_LEN),
-                      (unsigned char *)tmp + PPREFERREDIDENTITY_LEN);
+                      (unsigned char *) tmp + PPREFERREDIDENTITY_LEN);
 
             /* extract user */
             getUser(paiUser, paiDomain, pidURI->basic.string.value,
@@ -1200,7 +1211,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                       (*(tmp + 13) == 'i' || *(tmp + 13) == 'I') &&
                       *(tmp + PASSERTEDIDENTITY_LEN) == ':')) {
             set_hname(pidURI, (offset - last_offset - PASSERTEDIDENTITY_LEN),
-                      (unsigned char *)tmp + PASSERTEDIDENTITY_LEN);
+                      (unsigned char *) tmp + PASSERTEDIDENTITY_LEN);
 
             /* extract user */
             getUser(paiUser, paiDomain, pidURI->basic.string.value,

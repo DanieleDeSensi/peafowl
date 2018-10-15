@@ -30,9 +30,9 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-uint8_t check_imap(pfwl_state_t* state, const unsigned char* app_data,
-                   size_t data_length, pfwl_dissection_info_t* pkt_info,
-                   pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_imap(pfwl_state_t *state, const unsigned char *app_data,
+                   size_t data_length, pfwl_dissection_info_t *pkt_info,
+                   pfwl_flow_info_private_t *flow_info_private) {
   uint16_t i = 0;
   uint16_t space_pos = 0;
   uint16_t command_start = 0;

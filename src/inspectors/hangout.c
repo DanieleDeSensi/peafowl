@@ -45,9 +45,9 @@ static uint8_t is_hangout_tcp_port(uint16_t port) {
     return 0;
 }
 
-uint8_t check_hangout(pfwl_state_t* state, const unsigned char* app_data,
-                      size_t data_length, pfwl_dissection_info_t* pkt_info,
-                      pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_hangout(pfwl_state_t *state, const unsigned char *app_data,
+                      size_t data_length, pfwl_dissection_info_t *pkt_info,
+                      pfwl_flow_info_private_t *flow_info_private) {
   if ((data_length > 24)) {
     if (((pkt_info->l4.protocol == IPPROTO_UDP) &&
          (is_hangout_udp_port(pkt_info->l4.port_src) ||

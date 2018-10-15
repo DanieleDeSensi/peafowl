@@ -46,8 +46,8 @@ extern "C" {
  *                    store the fragments.
  * @return            A pointer to the IPv4 defragmentation handle.
  */
-pfwl_ipv4_fragmentation_state_t* pfwl_reordering_enable_ipv4_fragmentation(
-    uint16_t table_size);
+pfwl_ipv4_fragmentation_state_t *
+pfwl_reordering_enable_ipv4_fragmentation(uint16_t table_size);
 
 /**
  * Sets the maximum amount of memory that can be used to store
@@ -58,7 +58,7 @@ pfwl_ipv4_fragmentation_state_t* pfwl_reordering_enable_ipv4_fragmentation(
  *                               by the same source.
  */
 void pfwl_reordering_ipv4_fragmentation_set_per_host_memory_limit(
-    pfwl_ipv4_fragmentation_state_t* frag_state,
+    pfwl_ipv4_fragmentation_state_t *frag_state,
     uint32_t per_host_memory_limit);
 
 /**
@@ -69,7 +69,7 @@ void pfwl_reordering_ipv4_fragmentation_set_per_host_memory_limit(
  * @param total_memory_limit   The global memory limit.
  */
 void pfwl_reordering_ipv4_fragmentation_set_total_memory_limit(
-    pfwl_ipv4_fragmentation_state_t* frag_state, uint32_t total_memory_limit);
+    pfwl_ipv4_fragmentation_state_t *frag_state, uint32_t total_memory_limit);
 
 /**
  * Sets the maximum amount of time (seconds) which can elapse before
@@ -78,14 +78,14 @@ void pfwl_reordering_ipv4_fragmentation_set_total_memory_limit(
  * @param timeout_seconds   The timeout (seconds).
  */
 void pfwl_reordering_ipv4_fragmentation_set_reassembly_timeout(
-    pfwl_ipv4_fragmentation_state_t* frag_state, uint8_t timeout_seconds);
+    pfwl_ipv4_fragmentation_state_t *frag_state, uint8_t timeout_seconds);
 
 /**
  * Disables the IPv4 fragmentation and deallocates the handle.
  * @param frag_state  A pointer to the IPv4 defragmentation handle.
  */
 void pfwl_reordering_disable_ipv4_fragmentation(
-    pfwl_ipv4_fragmentation_state_t* frag_state);
+    pfwl_ipv4_fragmentation_state_t *frag_state);
 
 /**
  * Reassemble the IP datagram if it is fragmented. It is thread safe
@@ -106,8 +106,8 @@ void pfwl_reordering_disable_ipv4_fragmentation(
  *         different from data. The user should free() this pointer when
  *         it is no more needed.
  */
-unsigned char* pfwl_reordering_manage_ipv4_fragment(
-    pfwl_ipv4_fragmentation_state_t* state, const unsigned char* data,
+unsigned char *pfwl_reordering_manage_ipv4_fragment(
+    pfwl_ipv4_fragmentation_state_t *state, const unsigned char *data,
     uint32_t current_time, uint16_t offset, uint8_t more_fragments, int tid);
 
 #ifdef __cplusplus

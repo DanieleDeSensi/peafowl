@@ -27,9 +27,9 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-uint8_t check_bgp(pfwl_state_t* state, const unsigned char* app_data,
-                  size_t data_length, pfwl_dissection_info_t* pkt_info,
-                  pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_bgp(pfwl_state_t *state, const unsigned char *app_data,
+                  size_t data_length, pfwl_dissection_info_t *pkt_info,
+                  pfwl_flow_info_private_t *flow_info_private) {
   if (data_length > 18) {
     if (get_u64(app_data, 0) == 0xffffffffffffffffULL &&
         get_u64(app_data, 8) == 0xffffffffffffffffULL &&

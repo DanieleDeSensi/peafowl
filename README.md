@@ -105,6 +105,18 @@ The supported protocols are:
   <tr>
     <td>SSH</td><td>5/5</td>
   </tr>
+  <tr>
+    <td>Bitcoin</td><td>4/5</td>
+  </tr>
+    <tr>
+    <td>Ethereum</td><td>5/5</td>
+  </tr>
+  <tr>
+    <td>Zcash</td><td>5/5</td>
+  </tr>
+    <tr>
+    <td>Monero</td><td>5/5</td>
+  </tr>
 </table>
 
 At the moment, data and metadata extraction is supported for the following protocols (for a full list of fields please refer to the [Peafowl](include/peafowl/peafowl.h) header:
@@ -377,8 +389,8 @@ the protocol identifier (```src/parsing_l7.c```).
 ATTENTION: The ports must be specified in Network Byte Order! Check ```include/peafowl/inspectors/protocols_identifiers.h``` for some example.
 
 ```C
-static const pfwl_l7_prot_id const
-  pfwl_well_known_ports_association_tcp[PFWL_MAX_UINT_16+1] =
+static const pfwl_protocol_l7 const
+  pfwl_known_ports_tcp[PFWL_MAX_UINT_16+1] =
     {[0 ... PFWL_MAX_UINT_16] = PFWL_PROTOCOL_UNKNOWN
     ,[port_http] = PFWL_PROTOCOL_HTTP
     ,[port_bgp] = PFWL_PROTOCOL_BGP
@@ -388,7 +400,7 @@ static const pfwl_l7_prot_id const
     ,[port_telnet] = PFWL_PROTOCOL_TELNET};
 ```
 
-In this way, when the framework receives a protocol on the telnet port, it will first check if the carried protocol is Telnet and, if this is not the case, it will check the other protocols. In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to ```pfwl_well_known_ports_association_udp``` array.
+In this way, when the framework receives a protocol on the telnet port, it will first check if the carried protocol is Telnet and, if this is not the case, it will check the other protocols. In a similar way, if the protocol runs over UDP instead of TCP, you have to add it to ```pfwl_known_ports_udp``` array.
 
 5) Add unit tests for the protocol. Suppose you are adding the support for the ```TELNET``` protocol. 
 First, you need to add a ```testTelnet.cpp``` file under ```./test/```. This file will be automatically compiled and

@@ -50,7 +50,7 @@ enum pfwl_tcp_reordering_statuses {
 };
 
 typedef struct pfwl_tcp_reordering_reordered_segment {
-  unsigned char* data;
+  unsigned char *data;
   uint32_t data_length;
   uint8_t status : 2;
   uint8_t connection_terminated : 1;
@@ -60,7 +60,7 @@ typedef struct pfwl_tcp_reordering_reordered_segment {
  * Deletes all the pendent fragments belonging to a certain flow.
  * @param victim
  */
-void pfwl_reordering_tcp_delete_all_fragments(pfwl_flow_info_private_t* victim);
+void pfwl_reordering_tcp_delete_all_fragments(pfwl_flow_info_private_t *victim);
 
 /**
  * Tracks the TCP connection.
@@ -88,9 +88,10 @@ void pfwl_reordering_tcp_delete_all_fragments(pfwl_flow_info_private_t* victim);
  *         'data_length' field contains the length of the new (longer)
  *         segment.
  */
-pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
-    pfwl_dissection_info_t* dissection_info, pfwl_flow_info_private_t* tracking,
-    const unsigned char* pkt);
+pfwl_tcp_reordering_reordered_segment_t
+pfwl_reordering_tcp_track_connection(pfwl_dissection_info_t *dissection_info,
+                                     pfwl_flow_info_private_t *tracking,
+                                     const unsigned char *pkt);
 
 /**
  * Only checks if the connection terminates.
@@ -101,8 +102,8 @@ pfwl_tcp_reordering_reordered_segment_t pfwl_reordering_tcp_track_connection(
  * @return 1 if the connection is terminated, 0 otherwise.
  */
 uint8_t pfwl_reordering_tcp_track_connection_light(
-    const unsigned char* pkt, pfwl_dissection_info_t* dissection_info,
-    pfwl_flow_info_private_t* tracking);
+    const unsigned char *pkt, pfwl_dissection_info_t *dissection_info,
+    pfwl_flow_info_private_t *tracking);
 
 #ifdef __cplusplus
 }

@@ -36,9 +36,10 @@
 
 #define PFWL_DEBUG_HTTP 0
 
-#define debug_print(fmt, ...)                               \
-  do {                                                      \
-    if (PFWL_DEBUG_HTTP) fprintf(stdout, fmt, __VA_ARGS__); \
+#define debug_print(fmt, ...)                                                  \
+  do {                                                                         \
+    if (PFWL_DEBUG_HTTP)                                                       \
+      fprintf(stdout, fmt, __VA_ARGS__);                                       \
   } while (0)
 
 /**
@@ -51,9 +52,9 @@
 static
 #endif
     uint8_t
-    pfwl_http_manage_pdu_reassembly(http_parser* parser, const char* at,
+    pfwl_http_manage_pdu_reassembly(http_parser *parser, const char *at,
                                     size_t length,
-                                    pfwl_http_internal_informations_t* infos) {
+                                    pfwl_http_internal_informations_t *infos) {
   if (infos->temp_buffer_dirty) {
     free(infos->temp_buffer);
     infos->temp_buffer = NULL;
@@ -67,12 +68,12 @@ static
    * return and I wait for other data.
    */
   if (infos->temp_buffer) {
-    char* tmp = realloc(infos->temp_buffer, infos->temp_buffer_size + length);
+    char *tmp = realloc(infos->temp_buffer, infos->temp_buffer_size + length);
     if (!tmp) {
       free(infos->temp_buffer);
       return 2;
     }
-    infos->temp_buffer = (unsigned char*)tmp;
+    infos->temp_buffer = (unsigned char *) tmp;
     memcpy(infos->temp_buffer + infos->temp_buffer_size, at, length);
     infos->temp_buffer_size += length;
   }
@@ -81,7 +82,8 @@ static
     if (infos->temp_buffer == NULL) {
       infos->temp_buffer = malloc(length * sizeof(char));
 
-      if (!infos->temp_buffer) return 2;
+      if (!infos->temp_buffer)
+        return 2;
       memcpy(infos->temp_buffer, at, length);
       infos->temp_buffer_size = length;
     }
@@ -94,10 +96,10 @@ static
 static
 #endif
     int
-    on_url(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos =
-      (pfwl_http_internal_informations_t*)parser->data;
-  const unsigned char* real_data = (const unsigned char*)at;
+    on_url(http_parser *parser, const char *at, size_t length) {
+  pfwl_http_internal_informations_t *infos =
+      (pfwl_http_internal_informations_t *) parser->data;
+  const unsigned char *real_data = (const unsigned char *) at;
   size_t real_length = length;
   uint8_t segmentation_result =
       pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
@@ -120,10 +122,10 @@ static
 static
 #endif
     int
-    on_field(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos =
-      (pfwl_http_internal_informations_t*)parser->data;
-  const unsigned char* real_data = (const unsigned char*)at;
+    on_field(http_parser *parser, const char *at, size_t length) {
+  pfwl_http_internal_informations_t *infos =
+      (pfwl_http_internal_informations_t *) parser->data;
+  const unsigned char *real_data = (const unsigned char *) at;
   size_t real_length = length;
   uint8_t segmentation_result =
       pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
@@ -150,10 +152,10 @@ static
 static
 #endif
     int
-    on_value(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos =
-      (pfwl_http_internal_informations_t*)parser->data;
-  const unsigned char* real_data = (const unsigned char*)at;
+    on_value(http_parser *parser, const char *at, size_t length) {
+  pfwl_http_internal_informations_t *infos =
+      (pfwl_http_internal_informations_t *) parser->data;
+  const unsigned char *real_data = (const unsigned char *) at;
   size_t real_length = length;
   uint8_t segmentation_result =
       pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
@@ -177,10 +179,10 @@ static
 static
 #endif
     int
-    on_body(http_parser* parser, const char* at, size_t length) {
-  pfwl_http_internal_informations_t* infos =
-      (pfwl_http_internal_informations_t*)parser->data;
-  const unsigned char* real_data = (const unsigned char*)at;
+    on_body(http_parser *parser, const char *at, size_t length) {
+  pfwl_http_internal_informations_t *infos =
+      (pfwl_http_internal_informations_t *) parser->data;
+  const unsigned char *real_data = (const unsigned char *) at;
   size_t real_length = length;
   uint8_t segmentation_result =
       pfwl_http_manage_pdu_reassembly(parser, at, length, infos);
@@ -204,15 +206,15 @@ static
  * derived from host address so the user can include this identification
  * in its callback.
  */
-uint8_t check_http(pfwl_state_t* state, const unsigned char* app_data,
-                   size_t data_length, pfwl_dissection_info_t* pkt_info,
-                   pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
+                   size_t data_length, pfwl_dissection_info_t *pkt_info,
+                   pfwl_flow_info_private_t *flow_info_private) {
   debug_print("%s\n", "-------------------------------------------");
   debug_print("%s\n", "[http.c] Executing HTTP inspector...");
 
-  uint8_t* required_fields = state->fields_to_extract;
+  uint8_t *required_fields = state->fields_to_extract;
 
-  http_parser* parser = &(flow_info_private->http[pkt_info->l4.direction]);
+  http_parser *parser = &(flow_info_private->http[pkt_info->l4.direction]);
 
   /**
    * We assume that pfwl_tracking_informations_t is initialized to zero, so if
@@ -257,7 +259,7 @@ uint8_t check_http(pfwl_state_t* state, const unsigned char* app_data,
   memset(flow_info_private->http_informations->headers, 0,
          sizeof(flow_info_private->http_informations->headers));
 
-  http_parser_execute(parser, &x, (const char*)app_data, data_length);
+  http_parser_execute(parser, &x, (const char *) app_data, data_length);
 
   if (parser->http_errno == HPE_OK) {
     debug_print("%s\n", "[http.c] HTTP matches");

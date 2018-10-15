@@ -73,7 +73,7 @@
 #endif
 #endif
 
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
     defined(__cplusplus)
 #define PFWL_USE_INLINING 1
 #else
@@ -107,18 +107,20 @@
 #endif
 
 #define PFWL_IPv4_FRAGMENTATION_DEFAULT_TABLE_SIZE 512
-#define PFWL_IPv4_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT 102400 /* 100K \
-                                                                      */
-#define PFWL_IPv4_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                   \
-  10240000 /* 10M. If each host fills its memory limit, we can support up to \
+#define PFWL_IPv4_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT                  \
+  102400 /* 100K                                                               \
+          */
+#define PFWL_IPv4_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                     \
+  10240000 /* 10M. If each host fills its memory limit, we can support up to   \
               1000 hosts. */
 #define PFWL_IPv4_FRAGMENTATION_DEFAULT_REASSEMBLY_TIMEOUT 30
 
 #define PFWL_IPv6_FRAGMENTATION_DEFAULT_TABLE_SIZE 512
-#define PFWL_IPv6_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT 102400 /* 100K \
-                                                                      */
-#define PFWL_IPv6_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                   \
-  10240000 /* 10M. If each host fills its memory limit, we can support up to \
+#define PFWL_IPv6_FRAGMENTATION_DEFAULT_PER_HOST_MEMORY_LIMIT                  \
+  102400 /* 100K                                                               \
+          */
+#define PFWL_IPv6_FRAGMENTATION_DEFAULT_TOTAL_MEMORY_LIMIT                     \
+  10240000 /* 10M. If each host fills its memory limit, we can support up to   \
               1000 hosts. */
 #define PFWL_IPv6_FRAGMENTATION_DEFAULT_REASSEMBLY_TIMEOUT 60
 
@@ -138,7 +140,7 @@ enum hashes {
 #define PFWL_THREAD_SAFETY_ENABLED 0
 #endif
 
-#define __STDC_FORMAT_MACROS  // To enable inttypes.h macros also for g++
+#define __STDC_FORMAT_MACROS // To enable inttypes.h macros also for g++
 
 /******************************************************************/
 /* Configuration macros for multicore version.                    */
@@ -150,7 +152,7 @@ enum hashes {
 #define PFWL_NUMA_AWARE_PACKETS_NODE 0
 #endif
 
-#define PFWL_MULTICORE_DEFAULT_GRAIN_SIZE 1  // 256
+#define PFWL_MULTICORE_DEFAULT_GRAIN_SIZE 1 // 256
 
 #ifndef PFWL_MULTICORE_USE_TASKS_POOL
 #define PFWL_MULTICORE_USE_TASKS_POOL 1
@@ -178,32 +180,32 @@ enum hashes {
 #endif
 
 #ifndef PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE
-#define PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE \
+#define PFWL_MULTICORE_L3_L4_FARM_INPUT_BUFFER_SIZE                            \
   PFWL_MULTICORE_DEFAULT_BUFFER_SIZE
 #endif
 
 #ifndef PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE
-#define PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE \
+#define PFWL_MULTICORE_L3_L4_FARM_OUTPUT_BUFFER_SIZE                           \
   PFWL_MULTICORE_DEFAULT_BUFFER_SIZE
 #endif
 
 #ifndef PFWL_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE
-#define PFWL_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE \
+#define PFWL_MULTICORE_L7_FARM_INPUT_BUFFER_SIZE                               \
   PFWL_MULTICORE_DEFAULT_BUFFER_SIZE
 #endif
 
 #ifndef PFWL_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE
-#define PFWL_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE \
+#define PFWL_MULTICORE_L7_FARM_OUTPUT_BUFFER_SIZE                              \
   PFWL_MULTICORE_DEFAULT_BUFFER_SIZE
 #endif
 
 #ifndef PFWL_MULTICORE_PIPELINE_INPUT_BUFFER_SIZE
-#define PFWL_MULTICORE_PIPELINE_INPUT_BUFFER_SIZE \
+#define PFWL_MULTICORE_PIPELINE_INPUT_BUFFER_SIZE                              \
   PFWL_MULTICORE_DEFAULT_BUFFER_SIZE
 #endif
 
 #ifndef PFWL_MULTICORE_PIPELINE_OUTPUT_BUFFER_SIZE
-#define PFWL_MULTICORE_PIPELINE_OUTPUT_BUFFER_SIZE \
+#define PFWL_MULTICORE_PIPELINE_OUTPUT_BUFFER_SIZE                             \
   PFWL_MULTICORE_DEFAULT_BUFFER_SIZE
 #endif
 

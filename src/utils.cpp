@@ -25,12 +25,31 @@
  * =========================================================================
  */
 #include <peafowl/utils.h>
+#include <string.h>
 #include <sys/types.h>
 
 uint8_t pfwl_v6_addresses_equal(struct in6_addr x, struct in6_addr y) {
   uint8_t i;
   for (i = 0; i < 16; i++) {
-    if (x.s6_addr[i] != y.s6_addr[i]) return 0;
+    if (x.s6_addr[i] != y.s6_addr[i])
+      return 0;
   }
   return 1;
+}
+
+char *pfwl_strnstr(const char *haystack, const char *needle, size_t len) {
+  int i;
+  size_t needle_len;
+
+  if (0 == (needle_len = strnlen(needle, len)))
+    return (char *) haystack;
+
+  for (i = 0; i <= (int) (len - needle_len); i++) {
+    if ((haystack[0] == needle[0]) &&
+        (0 == strncmp(haystack, needle, needle_len)))
+      return (char *) haystack;
+
+    haystack++;
+  }
+  return NULL;
 }
