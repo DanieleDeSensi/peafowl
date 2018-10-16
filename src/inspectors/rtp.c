@@ -156,7 +156,25 @@ uint8_t check_rtp(pfwl_state_t* state, const unsigned char* app_data, size_t dat
                     pType = is_valid_payload_type(rtp->pType); // check Payload Type
                     if(pType != -1) {
                         if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
-                            // TODO extract fields
+                            pfwl_field_t* extracted_fields = pkt_info->l7.protocol_fields;
+
+                            if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTP_PTYPE)){
+                                pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTP_PTYPE,
+                                                      (int64_t) pType);
+                            }
+                            if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTP_SEQNUM)){
+                                pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTP_SEQNUM,
+                                                      (int64_t) ntohs(rtp->seq_num));
+                            }
+                            if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTP_TIMESTP)){
+                                pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTP_TIMESTP,
+                                                      (int64_t) ntohl(rtp->timestamp));
+                            }
+                            if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTP_SSRC)){
+                                pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTP_SSRC,
+                                                      (int64_t) ntohl(rtp->SSRC));
+                            }
+                            return PFWL_PROTOCOL_MATCHES;
                         }
                         else return PFWL_PROTOCOL_MATCHES;
                     }
