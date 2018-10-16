@@ -30,9 +30,9 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-uint8_t check_spotify(pfwl_state_t* state, const unsigned char* app_data,
-                      size_t data_length, pfwl_dissection_info_t* pkt_info,
-                      pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_spotify(pfwl_state_t *state, const unsigned char *app_data,
+                      size_t data_length, pfwl_dissection_info_t *pkt_info,
+                      pfwl_flow_info_private_t *flow_info_private) {
   if (pkt_info->l4.protocol == IPPROTO_UDP) {
     if (pkt_info->l4.port_src == port_spotify &&
         pkt_info->l4.port_dst == port_spotify && data_length >= 7) {
@@ -63,11 +63,11 @@ uint8_t check_spotify(pfwl_state_t* state, const unsigned char* app_data,
       */
       long src_addr = ntohl(pkt_info->l3.addr_src.ipv4);
       long dst_addr = ntohl(pkt_info->l3.addr_dst.ipv4);
-      long src_addr_masked_22 = src_addr & 0xFFFFFC00;  // */22
-      long dst_addr_masked_22 = dst_addr & 0xFFFFFC00;  // */22
-      long src_addr_masked_24 = src_addr & 0xFFFFFF00;  // */24
-      long dst_addr_masked_24 = dst_addr & 0xFFFFFF00;  // */24
-      if (src_addr_masked_22 == 0x4E1F0800 ||           /* 78.31.8.0/22 */
+      long src_addr_masked_22 = src_addr & 0xFFFFFC00; // */22
+      long dst_addr_masked_22 = dst_addr & 0xFFFFFC00; // */22
+      long src_addr_masked_24 = src_addr & 0xFFFFFF00; // */24
+      long dst_addr_masked_24 = dst_addr & 0xFFFFFF00; // */24
+      if (src_addr_masked_22 == 0x4E1F0800 ||          /* 78.31.8.0/22 */
           dst_addr_masked_22 == 0x4E1F0800 ||
           /* 193.235.232.0/22 */
           src_addr_masked_22 == 0xC1EBE800 ||

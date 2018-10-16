@@ -3,6 +3,7 @@
  *
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2018-2019 Michele Campus (michelecampus5@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,12 +48,12 @@ typedef enum {
 } dns_aType;
 
 typedef enum {
-  NO_ERR = 0,  // No Error
-  FMT_ERR,     // Format Error on query
-  SRV_FAIL,    // Server Failure (unable to process query)
-  NAME_ERR,    // Name Error (meaningful for auth serv answer)
-  NOT_IMPL,    // Not Implemented
-  REFUSED,     // Refused Operation from name server
+  NO_ERR = 0, // No Error
+  FMT_ERR,    // Format Error on query
+  SRV_FAIL,   // Server Failure (unable to process query)
+  NAME_ERR,   // Name Error (meaningful for auth serv answer)
+  NOT_IMPL,   // Not Implemented
+  REFUSED,    // Refused Operation from name server
 } dns_rCode;
 
 struct dns_header {
@@ -78,15 +79,15 @@ static inline uint8_t getBits(uint16_t x, uint p, uint n) {
    #param const unsigned char*
    @return the length of the pointer name server
 **/
-uint16_t get_NS_len(const unsigned char* p) {
-  const unsigned char* q = p;
+uint16_t get_NS_len(const unsigned char *p) {
+  const unsigned char *q = p;
   /**
      Note:
      In some cases we need a trick to determine the name server and its length
      i.e. .a.ns.joker == [01] 61 [02] 6e 73 [05] 6a 6f 6b 65 72
    **/
   do {
-    q += (*q + 1);  // move the pointer of *q value +1
+    q += (*q + 1); // move the pointer of *q value +1
   } while ((*q != 0xc0) && (*q != 0x00));
 
   return (uint16_t)(q - p);
@@ -97,7 +98,7 @@ uint16_t get_NS_len(const unsigned char* p) {
    #param struct dns_header*
    @return 0 if is query -1 else
 **/
-static uint8_t isQuery(struct dns_header* dns_header) {
+static uint8_t isQuery(struct dns_header *dns_header) {
   /* QDCOUNT >= 1 && ANCOUNT = 0 && NSCOUNT = 0 && ARCOUNT = 0 */
   if (dns_header->quest_count >= 1 && dns_header->answ_count == 0 &&
       dns_header->auth_rrs == 0)
@@ -114,33 +115,33 @@ static uint8_t isQuery(struct dns_header* dns_header) {
    #param pfwl_dns_internal_information_t*
    @return 0 if is response -1 else
  **/
-static uint8_t isResponse(struct dns_header* dns_header,
-                          uint8_t* is_name_server, uint8_t* is_auth_server,
-                          pfwl_dns_internal_information_t* dns_info)
+static uint8_t isResponse(struct dns_header *dns_header,
+                          uint8_t *is_name_server, uint8_t *is_auth_server,
+                          pfwl_dns_internal_information_t *dns_info)
 
 {
   uint8_t rcode, ret = -1;
   /* Check the RCODE value */
   rcode = getBits(dns_header->flags, 3, 4);
   switch (rcode) {
-    case 0:
-      dns_info->rCode = NO_ERR;
-      break;
-    case 1:
-      dns_info->rCode = FMT_ERR;
-      break;
-    case 2:
-      dns_info->rCode = SRV_FAIL;
-      break;
-    case 3:
-      dns_info->rCode = NAME_ERR;
-      break;
-    case 4:
-      dns_info->rCode = NOT_IMPL;
-      break;
-    case 5:
-      dns_info->rCode = REFUSED;
-      break;
+  case 0:
+    dns_info->rCode = NO_ERR;
+    break;
+  case 1:
+    dns_info->rCode = FMT_ERR;
+    break;
+  case 2:
+    dns_info->rCode = SRV_FAIL;
+    break;
+  case 3:
+    dns_info->rCode = NAME_ERR;
+    break;
+  case 4:
+    dns_info->rCode = NOT_IMPL;
+    break;
+  case 5:
+    dns_info->rCode = REFUSED;
+    break;
   }
   /** QDCOUNT = 1 **/
   if (dns_header->quest_count == 1) {
@@ -170,14 +171,16 @@ static uint8_t isResponse(struct dns_header* dns_header,
   return ret;
 }
 
-uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
-                  size_t data_length, pfwl_dissection_info_t* pkt_info,
-                  pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
+                  size_t data_length, pfwl_dissection_info_t *pkt_info,
+                  pfwl_flow_info_private_t *flow_info_private) {
   pfwl_dissector_accuracy_t accuracy =
       state->inspectors_accuracy[PFWL_PROTO_L7_DNS];
   // check param
-  if (!app_data) return PFWL_PROTOCOL_NO_MATCHES;
-  if (!data_length) return PFWL_PROTOCOL_MORE_DATA_NEEDED;
+  if (!app_data)
+    return PFWL_PROTOCOL_NO_MATCHES;
+  if (!data_length)
+    return PFWL_PROTOCOL_MORE_DATA_NEEDED;
 
   /* DNS port (53) */
   if ((pkt_info->l4.port_dst == port_dns ||
@@ -185,13 +188,13 @@ uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
       data_length >= 12) {
     uint8_t is_valid = -1;
     uint8_t is_name_server = 0, is_auth_server = 0;
-    struct dns_header* dns_header = (struct dns_header*)(app_data);
-    pfwl_dns_internal_information_t* dns_info =
+    struct dns_header *dns_header = (struct dns_header *) (app_data);
+    pfwl_dns_internal_information_t *dns_info =
         &flow_info_private->dns_informations;
-    pfwl_field_t* extracted_fields = pkt_info->l7.protocol_fields;
+    pfwl_field_t *extracted_fields = pkt_info->l7.protocol_fields;
 
     // pointer to beginning of queries section
-    const unsigned char* pq = app_data + sizeof(struct dns_header);
+    const unsigned char *pq = app_data + sizeof(struct dns_header);
 
     // init
     memset(&(flow_info_private->dns_informations), 0,
@@ -212,17 +215,18 @@ uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
       // check isQuery
       (isQuery(dns_header) != 0) ? (is_valid = 0) : (is_valid = 1);
       // set QTYPE
-      if (is_valid) dns_info->Type = QUERY;
+      if (is_valid)
+        dns_info->Type = QUERY;
 
       /** check accuracy type for fields parsing **/
       if (accuracy == PFWL_DISSECTOR_ACCURACY_HIGH && is_valid) {
         // check name server field
-        if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NAME_SRV)) {
+          if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NAME_SRV)) {
             const unsigned char* temp = (const unsigned char*)(pq + 1);
             const char* r = strchr((const char*)pq + 1, '\0');
             pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_DNS_NAME_SRV,
                                   temp, (const unsigned char*)r - temp);
-        }
+          }
       }
     }
     /**
@@ -230,19 +234,21 @@ uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
     **/
     if ((dns_header->flags & FMASK) == 0x8000) {
       // check isAnswer
-      (isResponse(dns_header, &is_name_server, &is_auth_server, dns_info) != 0)
-          ? (is_valid = 0)
-          : (is_valid = 1);
+      (isResponse(dns_header, &is_name_server, &is_auth_server, dns_info) !=
+       0) ?
+          (is_valid = 0) :
+          (is_valid = 1);
       // set QTYPE
-      if (is_valid) dns_info->Type = ANSWER;
+      if (is_valid)
+        dns_info->Type = ANSWER;
 
       /** check accuracy type for fields parsing **/
       if (accuracy == PFWL_DISSECTOR_ACCURACY_HIGH && is_valid) {
         // sfhift of Query section
-        const unsigned char* temp = (const unsigned char*)(pq);
-        char* r = strchr((const char*)pq, '\0');
-        pq += ((const unsigned char*)r - temp + 1) +
-              4;  // end of Name + Type(2) + Class(2)
+        const unsigned char *temp = (const unsigned char *) (pq);
+        char *r = strchr((const char *) pq, '\0');
+        pq += ((const unsigned char *) r - temp + 1) +
+              4; // end of Name + Type(2) + Class(2)
 
         // check name server IP
         if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NS_IP_1) && is_name_server) {
@@ -256,15 +262,15 @@ uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
           do {
             // Answer section
             if (*pq == 0xc0)
-              pq += 2;  // Name is just a pointer of Name in query section
+              pq += 2; // Name is just a pointer of Name in query section
 
             // Answer Type
             uint16_t type = pq[1] + (pq[0] << 8);
             dns_info->aType = type;
 
-            pq += 8;  // TYPE(2) + CLASS(2) + TTL(4)
+            pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
             uint16_t data_len = pq[1] + (pq[0] << 8);
-            pq += 2;  // shift data length(2)
+            pq += 2; // shift data length(2)
 
             // update s and len for the field
             if (dns_info->aType != CNAME) {
@@ -288,24 +294,24 @@ uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
           /** Answer field(s) present: skip all these sections **/
           if (is_name_server) {
             while (dns_header->answ_count) {
-              pq += 10;  // NPTR(2) + TYPE(2) + CLASS(2) + TTL(4)
+              pq += 10; // NPTR(2) + TYPE(2) + CLASS(2) + TTL(4)
               uint16_t data_len = pq[1] + (pq[0] << 8);
-              pq += 2;  // Data LEN(2)
+              pq += 2; // Data LEN(2)
               pq += data_len;
               --dns_header->answ_count;
             }
           }
           /* PARSE AUTHORITY FIELDS */
           if (*pq == 0xc0)
-            pq += 2;  // Name is just a pointer of Name in query section
+            pq += 2; // Name is just a pointer of Name in query section
 
           // Auth Type
           uint16_t type = pq[1] + (pq[0] << 8);
           dns_info->authType = type;
 
-          pq += 8;  // TYPE(2) + CLASS(2) + TTL(4)
+          pq += 8; // TYPE(2) + CLASS(2) + TTL(4)
           uint16_t data_len = pq[1] + (pq[0] << 8);
-          pq += 2;  // Data LEN(2)
+          pq += 2; // Data LEN(2)
 
           if (type == SOA) {
             pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_DNS_AUTH_SRV,
@@ -317,7 +323,8 @@ uint8_t check_dns(pfwl_state_t* state, const unsigned char* app_data,
         }
       }
     }
-    if (!is_valid) return PFWL_PROTOCOL_NO_MATCHES;
+    if (!is_valid)
+      return PFWL_PROTOCOL_NO_MATCHES;
     return PFWL_PROTOCOL_MATCHES;
   }
   return PFWL_PROTOCOL_NO_MATCHES;

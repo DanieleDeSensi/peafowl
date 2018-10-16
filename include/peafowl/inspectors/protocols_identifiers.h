@@ -83,6 +83,7 @@ enum protocol_check_statuses {
 #define port_hangout_19309 0x4B6D /** 19309 **/
 #define port_dropbox 0x5C44       /** 17500 **/
 #define port_spotify 0x15E1       /** 57621 **/
+#define port_bitcoin 0x8D20       /** 8333 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define port_ssh 0x0016           /* 22 **/
 #define port_smtp_1 0x0019        /** 25 **/
@@ -113,6 +114,7 @@ enum protocol_check_statuses {
 #define port_hangout_19309 0x4B6D /** 19309 **/
 #define port_dropbox 0x445C       /** 17500 **/
 #define port_spotify 0xE115       /** 57621 **/
+#define port_bitcoin 0x208D       /** 8333 **/
 #else
 #error "Please fix <bits/endian.h>"
 #endif

@@ -10,7 +10,18 @@ file(GLOB SOURCE_FILES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.c
 add_custom_target(
         clangformat
         COMMAND ${CLANG_FORMAT_EXECUTABLE}
-        -style=google
+        -style='{
+                 AllowShortFunctionsOnASingleLine : None,
+                 AllowShortIfStatementsOnASingleLine : false,
+                 AllowShortLoopsOnASingleLine : false,
+                 AlignOperands : true,
+                 AllowShortCaseLabelsOnASingleLine : false,
+                 AllowShortBlocksOnASingleLine : false,
+                 BreakBeforeBinaryOperators : None,
+                 BreakBeforeTernaryOperators : false,
+                 SpaceAfterCStyleCast : true,
+                 AlignAfterOpenBracket : true,
+                 UseTab : Never}'
         -i
         ${SOURCE_FILES}
 )

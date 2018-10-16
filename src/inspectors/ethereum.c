@@ -1,9 +1,9 @@
 /*
- * whatsapp.c
+ * ethereum.c
  *
  * This protocol inspector is adapted from
- * the nDPI WhatsApp dissector
- * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/whatsapp.c)
+ * the nDPI Mining dissector
+ * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/mining.c)
  *
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
@@ -29,27 +29,31 @@
  */
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
+#include <peafowl/utils.h>
 
-static uint8_t whatsapp_sequence[] = {0x45, 0x44, 0x0,  0x01, 0x0,
-                                      0x0,  0x02, 0x08, 0x0,  0x57,
-                                      0x41, 0x02, 0x0,  0x0,  0x0};
+#include <string.h>
 
-uint8_t check_whatsapp(pfwl_state_t *state, const unsigned char *app_data,
+static int has_eth_method(const unsigned char *app_data, size_t data_length) {
+  data_length =
+      PFWL_MIN(3 + 6, data_length); // 6 because of '\"web3_, 3 because of ' : '
+  return pfwl_strnstr((const char *) app_data + 8, "\"shh_",
+                      data_length) || // 8 because of "method"
+         pfwl_strnstr((const char *) app_data + 8, "\"db_", data_length) ||
+         pfwl_strnstr((const char *) app_data + 8, "\"eth_", data_length) ||
+         pfwl_strnstr((const char *) app_data + 8, "\"net_", data_length) ||
+         pfwl_strnstr((const char *) app_data + 8, "\"web3_", data_length);
+}
+
+uint8_t check_ethereum(pfwl_state_t *state, const unsigned char *app_data,
                        size_t data_length, pfwl_dissection_info_t *pkt_info,
                        pfwl_flow_info_private_t *flow_info_private) {
-  if (flow_info_private->whatsapp_matched_sequence <
-      sizeof(whatsapp_sequence)) {
-    if (memcmp(app_data,
-               &whatsapp_sequence[flow_info_private->whatsapp_matched_sequence],
-               PFWL_MIN(sizeof(whatsapp_sequence) -
-                            flow_info_private->whatsapp_matched_sequence,
-                        data_length))) {
-      return PFWL_PROTOCOL_NO_MATCHES;
-    } else {
-      flow_info_private->whatsapp_matched_sequence += data_length;
-      return PFWL_PROTOCOL_MORE_DATA_NEEDED;
-    }
-  } else {
+  unsigned char *method_start;
+  if ((pfwl_strnstr((const char *) app_data, "\"worker\"", data_length) &&
+       pfwl_strnstr((const char *) app_data, "\"eth1.0\"", data_length)) ||
+      ((method_start = (unsigned char *) pfwl_strnstr(
+            (const char *) app_data, "\"method\"", data_length)) &&
+       has_eth_method(method_start, data_length - (method_start - app_data)))) {
     return PFWL_PROTOCOL_MATCHES;
   }
+  return PFWL_PROTOCOL_NO_MATCHES;
 }

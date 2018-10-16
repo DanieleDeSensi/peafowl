@@ -37,35 +37,37 @@
 #include <string.h>
 
 #define PFWL_DEBUG_SSL 0
-#define debug_print(fmt, ...)                              \
-  do {                                                     \
-    if (PFWL_DEBUG_SSL) fprintf(stdout, fmt, __VA_ARGS__); \
+#define debug_print(fmt, ...)                                                  \
+  do {                                                                         \
+    if (PFWL_DEBUG_SSL)                                                        \
+      fprintf(stdout, fmt, __VA_ARGS__);                                       \
   } while (0)
 
-#define npfwl_isalpha(ch) \
+#define npfwl_isalpha(ch)                                                      \
   (((ch) >= 'a' && (ch) <= 'z') || ((ch) >= 'A' && (ch) <= 'Z'))
 #define npfwl_isdigit(ch) ((ch) >= '0' && (ch) <= '9')
 #define npfwl_isspace(ch) (((ch) >= '\t' && (ch) <= '\r') || ((ch) == ' '))
 #define npfwl_isprint(ch) ((ch) >= 0x20 && (ch) <= 0x7e)
-#define npfwl_ispunct(ch)                                          \
-  (((ch) >= '!' && (ch) <= '/') || ((ch) >= ':' && (ch) <= '@') || \
+#define npfwl_ispunct(ch)                                                      \
+  (((ch) >= '!' && (ch) <= '/') || ((ch) >= ':' && (ch) <= '@') ||             \
    ((ch) >= '[' && (ch) <= '`') || ((ch) >= '{' && (ch) <= '~'))
 
-static int getSSLcertificate(uint8_t* payload, u_int payload_len,
-                             pfwl_dissection_info_t* t,
+static int getSSLcertificate(uint8_t *payload, u_int payload_len,
+                             pfwl_dissection_info_t *t,
                              pfwl_dissector_accuracy_t accuracy,
-                             uint8_t* required_fields) {
+                             uint8_t *required_fields) {
   if (payload[0] == 0x16 /* Handshake */) {
     uint16_t total_len = (payload[3] << 8) + payload[4] + 5 /* SSL Header */;
     uint8_t handshake_protocol = payload[5]; /* handshake protocol a bit
                                                 misleading, it is message type
                                                 according TLS specs */
 
-    if (total_len <= 4) return 0;
+    if (total_len <= 4)
+      return 0;
 
     if (total_len > payload_len) {
       if (handshake_protocol == 0x01) {
-        return 3;  // need more data
+        return 3; // need more data
       } else {
         return 0;
       }
@@ -85,10 +87,11 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
           uint8_t server_len = payload[i + 3];
           if (payload[i] == 0x55) {
             num_found++;
-            if (num_found != 2) continue;
+            if (num_found != 2)
+              continue;
           }
           if (server_len + i + 3 < payload_len) {
-            unsigned char* server_name = (unsigned char*)&payload[i + 4];
+            unsigned char *server_name = (unsigned char *) &payload[i + 4];
             uint8_t begin = 0, j, num_dots, len;
             while (begin < server_len) {
               if (!npfwl_isprint(server_name[begin]))
@@ -99,11 +102,12 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
             len = server_len - begin;
             for (j = begin, num_dots = 0; j < len; j++) {
               if (!npfwl_isprint((server_name[j]))) {
-                num_dots = 0;  // This is not what we look for
+                num_dots = 0; // This is not what we look for
                 break;
               } else if (server_name[j] == '.') {
                 num_dots++;
-                if (num_dots >= 2) break;
+                if (num_dots >= 2)
+                  break;
               }
             }
             if (num_dots >= 2) {
@@ -151,10 +155,10 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                     return 0;
                   if (extension_id == 0) {
                     u_int begin = 0, len;
-                    unsigned char* server_name =
-                        (unsigned char*)&payload[offset + extension_offset];
+                    unsigned char *server_name =
+                        (unsigned char *) &payload[offset + extension_offset];
                     if (payload[offset + extension_offset + 2] ==
-                        0x00)  // host_name
+                        0x00) // host_name
                       begin = +5;
                     while (begin < extension_len) {
                       if ((!npfwl_isprint(server_name[begin])) ||
@@ -178,7 +182,7 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
                   }
                   extension_offset += extension_len;
                 }
-                return 4;  // SSL, but no certificate
+                return 4; // SSL, but no certificate
               }
             }
           }
@@ -189,10 +193,10 @@ static int getSSLcertificate(uint8_t* payload, u_int payload_len,
   return 0;
 }
 
-static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
-                                    pfwl_dissection_info_t* t,
+static int detectSSLFromCertificate(uint8_t *payload, int payload_len,
+                                    pfwl_dissection_info_t *t,
                                     pfwl_dissector_accuracy_t accuracy,
-                                    uint8_t* required_fields) {
+                                    uint8_t *required_fields) {
   if ((payload_len > 9) &&
       (payload[0] ==
        0x16 /* consider only specific SSL packets (handshake) */)) {
@@ -205,24 +209,24 @@ static int detectSSLFromCertificate(uint8_t* payload, int payload_len,
   return 0;
 }
 
-uint8_t check_ssl(pfwl_state_t* state, const unsigned char* payload,
-                  size_t data_length, pfwl_dissection_info_t* pkt_info,
-                  pfwl_flow_info_private_t* flow_info_private) {
+uint8_t check_ssl(pfwl_state_t *state, const unsigned char *payload,
+                  size_t data_length, pfwl_dissection_info_t *pkt_info,
+                  pfwl_flow_info_private_t *flow_info_private) {
   pfwl_dissector_accuracy_t accuracy =
       state->inspectors_accuracy[PFWL_PROTO_L7_SSL];
-  uint8_t* required_fields = state->fields_to_extract;
+  uint8_t *required_fields = state->fields_to_extract;
   int res;
   debug_print("Checking ssl with size %lu, direction %d\n", data_length,
               pkt_info->l4.direction);
   if (flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer ==
       NULL) {
-    res = detectSSLFromCertificate((uint8_t*)payload, data_length, pkt_info,
+    res = detectSSLFromCertificate((uint8_t *) payload, data_length, pkt_info,
                                    accuracy, required_fields);
     debug_print("Result %d\n", res);
     if (res > 0) {
       if (res == 3) {
         flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer =
-            (uint8_t*)malloc(data_length);
+            (uint8_t *) malloc(data_length);
         memcpy(flow_info_private->ssl_information[pkt_info->l4.direction]
                    .pkt_buffer,
                payload, data_length);
@@ -234,7 +238,7 @@ uint8_t check_ssl(pfwl_state_t* state, const unsigned char* payload,
     }
   } else {
     flow_info_private->ssl_information[pkt_info->l4.direction]
-        .pkt_buffer = (uint8_t*)realloc(
+        .pkt_buffer = (uint8_t *) realloc(
         flow_info_private->ssl_information[pkt_info->l4.direction].pkt_buffer,
         flow_info_private->ssl_information[pkt_info->l4.direction].pkt_size +
             data_length);
