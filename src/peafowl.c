@@ -363,19 +363,23 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
 }
 
 static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
-  if (field > PFWL_FIELDS_L7_SIP_FIRST && field < PFWL_FIELDS_L7_SIP_LAST) {
-    return PFWL_PROTO_L7_SIP;
+  if (field > PFWL_FIELDS_L7_SIP_FIRST &&
+      field < PFWL_FIELDS_L7_SIP_LAST) {
+      return PFWL_PROTO_L7_SIP;
   } else if (field > PFWL_FIELDS_L7_DNS_FIRST &&
              field < PFWL_FIELDS_L7_DNS_LAST) {
-    return PFWL_PROTO_L7_DNS;
+      return PFWL_PROTO_L7_DNS;
   } else if (field > PFWL_FIELDS_L7_SSL_FIRST &&
              field < PFWL_FIELDS_L7_SSL_LAST) {
-    return PFWL_PROTO_L7_SSL;
+      return PFWL_PROTO_L7_SSL;
   } else if (field > PFWL_FIELDS_L7_HTTP_FIRST &&
              field < PFWL_FIELDS_L7_HTTP_LAST) {
-    return PFWL_PROTO_L7_HTTP;
+      return PFWL_PROTO_L7_HTTP;
+  } else if (field > PFWL_FIELDS_L7_RTP_FIRST &&
+             field < PFWL_FIELDS_L7_RTP_LAST) {
+      return PFWL_PROTO_L7_RTP;
   } else {
-    return PFWL_PROTO_L7_NUM;
+      return PFWL_PROTO_L7_NUM;
   }
 }
 

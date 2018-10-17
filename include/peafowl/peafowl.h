@@ -241,77 +241,87 @@ typedef struct pfwl_field {
   };
 } pfwl_field_t;
 
+// clang-format off
 /**
  * Protocol fields which can be extracted by peafowl.
  **/
 typedef enum {
   /** SIP field **/
-  PFWL_FIELDS_L7_SIP_FIRST = 0,     ///< Dummy value to indicate first SIP field
-  PFWL_FIELDS_L7_SIP_REQUEST_URI,   ///< [STRING]
-  PFWL_FIELDS_L7_SIP_METHOD,        ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CALLID,        ///< [STRING]
-  PFWL_FIELDS_L7_SIP_REASON,        ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RTCPXR_CALLID, ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CSEQ,          ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING, ///< [STRING]
-  PFWL_FIELDS_L7_SIP_VIA,                ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CONTACT_URI,        ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_USER,          ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_DOMAIN,        ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_USER,          ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_DOMAIN,        ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_USER,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_DOMAIN,          ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PAI_USER,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PAI_DOMAIN,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PID_URI,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_URI,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_URI,             ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_URI,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_TAG,             ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_TAG,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_LAST, ///< Dummy value to indicate last SIP field. Must be
-                           ///< the last field specified for SIP.
+  PFWL_FIELDS_L7_SIP_FIRST = 0,           ///< Dummy value to indicate first SIP field
+  PFWL_FIELDS_L7_SIP_REQUEST_URI,         ///< [STRING]
+  PFWL_FIELDS_L7_SIP_METHOD,              ///< [STRING]
+  PFWL_FIELDS_L7_SIP_CALLID,              ///< [STRING]
+  PFWL_FIELDS_L7_SIP_REASON,              ///< [STRING]
+  PFWL_FIELDS_L7_SIP_RTCPXR_CALLID,       ///< [STRING]
+  PFWL_FIELDS_L7_SIP_CSEQ,                ///< [STRING]
+  PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING,  ///< [STRING]
+  PFWL_FIELDS_L7_SIP_VIA,                 ///< [STRING]
+  PFWL_FIELDS_L7_SIP_CONTACT_URI,         ///< [STRING]
+  PFWL_FIELDS_L7_SIP_RURI_USER,           ///< [STRING]
+  PFWL_FIELDS_L7_SIP_RURI_DOMAIN,         ///< [STRING]
+  PFWL_FIELDS_L7_SIP_FROM_USER,           ///< [STRING]
+  PFWL_FIELDS_L7_SIP_FROM_DOMAIN,         ///< [STRING]
+  PFWL_FIELDS_L7_SIP_TO_USER,             ///< [STRING]
+  PFWL_FIELDS_L7_SIP_TO_DOMAIN,           ///< [STRING]
+  PFWL_FIELDS_L7_SIP_PAI_USER,            ///< [STRING]
+  PFWL_FIELDS_L7_SIP_PAI_DOMAIN,          ///< [STRING]
+  PFWL_FIELDS_L7_SIP_PID_URI,             ///< [STRING]
+  PFWL_FIELDS_L7_SIP_FROM_URI,            ///< [STRING]
+  PFWL_FIELDS_L7_SIP_TO_URI,              ///< [STRING]
+  PFWL_FIELDS_L7_SIP_RURI_URI,            ///< [STRING]
+  PFWL_FIELDS_L7_SIP_TO_TAG,              ///< [STRING]
+  PFWL_FIELDS_L7_SIP_FROM_TAG,            ///< [STRING]
+  PFWL_FIELDS_L7_SIP_LAST,                ///< Dummy value to indicate last SIP field. Must be
+                                          ///< the last field specified for SIP.
   /** DNS field **/
-  PFWL_FIELDS_L7_DNS_FIRST,    ///< Dummy value to indicate first DNS field
-  PFWL_FIELDS_L7_DNS_NAME_SRV, ///< Server name [STRING]
-  PFWL_FIELDS_L7_DNS_NS_IP_1,  ///< Server name IP address [STRING]
-  PFWL_FIELDS_L7_DNS_NS_IP_2,  ///< Server name IP address [STRING]
-  PFWL_FIELDS_L7_DNS_AUTH_SRV, ///< Authority name [STRING]
-  PFWL_FIELDS_L7_DNS_LAST, ///< Dummy value to indicate last DNS field. Must be
-                           ///< the last field specified for DNS.
+  PFWL_FIELDS_L7_DNS_FIRST,               ///< Dummy value to indicate first DNS field
+  PFWL_FIELDS_L7_DNS_NAME_SRV,            ///< Server name [STRING]
+  PFWL_FIELDS_L7_DNS_NS_IP_1,             ///< Server name IP address [STRING]
+  PFWL_FIELDS_L7_DNS_NS_IP_2,             ///< Server name IP address [STRING]
+  PFWL_FIELDS_L7_DNS_AUTH_SRV,            ///< Authority name [STRING]
+  PFWL_FIELDS_L7_DNS_LAST,                ///< Dummy value to indicate last DNS field. Must be
+                                          ///< the last field specified for DNS.
   /** SSL field **/
-  PFWL_FIELDS_L7_SSL_FIRST,       ///< Dummy value to indicate first SSL field
-  PFWL_FIELDS_L7_SSL_CERTIFICATE, ///< Server name [STRING]
-  PFWL_FIELDS_L7_SSL_LAST, ///< Dummy value to indicate last SSL field. Must be
-                           ///< the last field specified for SSL.
+  PFWL_FIELDS_L7_SSL_FIRST,               ///< Dummy value to indicate first SSL field
+  PFWL_FIELDS_L7_SSL_CERTIFICATE,         ///< Server name [STRING]
+  PFWL_FIELDS_L7_SSL_LAST,                ///< Dummy value to indicate last SSL field. Must be
+                                          ///< the last field specified for SSL.
   /** HTTP field **/
-  PFWL_FIELDS_L7_HTTP_FIRST, ///< Dummy value to indicate first HTTP field
-  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR, ///< HTTP Version - Major [NUM]
-  PFWL_FIELDS_L7_HTTP_VERSION_MINOR, ///< HTTP Version - Minor [NUM]
-  PFWL_FIELDS_L7_HTTP_METHOD, ///< HTTP Method. [NUM] For the possible values,
-                              ///< please check HTTP_METHOD_MAP  in file
-  ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_STATUS_CODE, ///< HTTP Status code [NUM]
-  PFWL_FIELDS_L7_HTTP_MSG_TYPE,    ///< HTTP request or response. [NUM] For the
-                                   ///< possible values, please check
-                                   ///< pfwl_http_message_type_t enumeration in
-                                   ///< file
-  ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_BODY,    ///< HTTP Body [STRING]
-  PFWL_FIELDS_L7_HTTP_URL,     ///< HTTP URL  [STRING]
-  PFWL_FIELDS_L7_HTTP_HEADERS, ///< HTTP headers names [ARRAY OF PAIRS OF
-                               ///< STRINGS]. For each pair, the first element
-                               ///< is the header name and the second element
-                               ///< is the header value. We suggest using the
-                               ///< 'pfwl_http_get_header' helper function for
-                               ///< an easier access.
-  PFWL_FIELDS_L7_HTTP_LAST, ///< Dummy value to indicate last HTTP field. Must
-                            ///< be the last field specified for HTTP.
+  PFWL_FIELDS_L7_HTTP_FIRST,              ///< Dummy value to indicate first HTTP field
+  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUMBER]
+  PFWL_FIELDS_L7_HTTP_VERSION_MINOR,      ///< HTTP Version - Minor [NUMBER]
+  PFWL_FIELDS_L7_HTTP_METHOD,             ///< HTTP Method. [NUMBER] For the possible values,
+                                          ///< please check HTTP_METHOD_MAP in file
+                                          ///< include/peafowl/inspectors/http_parser_joyent.h
+  PFWL_FIELDS_L7_HTTP_STATUS_CODE,        ///< HTTP Status code [NUMBER]
+  PFWL_FIELDS_L7_HTTP_MSG_TYPE,           ///< HTTP request or response. [NUMBER] For the
+                                          ///< possible values, please check
+                                          ///< pfwl_http_message_type_t enumeration in
+                                          ///< file
+                                          ///< include/peafowl/inspectors/http_parser_joyent.h
+  PFWL_FIELDS_L7_HTTP_BODY,               ///< HTTP Body [STRING]
+  PFWL_FIELDS_L7_HTTP_URL,                ///< HTTP URL  [STRING]
+  PFWL_FIELDS_L7_HTTP_HEADERS,            ///< HTTP headers names [ARRAY OF PAIRS OF
+                                          ///< STRINGS]. For each pair, the first element
+                                          ///< is the header name and the second element
+                                          ///< is the header value. We suggest using the
+                                          ///< 'pfwl_http_get_header' helper function for
+                                          ///< an easier access.
+  PFWL_FIELDS_L7_HTTP_LAST,               ///< Dummy value to indicate last HTTP field. Must
+                                          ///< be the last field specified for HTTP.
+  /** RTP fields **/
+  PFWL_FIELDS_L7_RTP_FIRST,               ///< Dummy value to indicate first RTP field
+  PFWL_FIELDS_L7_RTP_PTYPE,               ///< RTP Payload Type [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_SEQNUM,              ///< RTP Sequence Number [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_TIMESTP,             ///< RTP Timestamp [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_LAST,                ///< Dummy value to indicate last RTP field. Must
+                                          ///< be the last field specified for RTP
   /** **/
   PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
                       ///< the last field specified.
 } pfwl_field_id_t;
+// clang-format on
 
 /**
  * An IP address.

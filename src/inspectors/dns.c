@@ -3,6 +3,7 @@
  *
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2018-2019 Michele Campus (michelecampus5@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -175,7 +176,6 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
                   pfwl_flow_info_private_t *flow_info_private) {
   pfwl_dissector_accuracy_t accuracy =
       state->inspectors_accuracy[PFWL_PROTO_L7_DNS];
-  uint8_t *required_fields = state->fields_to_extract;
   // check param
   if (!app_data)
     return PFWL_PROTOCOL_NO_MATCHES;
@@ -221,12 +221,12 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
       /** check accuracy type for fields parsing **/
       if (accuracy == PFWL_DISSECTOR_ACCURACY_HIGH && is_valid) {
         // check name server field
-        if (required_fields[PFWL_FIELDS_L7_DNS_NAME_SRV]) {
-          const unsigned char *temp = (const unsigned char *) (pq + 1);
-          const char *r = strchr((const char *) pq + 1, '\0');
-          pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_DNS_NAME_SRV,
-                                temp, (const unsigned char *) r - temp);
-        }
+          if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NAME_SRV)) {
+            const unsigned char* temp = (const unsigned char*)(pq + 1);
+            const char* r = strchr((const char*)pq + 1, '\0');
+            pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_DNS_NAME_SRV,
+                                  temp, (const unsigned char*)r - temp);
+          }
       }
     }
     /**
@@ -251,7 +251,7 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
               4; // end of Name + Type(2) + Class(2)
 
         // check name server IP
-        if (required_fields[PFWL_FIELDS_L7_DNS_NS_IP_1] && is_name_server) {
+        if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NS_IP_1) && is_name_server) {
           /**
          Note:
          In case of answer count > 1, we consider (for now) only the first two
@@ -285,7 +285,7 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
           } while (dns_header->answ_count > 0 && i < 2);
         }
         // check auth server
-        if (required_fields[PFWL_FIELDS_L7_DNS_AUTH_SRV] && is_auth_server) {
+        if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_AUTH_SRV) && is_auth_server) {
           /* /\** No Answer field(s) present: skip the query section and point
            * to Authority fields **\/ */
           /* if(!is_name_server) pq +=
