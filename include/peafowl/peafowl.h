@@ -241,6 +241,7 @@ typedef struct pfwl_field {
   };
 } pfwl_field_t;
 
+// clang-format off
 /**
  * Protocol fields which can be extracted by peafowl.
  **/
@@ -287,13 +288,13 @@ typedef enum {
                                           ///< the last field specified for SSL.
   /** HTTP field **/
   PFWL_FIELDS_L7_HTTP_FIRST,              ///< Dummy value to indicate first HTTP field
-  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUM]
-  PFWL_FIELDS_L7_HTTP_VERSION_MINOR,      ///< HTTP Version - Minor [NUM]
-  PFWL_FIELDS_L7_HTTP_METHOD,             ///< HTTP Method. [NUM] For the possible values,
+  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUMBER]
+  PFWL_FIELDS_L7_HTTP_VERSION_MINOR,      ///< HTTP Version - Minor [NUMBER]
+  PFWL_FIELDS_L7_HTTP_METHOD,             ///< HTTP Method. [NUMBER] For the possible values,
                                           ///< please check HTTP_METHOD_MAP in file
                                           ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_STATUS_CODE,        ///< HTTP Status code [NUM]
-  PFWL_FIELDS_L7_HTTP_MSG_TYPE,           ///< HTTP request or response. [NUM] For the
+  PFWL_FIELDS_L7_HTTP_STATUS_CODE,        ///< HTTP Status code [NUMBER]
+  PFWL_FIELDS_L7_HTTP_MSG_TYPE,           ///< HTTP request or response. [NUMBER] For the
                                           ///< possible values, please check
                                           ///< pfwl_http_message_type_t enumeration in
                                           ///< file
@@ -310,16 +311,17 @@ typedef enum {
                                           ///< be the last field specified for HTTP.
   /** RTP fields **/
   PFWL_FIELDS_L7_RTP_FIRST,               ///< Dummy value to indicate first RTP field
-  PFWL_FIELDS_L7_RTP_PTYPE,               ///< RTP Payload Type
-  PFWL_FIELDS_L7_RTP_SEQNUM,              ///< RTP Sequence Number
-  PFWL_FIELDS_L7_RTP_TIMESTP,             ///< RTP Timestamp
-  PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier
+  PFWL_FIELDS_L7_RTP_PTYPE,               ///< RTP Payload Type [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_SEQNUM,              ///< RTP Sequence Number [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_TIMESTP,             ///< RTP Timestamp [NUMBER] (Host byte order)
+  PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier [NUMBER] (Host byte order)
   PFWL_FIELDS_L7_RTP_LAST,                ///< Dummy value to indicate last RTP field. Must
                                           ///< be the last field specified for RTP
   /** **/
   PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
                       ///< the last field specified.
 } pfwl_field_id_t;
+// clang-format on
 
 /**
  * An IP address.
