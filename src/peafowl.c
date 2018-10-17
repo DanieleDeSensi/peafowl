@@ -221,7 +221,6 @@ pfwl_defragmentation_set_reassembly_timeout_ipv6(pfwl_state_t *state,
 
 uint8_t pfwl_defragmentation_disable_ipv4(pfwl_state_t *state) {
   if (likely(state)) {
-    assert(state->ipv4_frag_state);
     pfwl_reordering_disable_ipv4_fragmentation(state->ipv4_frag_state);
     state->ipv4_frag_state = NULL;
     return 0;
@@ -232,7 +231,6 @@ uint8_t pfwl_defragmentation_disable_ipv4(pfwl_state_t *state) {
 
 uint8_t pfwl_defragmentation_disable_ipv6(pfwl_state_t *state) {
   if (likely(state)) {
-    assert(state->ipv6_frag_state);
     pfwl_reordering_disable_ipv6_fragmentation(state->ipv6_frag_state);
     state->ipv6_frag_state = NULL;
     return 0;
