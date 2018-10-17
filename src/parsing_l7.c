@@ -225,7 +225,7 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
      * library was unable to identify the protocol.
      **/
     if (flow_info_private->possible_protocols == 0 ||
-        (state->max_trials != 0 &&
+        (state->max_trials &&
          unlikely(++flow_info_private->trials == state->max_trials))) {
       flow_info_private->l7prot = PFWL_PROTO_L7_UNKNOWN;
     }
@@ -283,7 +283,7 @@ const char **const pfwl_get_L7_protocols_names() {
 
 uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
                                 pfwl_protocol_l7_t protocol) {
-  if (protocol < PFWL_PROTO_L7_NUM) {
+  if (state && protocol < PFWL_PROTO_L7_NUM) {
     // Increment counter only if it was not set, otherwise
     // calling twice enable_protocol on the same protocol
     // would lead to a wrong number of active protocols
@@ -308,7 +308,7 @@ uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
 
 uint8_t pfwl_protocol_l7_disable(pfwl_state_t *state,
                                  pfwl_protocol_l7_t protocol) {
-  if (protocol < PFWL_PROTO_L7_NUM) {
+  if (state && protocol < PFWL_PROTO_L7_NUM) {
     // Decrement counter only if it was set, otherwise
     // calling twice disable_protocol on the same protocol
     // would lead to a wrong number of active protocols

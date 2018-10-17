@@ -58,3 +58,53 @@ TEST(GenericTest, BytesAndPackets) {
   });
   pfwl_terminate(state);
 }
+
+
+TEST(GenericTest, MaxFlows) {
+  pfwl_state_t* state = pfwl_init();
+  std::vector<uint> protocols;
+  pfwl_set_expected_flows(state, 1, 1);
+  uint errors = 0;
+  getProtocols("./pcaps/whatsapp.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    if(status == PFWL_ERROR_MAX_FLOWS){
+      ++errors;
+    }
+  });
+  EXPECT_GT(errors, 0);
+  pfwl_terminate(state);
+}
+
+TEST(GenericTest, MaxTrials) {
+  pfwl_state_t* state = pfwl_init();
+  std::vector<uint> protocols;
+  pfwl_set_max_trials(state, 1);
+  getProtocols("./pcaps/imap.cap", protocols, state);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_IMAP], 0);
+  pfwl_terminate(state);
+}
+
+
+TEST(GenericTest, NullState) {
+  EXPECT_EQ(pfwl_set_expected_flows(NULL, 0, 0), 1);
+  EXPECT_EQ(pfwl_set_max_trials(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_enable_ipv4(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_enable_ipv6(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_set_per_host_memory_limit_ipv4(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_set_per_host_memory_limit_ipv6(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_set_total_memory_limit_ipv4(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_set_total_memory_limit_ipv6(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_set_reassembly_timeout_ipv4(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_set_reassembly_timeout_ipv6(NULL, 0), 1);
+  EXPECT_EQ(pfwl_defragmentation_disable_ipv4(NULL), 1);
+  EXPECT_EQ(pfwl_defragmentation_disable_ipv6(NULL), 1);
+  EXPECT_EQ(pfwl_tcp_reordering_enable(NULL), 1);
+  EXPECT_EQ(pfwl_tcp_reordering_disable(NULL), 1);
+  EXPECT_EQ(pfwl_protocol_l7_enable(NULL, PFWL_PROTO_L7_BGP), 1);
+  EXPECT_EQ(pfwl_protocol_l7_disable(NULL, PFWL_PROTO_L7_BGP), 1);
+  EXPECT_EQ(pfwl_protocol_l7_enable_all(NULL), 1);
+  EXPECT_EQ(pfwl_protocol_l7_disable_all(NULL), 1);
+  EXPECT_EQ(pfwl_set_flow_cleaner_callback(NULL, NULL), 1);
+  EXPECT_EQ(pfwl_field_add_L7(NULL, PFWL_FIELDS_L7_DNS_AUTH_SRV), 1);
+  EXPECT_EQ(pfwl_field_remove_L7(NULL, PFWL_FIELDS_L7_DNS_AUTH_SRV), 1);
+  EXPECT_EQ(pfwl_set_protocol_accuracy_L7(NULL, PFWL_PROTO_L7_BGP, PFWL_DISSECTOR_ACCURACY_HIGH), 1);
+}
