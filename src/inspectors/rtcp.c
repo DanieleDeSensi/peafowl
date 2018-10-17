@@ -64,7 +64,7 @@ struct rtcp_header {
 
 }__attribute__((packed));
 
-#define rtcp_header_get_length(head) ntohs((head)->length)
+#define GET_LEN(head) ntohs((head)->length)
 
 
 static int8_t is_valid_payload_type(uint8_t PT)
@@ -81,6 +81,29 @@ static int8_t is_valid_payload_type(uint8_t PT)
     }
 }
 
+static int low_check(struct rtcp_header* rtcp)
+{
+    int8_t pType = 0;
+    if(rtcp->version == 2) { // check Version
+        pType = is_valid_payload_type(rtcp->pType); // check Payload Type
+        if(pType != -1) {
+            return PFWL_PROTOCOL_MATCHES;
+        }
+    }
+    return PFWL_PROTOCOL_NO_MATCHES;
+}
+
+static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
+                      int data_length, pfwl_dissection_info_t* pkt_info)
+{
+    int ret;
+    ret = low_check(rtcp);
+    if(ret == PFWL_PROTOCOL_MATCHES) {
+        // TODO GO deep
+    }
+    return ret;
+}
+
 
 uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t data_length, pfwl_dissection_info_t* pkt_info,
                    pfwl_flow_info_private_t* flow_info_private)
@@ -94,18 +117,14 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
     }
 
     if(data_length >= 4) {
-        int8_t pType = 0;
-        struct rtcp_header *rtcp = (struct rtcp_header*) app_data;
+        struct rtcp_header* rtcp = (struct rtcp_header*) app_data;
 
-        if(rtcp->version == 2) { // check Version
-            pType = is_valid_payload_type(rtcp->pType); // check Payload Type
-            if(pType != -1) {
-                if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
-                    // TODO extract fields
-                }
-                else return PFWL_PROTOCOL_MATCHES;
-            }
-            else return PFWL_PROTOCOL_NO_MATCHES;
+        if(accuracy == PFWL_DISSECTOR_ACCURACY_LOW) {
+            return low_check(rtcp);
+        }
+        else if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
+            // check packet and extract fields if needed
+            return hight_check(rtcp, state, (int) data_length, pkt_info);
         }
     }
     return PFWL_PROTOCOL_NO_MATCHES;
