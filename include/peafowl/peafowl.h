@@ -89,6 +89,7 @@ extern "C" {
 typedef struct pfwl_flow_info_private pfwl_flow_info_private_t;
 /// @endcond
 
+// clang-format off
 /** Statuses */
 typedef enum pfwl_status {
   /** Errors **/
@@ -189,12 +190,25 @@ typedef enum {
   PFWL_PROTO_L7_ETHEREUM, ///< Ethereum
   PFWL_PROTO_L7_ZCASH,    ///< Zcash
   PFWL_PROTO_L7_MONERO,   ///< Monero
+  PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
   PFWL_PROTO_L7_UNKNOWN ///< Dummy value to indicate that the protocol has not
                         ///< been identified
 } pfwl_protocol_l7_t;
+
+/**
+ * L7 sub-protocol.
+ **/
+typedef enum {
+  PFWL_PROTO_L7_SUB_GOOGLE,       ///< Google search
+  PFWL_PROTO_L7_SUB_AMAZON_VIDEO, ///< Amazon video
+  PFWL_PROTO_L7_SUB_NUM,          ///< Dummy value to indicate the number of protocols
+  PFWL_PROTO_L7_SUB_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
+                                    ///< has not been identified yet
+} pfwl_protocol_l7_sub_t;
+// clang-format on
 
 /**
  * A string as represented by peafowl.
@@ -282,10 +296,11 @@ typedef enum {
   PFWL_FIELDS_L7_DNS_LAST,                ///< Dummy value to indicate last DNS field. Must be
                                           ///< the last field specified for DNS.
   /** SSL field **/
-  PFWL_FIELDS_L7_SSL_FIRST,               ///< Dummy value to indicate first SSL field
-  PFWL_FIELDS_L7_SSL_CERTIFICATE,         ///< Server name [STRING]
-  PFWL_FIELDS_L7_SSL_LAST,                ///< Dummy value to indicate last SSL field. Must be
-                                          ///< the last field specified for SSL.
+  PFWL_FIELDS_L7_SSL_FIRST,       ///< Dummy value to indicate first SSL field
+  PFWL_FIELDS_L7_SSL_SNI, ///< Server name extension found in client certificate [STRING]
+  PFWL_FIELDS_L7_SSL_CERTIFICATE,        ///< Server name found in server certificate [STRING]
+  PFWL_FIELDS_L7_SSL_LAST, ///< Dummy value to indicate last SSL field. Must be
+                           ///< the last field specified for SSL.
   /** HTTP field **/
   PFWL_FIELDS_L7_HTTP_FIRST,              ///< Dummy value to indicate first HTTP field
   PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUMBER]
@@ -317,11 +332,21 @@ typedef enum {
   PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier [NUMBER] (Host byte order)
   PFWL_FIELDS_L7_RTP_LAST,                ///< Dummy value to indicate last RTP field. Must
                                           ///< be the last field specified for RTP
+  /** JSON-RPC fields **/
+  PFWL_FIELDS_L7_JSON_RPC_FIRST,          ///< Dummy value to indicate first JSON-RPC field
+  PFWL_FIELDS_L7_JSON_RPC_VERSION,        ///< JSON-RPC version [NUMBER]
+  PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE,       ///< Msg type [NUMBER] 0 = Request, 1 = Response, 2 = Notification
+  PFWL_FIELDS_L7_JSON_RPC_ID,             ///< Id field [STRING]
+  PFWL_FIELDS_L7_JSON_RPC_METHOD,         ///< Method field [STRING]
+  PFWL_FIELDS_L7_JSON_RPC_PARAMS,         ///< Params field [STRING]
+  PFWL_FIELDS_L7_JSON_RPC_RESULT,         ///< Result field [STRING]
+  PFWL_FIELDS_L7_JSON_RPC_ERROR,          ///< Error field [STRING]
+  PFWL_FIELDS_L7_JSON_RPC_LAST,           ///< Dummy value to indicate last JSON-RPC field. Must
+                                          ///< be the last field specified for JSON-RPC
   /** **/
   PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
                       ///< the last field specified.
 } pfwl_field_id_t;
-// clang-format on
 
 /**
  * An IP address.
@@ -358,6 +383,8 @@ typedef struct pfwl_flow_info {
                          ///< for this flow. One value for each direction.
 } pfwl_flow_info_t;
 
+#define PFWL_MAX_L7_SUBPROTO_DEPTH 10
+
 /**
  * The result of the identification process.
  **/
@@ -385,26 +412,39 @@ typedef struct pfwl_dissection_info {
     uint16_t port_dst;     ///< Destination port, in network byte order.
     uint8_t direction;     ///< Direction of the packet:
                            ///< 0: From source to dest. 1: From dest to source
-    ///< (with respect to src and dst stored in the flow).
-    ///< This is only valid for TCP and UDP packets.
+                           ///< (with respect to src and dst stored in the flow).
+                           ///< This is only valid for TCP and UDP packets.
     const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
     size_t resegmented_pkt_len;  ///< The length of the resegmented TCP payload.
     pfwl_protocol_l4_t protocol; ///< The Level 4 protocol.
   } l4;                          ///< Information known after L4 parsing
   struct {
-    pfwl_protocol_l7_t protocol;                      ///< The level 7 protocol.
+    pfwl_protocol_l7_t protocol;                      ///< The first level 7 protocol.
+    pfwl_protocol_l7_t protocols[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
+                                                              ///< For example, Ethereum may be carried by JSON-RPC, which
+                                                              ///< in turn may be carried by HTTP. If such a flow is found,
+                                                              ///< we will have:
+                                                              ///<   protocols[0] = HTTP
+                                                              ///<   protocols[1] = JSON-RPC
+                                                              ///<   protocols[2] = Ethereum
+                                                              ///< i.e., protocols are shown by the outermost to the innermost.
+                                                              ///< Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
+                                                              ///<   protocols[0] = JSON-RPC
+                                                              ///<   protocols[1] = Ethereum
+                                                              ///< The value 'protocol' is always equal to protocols[0]
     pfwl_field_t protocol_fields[PFWL_FIELDS_L7_NUM]; ///< Fields extracted by
-    /// the dissector. Some of
-    ///< these fields (e.g. strings) are only valid
-    ///< until another packet for the same flow is
-    ///< processed. I.e. if another packet for this
-    ///< flow is received, this data will not be
-    ///< valid anymore. If the user needs to preserve
-    ///< the data for a longer time, a copy of each
-    ///< needed field needs to be done.
+                                                      /// the dissector. Some of
+                                                      ///< these fields (e.g. strings) are only valid
+                                                      ///< until another packet for the same flow is
+                                                      ///< processed. I.e. if another packet for this
+                                                      ///< flow is received, this data will not be
+                                                      ///< valid anymore. If the user needs to preserve
+                                                      ///< the data for a longer time, a copy of each
+                                                      ///< needed field needs to be done.
   } l7;                       ///< Information known after L7 parsing
   pfwl_flow_info_t flow_info; ///< Information about the flow.
 } pfwl_dissection_info_t;
+// clang-format on
 
 /**
  * @brief Callback for flow cleaning.

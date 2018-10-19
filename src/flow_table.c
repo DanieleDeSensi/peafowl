@@ -392,6 +392,8 @@ void pfwl_flow_table_setup_partitions(pfwl_flow_table_t *table,
   debug_print("%s\n", "[flow_table.c]: Active v4 flows computation finished.");
 }
 
+void jsonrpc_delete_parser(void* parser);
+
 void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
                                     uint16_t partition_id,
                                     pfwl_flow_t *to_delete) {
@@ -409,6 +411,9 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   }
   if (to_delete->info_private.last_rebuilt_ip_fragments) {
     free((void *) to_delete->info_private.last_rebuilt_ip_fragments);
+  }
+  if(to_delete->info_private.json_parser){
+    jsonrpc_delete_parser(to_delete->info_private.json_parser);
   }
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL

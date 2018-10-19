@@ -16,7 +16,6 @@ endif(PCAP_FOUND)
 ####################
 if (ENABLE_PARALLEL)
   find_package (Threads REQUIRED)
-  include_directories(external/fastflow) 
   list(APPEND SOURCES "${CMAKE_SOURCE_DIR}/src/worker.cpp" "${CMAKE_SOURCE_DIR}/src/peafowl_mc.cpp")
   add_definitions(-DPFWL_THREAD_SAFETY_ENABLED=1 -DFF_BOUNDED_BUFFER -DNO_DEFAULT_MAPPING)
 endif (ENABLE_PARALLEL)

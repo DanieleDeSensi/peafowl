@@ -401,6 +401,7 @@ uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
         return 0;
       }
       ++state->fields_to_extract_num[protocol];
+      pfwl_protocol_l7_enable(state, protocol);
       pfwl_set_protocol_accuracy_L7(
           state, protocol,
           PFWL_DISSECTOR_ACCURACY_HIGH); // TODO: mmm, the problem is that we

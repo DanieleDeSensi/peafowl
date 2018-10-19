@@ -133,10 +133,17 @@ typedef struct pfwl_http_internal_informations {
 /********************** HTTP (END) ************************/
 
 /********************** SSL ************************/
-typedef struct pfwl_ssl_internal_information {
-  uint8_t *pkt_buffer;
-  int pkt_size;
-} pfwl_ssl_internal_information_t;
+typedef enum{
+  PFWL_SSLV2 = 0,
+  PFWL_SSLV3
+}pfwl_ssl_version_t;
+
+typedef struct pfwl_ssl_internal_information_new {
+  uint8_t stage;
+  uint8_t certificate_num_checks;
+  uint8_t certificates_detected;
+  pfwl_ssl_version_t version;
+} pfwl_ssl_internal_information_new_t;
 /********************** SSL (END) ************************/
 
 typedef struct pfwl_flow pfwl_flow_t;
@@ -250,12 +257,17 @@ typedef struct pfwl_flow_info_private {
   /*********************************/
   /** SSL Tracking informations. **/
   /*********************************/
-  pfwl_ssl_internal_information_t ssl_information[2];
+  pfwl_ssl_internal_information_new_t ssl_information;
 
   /**************************************/
   /** WhatsApp Tracking informations.  **/
   /**************************************/
   size_t whatsapp_matched_sequence;
+
+  /*****************************************/
+  /** JSON-RPC and depending protos info. **/
+  /*****************************************/
+  void* json_parser;
 } pfwl_flow_info_private_t;
 
 struct pfwl_flow {

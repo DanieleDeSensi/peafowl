@@ -34,13 +34,15 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
                                      pfwl_field_id_t field);
 void pfwl_field_string_set(pfwl_field_t *fields, pfwl_field_id_t id,
                            const unsigned char *s, size_t len);
 void pfwl_field_number_set(pfwl_field_t *fields, pfwl_field_id_t id,
                            int64_t num);
-
 /**
  * @brief pfwl_array_push_back Pushes a string into an array. The call
  * assumes there is space left in the array. The caller must guarantee that.
@@ -159,4 +161,10 @@ uint8_t check_monero(pfwl_state_t *state, const unsigned char *app_data,
                      size_t data_length, pfwl_dissection_info_t *pkt_info,
                      pfwl_flow_info_private_t *flow_info_private);
 
+uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
+                     size_t data_length, pfwl_dissection_info_t *pkt_info,
+                     pfwl_flow_info_private_t *flow_info_private);
+#ifdef __cplusplus
+}
+#endif
 #endif /* INSPECTORS_H_ */

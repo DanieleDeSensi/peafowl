@@ -180,6 +180,7 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
       if (s[i] == '@') {
         host_offset = i;
         st = URI_HOST;
+        user->present = 1;
         user->basic.string.value =
             (const unsigned char *) s + (first_offset + 1);
         user->basic.string.length = (i - first_offset - 1);
@@ -187,11 +188,13 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
         foundAtValue = 1;
       } else if (s[i] == ':') {
         st = URI_PASSWORD;
+        user->present = 1;
         user->basic.string.value =
             (const unsigned char *) s + (first_offset + 1);
         user->basic.string.length = (i - first_offset - 1);
         foundUser = 1;
       } else if (s[i] == ';' || s[i] == '?' || s[i] == '&') {
+        user->present = 1;
         user->basic.string.value =
             (const unsigned char *) s + (first_offset + 1);
         user->basic.string.length = (i - first_offset - 1);
@@ -224,6 +227,7 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
         st = URI_HOST_IPV6;
       else if (s[i] == ':' || s[i] == '>' || s[i] == ';' || s[i] == ' ') {
         st = URI_HOST_END;
+        domain->present = 1;
         domain->basic.string.value =
             (const unsigned char *) s + host_offset + 1;
         domain->basic.string.length = (i - host_offset - 1);
@@ -233,6 +237,7 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
 
     case URI_HOST_IPV6:
       if (s[i] == ']') {
+        domain->present = 1;
         domain->basic.string.value =
             (const unsigned char *) s + host_offset + 1;
         domain->basic.string.length = (i - host_offset - 1);
@@ -258,6 +263,7 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
   if (foundUser == 0)
     user->basic.string.length = 0;
   else if (foundAtValue == 0 && foundUser == 1) {
+    domain->present = 1;
     domain->basic.string.value =
         (const unsigned char *) user->basic.string.value;
     domain->basic.string.length = user->basic.string.length;
@@ -266,6 +272,7 @@ uint8_t getUser(pfwl_field_t *user, pfwl_field_t *domain,
     user->basic.string.length = 0;
   }
   if (foundUser == 0 && foundHost == 0) {
+    domain->present = 1;
     domain->basic.string.value = (const unsigned char *) s + first_offset + 1;
     domain->basic.string.length = (len - first_offset);
   }
@@ -289,6 +296,7 @@ uint8_t set_hname(pfwl_field_t *hname, int len, const unsigned char *s) {
     }
   }
 
+  hname->present = 1;
   hname->basic.string.value = s;
   hname->basic.string.length = len;
   return 1;
@@ -378,10 +386,12 @@ int parseSdpCLine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
       break;
     case ST_CONNECTIONADRESS:
+      mp->media_ip.present = 1;
       mp->media_ip.basic.string.value =
           (const unsigned char *) (char *) data + last_offset + 1;
       mp->media_ip.basic.string.length = len - last_offset - 3;
       if (mp->rtcp_ip.basic.string.length == 0) {
+        mp->rtcp_ip.present = 1;
         mp->rtcp_ip.basic.string.length = mp->media_ip.basic.string.length;
         mp->rtcp_ip.basic.string.value =
             (const unsigned char *) mp->media_ip.basic.string.value;
@@ -486,6 +496,7 @@ int parseSdpALine(pfwl_sip_miprtcp_t *mp, const unsigned char *data,
 
     case ST_IP:
       st = ST_END;
+      mp->rtcp_ip.present = 1;
       mp->rtcp_ip.basic.string.value =
           (const unsigned char *) (const char *) data + last_offset + 1;
       mp->rtcp_ip.basic.string.length = len - last_offset - 3;
@@ -634,6 +645,7 @@ int parseSdp(const unsigned char *body, pfwl_sip_internal_information_t *psip,
 
   /* let do it for rtcp */
   if (tmpmp.rtcp_ip.basic.string.length == 0) {
+    tmpmp.rtcp_ip.present = 1;
     tmpmp.rtcp_ip.basic.string.length = tmpmp.media_ip.basic.string.length;
     tmpmp.rtcp_ip.basic.string.value =
         (const unsigned char *) tmpmp.media_ip.basic.string.value;
@@ -795,6 +807,7 @@ uint8_t splitCSeq(pfwl_sip_internal_information_t *sipStruct, const char *s,
 
     pfwl_field_t *cSeqMethodString =
         &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING]);
+    cSeqMethodString->present = 1;
     cSeqMethodString->basic.string.value = (const unsigned char *) pch;
     cSeqMethodString->basic.string.length = (len - mylen);
 
@@ -934,6 +947,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
     if (required_fields[PFWL_FIELDS_L7_SIP_REASON]) {
       pfwl_field_t *reasonField =
           &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_REASON]);
+      reasonField->present = 1;
       reasonField->basic.string.value = (const unsigned char *) tmp + 12;
       reasonField->basic.string.length = reason - (tmp + 13);
     }
@@ -988,12 +1002,14 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       if ((pch = strchr(tmp + 1, ' ')) != NULL) {
         pfwl_field_t *methodString =
             &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_METHOD]);
+        methodString->present = 1;
         methodString->basic.string.value = (const unsigned char *) tmp;
         methodString->basic.string.length = (pch - tmp);
 
         if ((ped = strchr(pch + 1, ' ')) != NULL) {
           pfwl_field_t *requestURI =
               &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_REQUEST_URI]);
+          requestURI->present = 1;
           requestURI->basic.string.value = (const unsigned char *) pch + 1;
           requestURI->basic.string.length = (ped - pch - 1);
 
