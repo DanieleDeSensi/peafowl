@@ -55,12 +55,14 @@
 
 uint8_t pfwl_set_expected_flows(pfwl_state_t *state, uint32_t flows,
                                 uint8_t strict) {
-  if (state->flow_table) {
+  if (state) {
+    assert(state->flow_table);
     pfwl_flow_table_delete(state->flow_table);
     state->flow_table = pfwl_flow_table_create(flows, strict, 1);
+    return 0;
+  }else{
+    return 1;
   }
-
-  return 0;
 }
 
 pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
@@ -109,8 +111,12 @@ pfwl_state_t *pfwl_init() {
 }
 
 uint8_t pfwl_set_max_trials(pfwl_state_t *state, uint16_t max_trials) {
-  state->max_trials = max_trials;
-  return 0;
+  if(state){
+    state->max_trials = max_trials;
+    return 0;
+  }else{
+    return 1;
+  }
 }
 
 uint8_t pfwl_defragmentation_enable_ipv4(pfwl_state_t *state,
@@ -118,11 +124,8 @@ uint8_t pfwl_defragmentation_enable_ipv4(pfwl_state_t *state,
   if (state) {
     state->ipv4_frag_state =
         pfwl_reordering_enable_ipv4_fragmentation(table_size);
-    if (state->ipv4_frag_state) {
-      return 0;
-    } else {
-      return 1;
-    }
+    assert(state->ipv4_frag_state);
+    return 0;
   } else {
     return 1;
   }
@@ -133,11 +136,8 @@ uint8_t pfwl_defragmentation_enable_ipv6(pfwl_state_t *state,
   if (likely(state)) {
     state->ipv6_frag_state =
         pfwl_reordering_enable_ipv6_fragmentation(table_size);
-    if (state->ipv6_frag_state) {
-      return 0;
-    } else {
-      return 1;
-    }
+    assert(state->ipv6_frag_state);
+    return 0;
   } else {
     return 1;
   }
@@ -145,7 +145,8 @@ uint8_t pfwl_defragmentation_enable_ipv6(pfwl_state_t *state,
 
 uint8_t pfwl_defragmentation_set_per_host_memory_limit_ipv4(
     pfwl_state_t *state, uint32_t per_host_memory_limit) {
-  if (likely(state && state->ipv4_frag_state)) {
+  if (likely(state)) {
+    assert(state->ipv4_frag_state);
     pfwl_reordering_ipv4_fragmentation_set_per_host_memory_limit(
         state->ipv4_frag_state, per_host_memory_limit);
     return 0;
@@ -156,7 +157,8 @@ uint8_t pfwl_defragmentation_set_per_host_memory_limit_ipv4(
 
 uint8_t pfwl_defragmentation_set_per_host_memory_limit_ipv6(
     pfwl_state_t *state, uint32_t per_host_memory_limit) {
-  if (likely(state && state->ipv6_frag_state)) {
+  if (likely(state)) {
+    assert(state->ipv6_frag_state);
     pfwl_reordering_ipv6_fragmentation_set_per_host_memory_limit(
         state->ipv6_frag_state, per_host_memory_limit);
     return 0;
@@ -168,7 +170,8 @@ uint8_t pfwl_defragmentation_set_per_host_memory_limit_ipv6(
 uint8_t
 pfwl_defragmentation_set_total_memory_limit_ipv4(pfwl_state_t *state,
                                                  uint32_t total_memory_limit) {
-  if (likely(state && state->ipv4_frag_state)) {
+  if (likely(state)) {
+    assert(state->ipv4_frag_state);
     pfwl_reordering_ipv4_fragmentation_set_total_memory_limit(
         state->ipv4_frag_state, total_memory_limit);
     return 0;
@@ -180,7 +183,8 @@ pfwl_defragmentation_set_total_memory_limit_ipv4(pfwl_state_t *state,
 uint8_t
 pfwl_defragmentation_set_total_memory_limit_ipv6(pfwl_state_t *state,
                                                  uint32_t total_memory_limit) {
-  if (likely(state && state->ipv6_frag_state)) {
+  if (likely(state)) {
+    assert(state->ipv6_frag_state);
     pfwl_reordering_ipv6_fragmentation_set_total_memory_limit(
         state->ipv6_frag_state, total_memory_limit);
     return 0;
@@ -192,7 +196,8 @@ pfwl_defragmentation_set_total_memory_limit_ipv6(pfwl_state_t *state,
 uint8_t
 pfwl_defragmentation_set_reassembly_timeout_ipv4(pfwl_state_t *state,
                                                  uint8_t timeout_seconds) {
-  if (likely(state && state->ipv4_frag_state)) {
+  if (likely(state)) {
+    assert(state->ipv4_frag_state);
     pfwl_reordering_ipv4_fragmentation_set_reassembly_timeout(
         state->ipv4_frag_state, timeout_seconds);
     return 0;
@@ -204,7 +209,8 @@ pfwl_defragmentation_set_reassembly_timeout_ipv4(pfwl_state_t *state,
 uint8_t
 pfwl_defragmentation_set_reassembly_timeout_ipv6(pfwl_state_t *state,
                                                  uint8_t timeout_seconds) {
-  if (likely(state && state->ipv6_frag_state)) {
+  if (likely(state)) {
+    assert(state->ipv6_frag_state);
     pfwl_reordering_ipv6_fragmentation_set_reassembly_timeout(
         state->ipv6_frag_state, timeout_seconds);
     return 0;
@@ -214,7 +220,7 @@ pfwl_defragmentation_set_reassembly_timeout_ipv6(pfwl_state_t *state,
 }
 
 uint8_t pfwl_defragmentation_disable_ipv4(pfwl_state_t *state) {
-  if (likely(state && state->ipv4_frag_state)) {
+  if (likely(state)) {
     pfwl_reordering_disable_ipv4_fragmentation(state->ipv4_frag_state);
     state->ipv4_frag_state = NULL;
     return 0;
@@ -224,7 +230,7 @@ uint8_t pfwl_defragmentation_disable_ipv4(pfwl_state_t *state) {
 }
 
 uint8_t pfwl_defragmentation_disable_ipv6(pfwl_state_t *state) {
-  if (likely(state && state->ipv6_frag_state)) {
+  if (likely(state)) {
     pfwl_reordering_disable_ipv6_fragmentation(state->ipv6_frag_state);
     state->ipv6_frag_state = NULL;
     return 0;
@@ -358,8 +364,12 @@ const char *pfwl_get_status_msg(pfwl_status_t status_code) {
 
 uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
                                        pfwl_flow_cleaner_callback_t *cleaner) {
-  pflw_flow_table_set_flow_cleaner_callback(state->flow_table, cleaner);
-  return 0;
+  if(state){
+    pflw_flow_table_set_flow_cleaner_callback(state->flow_table, cleaner);
+    return 0;
+  }else{
+    return 1;
+  }
 }
 
 static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {

@@ -263,6 +263,9 @@ pfwl_flow_table_t *pfwl_flow_table_create(uint32_t expected_flows,
                                           uint16_t num_partitions) {
 #endif
   pfwl_flow_table_t *table = NULL;
+  if(expected_flows < PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE){
+    expected_flows = PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE;
+  }
   uint32_t size = expected_flows / PFWL_DEFAULT_FLOW_TABLE_AVG_BUCKET_SIZE;
   if (size != 0) {
     table = (pfwl_flow_table_t *) malloc(sizeof(pfwl_flow_table_t));
