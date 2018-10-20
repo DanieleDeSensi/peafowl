@@ -124,7 +124,7 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
         }
         else if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
             // check packet and extract fields if needed
-            return hight_check(rtcp, state, (int) data_length, pkt_info);
+            return high_check(rtcp, state, (int) data_length, pkt_info);
         }
     }
     return PFWL_PROTOCOL_NO_MATCHES;
