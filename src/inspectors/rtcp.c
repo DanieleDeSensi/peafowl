@@ -119,10 +119,9 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
     if(data_length >= 4) {
         struct rtcp_header* rtcp = (struct rtcp_header*) app_data;
 
-        if(accuracy == PFWL_DISSECTOR_ACCURACY_LOW) {
+        if(accuracy < PFWL_DISSECTOR_ACCURACY_HIGH) {
             return low_check(rtcp);
-        }
-        else if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
+        } else {
             // check packet and extract fields if needed
             return high_check(rtcp, state, (int) data_length, pkt_info);
         }
