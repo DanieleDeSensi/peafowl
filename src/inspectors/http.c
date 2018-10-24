@@ -304,7 +304,7 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
      * the flow as unknown.
      */
     if (flow_info_private->seen_syn == 0) {
-      http_parser_init(parser, HTTP_BOTH);
+      parser->data = NULL; // To force http_parser_init at next iteration
       return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     } else {
       return PFWL_PROTOCOL_NO_MATCHES;

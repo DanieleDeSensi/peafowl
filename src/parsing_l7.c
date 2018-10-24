@@ -46,55 +46,57 @@
 #include <strings.h>
 #include <time.h>
 
+#define PFWL_DEBUG 0
+
 #define debug_print(fmt, ...)                                                  \
   do {                                                                         \
-    if (PFWL_DEBUG)                                                            \
-      fprintf(stderr, fmt, __VA_ARGS__);                                       \
+  if (PFWL_DEBUG)                                                            \
+  fprintf(stderr, fmt, __VA_ARGS__);                                       \
   } while (0)
 
 // clang-format off
 static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
-        [0 ... PFWL_MAX_UINT_16] = PFWL_PROTO_L7_UNKNOWN, 
-        [port_dns] = PFWL_PROTO_L7_DNS, 
-        [port_http] = PFWL_PROTO_L7_HTTP, 
-        [port_bgp] = PFWL_PROTO_L7_BGP, 
-        [port_smtp_1] = PFWL_PROTO_L7_SMTP, 
-        [port_smtp_2] = PFWL_PROTO_L7_SMTP, 
-        [port_smtp_ssl] = PFWL_PROTO_L7_SMTP, 
-        [port_pop3] = PFWL_PROTO_L7_POP3, 
-        [port_pop3_ssl] = PFWL_PROTO_L7_POP3, 
-        [port_imap] = PFWL_PROTO_L7_IMAP, 
-        [port_imap_ssl] = PFWL_PROTO_L7_IMAP, 
-        [port_ssl] = PFWL_PROTO_L7_SSL, 
-        [port_hangout_19305] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19306] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19307] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19308] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19309] = PFWL_PROTO_L7_HANGOUT, 
-        [port_ssh] = PFWL_PROTO_L7_SSH,
-        [port_bitcoin] = PFWL_PROTO_L7_BITCOIN,
+  [0 ... PFWL_MAX_UINT_16] = PFWL_PROTO_L7_UNKNOWN,
+  [port_dns] = PFWL_PROTO_L7_DNS,
+  [port_http] = PFWL_PROTO_L7_HTTP,
+  [port_bgp] = PFWL_PROTO_L7_BGP,
+  [port_smtp_1] = PFWL_PROTO_L7_SMTP,
+  [port_smtp_2] = PFWL_PROTO_L7_SMTP,
+  [port_smtp_ssl] = PFWL_PROTO_L7_SMTP,
+  [port_pop3] = PFWL_PROTO_L7_POP3,
+  [port_pop3_ssl] = PFWL_PROTO_L7_POP3,
+  [port_imap] = PFWL_PROTO_L7_IMAP,
+  [port_imap_ssl] = PFWL_PROTO_L7_IMAP,
+  [port_ssl] = PFWL_PROTO_L7_SSL,
+  [port_hangout_19305] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19306] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19307] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19308] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19309] = PFWL_PROTO_L7_HANGOUT,
+  [port_ssh] = PFWL_PROTO_L7_SSH,
+  [port_bitcoin] = PFWL_PROTO_L7_BITCOIN,
 };
 
 static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
-        [0 ... PFWL_MAX_UINT_16] = PFWL_PROTO_L7_UNKNOWN, 
-        [port_dns] = PFWL_PROTO_L7_DNS, 
-        [port_mdns] = PFWL_PROTO_L7_MDNS, 
-        [port_dhcp_1] = PFWL_PROTO_L7_DHCP, 
-        [port_dhcp_2] = PFWL_PROTO_L7_DHCP, 
-        [port_dhcpv6_1] = PFWL_PROTO_L7_DHCPv6, 
-        [port_dhcpv6_2] = PFWL_PROTO_L7_DHCPv6, 
-        [port_sip] = PFWL_PROTO_L7_SIP, 
-        [port_ntp] = PFWL_PROTO_L7_NTP, 
-        [port_hangout_19302] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19303] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19304] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19305] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19306] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19307] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19308] = PFWL_PROTO_L7_HANGOUT, 
-        [port_hangout_19309] = PFWL_PROTO_L7_HANGOUT, 
-        [port_dropbox] = PFWL_PROTO_L7_DROPBOX, 
-        [port_spotify] = PFWL_PROTO_L7_SPOTIFY,
+  [0 ... PFWL_MAX_UINT_16] = PFWL_PROTO_L7_UNKNOWN,
+  [port_dns] = PFWL_PROTO_L7_DNS,
+  [port_mdns] = PFWL_PROTO_L7_MDNS,
+  [port_dhcp_1] = PFWL_PROTO_L7_DHCP,
+  [port_dhcp_2] = PFWL_PROTO_L7_DHCP,
+  [port_dhcpv6_1] = PFWL_PROTO_L7_DHCPv6,
+  [port_dhcpv6_2] = PFWL_PROTO_L7_DHCPv6,
+  [port_sip] = PFWL_PROTO_L7_SIP,
+  [port_ntp] = PFWL_PROTO_L7_NTP,
+  [port_hangout_19302] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19303] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19304] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19305] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19306] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19307] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19308] = PFWL_PROTO_L7_HANGOUT,
+  [port_hangout_19309] = PFWL_PROTO_L7_HANGOUT,
+  [port_dropbox] = PFWL_PROTO_L7_DROPBOX,
+  [port_spotify] = PFWL_PROTO_L7_SPOTIFY,
 };
 // clang-format on
 
@@ -154,21 +156,93 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
 static int inspect_protocol(pfwl_protocol_l4_t protocol_l4,
                             const pfwl_protocol_descriptor_t *descr) {
   return descr->transport == PFWL_L7_TRANSPORT_TCP_OR_UDP ||
-         (protocol_l4 == IPPROTO_TCP &&
-          descr->transport == PFWL_L7_TRANSPORT_TCP) ||
-         (protocol_l4 == IPPROTO_UDP &&
-          descr->transport == PFWL_L7_TRANSPORT_UDP);
+      (protocol_l4 == IPPROTO_TCP &&
+       descr->transport == PFWL_L7_TRANSPORT_TCP) ||
+      (protocol_l4 == IPPROTO_UDP &&
+       descr->transport == PFWL_L7_TRANSPORT_UDP);
+}
+
+void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
+                         size_t length, pfwl_dissection_info_t *diss_info,
+                         pfwl_flow_info_private_t *flow_info_private) {
+  const pfwl_protocol_l7_t *well_known_ports;
+  pfwl_protocol_l7_t i;
+  uint8_t check_result = PFWL_PROTOCOL_NO_MATCHES;
+
+  if (!flow_info_private->identification_terminated) {
+    // Set next protocol as not yet determined
+    flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] = PFWL_PROTO_L7_NOT_DETERMINED;
+    debug_print("%s\n", "Still some protocols to identify.");
+    if (diss_info->l4.protocol == IPPROTO_TCP) {
+      well_known_ports = pfwl_known_ports_tcp;
+    } else {
+      well_known_ports = pfwl_known_ports_udp;
+    }
+
+    pfwl_protocol_l7_t first_to_check;
+    pfwl_protocol_l7_t checked = 0;
+
+    if ((first_to_check = well_known_ports[diss_info->l4.port_src]) ==
+        PFWL_PROTO_L7_UNKNOWN &&
+        (first_to_check = well_known_ports[diss_info->l4.port_dst]) ==
+        PFWL_PROTO_L7_UNKNOWN) {
+      first_to_check = 0;
+    }
+
+    for (i = first_to_check; checked < PFWL_PROTO_L7_NUM;
+         i = (i + 1) % PFWL_PROTO_L7_NUM, ++checked) {
+      if (BITTEST(flow_info_private->possible_matching_protocols, i)) {
+        pfwl_protocol_descriptor_t descr = protocols_descriptors[i];
+        if (inspect_protocol(diss_info->l4.protocol, &descr)) {
+          debug_print("Checking: %s\n", pfwl_get_L7_protocol_name(i));
+          check_result = (*(descr.dissector))(state, pkt, length, diss_info,
+                                              flow_info_private);
+          if (check_result == PFWL_PROTOCOL_MATCHES) {
+            flow_info_private->l7_protocols[flow_info_private->l7_protocols_num++] = i;
+
+            // Reset values
+            if(descr.dependending_protocols){
+              for(size_t j = 0; j < PFWL_PROTO_L7_NUM; j++){
+                BITCLEAR(flow_info_private->possible_matching_protocols, j);
+              }
+              flow_info_private->trials = state->max_trials;
+
+              size_t j = 0;
+              flow_info_private->possible_protocols = 0;
+              while(descr.dependending_protocols &&
+                    descr.dependending_protocols[j] != PFWL_PROTO_L7_NUM){
+                BITSET(flow_info_private->possible_matching_protocols, descr.dependending_protocols[j]);
+                ++j;
+              }
+              flow_info_private->possible_protocols = j;
+              debug_print("%s\n", "Going to dissect sub protocols.");
+              pfwl_dissect_L7_sub(state, pkt, length, diss_info, flow_info_private);
+            }else{
+              debug_print("%s\n", "Marking identification as terminated.");
+              flow_info_private->identification_terminated = 1;
+              flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] = PFWL_PROTO_L7_UNKNOWN;
+            }
+            break;
+          } else if (check_result == PFWL_PROTOCOL_NO_MATCHES) {
+            BITCLEAR(flow_info_private->possible_matching_protocols, i);
+            --(flow_info_private->possible_protocols);
+          }
+        } else {
+          BITCLEAR(flow_info_private->possible_matching_protocols, i);
+          --(flow_info_private->possible_protocols);
+        }
+      }
+    }
+  }
 }
 
 pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
                               size_t length, pfwl_dissection_info_t *diss_info,
                               pfwl_flow_info_private_t *flow_info_private) {
-  pfwl_protocol_l7_t i;
-  uint8_t check_result = PFWL_PROTOCOL_NO_MATCHES;
-  const pfwl_protocol_l7_t *well_known_ports;
+  debug_print("%s\n", "Going to dissect L7.");
 
   ++((pfwl_flow_info_t *) flow_info_private->info_public)
-        ->num_packets_l7[diss_info->l4.direction];
+      ->num_packets_l7[diss_info->l4.direction];
   ((pfwl_flow_info_t *) flow_info_private->info_public)
       ->num_bytes_l7[diss_info->l4.direction] += length;
 
@@ -182,87 +256,36 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
   diss_info->flow_info.num_bytes_l7[diss_info->l4.direction] =
       flow_info_private->info_public->num_bytes_l7[diss_info->l4.direction];
 
-  if (flow_info_private->l7prot < PFWL_PROTO_L7_NUM) {
-    if (state->fields_to_extract_num[flow_info_private->l7prot]) {
-      pfwl_protocol_descriptor_t descr =
-          protocols_descriptors[flow_info_private->l7prot];
-      check_result = (*(descr.dissector))(state, pkt, length, diss_info, flow_info_private);
-    }
-    return PFWL_STATUS_OK;
-  } else if (flow_info_private->l7prot == PFWL_PROTO_L7_NOT_DETERMINED) {
-    if (diss_info->l4.protocol == IPPROTO_TCP) {
-      well_known_ports = pfwl_known_ports_tcp;
-    } else {
-      well_known_ports = pfwl_known_ports_udp;
-    }
-
-    pfwl_protocol_l7_t first_to_check;
-    pfwl_protocol_l7_t checked = 0;
-
-    if ((first_to_check = well_known_ports[diss_info->l4.port_src]) ==
-            PFWL_PROTO_L7_UNKNOWN &&
-        (first_to_check = well_known_ports[diss_info->l4.port_dst]) ==
-            PFWL_PROTO_L7_UNKNOWN) {
-      first_to_check = 0;
-    }
-
-    for (i = first_to_check; checked < PFWL_PROTO_L7_NUM;
-         i = (i + 1) % PFWL_PROTO_L7_NUM, ++checked) {
-      if (BITTEST(flow_info_private->possible_matching_protocols, i)) {
-        pfwl_protocol_descriptor_t descr = protocols_descriptors[i];
-        if (inspect_protocol(diss_info->l4.protocol, &descr)) {
-          check_result = (*(descr.dissector))(state, pkt, length, diss_info,
-                                              flow_info_private);
-          if (check_result == PFWL_PROTOCOL_MATCHES) {
-            flow_info_private->l7prot = i;
-            diss_info->l7.protocol = flow_info_private->l7prot;
-            diss_info->l7.protocols[0] = diss_info->l7.protocol;
-
-            // Check depending protocols
-            size_t depth = 0;
-            if(descr.dependending_protocols){
-              size_t i = 0;
-              while(descr.dependending_protocols &&
-                    descr.dependending_protocols[i] != PFWL_PROTO_L7_NUM){
-                pfwl_protocol_descriptor_t tmpdescr = protocols_descriptors[descr.dependending_protocols[i]];
-                check_result = (*(tmpdescr.dissector))(state, pkt, length, diss_info, flow_info_private);
-                if(check_result == PFWL_PROTOCOL_MATCHES){
-                  ++depth;
-                  diss_info->l7.protocols[depth] = descr.dependending_protocols[i];
-                  descr = protocols_descriptors[i];
-                  i = 0;
-                }else{
-                  i++;
-                }
-              };
-            }
-
-            return PFWL_STATUS_OK;
-          } else if (check_result == PFWL_PROTOCOL_NO_MATCHES) {
-            BITCLEAR(flow_info_private->possible_matching_protocols, i);
-            --(flow_info_private->possible_protocols);
-          }
-        } else {
-          BITCLEAR(flow_info_private->possible_matching_protocols, i);
-          --(flow_info_private->possible_protocols);
-        }
-      }
-    }
-
-    /**
-     * If all the protocols don't match or if we still have
-     * ambiguity after the maximum number of trials, then the
-     * library was unable to identify the protocol.
-     **/
-    if (flow_info_private->possible_protocols == 0 ||
-        (state->max_trials &&
-         unlikely(++flow_info_private->trials == state->max_trials))) {
-      flow_info_private->l7prot = PFWL_PROTO_L7_UNKNOWN;
+  // Extract the fields for all the protocols we identified
+  pfwl_protocol_descriptor_t descr;
+  for(size_t i = 0; i < diss_info->l7.protocols_num; i++){
+    pfwl_protocol_l7_t proto = diss_info->l7.protocols[i];
+    if (state->fields_to_extract_num[proto]) {
+      debug_print("Extracting fields for protocol %d\n", proto);
+      descr = protocols_descriptors[proto];
+      (*(descr.dissector))(state, pkt, length, diss_info, flow_info_private);
     }
   }
 
-  diss_info->l7.protocol = flow_info_private->l7prot;
-  diss_info->l7.protocols[0] = diss_info->l7.protocol;
+  pfwl_dissect_L7_sub(state, pkt, length, diss_info, flow_info_private);
+
+  /**
+   * If all the protocols don't match or if we still have
+   * ambiguity after the maximum number of trials, then the
+   * library was unable to identify the protocol.
+   **/
+  if (flow_info_private->possible_protocols == 0 ||
+      (state->max_trials &&
+       unlikely(++flow_info_private->trials == state->max_trials))) {
+    flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] = PFWL_PROTO_L7_UNKNOWN;
+    flow_info_private->identification_terminated = 1;
+  }
+
+  for(size_t i = 0; i < flow_info_private->l7_protocols_num; i++){
+    diss_info->l7.protocols[i] = flow_info_private->l7_protocols[i];
+  }
+  diss_info->l7.protocols_num = flow_info_private->l7_protocols_num;
+  diss_info->l7.protocol = flow_info_private->l7_protocols[0];
 
   return PFWL_STATUS_OK;
 }
@@ -368,12 +391,12 @@ uint8_t pfwl_protocol_l7_disable(pfwl_state_t *state,
     if (BITTEST(state->protocols_to_inspect, protocol)) {
       if (protocols_descriptors[protocol].transport == PFWL_L7_TRANSPORT_TCP ||
           protocols_descriptors[protocol].transport ==
-              PFWL_L7_TRANSPORT_TCP_OR_UDP) {
+          PFWL_L7_TRANSPORT_TCP_OR_UDP) {
         --state->active_protocols[0];
       }
       if (protocols_descriptors[protocol].transport == PFWL_L7_TRANSPORT_UDP ||
           protocols_descriptors[protocol].transport ==
-              PFWL_L7_TRANSPORT_TCP_OR_UDP) {
+          PFWL_L7_TRANSPORT_TCP_OR_UDP) {
         --state->active_protocols[1];
       }
     }

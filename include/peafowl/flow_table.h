@@ -162,7 +162,9 @@ typedef struct pfwl_flow_info_private {
    * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
    * or the matching protocol identifier.
    */
-  pfwl_protocol_l7_t l7prot;
+  pfwl_protocol_l7_t l7_protocols[PFWL_MAX_L7_SUBPROTO_DEPTH];
+  uint8_t l7_protocols_num;
+  uint8_t identification_terminated;
 
   /** Number of times that the library tried to guess the protocol. **/
   uint16_t trials;

@@ -30,14 +30,23 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 #include <peafowl/utils.h>
+#include "../external/rapidjson/document.h"
+
+using namespace rapidjson;
 
 uint8_t check_zcash(pfwl_state_t *state, const unsigned char *app_data,
                     size_t data_length, pfwl_dissection_info_t *pkt_info,
                     pfwl_flow_info_private_t *flow_info_private) {
-  if (pfwl_strnstr((const char *) app_data, "\"method\"", data_length) ||
-      pfwl_strnstr((const char *) app_data, "\"blob\"", data_length) ||
-      pfwl_strnstr((const char *) app_data, "\"id\"", data_length)) {
-    return PFWL_PROTOCOL_MATCHES;
+  if(pkt_info->l7.protocols_num &&
+     pkt_info->l7.protocols[pkt_info->l7.protocols_num - 1] == PFWL_PROTO_L7_JSON_RPC){
+    Document* d = static_cast<Document*>(flow_info_private->json_parser);
+    assert(d);
+    if(d->FindMember("method") != d->MemberEnd() ||
+       d->FindMember("blob") != d->MemberEnd()){
+      return PFWL_PROTOCOL_MATCHES;
+    }
+  }else if(pkt_info->l7.protocols[pkt_info->l7.protocols_num - 1] == PFWL_PROTO_L7_NOT_DETERMINED){
+    return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
   return PFWL_PROTOCOL_NO_MATCHES;
 }

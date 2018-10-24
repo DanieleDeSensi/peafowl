@@ -432,6 +432,7 @@ typedef struct pfwl_dissection_info {
                                                               ///<   protocols[0] = JSON-RPC
                                                               ///<   protocols[1] = Ethereum
                                                               ///< The value 'protocol' is always equal to protocols[0]
+    uint8_t protocols_num; ///< Number of values set in 'protocols' array.
     pfwl_field_t protocol_fields[PFWL_FIELDS_L7_NUM]; ///< Fields extracted by
                                                       /// the dissector. Some of
                                                       ///< these fields (e.g. strings) are only valid

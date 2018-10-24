@@ -193,7 +193,11 @@ pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
   }
 
   dissection_info->flow_info = *flow_info_private->info_public;
-  dissection_info->l7.protocol = flow_info_private->l7prot;
+  for(size_t i = 0; i < flow_info_private->l7_protocols_num; i++){
+    dissection_info->l7.protocols[i] = flow_info_private->l7_protocols[i];
+  }
+  dissection_info->l7.protocols_num = flow_info_private->l7_protocols_num;
+  dissection_info->l7.protocol = flow_info_private->l7_protocols[0];
 
   // Store L3 fragmented data for later deletion
   if (flow_info_private->last_rebuilt_ip_fragments) {

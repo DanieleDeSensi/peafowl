@@ -413,7 +413,7 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
     free((void *) to_delete->info_private.last_rebuilt_ip_fragments);
   }
   if(to_delete->info_private.json_parser){
-    jsonrpc_delete_parser(to_delete->info_private.json_parser);
+    //jsonrpc_delete_parser(to_delete->info_private.json_parser);
   }
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
@@ -535,7 +535,9 @@ void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
     }
   }
 
-  flow_info_private->l7prot = PFWL_PROTO_L7_NOT_DETERMINED;
+  flow_info_private->l7_protocols_num = 0;
+  flow_info_private->l7_protocols[0] = PFWL_PROTO_L7_NOT_DETERMINED;
+  flow_info_private->identification_terminated = 0;
   flow_info_private->trials = 0;
   flow_info_private->tcp_reordering_enabled = tcp_reordering_enabled;
   flow_info_private->last_rebuilt_tcp_data = NULL;
