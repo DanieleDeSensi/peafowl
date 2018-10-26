@@ -50,14 +50,12 @@
 #include <netinet/in.h>
 #include <net/ethernet.h>
 #include <stdint.h>
-#include <ff/ubuffer.hpp>
+#include <list>
 
 using namespace antivirus;
 #define CAPACITY_CHUNK 1000
-#define SCANNER_POOL_SIZE 4096
 
-
-static ff::uSWSR_Ptr_Buffer* scanner_pool;
+static std::list<void*> scanner_pool;
 
 trie* my_trie;
 
@@ -67,9 +65,12 @@ static void match_found(string::size_type position, trie::value_type const &matc
 }
 
 void body_cb(const unsigned char* app_data, u_int32_t data_length, void** flow_specific_user_data){
-  if(*flow_specific_user_data==NULL){
-    if(scanner_pool->mc_pop(flow_specific_user_data)==false){
-      *flow_specific_user_data=new byte_scanner(*my_trie, match_found);
+  if(*flow_specific_user_data==NULL){    
+    if(scanner_pool.empty()){
+      *flow_specific_user_data = new byte_scanner(*my_trie, match_found);
+    }else{
+      *flow_specific_user_data = scanner_pool.front();  
+      scanner_pool.pop_front();  
     }
   }
   byte_scanner* scanner=(byte_scanner*) (*flow_specific_user_data);
@@ -79,9 +80,7 @@ void body_cb(const unsigned char* app_data, u_int32_t data_length, void** flow_s
 }
 
 void flow_cleaner(void* flow_specific_user_data){
-  if(scanner_pool->mp_push(flow_specific_user_data)==false){
-    delete static_cast<byte_scanner*>(flow_specific_user_data);
-  }
+  scanner_pool.push_back(flow_specific_user_data);
 }
 
 
@@ -189,13 +188,6 @@ int main(int argc, char **argv){
     pcap_close(handle);
 
 
-
-    scanner_pool = new ff::uSWSR_Ptr_Buffer(SCANNER_POOL_SIZE);
-    scanner_pool->init();
-    for(uint i=0; i<SCANNER_POOL_SIZE; i++){
-      scanner_pool->push(new byte_scanner(t, match_found));
-    }
-
     pfwl_state_t* state=pfwl_init();
     pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
     pfwl_set_flow_cleaner_callback(state, &flow_cleaner);
@@ -217,13 +209,13 @@ int main(int argc, char **argv){
     }
 
     byte_scanner* bs;
-    while(!scanner_pool->empty()){
-      scanner_pool->pop((void**) &bs);
+    while(!scanner_pool.empty()){
+      bs = static_cast<byte_scanner*>(scanner_pool.back());
+      scanner_pool.pop_back();
       delete bs;
     }
     /* And close the session */
     pfwl_terminate(state);
-    delete scanner_pool;
 
     full_timer.stop();
 
