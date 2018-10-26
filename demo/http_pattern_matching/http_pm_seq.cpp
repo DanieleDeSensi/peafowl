@@ -208,9 +208,8 @@ int main(int argc, char **argv){
       }
     }
 
-    byte_scanner* bs;
     while(!scanner_pool.empty()){
-      bs = static_cast<byte_scanner*>(scanner_pool.back());
+      byte_scanner* bs = static_cast<byte_scanner*>(scanner_pool.back());
       scanner_pool.pop_back();
       delete bs;
     }
