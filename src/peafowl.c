@@ -85,6 +85,13 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   state->flow_table =
       pfwl_flow_table_create(expected_flows, strict, num_table_partitions);
 #endif
+  // Must be called before pfwl_protocol_l7_enable_all
+  for (size_t i = 0; i < PFWL_PROTO_L7_NUM; i++) {
+    memset(state->fields_to_extract, 0, sizeof(state->fields_to_extract));
+    memset(state->fields_to_extract_num, 0,
+           sizeof(state->fields_to_extract_num));
+  }
+
   pfwl_set_max_trials(state, PFWL_DEFAULT_MAX_TRIALS_PER_FLOW);
   pfwl_protocol_l7_enable_all(state);
 
@@ -96,12 +103,6 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   pfwl_tcp_reordering_enable(state);
 
   state->l7_skip = NULL;
-
-  for (size_t i = 0; i < PFWL_PROTO_L7_NUM; i++) {
-    memset(state->fields_to_extract, 0, sizeof(state->fields_to_extract));
-    memset(state->fields_to_extract_num, 0,
-           sizeof(state->fields_to_extract_num));
-  }
 
   return state;
 }
@@ -388,6 +389,9 @@ static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
   } else if (field > PFWL_FIELDS_L7_RTP_FIRST &&
              field < PFWL_FIELDS_L7_RTP_LAST) {
       return PFWL_PROTO_L7_RTP;
+  } else if (field > PFWL_FIELDS_L7_JSON_RPC_FIRST &&
+             field < PFWL_FIELDS_L7_JSON_RPC_LAST) {
+      return PFWL_PROTO_L7_JSON_RPC;
   } else {
       return PFWL_PROTO_L7_NUM;
   }
@@ -518,14 +522,23 @@ uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
   pfwl_field_t field =
       dissection_info->l7.protocol_fields[PFWL_FIELDS_L7_HTTP_HEADERS];
   if (field.present) {
-    for (size_t i = 0; i < field.array.length; i++) {
+    for (size_t i = 0; i < field.array.length; i++) {      
       pfwl_pair_t pair = ((pfwl_pair_t *) field.array.values)[i];
       pfwl_string_t key = pair.first.string;
-      if (!strncasecmp(header_name, (const char *) key.value, key.length)) {
+      if (key.length && !strncasecmp(header_name, (const char *) key.value, key.length)) {
         *header_value = pair.second.string;
         return 0;
       }
     }
   }
   return 1;
+}
+
+uint8_t pfwl_has_protocol_L7(pfwl_dissection_info_t* dissection_info, pfwl_protocol_l7_t protocol){
+  for(size_t i = 0; i < dissection_info->l7.protocols_num; i++){
+    if(dissection_info->l7.protocols[i] == protocol){
+      return 1;
+    }
+  }
+  return 0;
 }

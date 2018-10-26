@@ -109,6 +109,10 @@ typedef struct pfwl_sip_internal_information {
   unsigned int cSeqNumber;
   uint8_t hasVqRtcpXR;
   pfwl_sip_method_t cSeqMethod;
+  uint8_t hasTo;
+  uint8_t hasFrom;
+  uint8_t hasCseq;
+  uint8_t hasCallid;
 } pfwl_sip_internal_information_t;
 /***************** SIP (end) ******************/
 
@@ -143,10 +147,12 @@ typedef struct pfwl_ssl_internal_information_new {
   uint8_t certificate_num_checks;
   uint8_t certificates_detected;
   pfwl_ssl_version_t version;
-} pfwl_ssl_internal_information_new_t;
+} pfwl_ssl_internal_information_t;
 /********************** SSL (END) ************************/
 
 typedef struct pfwl_flow pfwl_flow_t;
+
+typedef void (*pfwl_flow_cleaner_dissectors)(pfwl_flow_info_private_t *flow_info_private);
 
 /** This must be initialized to zero before use. **/
 typedef struct pfwl_flow_info_private {
@@ -216,6 +222,7 @@ typedef struct pfwl_flow_info_private {
   /************************************/
   /* Protocol inspectors support data */
   /************************************/
+  pfwl_flow_cleaner_dissectors flow_cleaners_dissectors[PFWL_PROTO_L7_NUM];
 
   /*********************************/
   /** DNS Tracking informations. **/
@@ -259,7 +266,7 @@ typedef struct pfwl_flow_info_private {
   /*********************************/
   /** SSL Tracking informations. **/
   /*********************************/
-  pfwl_ssl_internal_information_new_t ssl_information;
+  pfwl_ssl_internal_information_t ssl_information;
 
   /**************************************/
   /** WhatsApp Tracking informations.  **/
@@ -270,6 +277,7 @@ typedef struct pfwl_flow_info_private {
   /** JSON-RPC and depending protos info. **/
   /*****************************************/
   void* json_parser;
+  void* json_stringbuffers[PFWL_FIELDS_L7_JSON_RPC_LAST - PFWL_FIELDS_L7_JSON_RPC_FIRST - 1];
 } pfwl_flow_info_private_t;
 
 struct pfwl_flow {

@@ -190,7 +190,9 @@ typedef enum {
   PFWL_PROTO_L7_ETHEREUM, ///< Ethereum
   PFWL_PROTO_L7_ZCASH,    ///< Zcash
   PFWL_PROTO_L7_MONERO,   ///< Monero
+  PFWL_PROTO_L7_STRATUM,  ///< Stratum mining protocol (can be used by Bitcoin, Zcash and others)
   PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
+  PFWL_PROTO_L7_SSDP,     ///< SSDP
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
@@ -431,6 +433,17 @@ typedef struct pfwl_dissection_info {
                                                               ///< Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
                                                               ///<   protocols[0] = JSON-RPC
                                                               ///<   protocols[1] = Ethereum
+                                                              ///<
+                                                              ///< This encapsulation can also hold over different packets of a given flow.
+                                                              ///< E.g.IMAP over SSL has a few packet exchanged with plain IMAP and then
+                                                              ///< the subsequent packets encapsulated within SSL.
+                                                              ///< In such a case, the first IMAP packets will only have
+                                                              ///< protocols[0] = IMAP. However, when the first SSL packet for the flow
+                                                              ///< is received, we will have protocols[0] = IMAP and protocols[1] = SSL
+                                                              ///< for that packet and for all the subsequent packets.
+                                                              ///< Indeed, it is important to remark that protocols are associated to
+                                                              ///< flows and not to packets.
+                                                              ///<
                                                               ///< The value 'protocol' is always equal to protocols[0]
     uint8_t protocols_num; ///< Number of values set in 'protocols' array.
     pfwl_field_t protocol_fields[PFWL_FIELDS_L7_NUM]; ///< Fields extracted by
@@ -471,30 +484,6 @@ typedef enum {
   PFWL_DISSECTOR_ACCURACY_MEDIUM,  ///< Medium accuracy
   PFWL_DISSECTOR_ACCURACY_HIGH,    ///< High accuracy
 } pfwl_dissector_accuracy_t;
-
-/// @cond Private structures
-/**
- * @brief A generic protocol dissector.
- * A generic protocol dissector.
- * @param state               A pointer to the peafowl internal state
- * @param app_data            A pointer to the application payload.
- * @param data_length         The length of the application payload.
- * @param identification_info Info about the identification done up to now (up
- * to L4 parsing).
- * @param flow_info_private   A pointer to the private flow information.
- * @return               PFWL_PROTOCOL_MATCHES if the protocol matches.
- *                       PFWL_PROTOCOL_NO_MATCHES if the protocol doesn't
- *                       matches.
- *                       PFWL_PROTOCOL_MORE_DATA_NEEDED if the dissector
- *                       needs more data to decide.
- *                       PFWL_ERROR if an error occurred.
- */
-typedef uint8_t (*pfwl_dissector)(pfwl_state_t *state,
-                                  const unsigned char *app_data,
-                                  size_t data_length,
-                                  pfwl_dissection_info_t *identification_info,
-                                  pfwl_flow_info_private_t *flow_info_private);
-/// @endcond
 
 /**
  * @brief Initializes Peafowl.
@@ -1043,6 +1032,32 @@ uint8_t pfwl_field_array_get_pair(pfwl_field_t *fields, pfwl_field_id_t id,
 uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
                              const char *header_name,
                              pfwl_string_t *header_value);
+
+/**
+ * Checks if a specific L7 protocol has been identified in a given dissection info.
+ * ATTENTION: Please note that protocols are associated to flows and not to packets.
+ * For example, if for a given flow, the first packet carries IMAP data and the second
+ * packet carries SSL encrypted data, we will have:
+ *
+ * For the first packet:
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 0
+ *
+ * For the second packet:
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 1
+ *
+ * For all the subsequent packets:
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 1
+ *
+ * @brief pfwl_has_protocol_L7 Checks if a specific L7 protocol has been identified in
+ * a given dissection info.
+ * @param dissection_info The dissection info.
+ * @param protocol The L7 protocol.
+ * @return 1 if the L7 protocol is carried by the flow, 0 otherwise.
+ */
+uint8_t pfwl_has_protocol_L7(pfwl_dissection_info_t* dissection_info, pfwl_protocol_l7_t protocol);
 
 /**
  * @brief pfwl_convert_pcap_dlt Converts a pcap datalink type (which can be

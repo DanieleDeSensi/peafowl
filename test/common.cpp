@@ -40,7 +40,7 @@ void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state
     terminate = true;
   }
   protocols.clear();
-  protocols.resize(PFWL_PROTO_L7_NUM + 1); // +1 to store unknown protocols
+  protocols.resize(PFWL_PROTO_L7_NUM);
 
   Pcap pcap(pcapName);
   pfwl_dissection_info_t r;
@@ -50,8 +50,12 @@ void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state
     pfwl_status_t status = pfwl_dissect_from_L2(state, pkt.first, pkt.second, time(NULL), pcap._datalink_type, &r);
     lambda(status, r);
     if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
-      if(r.l7.protocol > PFWL_PROTO_L7_NUM){r.l7.protocol = PFWL_PROTO_L7_NUM;}
-      ++protocols[r.l7.protocol];
+      for(size_t i = 0; i < r.l7.protocols_num; i++){
+        pfwl_protocol_l7_t proto = r.l7.protocols[i];
+        if(proto < PFWL_PROTO_L7_NUM){
+          ++protocols[proto];
+        }
+      }
     }
   }
 

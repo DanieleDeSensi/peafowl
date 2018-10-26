@@ -26,6 +26,8 @@ TEST(HTTPTest, Generic) {
     EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 9);
     getProtocols("./pcaps/http-segmented.pcap", protocols);
     EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 20);
+    getProtocols("./pcaps/ethereum-js-http.pcap", protocols);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 7);
 }
 
 TEST(HTTPTest, TCPDuplicates){

@@ -832,6 +832,11 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
     return PFWL_PROTOCOL_NO_MATCHES;
   }
 
+  if (!memcmp("SIP/2.0 ", app_data, 8)) {
+    psip->isRequest = 0;
+  }else{
+    psip->isRequest = 1;
+  }
   int offset = 0, last_offset = 0;
   const unsigned char *c, *tmp;
 
@@ -861,6 +866,7 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
           ((*tmp == 'C' || *tmp == 'c') &&
            (*(tmp + 5) == 'I' || *(tmp + 5) == 'i') &&
            *(tmp + CALLID_LEN) == ':')) {
+        psip->hasCallid = 1;
         if (*(tmp + 1) == ':')
           header_offset = 1;
         else
@@ -887,10 +893,13 @@ int light_parse_message(const unsigned char *app_data, uint32_t data_length,
       }
     }
   }
-  if (!psip->len) {
+
+  if(psip->len &&
+     ((psip->isRequest && psip->hasCallid) ||
+      (!psip->isRequest))){
+     return PFWL_PROTOCOL_MATCHES;
+  }else{
     return PFWL_PROTOCOL_NO_MATCHES;
-  } else {
-    return PFWL_PROTOCOL_MATCHES;
   }
 }
 
@@ -933,6 +942,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
   tmp = (const char *) app_data;
 
   if (!memcmp("SIP/2.0 ", tmp, 8)) {
+    sip_info->isRequest = 0;
     // Extract Response code's reason
     const char *reason = tmp + 12;
     for (; *reason; reason++) {
@@ -941,8 +951,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       }
     }
     // TODO: Check if reason/responsecode are valid!
-    sip_info->responseCode = atoi((const char *) tmp + 8);
-    sip_info->isRequest = 0;
+    sip_info->responseCode = atoi((const char *) tmp + 8);    
 
     if (required_fields[PFWL_FIELDS_L7_SIP_REASON]) {
       pfwl_field_t *reasonField =
@@ -1051,6 +1060,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
           ((*tmp == 'C' || *tmp == 'c') &&
            (*(tmp + 5) == 'I' || *(tmp + 5) == 'i') &&
            *(tmp + CALLID_LEN) == ':')) {
+        sip_info->hasCallid = 1;
         if (*(tmp + 1) == ':')
           header_offset = 1;
         else
@@ -1078,6 +1088,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       } else if ((*tmp == 'C' || *tmp == 'c') &&
                  (*(tmp + 1) == 'S' || *(tmp + 1) == 's') &&
                  *(tmp + CSEQ_LEN) == ':') {
+        sip_info->hasCseq = 1;
         if (required_fields[PFWL_FIELDS_L7_SIP_CSEQ] ||
             required_fields[PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING]) {
           pfwl_field_t *cSeq = &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_CSEQ]);
@@ -1138,6 +1149,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
                  ((*tmp == 'F' || *tmp == 'f') &&
                   (*(tmp + 3) == 'M' || *(tmp + 3) == 'm') &&
                   *(tmp + FROM_LEN) == ':')) {
+        sip_info->hasFrom = 1;
         if (required_fields[PFWL_FIELDS_L7_SIP_FROM_URI] ||
             required_fields[PFWL_FIELDS_L7_SIP_FROM_TAG] ||
             required_fields[PFWL_FIELDS_L7_SIP_FROM_USER] ||
@@ -1169,6 +1181,7 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
         continue;
       } else if ((*tmp == 't' && *(tmp + 1) == ':') ||
                  ((*tmp == 'T' || *tmp == 't') && *(tmp + TO_LEN) == ':')) {
+        sip_info->hasTo = 1;
         if (required_fields[PFWL_FIELDS_L7_SIP_TO_URI] ||
             required_fields[PFWL_FIELDS_L7_SIP_TO_TAG] ||
             required_fields[PFWL_FIELDS_L7_SIP_TO_USER] ||
@@ -1239,7 +1252,12 @@ uint8_t parse_message(const unsigned char *app_data, uint32_t data_length,
       }
     }
   }
-  return PFWL_PROTOCOL_MATCHES;
+  if(!sip_info->isRequest ||
+     (sip_info->isRequest && sip_info->hasTo && sip_info->hasFrom && sip_info->hasCallid && sip_info->hasCseq)){
+    return PFWL_PROTOCOL_MATCHES;
+  }else{
+    return PFWL_PROTOCOL_NO_MATCHES;
+  }
 }
 
 uint8_t parse_packet(const unsigned char *app_data, uint32_t data_length,

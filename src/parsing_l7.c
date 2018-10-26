@@ -75,6 +75,10 @@ static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
   [port_hangout_19309] = PFWL_PROTO_L7_HANGOUT,
   [port_ssh] = PFWL_PROTO_L7_SSH,
   [port_bitcoin] = PFWL_PROTO_L7_BITCOIN,
+  [port_monero_p2p_1] = PFWL_PROTO_L7_MONERO,
+  [port_monero_p2p_2] = PFWL_PROTO_L7_MONERO,
+  [port_monero_rpc_1] = PFWL_PROTO_L7_MONERO,
+  [port_monero_rpc_2] = PFWL_PROTO_L7_MONERO,
 };
 
 static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
@@ -97,6 +101,7 @@ static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
   [port_hangout_19309] = PFWL_PROTO_L7_HANGOUT,
   [port_dropbox] = PFWL_PROTO_L7_DROPBOX,
   [port_spotify] = PFWL_PROTO_L7_SPOTIFY,
+  [port_ssdp] = PFWL_PROTO_L7_SSDP,
 };
 // clang-format on
 
@@ -105,6 +110,28 @@ typedef enum {
   PFWL_L7_TRANSPORT_UDP,
   PFWL_L7_TRANSPORT_TCP_OR_UDP,
 } pfwl_l7_transport_t;
+
+/**
+ * @brief A generic protocol dissector.
+ * A generic protocol dissector.
+ * @param state               A pointer to the peafowl internal state
+ * @param app_data            A pointer to the application payload.
+ * @param data_length         The length of the application payload.
+ * @param identification_info Info about the identification done up to now (up
+ * to L4 parsing).
+ * @param flow_info_private   A pointer to the private flow information.
+ * @return               PFWL_PROTOCOL_MATCHES if the protocol matches.
+ *                       PFWL_PROTOCOL_NO_MATCHES if the protocol doesn't
+ *                       matches.
+ *                       PFWL_PROTOCOL_MORE_DATA_NEEDED if the dissector
+ *                       needs more data to decide.
+ *                       PFWL_ERROR if an error occurred.
+ */
+typedef uint8_t (*pfwl_dissector)(pfwl_state_t *state,
+                                  const unsigned char *app_data,
+                                  size_t data_length,
+                                  pfwl_dissection_info_t *identification_info,
+                                  pfwl_flow_info_private_t *flow_info_private);
 
 typedef struct {
   const char *name;
@@ -115,12 +142,13 @@ typedef struct {
 } pfwl_protocol_descriptor_t;
 
 static pfwl_protocol_l7_t http_dep_proto[]     = {PFWL_PROTO_L7_JSON_RPC, PFWL_PROTO_L7_NUM};
-static pfwl_protocol_l7_t json_rpc_dep_proto[] = {PFWL_PROTO_L7_ETHEREUM, PFWL_PROTO_L7_ZCASH, PFWL_PROTO_L7_MONERO, PFWL_PROTO_L7_NUM};
+static pfwl_protocol_l7_t json_rpc_dep_proto[] = {PFWL_PROTO_L7_ETHEREUM, PFWL_PROTO_L7_ZCASH, PFWL_PROTO_L7_MONERO, PFWL_PROTO_L7_STRATUM, PFWL_PROTO_L7_NUM};
 
 static pfwl_field_id_t ethereum_dep_fields[]   = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t zcash_dep_fields[]      = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_JSON_RPC_ID, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t monero_dep_fields[]     = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_JSON_RPC_ID, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t json_rpc_dep_fields[]   = {PFWL_FIELDS_L7_HTTP_HEADERS, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t zcash_dep_fields[]      = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t monero_dep_fields[]     = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t stratum_dep_fields[]    = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t json_rpc_dep_fields[]   = {PFWL_FIELDS_L7_HTTP_HEADERS, PFWL_FIELDS_L7_HTTP_BODY, PFWL_FIELDS_L7_NUM};
 
 // clang-format off
 static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM] = {
@@ -149,7 +177,9 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_ETHEREUM] = {"Ethereum", check_ethereum, PFWL_L7_TRANSPORT_TCP       , NULL              , ethereum_dep_fields},
   [PFWL_PROTO_L7_ZCASH]    = {"Zcash"   , check_zcash   , PFWL_L7_TRANSPORT_TCP       , NULL              , zcash_dep_fields},
   [PFWL_PROTO_L7_MONERO]   = {"Monero"  , check_monero  , PFWL_L7_TRANSPORT_TCP       , NULL              , monero_dep_fields},
+  [PFWL_PROTO_L7_STRATUM]  = {"Stratum" , check_stratum , PFWL_L7_TRANSPORT_TCP       , NULL              , stratum_dep_fields},
   [PFWL_PROTO_L7_JSON_RPC] = {"JSON-RPC", check_jsonrpc , PFWL_L7_TRANSPORT_TCP_OR_UDP, json_rpc_dep_proto, json_rpc_dep_fields},
+  [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
 };
 // clang-format on
 
@@ -194,7 +224,7 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
       if (BITTEST(flow_info_private->possible_matching_protocols, i)) {
         pfwl_protocol_descriptor_t descr = protocols_descriptors[i];
         if (inspect_protocol(diss_info->l4.protocol, &descr)) {
-          debug_print("Checking: %s\n", pfwl_get_L7_protocol_name(i));
+          debug_print("Checking: %s, possible matches %d\n", pfwl_get_L7_protocol_name(i), flow_info_private->possible_protocols);
           check_result = (*(descr.dissector))(state, pkt, length, diss_info,
                                               flow_info_private);
           if (check_result == PFWL_PROTOCOL_MATCHES) {

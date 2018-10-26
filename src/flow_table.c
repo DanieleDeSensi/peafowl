@@ -412,8 +412,10 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   if (to_delete->info_private.last_rebuilt_ip_fragments) {
     free((void *) to_delete->info_private.last_rebuilt_ip_fragments);
   }
-  if(to_delete->info_private.json_parser){
-    //jsonrpc_delete_parser(to_delete->info_private.json_parser);
+  for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+    if(to_delete->info_private.flow_cleaners_dissectors[i]){
+      to_delete->info_private.flow_cleaners_dissectors[i](&(to_delete->info_private));
+    }
   }
 
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
@@ -528,9 +530,10 @@ void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
   bzero(flow_info_private, sizeof(pfwl_flow_info_private_t));
   pfwl_protocol_l7_t i;
   flow_info_private->possible_protocols = 0;
-  for (i = 0; i < BITNSLOTS(PFWL_PROTO_L7_NUM); i++) {
-    flow_info_private->possible_matching_protocols[i] = protocols_to_inspect[i];
-    if (protocols_to_inspect[i]) {
+  for (i = 0; i < PFWL_PROTO_L7_NUM; i++) {
+    uint8_t set = BITTEST(protocols_to_inspect, i);
+    if(set){
+      BITSET(flow_info_private->possible_matching_protocols, i);
       ++flow_info_private->possible_protocols;
     }
   }

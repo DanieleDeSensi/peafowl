@@ -117,8 +117,19 @@ The supported protocols are:
   <tr>
     <td>Zcash</td><td>5/5</td>
   </tr>
-    <tr>
+  <tr>
     <td>Monero</td><td>5/5</td>
+  </tr>
+  <tr>
+    <td>Stratum</td><td>5/5</td>
+  </tr>
+  </tr>
+    <tr>
+    <td>JSON-RPC</td><td>5/5</td>
+  </tr>
+  </tr>
+    <tr>
+    <td>SSDP</td><td>5/5</td>
   </tr>
 </table>
 

@@ -84,6 +84,11 @@ enum protocol_check_statuses {
 #define port_dropbox 0x5C44       /** 17500 **/
 #define port_spotify 0x15E1       /** 57621 **/
 #define port_bitcoin 0x8D20       /** 8333 **/
+#define port_ssdp 0x6C07          /** 1900 **/
+#define port_monero_rpc_1 0xA146  /** 18081 **/
+#define port_monero_rpc_2 0xB16D  /** 28081 **/
+#define port_monero_p2p_1 0xA046  /** 18080 **/
+#define port_monero_p2p_2 0xB06D  /** 28080 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define port_ssh 0x0016           /* 22 **/
 #define port_smtp_1 0x0019        /** 25 **/
@@ -115,6 +120,11 @@ enum protocol_check_statuses {
 #define port_dropbox 0x445C       /** 17500 **/
 #define port_spotify 0xE115       /** 57621 **/
 #define port_bitcoin 0x208D       /** 8333 **/
+#define port_ssdp 0x076C          /** 1900 **/
+#define port_monero_rpc_1 0x46A1  /** 18081 **/
+#define port_monero_rpc_2 0x6DB1  /** 28081 **/
+#define port_monero_p2p_1 0x46A0  /** 18080 **/
+#define port_monero_p2p_2 0x6DB0  /** 28080 **/
 #else
 #error "Please fix <bits/endian.h>"
 #endif

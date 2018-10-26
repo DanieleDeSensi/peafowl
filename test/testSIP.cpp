@@ -12,10 +12,6 @@ TEST(SIPTest, Generic) {
   std::vector<uint> protocols;
   getProtocols("./pcaps/sip-rtp.pcap", protocols);
   EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 102);
-  getProtocols("./pcaps/whatsapp.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 6);
-  getProtocols("./pcaps/dropbox.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 140);
 }
 
 TEST(SIPTest, CallbackRequestURI){

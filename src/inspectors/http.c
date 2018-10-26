@@ -95,8 +95,7 @@ static
 #ifndef PFWL_DEBUG
 static
 #endif
-    int
-    on_url(http_parser *parser, const char *at, size_t length) {
+int on_url(http_parser *parser, const char *at, size_t length) {
   pfwl_http_internal_informations_t *infos =
       (pfwl_http_internal_informations_t *) parser->data;
   const unsigned char *real_data = (const unsigned char *) at;
@@ -168,10 +167,8 @@ static
     real_length = infos->temp_buffer_size;
     infos->temp_buffer_dirty = 1;
   }
-
   infos->headers[infos->headers_length - 1].second.string.value = real_data;
   infos->headers[infos->headers_length - 1].second.string.length = real_length;
-  ++infos->headers_length;
   return 0;
 }
 
@@ -211,7 +208,6 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
                    pfwl_flow_info_private_t *flow_info_private) {
   debug_print("%s\n", "-------------------------------------------");
   debug_print("%s\n", "[http.c] Executing HTTP inspector...");
-
   uint8_t *required_fields = state->fields_to_extract;
 
   http_parser *parser = &(flow_info_private->http[pkt_info->l4.direction]);
