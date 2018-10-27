@@ -86,11 +86,10 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
       pfwl_flow_table_create(expected_flows, strict, num_table_partitions);
 #endif
   // Must be called before pfwl_protocol_l7_enable_all
-  for (size_t i = 0; i < PFWL_PROTO_L7_NUM; i++) {
-    memset(state->fields_to_extract, 0, sizeof(state->fields_to_extract));
-    memset(state->fields_to_extract_num, 0,
-           sizeof(state->fields_to_extract_num));
-  }
+  memset(state->fields_to_extract, 0, sizeof(state->fields_to_extract));
+  memset(state->fields_to_extract_num, 0, sizeof(state->fields_to_extract_num));
+  memset(state->fields_support, 0, sizeof(state->fields_support));
+  memset(state->fields_support_num, 0, sizeof(state->fields_support_num));
 
   pfwl_set_max_trials(state, PFWL_DEFAULT_MAX_TRIALS_PER_FLOW);
   pfwl_protocol_l7_enable_all(state);
@@ -397,14 +396,15 @@ static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
   }
 }
 
-uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
+uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
+                                   uint8_t* fields_to_extract, uint8_t* fields_to_extract_num) {
   if (state) {
-    if (!state->fields_to_extract[field]) {
+    if (!fields_to_extract[field]) {
       pfwl_protocol_l7_t protocol = pfwl_get_protocol_from_field(field);
       if (protocol == PFWL_PROTO_L7_NUM) {
         return 0;
       }
-      ++state->fields_to_extract_num[protocol];
+      ++fields_to_extract_num[protocol];
       pfwl_protocol_l7_enable(state, protocol);
       pfwl_set_protocol_accuracy_L7(
           state, protocol,
@@ -412,11 +412,15 @@ uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
                                          // do not set back the original
                                          // accuracy when doing field_remove
     }
-    state->fields_to_extract[field] = 1;
+    fields_to_extract[field] = 1;
     return 0;
   } else {
     return 1;
   }
+}
+
+uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
+  return pfwl_field_add_L7_internal(state, field, state->fields_to_extract, state->fields_to_extract_num);
 }
 
 uint8_t pfwl_field_remove_L7(pfwl_state_t *state, pfwl_field_id_t field) {
@@ -436,9 +440,14 @@ uint8_t pfwl_field_remove_L7(pfwl_state_t *state, pfwl_field_id_t field) {
 }
 
 uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
+                                     pfwl_flow_info_private_t* flow_info_private,
                                      pfwl_field_id_t field) {
   if (state) {
-    return state->fields_to_extract[field];
+    if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] == PFWL_PROTO_L7_UNKNOWN){
+      return state->fields_to_extract[field];
+    }else{
+      return state->fields_to_extract[field] || state->fields_support[field];
+    }
   } else {
     return 0;
   }

@@ -61,6 +61,7 @@ int main(int argc, char** argv){
   }
 
   pfwl_state_t* state = pfwl_init();
+
   pfwl_dissection_info_t r;
   pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
   while((packet = pcap_next(handle, &header))!=NULL){

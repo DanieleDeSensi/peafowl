@@ -1124,6 +1124,18 @@ typedef struct pfwl_state {
    **/
   uint8_t fields_to_extract_num[PFWL_PROTO_L7_NUM];
 
+  /**
+   * One flag per field.
+   * If 1, the field is extracted. If 0, it is not extracted.
+   * These are the fields needed ONLY for identifying other
+   * protocols. After identification these fields will be ignored.
+   **/
+  uint8_t fields_support[PFWL_FIELDS_L7_NUM];
+  /**
+   * Number of fields to extract, per protocol.
+   **/
+  uint8_t fields_support_num[PFWL_PROTO_L7_NUM];
+
   uint8_t tcp_reordering_enabled : 1;
 
   /** L7 skipping information. **/

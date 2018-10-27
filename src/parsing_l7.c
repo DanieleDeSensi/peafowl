@@ -241,7 +241,10 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
               flow_info_private->possible_protocols = 0;
               while(descr.dependending_protocols &&
                     descr.dependending_protocols[j] != PFWL_PROTO_L7_NUM){
-                BITSET(flow_info_private->possible_matching_protocols, descr.dependending_protocols[j]);
+                pfwl_protocol_l7_t dep = descr.dependending_protocols[j];
+                if(BITTEST(state->protocols_to_inspect, dep)){
+                  BITSET(flow_info_private->possible_matching_protocols, dep);
+                }
                 ++j;
               }
               flow_info_private->possible_protocols = j;
@@ -263,6 +266,15 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
         }
       }
     }
+  }
+}
+
+static int8_t pfwl_keep_inspecting(pfwl_state_t* state, pfwl_flow_info_private_t *flow_info_private,
+                                   pfwl_protocol_l7_t protocol){
+  if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] == PFWL_PROTO_L7_UNKNOWN){
+    return state->fields_to_extract_num[protocol];
+  }else{
+    return state->fields_support_num[protocol] || state->fields_to_extract_num[protocol];
   }
 }
 
@@ -290,7 +302,7 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
   pfwl_protocol_descriptor_t descr;
   for(size_t i = 0; i < diss_info->l7.protocols_num; i++){
     pfwl_protocol_l7_t proto = diss_info->l7.protocols[i];
-    if (state->fields_to_extract_num[proto]) {
+    if (pfwl_keep_inspecting(state, flow_info_private, proto)) {
       debug_print("Extracting fields for protocol %d\n", proto);
       descr = protocols_descriptors[proto];
       (*(descr.dissector))(state, pkt, length, diss_info, flow_info_private);
@@ -365,6 +377,9 @@ const char **const pfwl_get_L7_protocols_names() {
   return protocols_strings;
 }
 
+uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
+                                          uint8_t* fields_to_extract, uint8_t* fields_to_extract_num);
+
 uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
                                 pfwl_protocol_l7_t protocol) {
   if (state && protocol < PFWL_PROTO_L7_NUM) {
@@ -400,7 +415,7 @@ uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
       size_t i = 0;
       if(descr.dependencies_fields){
         while(descr.dependencies_fields[i] != PFWL_FIELDS_L7_NUM){
-          pfwl_field_add_L7(state, descr.dependencies_fields[i]);
+          pfwl_field_add_L7_internal(state, descr.dependencies_fields[i], state->fields_support, state->fields_support_num);
           ++i;
         }
       }

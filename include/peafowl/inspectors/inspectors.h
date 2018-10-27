@@ -38,6 +38,7 @@
 extern "C" {
 #endif
 uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
+                                     pfwl_flow_info_private_t* flow_info_private,
                                      pfwl_field_id_t field);
 void pfwl_field_string_set(pfwl_field_t *fields, pfwl_field_id_t id,
                            const unsigned char *s, size_t len);

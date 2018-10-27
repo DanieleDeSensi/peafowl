@@ -208,7 +208,6 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
                    pfwl_flow_info_private_t *flow_info_private) {
   debug_print("%s\n", "-------------------------------------------");
   debug_print("%s\n", "[http.c] Executing HTTP inspector...");
-  uint8_t *required_fields = state->fields_to_extract;
 
   http_parser *parser = &(flow_info_private->http[pkt_info->l4.direction]);
 
@@ -222,24 +221,23 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
     bzero(&(flow_info_private->http_informations[pkt_info->l4.direction]),
           sizeof(pfwl_http_internal_informations_t));
 
-    parser->required_fields = required_fields;
     parser->extracted_fields = pkt_info->l7.protocol_fields;
     parser->data = flow_info_private->http_informations;
   }
 
   http_parser_settings x = {0};
 
-  if (required_fields[PFWL_FIELDS_L7_HTTP_URL])
+  if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_HTTP_URL))
     x.on_url = on_url;
   else
     x.on_url = 0;
 
-  if (required_fields[PFWL_FIELDS_L7_HTTP_BODY])
+  if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_HTTP_BODY))
     x.on_body = on_body;
   else
     x.on_body = 0;
 
-  if (required_fields[PFWL_FIELDS_L7_HTTP_HEADERS]) {
+  if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_HTTP_HEADERS)) {
     x.on_header_field = on_field;
     x.on_header_value = on_value;
   } else {

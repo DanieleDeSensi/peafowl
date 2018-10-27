@@ -53,7 +53,7 @@ bool hasField(Document& d, const char* field){
 const unsigned char* getFieldAsString(Document& d, pfwl_field_id_t fieldId, const char* field, int persistent, pfwl_flow_info_private_t* flow_info_private){
   auto it = d.FindMember(field);
   if(it != d.MemberEnd()){
-    if(it->value.IsString() || it->value.IsNumber()){
+    if(it->value.IsString() || it->value.IsNumber()){      
       return reinterpret_cast<const unsigned char*>(it->value.GetString());
     }else{
       if(persistent){
@@ -132,7 +132,7 @@ JsonRpcOverHttpCheck check_jsonrpc_over_http(pfwl_dissection_info_t *pkt_info,
        http_method == HTTP_POST){
       debug_print("%s", "HTTP Method is POST\n");
       pfwl_string_t http_ct;
-      if(!pfwl_http_get_header(pkt_info, "Content-Type", &http_ct) && http_ct.length && isJsonCt(http_ct)){
+      if(!pfwl_http_get_header(pkt_info, "Content-Type", &http_ct) && isJsonCt(http_ct)){
         debug_print("%s", "HTTP content type was json\n");
         pfwl_string_t http_body_string;
         if(!pfwl_field_string_get(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_HTTP_BODY, &http_body_string)){
@@ -167,6 +167,7 @@ uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
                       size_t data_length, pfwl_dissection_info_t *pkt_info,
                       pfwl_flow_info_private_t *flow_info_private) {
   // TODO: Check if 'in-situ' parsing is faster (https://github.com/Tencent/rapidjson/blob/master/doc/dom.md)
+  // TODO: Manage segmented jsons (some in stratum.pcap)
   Document* d = NULL;
   if(!flow_info_private->json_parser){
     d = new Document();
@@ -176,8 +177,12 @@ uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
     d = static_cast<Document*>(flow_info_private->json_parser);
   }
 
-  ParseResult ok = d->Parse<kParseNumbersAsStringsFlag>((const char*) app_data);
-  if(!ok) {
+  ParseResult ok = d->Parse<kParseNumbersAsStringsFlag>((const char*) app_data, data_length);
+  if(!ok &&
+     ok != kParseErrorDocumentRootNotSingular) { // to avoid errors for newlines at the end of the json (ndjson)
+    debug_print("%s\n", "It is not json-RPC");
+    if(PFWL_DEBUG_DISS_JSONRPC)
+      fprintf(stderr, "JSON parse error: %s (%lu)\n", GetParseError_En(ok.Code()), ok.Offset());
     // Check if JSON over HTTP
     const unsigned char* http_body;
     size_t http_body_length;
@@ -185,12 +190,12 @@ uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
     case JRPC_HTTP_MAYBE:{
       app_data = http_body;
       data_length = http_body_length;
-      // kParseStopWhenDoneFlag is Used to avoid errors for CRLF at the end of HTTP body
-      ok = d->Parse<kParseNumbersAsStringsFlag | kParseStopWhenDoneFlag>((const char*) app_data);
-      if (!ok) {
+      ok = d->Parse<kParseNumbersAsStringsFlag>((const char*) app_data, data_length);
+      if (!ok &&
+          ok != kParseErrorDocumentRootNotSingular) { // to avoid errors for CRLF at the end of HTTP body
         debug_print("%s\n", "It is not json-RPC");
         if(PFWL_DEBUG_DISS_JSONRPC)
-          fprintf(stderr, "JSON parse error: %s (%lu)", GetParseError_En(ok.Code()), ok.Offset());
+          fprintf(stderr, "JSON parse error: %s (%lu)\n", GetParseError_En(ok.Code()), ok.Offset());
         return PFWL_PROTOCOL_NO_MATCHES;
       }
     }break;
@@ -258,25 +263,25 @@ uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
 
   // Set any required field
   if(to_return == PFWL_PROTOCOL_MATCHES){
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_VERSION)){
+    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_JSON_RPC_VERSION)){
       pfwl_field_number_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_VERSION, version);
     }
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE)){
+    if(pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE)){
       pfwl_field_number_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE, type);
     }
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_ID)){
+    if(pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_JSON_RPC_ID)){
       setIfPresent(*d, pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_ID, "id", flow_info_private);
     }
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_METHOD)){
+    if(pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_JSON_RPC_METHOD)){
       setIfPresent(*d, pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_METHOD, "method", flow_info_private);
     }
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_PARAMS)){
+    if(pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_JSON_RPC_PARAMS)){
       setIfPresent(*d, pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_PARAMS, "params", flow_info_private);
     }
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_RESULT)){
+    if(pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_JSON_RPC_RESULT)){
       setIfPresent(*d, pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_RESULT, "result", flow_info_private);
     }
-    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_JSON_RPC_ERROR)){
+    if(pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_JSON_RPC_ERROR)){
       setIfPresent(*d, pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_ERROR, "error", flow_info_private);
     }
     return PFWL_PROTOCOL_MATCHES;
