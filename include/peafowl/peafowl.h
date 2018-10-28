@@ -1133,8 +1133,18 @@ typedef struct pfwl_state {
   uint8_t fields_support[PFWL_FIELDS_L7_NUM];
   /**
    * Number of fields to extract, per protocol.
+   * These are the fields needed ONLY for identifying other
+   * protocols. After identification these fields will be ignored.
    **/
   uint8_t fields_support_num[PFWL_PROTO_L7_NUM];
+
+  /**
+   * Dependencies among L7 protocols.
+   * E.g. protocol_dependencies[PFWL_PROTO_L7_JSON_RPC] contains
+   * an array of protocols which may be carried by JSON-RPC messages.
+   * The last value of this array must be PFWL_PROTO_L7_NUM.
+   */
+  pfwl_protocol_l7_t protocol_dependencies[PFWL_PROTO_L7_NUM][PFWL_PROTO_L7_NUM + 1];
 
   uint8_t tcp_reordering_enabled : 1;
 

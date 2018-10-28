@@ -137,49 +137,45 @@ typedef struct {
   const char *name;
   pfwl_dissector dissector;
   pfwl_l7_transport_t transport;
-  pfwl_protocol_l7_t* dependending_protocols; ///< Protocols depending on this one. Last value in the array must always be PFWL_PROTO_L7_NUM
-  pfwl_field_id_t* dependencies_fields;       ///< Fields needed to identify this protocol. Last value in the array must always be PFWL_FIELDS_L7_NUM
+  pfwl_field_id_t* dependencies_fields;       ///< Fields (of other protocols) needed to identify this protocol. Last value in the array must always be PFWL_FIELDS_L7_NUM
 } pfwl_protocol_descriptor_t;
 
-static pfwl_protocol_l7_t http_dep_proto[]     = {PFWL_PROTO_L7_JSON_RPC, PFWL_PROTO_L7_NUM};
-static pfwl_protocol_l7_t json_rpc_dep_proto[] = {PFWL_PROTO_L7_ETHEREUM, PFWL_PROTO_L7_ZCASH, PFWL_PROTO_L7_MONERO, PFWL_PROTO_L7_STRATUM, PFWL_PROTO_L7_NUM};
-
-static pfwl_field_id_t ethereum_dep_fields[]   = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t zcash_dep_fields[]      = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t monero_dep_fields[]     = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t stratum_dep_fields[]    = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
-static pfwl_field_id_t json_rpc_dep_fields[]   = {PFWL_FIELDS_L7_HTTP_HEADERS, PFWL_FIELDS_L7_HTTP_BODY, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t dep_fields_ethereum[]   = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t dep_fields_zcash[]      = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t dep_fields_monero[]     = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t dep_fields_stratum[]    = {PFWL_FIELDS_L7_JSON_RPC_METHOD, PFWL_FIELDS_L7_NUM};
+static pfwl_field_id_t dep_fields_json_rpc[]   = {PFWL_FIELDS_L7_HTTP_HEADERS, PFWL_FIELDS_L7_HTTP_BODY, PFWL_FIELDS_L7_NUM};
 
 // clang-format off
 static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM] = {
-  [PFWL_PROTO_L7_DHCP]     = {"DHCP"    , check_dhcp    , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_DNS]      = {"DNS"     , check_dns     , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL              , NULL},
-  [PFWL_PROTO_L7_MDNS]     = {"MDNS"    , check_mdns    , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_SIP]      = {"SIP"     , check_sip     , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL              , NULL},
-  [PFWL_PROTO_L7_RTP]      = {"RTP"     , check_rtp     , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_RTCP]     = {"RTCP"    , check_rtcp    , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_SSH]      = {"SSH"     , check_ssh     , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_SKYPE]    = {"Skype"   , check_skype   , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_NTP]      = {"NTP"     , check_ntp     , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_BGP]      = {"BGP"     , check_bgp     , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_HTTP]     = {"HTTP"    , check_http    , PFWL_L7_TRANSPORT_TCP       , http_dep_proto    , NULL},
-  [PFWL_PROTO_L7_SMTP]     = {"SMTP"    , check_smtp    , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_POP3]     = {"POP3"    , check_pop3    , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_IMAP]     = {"IMAP"    , check_imap    , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_SSL]      = {"SSL"     , check_ssl     , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_HANGOUT]  = {"Hangout" , check_hangout , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL              , NULL},
-  [PFWL_PROTO_L7_WHATSAPP] = {"WhatsApp", check_whatsapp, PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_TELEGRAM] = {"Telegram", check_telegram, PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_DROPBOX]  = {"Dropbox" , check_dropbox , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
-  [PFWL_PROTO_L7_SPOTIFY]  = {"Spotify" , check_spotify , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL              , NULL},
-  [PFWL_PROTO_L7_BITCOIN]  = {"Bitcoin" , check_bitcoin , PFWL_L7_TRANSPORT_TCP       , NULL              , NULL},
-  [PFWL_PROTO_L7_ETHEREUM] = {"Ethereum", check_ethereum, PFWL_L7_TRANSPORT_TCP       , NULL              , ethereum_dep_fields},
-  [PFWL_PROTO_L7_ZCASH]    = {"Zcash"   , check_zcash   , PFWL_L7_TRANSPORT_TCP       , NULL              , zcash_dep_fields},
-  [PFWL_PROTO_L7_MONERO]   = {"Monero"  , check_monero  , PFWL_L7_TRANSPORT_TCP       , NULL              , monero_dep_fields},
-  [PFWL_PROTO_L7_STRATUM]  = {"Stratum" , check_stratum , PFWL_L7_TRANSPORT_TCP       , NULL              , stratum_dep_fields},
-  [PFWL_PROTO_L7_JSON_RPC] = {"JSON-RPC", check_jsonrpc , PFWL_L7_TRANSPORT_TCP_OR_UDP, json_rpc_dep_proto, json_rpc_dep_fields},
-  [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL              , NULL},
+  [PFWL_PROTO_L7_DHCP]     = {"DHCP"    , check_dhcp    , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_DHCPv6]   = {"DHCPv6"  , check_dhcpv6  , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_DNS]      = {"DNS"     , check_dns     , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+  [PFWL_PROTO_L7_MDNS]     = {"MDNS"    , check_mdns    , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_SIP]      = {"SIP"     , check_sip     , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+  [PFWL_PROTO_L7_RTP]      = {"RTP"     , check_rtp     , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_RTCP]     = {"RTCP"    , check_rtcp    , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_SSH]      = {"SSH"     , check_ssh     , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_SKYPE]    = {"Skype"   , check_skype   , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_NTP]      = {"NTP"     , check_ntp     , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_BGP]      = {"BGP"     , check_bgp     , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_HTTP]     = {"HTTP"    , check_http    , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_SMTP]     = {"SMTP"    , check_smtp    , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_POP3]     = {"POP3"    , check_pop3    , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_IMAP]     = {"IMAP"    , check_imap    , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_SSL]      = {"SSL"     , check_ssl     , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_HANGOUT]  = {"Hangout" , check_hangout , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+  [PFWL_PROTO_L7_WHATSAPP] = {"WhatsApp", check_whatsapp, PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_TELEGRAM] = {"Telegram", check_telegram, PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_DROPBOX]  = {"Dropbox" , check_dropbox , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_SPOTIFY]  = {"Spotify" , check_spotify , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+  [PFWL_PROTO_L7_BITCOIN]  = {"Bitcoin" , check_bitcoin , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_ETHEREUM] = {"Ethereum", check_ethereum, PFWL_L7_TRANSPORT_TCP       , dep_fields_ethereum},
+  [PFWL_PROTO_L7_ZCASH]    = {"Zcash"   , check_zcash   , PFWL_L7_TRANSPORT_TCP       , dep_fields_zcash},
+  [PFWL_PROTO_L7_MONERO]   = {"Monero"  , check_monero  , PFWL_L7_TRANSPORT_TCP       , dep_fields_monero},
+  [PFWL_PROTO_L7_STRATUM]  = {"Stratum" , check_stratum , PFWL_L7_TRANSPORT_TCP       , dep_fields_stratum},
+  [PFWL_PROTO_L7_JSON_RPC] = {"JSON-RPC", check_jsonrpc , PFWL_L7_TRANSPORT_TCP_OR_UDP, dep_fields_json_rpc},
+  [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL},
 };
 // clang-format on
 
@@ -231,7 +227,7 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
             flow_info_private->l7_protocols[flow_info_private->l7_protocols_num++] = i;
 
             // Reset values
-            if(descr.dependending_protocols){
+            if(state->protocol_dependencies[i]){
               for(size_t j = 0; j < PFWL_PROTO_L7_NUM; j++){
                 BITCLEAR(flow_info_private->possible_matching_protocols, j);
               }
@@ -239,9 +235,8 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
 
               size_t j = 0;
               flow_info_private->possible_protocols = 0;
-              while(descr.dependending_protocols &&
-                    descr.dependending_protocols[j] != PFWL_PROTO_L7_NUM){
-                pfwl_protocol_l7_t dep = descr.dependending_protocols[j];
+              pfwl_protocol_l7_t dep;
+              while((dep = state->protocol_dependencies[i][j]) != PFWL_PROTO_L7_NUM){
                 if(BITTEST(state->protocols_to_inspect, dep)){
                   BITSET(flow_info_private->possible_matching_protocols, dep);
                 }
@@ -379,6 +374,7 @@ const char **const pfwl_get_L7_protocols_names() {
 
 uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
                                           uint8_t* fields_to_extract, uint8_t* fields_to_extract_num);
+pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field);
 
 uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
                                 pfwl_protocol_l7_t protocol) {
@@ -397,26 +393,31 @@ uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
         ++state->active_protocols[1];
       }
 
-      // Enable dependent protocols
-      for(pfwl_protocol_l7_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
-        pfwl_protocol_descriptor_t descr_dep = protocols_descriptors[i];
-        if(descr_dep.dependending_protocols){
-          size_t j = 0;
-          while(descr_dep.dependending_protocols[j] != PFWL_PROTO_L7_NUM){
-            if(descr_dep.dependending_protocols[j] == protocol){
-              pfwl_protocol_l7_enable(state, i);
-            }
-            ++j;
-          }
-        }
-      }
-
-      // Enable dependent fields
-      size_t i = 0;
+      // Enable dependent fields and build dependencies array
       if(descr.dependencies_fields){
+        size_t i = 0;
+        uint8_t dependencies[PFWL_PROTO_L7_NUM];
+        memset(dependencies, 0, sizeof(dependencies));
         while(descr.dependencies_fields[i] != PFWL_FIELDS_L7_NUM){
-          pfwl_field_add_L7_internal(state, descr.dependencies_fields[i], state->fields_support, state->fields_support_num);
+          pfwl_field_id_t field = descr.dependencies_fields[i];
+          pfwl_protocol_l7_t dep_protocol = pfwl_get_protocol_from_field(field);
+          dependencies[dep_protocol] = 1;
+          pfwl_field_add_L7_internal(state, field, state->fields_support, state->fields_support_num);
           ++i;
+        }
+
+        for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+          if(dependencies[i]){
+            // If dependencies[i] == 1, 'protocol' depends on i
+            // Add this protocol to protocols depending on protocol i
+            for(size_t j = 0; j < PFWL_PROTO_L7_NUM; j++){
+              if(state->protocol_dependencies[i][j] == PFWL_PROTO_L7_NUM){
+                state->protocol_dependencies[i][j] = protocol;
+                state->protocol_dependencies[i][j + 1] = PFWL_PROTO_L7_NUM;
+                break;
+              }
+            }
+          }
         }
       }
     }

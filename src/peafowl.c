@@ -90,6 +90,9 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   memset(state->fields_to_extract_num, 0, sizeof(state->fields_to_extract_num));
   memset(state->fields_support, 0, sizeof(state->fields_support));
   memset(state->fields_support_num, 0, sizeof(state->fields_support_num));
+  for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+    state->protocol_dependencies[i][0] = PFWL_PROTO_L7_NUM;
+  }
 
   pfwl_set_max_trials(state, PFWL_DEFAULT_MAX_TRIALS_PER_FLOW);
   pfwl_protocol_l7_enable_all(state);
@@ -102,7 +105,6 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   pfwl_tcp_reordering_enable(state);
 
   state->l7_skip = NULL;
-
   return state;
 }
 
@@ -372,7 +374,7 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
   }
 }
 
-static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
+pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
   if (field > PFWL_FIELDS_L7_SIP_FIRST &&
       field < PFWL_FIELDS_L7_SIP_LAST) {
       return PFWL_PROTO_L7_SIP;

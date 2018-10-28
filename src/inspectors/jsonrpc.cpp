@@ -34,7 +34,6 @@
 #include "../external/rapidjson/stringbuffer.h"
 #include "../external/rapidjson/writer.h"
 
-
 #define PFWL_DEBUG_DISS_JSONRPC 0
 #define debug_print(fmt, ...)                                                  \
   do {                                                                         \
