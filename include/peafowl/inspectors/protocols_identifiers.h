@@ -45,8 +45,8 @@
  */
 
 enum protocol_check_statuses {
-  PFWL_PROTOCOL_MATCHES = 0, /** If the protocol matches for sure. */
-  PFWL_PROTOCOL_NO_MATCHES,  /** If the protocol doesn't matches for sure. */
+  PFWL_PROTOCOL_MATCHES = 0,      /** If the protocol matches for sure. */
+  PFWL_PROTOCOL_NO_MATCHES,       /** If the protocol doesn't matches for sure. */
   PFWL_PROTOCOL_MORE_DATA_NEEDED, /** The inspector needs more data to be sure
                                     that the protocol matches or to invoke the
                                     callback on the complete data. **/
