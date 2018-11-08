@@ -128,8 +128,11 @@ The supported protocols are:
     <td>JSON-RPC</td><td>5/5</td>
   </tr>
   </tr>
-    <tr>
+  <tr>
     <td>SSDP</td><td>5/5</td>
+  </tr>
+  <tr>
+    <td>STUN</td><td>5/5</td>
   </tr>
 </table>
 

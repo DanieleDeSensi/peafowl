@@ -79,6 +79,8 @@ static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
   [port_monero_p2p_2] = PFWL_PROTO_L7_MONERO,
   [port_monero_rpc_1] = PFWL_PROTO_L7_MONERO,
   [port_monero_rpc_2] = PFWL_PROTO_L7_MONERO,
+  [port_stun] = PFWL_PROTO_L7_STUN,
+  [port_stun_tls] = PFWL_PROTO_L7_STUN,
 };
 
 static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
@@ -102,6 +104,7 @@ static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
   [port_dropbox] = PFWL_PROTO_L7_DROPBOX,
   [port_spotify] = PFWL_PROTO_L7_SPOTIFY,
   [port_ssdp] = PFWL_PROTO_L7_SSDP,
+  [port_stun] = PFWL_PROTO_L7_STUN,
 };
 // clang-format on
 
@@ -176,6 +179,7 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_STRATUM]  = {"Stratum" , check_stratum , PFWL_L7_TRANSPORT_TCP       , dep_fields_stratum},
   [PFWL_PROTO_L7_JSON_RPC] = {"JSON-RPC", check_jsonrpc , PFWL_L7_TRANSPORT_TCP_OR_UDP, dep_fields_json_rpc},
   [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_STUN]     = {"STUN"    , check_stun    , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
 };
 // clang-format on
 

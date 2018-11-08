@@ -193,6 +193,7 @@ typedef enum {
   PFWL_PROTO_L7_STRATUM,  ///< Stratum mining protocol (can be used by Bitcoin, Zcash and others)
   PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
   PFWL_PROTO_L7_SSDP,     ///< SSDP
+  PFWL_PROTO_L7_STUN,     ///< STUN
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
@@ -298,11 +299,11 @@ typedef enum {
   PFWL_FIELDS_L7_DNS_LAST,                ///< Dummy value to indicate last DNS field. Must be
                                           ///< the last field specified for DNS.
   /** SSL field **/
-  PFWL_FIELDS_L7_SSL_FIRST,       ///< Dummy value to indicate first SSL field
-  PFWL_FIELDS_L7_SSL_SNI, ///< Server name extension found in client certificate [STRING]
-  PFWL_FIELDS_L7_SSL_CERTIFICATE,        ///< Server name found in server certificate [STRING]
-  PFWL_FIELDS_L7_SSL_LAST, ///< Dummy value to indicate last SSL field. Must be
-                           ///< the last field specified for SSL.
+  PFWL_FIELDS_L7_SSL_FIRST,               ///< Dummy value to indicate first SSL field
+  PFWL_FIELDS_L7_SSL_SNI,                 ///< Server name extension found in client certificate [STRING]
+  PFWL_FIELDS_L7_SSL_CERTIFICATE,         ///< Server name found in server certificate [STRING]
+  PFWL_FIELDS_L7_SSL_LAST,                ///< Dummy value to indicate last SSL field. Must be
+                                          ///< the last field specified for SSL.
   /** HTTP field **/
   PFWL_FIELDS_L7_HTTP_FIRST,              ///< Dummy value to indicate first HTTP field
   PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUMBER]
@@ -346,8 +347,8 @@ typedef enum {
   PFWL_FIELDS_L7_JSON_RPC_LAST,           ///< Dummy value to indicate last JSON-RPC field. Must
                                           ///< be the last field specified for JSON-RPC
   /** **/
-  PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
-                      ///< the last field specified.
+  PFWL_FIELDS_L7_NUM,                     ///< Dummy value to indicate number of fields. Must be
+                                          ///< the last field specified.
 } pfwl_field_id_t;
 
 /**
