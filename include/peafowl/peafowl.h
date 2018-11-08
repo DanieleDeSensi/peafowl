@@ -1087,6 +1087,37 @@ typedef struct pfwl_state {
   void *ipv6_frag_state;
 } pfwl_state_t;
 
+// Bindings support structures
+typedef struct pfwl_dissection_info_for_bindings {
+  size_t l2_length;
+  pfwl_protocol_l2_t l2_protocol; 
+  size_t l3_length; 
+  size_t l3_payload_length; 
+  pfwl_ip_addr_t l3_addr_src;
+  pfwl_ip_addr_t l3_addr_dst;
+  const unsigned char *l3_refrag_pkt; 
+  size_t l3_refrag_pkt_len; 
+  pfwl_protocol_l3_t l3_protocol;
+  size_t l4_length;
+  size_t l4_payload_length;
+  uint16_t l4_port_src; 
+  uint16_t l4_port_dst; 
+  uint8_t l4_direction; 
+  const unsigned char *l4_resegmented_pkt;
+  size_t l4_resegmented_pkt_len; 
+  pfwl_protocol_l4_t l4_protocol; 
+  pfwl_protocol_l7_t l7_protocol; 
+  pfwl_field_t l7_protocol_fields[PFWL_FIELDS_L7_NUM];
+  uint64_t flow_info_num_packets[2];
+  uint64_t flow_info_num_bytes[2]; 
+  uint64_t flow_info_num_packets_l7[2];
+  uint64_t flow_info_num_bytes_l7[2]; 
+  void **flow_info_udata; 
+  uint32_t flow_info_timestamp_first[2]; 
+  uint32_t flow_info_timestamp_last[2]; 
+} pfwl_dissection_info_for_bindings_t;
+
+
 /// @endcond
 
 #ifdef __cplusplus
