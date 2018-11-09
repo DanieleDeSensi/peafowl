@@ -25,52 +25,89 @@
  * =========================================================================
  */
 #include <peafowl/peafowl.h>
-#include <peafowl/l7_sub_rules.h>
 #include <peafowl/external/radix_tree/radix_tree.hpp>
 
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 
-typedef struct{
-  radix_tree<std::string, pfwl_protocol_l7_sub_t> tree_with_tld;
-  radix_tree<std::string, pfwl_protocol_l7_sub_t> tree_without_tld;
-}pfwl_sub_rules_http_host_db_t;
+typedef enum{
+  PFWL_FIELD_MATCHING_PREFIX = 0, // PREFIX
+  PFWL_FIELD_MATCHING_EXACT,  // EXACT
+  PFWL_FIELD_MATCHING_SUFFIX, // SUFFIX
+  PFWL_FIELD_MATCHING_ERROR    // Error
+}pfwl_field_matching_t;
 
-void* pfwl_sub_rules_http_host_load(){
-  size_t num_rules = sizeof(pfwl_l7_sub_rules_http_host) / sizeof(pfwl_l7_sub_rules_http_host[0]);
-  pfwl_sub_rules_http_host_db_t* db = new pfwl_sub_rules_http_host_db_t();
-  for(size_t i = 0; i < num_rules; i++){
-    pfwl_l7_sub_rule_http_host_t rule = pfwl_l7_sub_rules_http_host[i];
-    radix_tree<std::string, pfwl_protocol_l7_sub_t>* tree;
-    if(rule.has_tld){
-      tree = &db->tree_with_tld;
-    }else{
-      tree = &db->tree_without_tld;
-    }
-    std::string to_match(rule.value);
-    std::transform(to_match.begin(), to_match.end(), to_match.begin(), ::tolower);
-    std::reverse(to_match.begin(), to_match.end());
-    (*tree)[to_match] = rule.protocol;
+static pfwl_field_matching_t getFieldMatchingType(std::string& matchingType){
+  if(!matchingType.compare("PREFIX")){
+    return PFWL_FIELD_MATCHING_PREFIX;
+  }else if(!matchingType.compare("EXACT")){
+    return PFWL_FIELD_MATCHING_EXACT;
+  }else if(!matchingType.compare("SUFFIX")){
+    return PFWL_FIELD_MATCHING_SUFFIX;
+  }else{
+    return PFWL_FIELD_MATCHING_ERROR;
+  }
+}
+
+static bool getCaseSensitive(std::string& caseSensitive){
+  std::transform(caseSensitive.begin(), caseSensitive.end(), caseSensitive.begin(), ::tolower);
+  if(!caseSensitive.compare("true")){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+typedef struct{
+  radix_tree<std::string, std::string> prefixes;
+  radix_tree<std::string, std::string> exact;
+  radix_tree<std::string, std::string> suffixes;
+}pfwl_field_matching_db_t;
+
+void pfwl_sub_rules_add(void* db, const char* toMatch, pfwl_field_matching_t matchingType, uint8_t caseSensitive, const char* protocol){
+  pfwl_field_matching_db_t* db_real = static_cast<pfwl_field_matching_db_t*>(db);
+  std::string toMatchStr(toMatch);
+  if(caseSensitive){
+    std::transform(toMatchStr.begin(), toMatchStr.end(), toMatchStr.begin(), ::tolower);
+  }
+  switch(matchingType){
+  case PFWL_FIELD_MATCHING_PREFIX:{
+    db_real->prefixes[toMatchStr] = protocol;
+  }break;
+  case PFWL_FIELD_MATCHING_EXACT:{
+    db_real->exact[toMatchStr] = protocol;
+  }break;
+  case PFWL_FIELD_MATCHING_SUFFIX:{
+    std::reverse(toMatchStr.begin(), toMatchStr.end());
+    db_real->suffixes[toMatchStr] = protocol;
+  }break;
+  case PFWL_FIELD_MATCHING_ERROR:{
+    ;
+  }break;
+  }
+}
+
+void* pfwl_sub_rules_load(const char* fileName){
+  pfwl_field_matching_db_t* db = new pfwl_field_matching_db_t;
+  std::string toMatch, matchingTypeStr, caseSensitive, protocol;
+  std::ifstream infile(fileName);
+  while (infile >> toMatch >> matchingTypeStr >> caseSensitive >> protocol){
+    pfwl_sub_rules_add(db, toMatch.c_str(), getFieldMatchingType(matchingTypeStr), getCaseSensitive(caseSensitive), protocol.c_str());
   }
   return static_cast<void*>(db);
 }
 
-pfwl_protocol_l7_sub_t pfwl_sub_rules_http_host_match(void* db, const char* host){
-  pfwl_sub_rules_http_host_db_t* db_real = static_cast<pfwl_sub_rules_http_host_db_t*>(db);
-  std::string host_str(host);
-  std::transform(host_str.begin(), host_str.end(), host_str.begin(), ::tolower);
-  std::reverse(host_str.begin(), host_str.end());
-  auto iterator = db_real->tree_with_tld.longest_match(host_str);
-  if(iterator != db_real->tree_with_tld.end()){
-    return iterator->second;
-  }else{
-    iterator = db_real->tree_without_tld.longest_match(host_str);
-    if(iterator != db_real->tree_without_tld.end()){
-      return iterator->second;
-    }
+const char* pfwl_sub_rules_match(void* db, const char* field){
+  pfwl_field_matching_db_t* db_real = static_cast<pfwl_field_matching_db_t*>(db);
+  std::string field_str(field);
+  std::transform(field_str.begin(), field_str.end(), field_str.begin(), ::tolower);
+  std::reverse(field_str.begin(), field_str.end());
+  auto iterator = db_real->longest_match(field_str);
+  if(iterator != db_real->end()){
+    return iterator->second.c_str();
   }
-  return PFWL_PROTO_L7_SUB_NUM;
+  return NULL;
 }
 
 /*
