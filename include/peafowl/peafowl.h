@@ -886,6 +886,13 @@ const char **const pfwl_get_L7_protocols_names();
 const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
 
 /**
+ * Returns the id associated to a protocol field name.
+ * @param field_name The name of the field.
+ * @return The id associated to the protocol field with name 'field_name'.
+ */
+pfwl_field_id_t pfwl_get_L7_field_id(const char* field_name);
+
+/**
  * Sets the callback that will be called when a flow expires.
  * @param state     A pointer to the state of the library.
  * @param cleaner   The callback used to clear the user data.
