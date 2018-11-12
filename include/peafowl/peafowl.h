@@ -244,6 +244,7 @@ typedef struct pfwl_field {
 /**
  * Protocol fields which can be extracted by peafowl.
  **/
+//--PROTOFIELDSTART || Do Not Remove This Line
 typedef enum {
   /** SIP field **/
   PFWL_FIELDS_L7_SIP_FIRST = 0,           ///< Dummy value to indicate first SIP field
@@ -320,6 +321,7 @@ typedef enum {
   PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
                       ///< the last field specified.
 } pfwl_field_id_t;
+//--PROTOFIELDEND || Do Not Remove This Line
 // clang-format on
 
 /**
@@ -875,6 +877,13 @@ pfwl_protocol_l7_t pfwl_get_L7_protocol_id(const char *const string);
  * string representation of the protocol with id 'i'.
  */
 const char **const pfwl_get_L7_protocols_names();
+
+/**
+ * Returns the string represetation of a protocol field.
+ * @param   field The protocol field identifier.
+ * @return  The string representation of the protocol field with id 'field'.
+ */ 
+const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
 
 /**
  * Sets the callback that will be called when a flow expires.
