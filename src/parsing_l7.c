@@ -277,6 +277,8 @@ static int8_t pfwl_keep_inspecting(pfwl_state_t* state, pfwl_flow_info_private_t
   }
 }
 
+const char* pfwl_tag_get(void* db, pfwl_string_t);
+
 pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
                               size_t length, pfwl_dissection_info_t *diss_info,
                               pfwl_flow_info_private_t *flow_info_private) {
@@ -327,6 +329,23 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
   }
   diss_info->l7.protocols_num = flow_info_private->l7_protocols_num;
   diss_info->l7.protocol = flow_info_private->l7_protocols[0];
+
+  // Set tags
+  if(state->tags_matchers_num){
+    for(size_t i = 0; i < PFWL_FIELDS_L7_NUM; i++){
+      pfwl_field_t field = diss_info->l7.protocol_fields[i];
+      if(state->tags_matchers[i] &&
+         field.present){
+        const char* tag = pfwl_tag_get(state->tags_matchers[i], field.basic.string);
+        if(tag){
+          diss_info->l7.tags[diss_info->l7.tags_num++] = tag;
+          if(diss_info->l7.tags_num == PFWL_TAGS_MAX){
+            break;
+          }
+        }
+      }
+    }
+  }
 
   return PFWL_STATUS_OK;
 }

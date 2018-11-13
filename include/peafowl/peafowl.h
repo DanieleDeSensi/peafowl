@@ -201,16 +201,6 @@ typedef enum {
                         ///< been identified
 } pfwl_protocol_l7_t;
 
-/**
- * L7 sub-protocol.
- **/
-typedef enum {
-  PFWL_PROTO_L7_SUB_GOOGLE,       ///< Google search
-  PFWL_PROTO_L7_SUB_AMAZON_VIDEO, ///< Amazon video
-  PFWL_PROTO_L7_SUB_NUM,          ///< Dummy value to indicate the number of protocols
-  PFWL_PROTO_L7_SUB_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
-                                    ///< has not been identified yet
-} pfwl_protocol_l7_sub_t;
 // clang-format on
 
 /**
@@ -257,6 +247,18 @@ typedef struct pfwl_field {
     pfwl_array_t array;      ///< An array.
   };
 } pfwl_field_t;
+
+typedef enum {
+  PFWL_FIELD_TYPE_STRING = 0,
+  PFWL_FIELD_TYPE_NUMBER,
+  PFWL_FIELD_TYPE_MAP
+} pfwl_field_type_t;
+
+typedef struct {
+  pfwl_protocol_l7_t protocol;
+  const char* name;
+  pfwl_field_type_t type;
+} pfwl_field_L7_descriptor;
 
 // clang-format off
 /**
@@ -387,6 +389,7 @@ typedef struct pfwl_flow_info {
 } pfwl_flow_info_t;
 
 #define PFWL_MAX_L7_SUBPROTO_DEPTH 10
+#define PFWL_TAGS_MAX 128
 
 /**
  * The result of the identification process.
@@ -456,6 +459,8 @@ typedef struct pfwl_dissection_info {
                                                       ///< valid anymore. If the user needs to preserve
                                                       ///< the data for a longer time, a copy of each
                                                       ///< needed field needs to be done.
+    const char* tags[PFWL_TAGS_MAX];                  ///< Tags associated to the packet.
+    uint16_t tags_num;                                ///< Number of values in 'tags' array.
   } l7;                       ///< Information known after L7 parsing
   pfwl_flow_info_t flow_info; ///< Information about the flow.
 } pfwl_dissection_info_t;
@@ -1069,6 +1074,82 @@ uint8_t pfwl_has_protocol_L7(pfwl_dissection_info_t* dissection_info, pfwl_proto
  */
 pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int dlt);
 
+/**
+ * Possible type of matchings when associating tags to packets.
+ **/
+typedef enum{
+  PFWL_FIELD_MATCHING_PREFIX = 0, ///< Prefix matching.
+  PFWL_FIELD_MATCHING_EXACT,      ///< Exact matching.
+  PFWL_FIELD_MATCHING_SUFFIX,     ///< Suffix matching.
+  PFWL_FIELD_MATCHING_ERROR       ///< Invalid tag matching.
+}pfwl_field_matching_t;
+
+/**
+ * Loads the associations between fields values and user-defined tags.
+ * @brief pfwl_tags_load Loads the associations between fields values and user-defined tags.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ * @param tags_file The name of the JSON file containing associations between fields values and tags.
+ * The structure of the JSON file depends from the type of 'field'.
+ *
+ * ------------------------
+ * If 'field' is a string:
+ * ------------------------
+ * {
+ *   "rules": [
+ *     {"value": "google.com", "matchingType": "SUFFIX", "tag": "GOOGLE"},
+ *     {"value": "amazon.com", "matchingType": "SUFFIX", "tag": "AMAZON"},
+ *     ...
+ *   ],
+ * }
+ *
+ * value:         Is the string to be matched against the field. The comparison will
+ *                always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *                will match as well.
+ * matchingType:  Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
+ * tag:           The tag to assign to the packet when the field matches with stringToMatch.
+ *
+ * ------------------------
+ * If 'field' is a map:
+ * ------------------------
+ *
+ * {
+ *   "rules": [
+ *     {"key": "Host", "value": "google.com", "matchingType": "SUFFIX", "tag": "GOOGLE"},
+ *     {"key": "Content-Type", "value": "amazon.com", "matchingType": "SUFFIX", "tag": "AMAZON"},
+ *     ...
+ *   ],
+ * }
+ *
+ * key: The key to match in the map.
+ * 'value', 'matchingType' and 'tag' are the same as in the string case.
+ *
+ * The 'tags_file' argument can be null and the matching rules can be added later with the pfwl_tags_add call.
+ */
+void pfwl_tags_load(pfwl_state_t* state, pfwl_field_id_t field, const char* tags_file);
+
+/**
+ * Adds a tag matching rule for a specific field. pfwl_tags_load must be called before calling
+ * this function.
+ * @brief pfwl_tags_add Adds a tag matching rule for a specific field.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ * @param value Is the string to be matched against the field. The comparison will
+ *                always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *                will match as well.
+ * @param matchingType Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
+ * @param tag The tag to assign to the packet when the field matches with 'value'.
+ */
+void pfwl_tags_add(pfwl_state_t* state, pfwl_field_id_t field, const char* value, pfwl_field_matching_t matchingType, const char* tag);
+
+/**
+ * Unloads the associations between fields values and user-defined tags.
+ * @brief pfwl_tags_unload Unloads the associations between fields values and user-defined tags.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ */
+void pfwl_tags_unload(pfwl_state_t* state, pfwl_field_id_t field);
+
 /// @cond MC
 pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
                                                 uint8_t strict,
@@ -1153,6 +1234,10 @@ typedef struct pfwl_state {
   pfwl_l7_skipping_info_t *l7_skip;
 
   pfwl_dissector_accuracy_t inspectors_accuracy[PFWL_PROTO_L7_NUM];
+
+  /** Tags **/
+  void* tags_matchers[PFWL_FIELDS_L7_NUM];
+  size_t tags_matchers_num;
 
   /********************************************************************/
   /** The content of these structures can be modified during the     **/
