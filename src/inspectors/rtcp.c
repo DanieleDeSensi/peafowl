@@ -39,7 +39,11 @@
     if (PFWL_DEBUG_RTP) fprintf(stdout, fmt, __VA_ARGS__); \
   } while (0)
 
+#define RTCP_HDR_SIZE 4
 
+/**
+   RTCP Structures
+**/
 typedef enum {
     RTCP_SENDER    = 200,
     RTCP_RECEIVER  = 201,
@@ -48,7 +52,22 @@ typedef enum {
     RTCP_APP       = 204,
 }RTCPpayloadType;
 
+/**
+   SDES Types
+**/
+typedef enum {
+    END = 0,
+    CNAME,
+    NAME,
+    EMAIL,
+    PHONE,
+    LOC,
+    TOOL,
+    NOTE,
+    PRIV,
+}SDESTypes;
 
+/* RTCP Header */
 struct rtcp_header {
 #if __BYTE_ORDER == __BIG_ENDIAN
 	uint8_t version:2;
@@ -60,12 +79,81 @@ struct rtcp_header {
 	uint8_t version:2;
 #endif
     uint8_t pType;
-	uint16_t length;
+    uint16_t length;
 
 }__attribute__((packed));
 
-#define GET_LEN(head) ntohs((head)->length)
 
+/* Sender Info */
+typedef struct _sender_info
+{
+	uint32_t ntp_timestamp_msw;
+	uint32_t ntp_timestamp_lsw;
+	uint32_t rtp_timestamp;
+	uint32_t senders_packet_count;
+	uint32_t senders_octet_count;
+} sender_info_t;
+
+/* Report Block */
+typedef struct _report_block
+{
+	uint32_t identifier;
+	uint32_t fl_cnpl;
+	uint32_t ext_high_seq_num_rec;
+	uint32_t interarrival_jitter;
+	uint32_t lsr;
+	uint32_t delay_lsr;
+} report_block_t;
+
+/* Sender Report */
+typedef struct _rtcp_sr
+{
+    struct rtcp_header header;
+	uint32_t ssrc;
+	sender_info_t si;
+	report_block_t rb[1];
+} rtcp_sr_t;
+
+/* Receive Report */
+typedef struct _rtcp_rr
+{
+    struct rtcp_header header;
+	uint32_t ssrc;
+	report_block_t rb[1];
+} rtcp_rr_t;
+
+/* Source Descrption Items*/
+typedef struct _rtcp_sdes_item
+{
+	uint8_t type;
+	uint8_t len;
+	char content[1];
+} rtcp_sdes_item_t;
+
+/* Source Descrption */
+typedef struct _rtcp_sdes_t
+{
+    struct rtcp_header header;
+	uint32_t csrc;
+	rtcp_sdes_item_t item[1];
+} rtcp_sdes_t;
+
+/* Goodbye */
+typedef struct _rtcp_bye
+{
+    struct rtcp_header header;
+	uint32_t ssrc[1];
+} rtcp_bye_t;
+
+/* Application Specific */
+typedef struct _rtcp_app
+{
+    struct rtcp_header header;
+	uint32_t ssrc;
+	char name[4];
+} rtcp_app_t;
+
+/** ************************************ **/
 
 static int8_t is_valid_payload_type(uint8_t PT)
 {
@@ -81,6 +169,7 @@ static int8_t is_valid_payload_type(uint8_t PT)
     }
 }
 
+// LOW CHECK
 static int low_check(struct rtcp_header* rtcp)
 {
     int8_t pType = 0;
@@ -93,13 +182,93 @@ static int low_check(struct rtcp_header* rtcp)
     return PFWL_PROTOCOL_NO_MATCHES;
 }
 
+// HIGH CHECK (for field extraction)
 static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                       int data_length, pfwl_dissection_info_t* pkt_info)
 {
     int ret;
+    int flag = 0, total = data_length;
+
     ret = low_check(rtcp);
     if(ret == PFWL_PROTOCOL_MATCHES) {
-        // TODO GO deep
+        pfwl_field_t *extracted_fields = pkt_info->l7.protocol_fields;
+
+        while(rtcp) {
+
+            switch(rtcp->pType) {
+
+            /* Sender Report */
+            case RTCP_SENDER: {
+
+                rtcp_sr_t *sr = (rtcp_sr_t*)rtcp;
+                // check if source is present
+                if(sr->header.rc > 0) {
+                    // TODO Extraction
+                }
+                break;
+            }
+
+            /* Receiver Report */
+            case RTCP_RECEIVER: {
+
+                rtcp_rr_t *rr = (rtcp_rr_t*)rtcp;
+
+                if(rr->header.rc > 0) {
+                    // TODO Extraction
+                }
+                break;
+            }
+
+            /* Source Description */
+            case RTCP_SRC_DESCR: {
+
+                int items;
+                rtcp_sdes_t *sdes = (rtcp_sdes_t*)rtcp;
+                rtcp_sdes_item_t *end = (rtcp_sdes_item_t *)((uint32_t *)rtcp + ntohs(rtcp->length) + 1);
+                rtcp_sdes_item_t *rsp, *rspn; // actual and next items
+
+                rsp = &sdes->item[0];
+                if(rsp >= end) break;
+                for(items = 0; rsp->type; rsp = rspn ) {
+                    rspn = (rtcp_sdes_item_t *)((char*)rsp+rsp->len+2);
+                    if(rspn >= end) {
+                        rsp = rspn;
+                        break;
+                    }
+                    items++;
+                }
+                // TODO Extraction
+            }
+
+            /* Goodbye */
+            case RTCP_BYE: {
+                flag = 1;
+                break;
+            }
+            /* Application Specific */
+            case RTCP_APP: {
+                flag = 1;
+                break;
+            }
+
+            /*** WRONG case ***/
+            default: break;
+
+            } // switch
+
+            total -= (rtcp->length *4) + RTCP_HDR_SIZE;
+            if(total <= 0)
+                // End of RTCP packet
+                break;
+
+            rtcp = (struct rtcp_header *)((uint32_t*)rtcp + rtcp->length + 1);
+
+        } // while
+
+        if(flag == 0)
+            printf("GOOD PARSING -> Final Bye or APP received\n");
+        else
+            printf("BAD PARSING -> NOT Bye or APP received\n");
     }
     return ret;
 }
