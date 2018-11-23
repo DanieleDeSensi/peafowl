@@ -129,23 +129,24 @@ typedef enum pfwl_status {
 /**
  * L2 datalink protocols supported by peafowl.
  **/
+// clang-format off
 typedef enum pfwl_datalink_type {
-  PFWL_PROTO_L2_EN10MB =
-      0, ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
+  PFWL_PROTO_L2_EN10MB = 0,       ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
   PFWL_PROTO_L2_LINUX_SLL,        ///< Linux "cooked" capture encapsulation
   PFWL_PROTO_L2_IEEE802_11_RADIO, ///< Radiotap link-layer information followed
                                   ///< by an 802.11 header
   PFWL_PROTO_L2_IEEE802_11,       ///< IEEE 802.11
   PFWL_PROTO_L2_IEEE802,          ///< IEEE 802.5 Token Ring
-  PFWL_PROTO_L2_SLIP, ///< SLIP, encapsulated with a LINKTYPE_SLIP header
-  PFWL_PROTO_L2_PPP,  ///< PPP, as per RFC 1661 and RFC 1662
-  PFWL_PROTO_L2_FDDI, ///< FDDI, as specified by ANSI INCITS 239-1994
-  PFWL_PROTO_L2_RAW,  ///< Raw IP
-  PFWL_PROTO_L2_LOOP, ///< OpenBSD loopback encapsulation
-  PFWL_PROTO_L2_NULL, ///< BSD loopback encapsulation
-  PFWL_PROTO_L2_NUM   ///< Special value to indicate an unsupported datalink
-                      ///< type. This must be the last value
+  PFWL_PROTO_L2_SLIP,             ///< SLIP, encapsulated with a LINKTYPE_SLIP header
+  PFWL_PROTO_L2_PPP,              ///< PPP, as per RFC 1661 and RFC 1662
+  PFWL_PROTO_L2_FDDI,             ///< FDDI, as specified by ANSI INCITS 239-1994
+  PFWL_PROTO_L2_RAW,              ///< Raw IP
+  PFWL_PROTO_L2_LOOP,             ///< OpenBSD loopback encapsulation
+  PFWL_PROTO_L2_NULL,             ///< BSD loopback encapsulation
+  PFWL_PROTO_L2_NUM               ///< Special value to indicate an unsupported datalink
+                                  ///< type. This must be the last value
 } pfwl_protocol_l2_t;
+// clang-format on
 
 /**
  * L3 (IP) protocol.
