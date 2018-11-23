@@ -265,11 +265,12 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
             rtcp = (struct rtcp_header *)((uint32_t*)rtcp + rtcp->length + 1);
 
         } // while
-
+	/*
         if(flag == 0)
             printf("GOOD PARSING -> Final Bye or APP received\n");
         else
             printf("BAD PARSING -> NOT Bye or APP received\n");
+	*/
     }
     return ret;
 }
