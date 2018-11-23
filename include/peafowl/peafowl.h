@@ -129,6 +129,7 @@ typedef enum pfwl_status {
 /**
  * L2 datalink protocols supported by peafowl.
  **/
+// clang-format off
 typedef enum pfwl_datalink_type {
   PFWL_PROTO_L2_EN10MB = 0,       ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
   PFWL_PROTO_L2_LINUX_SLL,        ///< Linux "cooked" capture encapsulation
@@ -145,6 +146,7 @@ typedef enum pfwl_datalink_type {
   PFWL_PROTO_L2_NUM               ///< Special value to indicate an unsupported datalink
                                   ///< type. This must be the last value
 } pfwl_protocol_l2_t;
+// clang-format on
 
 /**
  * L3 (IP) protocol.
