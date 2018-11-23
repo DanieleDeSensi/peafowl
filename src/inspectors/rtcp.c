@@ -307,12 +307,12 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
 
             /* Goodbye */
             case RTCP_BYE: {
-                flag = 1;
+                //flag = 1;
                 break;
             }
             /* Application Specific */
             case RTCP_APP: {
-                flag = 1;
+                //flag = 1;
                 break;
             }
 
