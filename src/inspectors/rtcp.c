@@ -139,19 +139,19 @@ typedef struct _rtcp_sdes_t
 } rtcp_sdes_t;
 
 /* Goodbye */
-typedef struct _rtcp_bye
-{
-    struct rtcp_header header;
-	uint32_t ssrc[1];
-} rtcp_bye_t;
+/* typedef struct _rtcp_bye */
+/* { */
+/*     struct rtcp_header header; */
+/* 	uint32_t ssrc[1]; */
+/* } rtcp_bye_t; */
 
 /* Application Specific */
-typedef struct _rtcp_app
-{
-    struct rtcp_header header;
-	uint32_t ssrc;
-	char name[4];
-} rtcp_app_t;
+/* typedef struct _rtcp_app */
+/* { */
+/*     struct rtcp_header header; */
+/* 	uint32_t ssrc; */
+/* 	char name[4]; */
+/* } rtcp_app_t; */
 
 /** ************************************ **/
 
@@ -187,11 +187,12 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                       int data_length, pfwl_dissection_info_t* pkt_info)
 {
     int ret;
-    int flag = 0, total = data_length;
+    int total = data_length;
 
     ret = low_check(rtcp);
     if(ret == PFWL_PROTOCOL_MATCHES) {
-        pfwl_field_t *extracted_fields = pkt_info->l7.protocol_fields;
+        int flag = 0;
+        // pfwl_field_t *extracted_fields = pkt_info->l7.protocol_fields;
 
         while(rtcp) {
 
