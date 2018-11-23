@@ -191,7 +191,7 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
 
     ret = low_check(rtcp);
     if(ret == PFWL_PROTOCOL_MATCHES) {
-        int flag = 0;
+        //int flag = 0;
         // pfwl_field_t *extracted_fields = pkt_info->l7.protocol_fields;
 
         while(rtcp) {
@@ -243,12 +243,12 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
 
             /* Goodbye */
             case RTCP_BYE: {
-                flag = 1;
+                //flag = 1;
                 break;
             }
             /* Application Specific */
             case RTCP_APP: {
-                flag = 1;
+                //flag = 1;
                 break;
             }
 
