@@ -319,6 +319,38 @@ typedef enum {
   PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier [NUMBER] (Host byte order)
   PFWL_FIELDS_L7_RTP_LAST,                ///< Dummy value to indicate last RTP field. Must
                                           ///< be the last field specified for RTP
+  /** RTCP fields **/
+  PFWL_FIELDS_L7_RTCP_FIRST,               ///< Dummy value to indicate first RTP field
+  // Sender Report fields
+  PFWL_FIELDS_L7_RTCP_SENDER_ALL,          ///< To extract all the Sender fields
+  PFWL_FIELDS_L7_RTCP_SENDER_SSRC,         ///< RTCP Sender SSRC
+  PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW,     ///< RTCP Sender timestamp MSW
+  PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW,     ///< RTCP Sender timestamp LSW
+  PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP,     ///< RTCP Sender timestamp RTP
+  PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT,    ///< RTCP Sender packet count
+  PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT,    ///< RTCP Sender octet count
+  /// Sender Report Block fields
+  PFWL_FIELDS_L7_RTCP_SENDER_ID,           ///< RTCP Sender Identifier
+  PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL,       ///< RTCP Sender Fraction lost + Cumulative pkt lost
+  PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV, ///< RTCP Sender Extended highest sequence number received
+  PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER,   ///< RTCP Sender Interarrival Jitter
+  PFWL_FIELDS_L7_RTCP_SENDER_LSR,          ///< RTCP Sender Last SR timestamp
+  PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR,    ///< RTCP Sender Delay last SR timestamp
+  // Receiver Report fields
+  PFWL_FIELDS_L7_RTCP_RECEIVER_ALL,          ///< To extract all the Receiver fields
+  PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC,         ///< RTCP Receiver SSRC
+  /// Receiver Report Block fields
+  PFWL_FIELDS_L7_RTCP_RECEIVER_ID,           ///< RTCP Receiver Identifier
+  PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL,       ///< RTCP Receiver Fraction lost + Cumulative pkt lost
+  PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV, ///< RTCP Receiver Extended highest sequence number received
+  PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER,   ///< RTCP Receiver Interarrival Jitter
+  PFWL_FIELDS_L7_RTCP_RECEIVER_LSR,          ///< RTCP Receiver Last SR timestamp
+  PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR,    ///< RTCP Receiver Delay last SR timestamp
+  // Source Descrition Items fields
+  PFWL_FIELDS_L7_RTCP_SDES_CSRC,             ///< RTCP Source description CSRC ID
+  PFWL_FIELDS_L7_RTCP_SDES_TEXT,             ///< RTCP Source description Text
+  PFWL_FIELDS_L7_RTCP_LAST,                  ///< Dummy value to indicate last RTP field. Must
+                                             ///< be the last field specified for RTP
   /** **/
   PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
                       ///< the last field specified.
@@ -884,7 +916,7 @@ const char **const pfwl_get_L7_protocols_names();
  * Returns the string represetation of a protocol field.
  * @param   field The protocol field identifier.
  * @return  The string representation of the protocol field with id 'field'.
- */ 
+ */
 const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
 
 /**
@@ -1107,31 +1139,31 @@ typedef struct pfwl_state {
 // Bindings support structures
 typedef struct pfwl_dissection_info_for_bindings {
   size_t l2_length;
-  pfwl_protocol_l2_t l2_protocol; 
-  size_t l3_length; 
-  size_t l3_payload_length; 
+  pfwl_protocol_l2_t l2_protocol;
+  size_t l3_length;
+  size_t l3_payload_length;
   pfwl_ip_addr_t l3_addr_src;
   pfwl_ip_addr_t l3_addr_dst;
-  const unsigned char *l3_refrag_pkt; 
-  size_t l3_refrag_pkt_len; 
+  const unsigned char *l3_refrag_pkt;
+  size_t l3_refrag_pkt_len;
   pfwl_protocol_l3_t l3_protocol;
   size_t l4_length;
   size_t l4_payload_length;
-  uint16_t l4_port_src; 
-  uint16_t l4_port_dst; 
-  uint8_t l4_direction; 
+  uint16_t l4_port_src;
+  uint16_t l4_port_dst;
+  uint8_t l4_direction;
   const unsigned char *l4_resegmented_pkt;
-  size_t l4_resegmented_pkt_len; 
-  pfwl_protocol_l4_t l4_protocol; 
-  pfwl_protocol_l7_t l7_protocol; 
+  size_t l4_resegmented_pkt_len;
+  pfwl_protocol_l4_t l4_protocol;
+  pfwl_protocol_l7_t l7_protocol;
   pfwl_field_t l7_protocol_fields[PFWL_FIELDS_L7_NUM];
   uint64_t flow_info_num_packets[2];
-  uint64_t flow_info_num_bytes[2]; 
+  uint64_t flow_info_num_bytes[2];
   uint64_t flow_info_num_packets_l7[2];
-  uint64_t flow_info_num_bytes_l7[2]; 
-  void **flow_info_udata; 
-  uint32_t flow_info_timestamp_first[2]; 
-  uint32_t flow_info_timestamp_last[2]; 
+  uint64_t flow_info_num_bytes_l7[2];
+  void **flow_info_udata;
+  uint32_t flow_info_timestamp_first[2];
+  uint32_t flow_info_timestamp_last[2];
 } pfwl_dissection_info_for_bindings_t;
 
 
