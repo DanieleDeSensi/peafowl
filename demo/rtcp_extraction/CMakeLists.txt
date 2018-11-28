@@ -1,0 +1,2 @@
+add_executable(rtcp_extraction rtcp_extraction.c)
+target_link_libraries(rtcp_extraction LINK_PUBLIC peafowl pcap)

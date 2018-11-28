@@ -388,7 +388,10 @@ static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
   } else if (field > PFWL_FIELDS_L7_RTP_FIRST &&
              field < PFWL_FIELDS_L7_RTP_LAST) {
       return PFWL_PROTO_L7_RTP;
-  } else {
+  } else if (field > PFWL_FIELDS_L7_RTCP_FIRST &&
+             field < PFWL_FIELDS_L7_RTCP_LAST) {
+      return PFWL_PROTO_L7_RTCP;
+  } else{
       return PFWL_PROTO_L7_NUM;
   }
 }

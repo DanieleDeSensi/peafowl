@@ -191,7 +191,6 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
 
     ret = low_check(rtcp);
     if(ret == PFWL_PROTOCOL_MATCHES) {
-        int flag = 0;
         pfwl_field_t *extracted_fields = pkt_info->l7.protocol_fields;
 
         while(rtcp) {
@@ -208,36 +207,36 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                 if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL)) {
 
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_SSRC,
-                                          (int64_t) ntohs(sr->ssrc));
+                                          (int64_t) ntohl(sr->ssrc));
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW,
-                                          (int64_t) ntohs(sr->si.ntp_timestamp_msw));
+                                          (int64_t) ntohl(sr->si.ntp_timestamp_msw));
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW,
-                                          (int64_t) ntohs(sr->si.ntp_timestamp_lsw));
+                                          (int64_t) ntohl(sr->si.ntp_timestamp_lsw));
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP,
-                                          (int64_t) ntohs(sr->si.rtp_timestamp));
+                                          (int64_t) ntohl(sr->si.rtp_timestamp));
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT,
-                                          (int64_t) ntohs(sr->si.senders_packet_count));
+                                          (int64_t) ntohl(sr->si.senders_packet_count));
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT,
-                                          (int64_t) ntohs(sr->si.senders_octet_count));
+                                          (int64_t) ntohl(sr->si.senders_octet_count));
                     if(sr->header.rc > 0) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_ID,
-                                              (int64_t) ntohs(sr->rb[0].identifier));
+                                              (int64_t) ntohl(sr->rb[0].identifier));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL,
-                                              (int64_t) ntohs(sr->rb[0].fl_cnpl));
+                                              (int64_t) ntohl(sr->rb[0].fl_cnpl));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV,
-                                              (int64_t) ntohs(sr->rb[0].ext_high_seq_num_rec));
+                                              (int64_t) ntohl(sr->rb[0].ext_high_seq_num_rec));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER,
-                                              (int64_t) ntohs(sr->rb[0].interarrival_jitter));
+                                              (int64_t) ntohl(sr->rb[0].interarrival_jitter));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_LSR,
-                                              (int64_t) ntohs(sr->rb[0].lsr));
+                                              (int64_t) ntohl(sr->rb[0].lsr));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR,
-                                              (int64_t) ntohs(sr->rb[0].delay_lsr));
+                                              (int64_t) ntohl(sr->rb[0].delay_lsr));
                     }
-                    break;
                 }
                 else {
                     // TODO: specify single fields extraction
                 }
+                break;
             }
 
             /* Receiver Report */
@@ -250,26 +249,26 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                 if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL)) {
 
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC,
-                                          (int64_t) ntohs(rr->ssrc));
+                                          (int64_t) ntohl(rr->ssrc));
                     if(rr->header.rc > 0) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_ID,
-                                              (int64_t) ntohs(rr->rb[0].identifier));
+                                              (int64_t) ntohl(rr->rb[0].identifier));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL,
-                                              (int64_t) ntohs(rr->rb[0].fl_cnpl));
+                                              (int64_t) ntohl(rr->rb[0].fl_cnpl));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV,
-                                              (int64_t) ntohs(rr->rb[0].ext_high_seq_num_rec));
+                                              (int64_t) ntohl(rr->rb[0].ext_high_seq_num_rec));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER,
-                                              (int64_t) ntohs(rr->rb[0].interarrival_jitter));
+                                              (int64_t) ntohl(rr->rb[0].interarrival_jitter));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_LSR,
-                                              (int64_t) ntohs(rr->rb[0].lsr));
+                                              (int64_t) ntohl(rr->rb[0].lsr));
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR,
-                                              (int64_t) ntohs(rr->rb[0].delay_lsr));
+                                              (int64_t) ntohl(rr->rb[0].delay_lsr));
                     }
-                    break;
                 }
                 else {
                     // TODO: specify single fields extraction
                 }
+                break;
             }
 
             /* Source Description */
@@ -285,7 +284,7 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
 
                 if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SDES_CSRC)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SDES_CSRC,
-                                          (int64_t) ntohs(sdes->csrc));
+                                          (int64_t) ntohl(sdes->csrc));
                 }
 
                 for(items = 0; rsp->type; rsp = rspn ) {
@@ -303,39 +302,36 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                     }
                     items++;
                 }
+                break;
             }
 
             /* Goodbye */
             case RTCP_BYE: {
-                //flag = 1;
+                /* TODO */
                 break;
             }
             /* Application Specific */
             case RTCP_APP: {
-                //flag = 1;
+                /* TODO */
                 break;
             }
 
             /*** WRONG case ***/
-            default: return -1;
+            default: return PFWL_PROTOCOL_NO_MATCHES;
 
             } // switch
 
-            total -= (rtcp->length *4) + RTCP_HDR_SIZE;
+            int length = ntohs(rtcp->length);
+            if(length == 0) {
+                break;
+            }
+
+            total -= ntohs((rtcp->length) *4) + RTCP_HDR_SIZE;
             if(total <= 0)
                 // End of RTCP packet
                 break;
-
-            rtcp = (struct rtcp_header *)((uint32_t*)rtcp + rtcp->length + 1);
-
+            rtcp = (struct rtcp_header *)((uint32_t*)rtcp + length + 1);
         } // while
-
-        if(flag == 0)
-            printf("GOOD PARSING -> Final Bye or APP received\n");
-        else {
-            printf("BAD PARSING -> NOT Bye or APP received\n");
-            ret = -2;
-        }
     }
     return ret;
 }
