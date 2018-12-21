@@ -144,14 +144,13 @@ int getSSLcertificate(const unsigned char *payload,
 
     /* At least "magic" 3 bytes, null for string end, otherwise no need to waste cpu cycles */
     if(total_len > 4) {
-      int i;
-
       if(handshake_protocol == 0x02 || handshake_protocol == 0xb /* Server Hello and Certificate message types are interesting for us */) {
         u_int num_found = 0;
 
         // Here we are sure we saw the client certificate
 
         /* Check after handshake protocol header (5 bytes) and message header (4 bytes) */
+        int i;
         for(i = 9; i < data_length-3; i++) {
           if(((payload[i] == 0x04) && (payload[i+1] == 0x03) && (payload[i+2] == 0x0c))
              || ((payload[i] == 0x04) && (payload[i+1] == 0x03) && (payload[i+2] == 0x13))
