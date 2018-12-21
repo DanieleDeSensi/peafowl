@@ -43,98 +43,31 @@ The supported protocols are:
 
 <table>
   <tr>
-    <th>Protocol</th><th>Quality</th>
+    <th>Protocol</th><th>Quality</th><th>Protocol</th><th>Quality</th><th>Protocol</th><th>Quality</th><th>Protocol</th><th>Quality</th>
   </tr>
   <tr>
-    <td>HTTP</td><td>5/5</td>
+    <td>HTTP</td><td>5/5</td><td>SSL</td><td>5/5</td><td>POP3</td><td>3/5</td><td>IMAP</td><td>5/5</td>
   </tr>
   <tr>
-  	<td>SSL</td><td>5/5</td>
+    <td>SMTP</td><td>3/5</td><td>BGP</td><td>5/5</td><td>DHCP</td><td>5/5</td><td>DHCPv6</td><td>5/5</td>
   </tr>
   <tr>
-    <td>POP3</td><td>3/5</td>
+    <td>DNS</td><td>5/5</td><td>MDNS</td><td>5/5</td><td>NTP</td><td>5/5</td><td>SIP</td><td>5/5</td>
   </tr>
   <tr>
-    <td>IMAP</td><td>5/5</td>
+    <td>RTP</td><td>4/5</td><td>RTCP</td><td>4/5</td><td>Skype</td><td>3/5</td><td>Hangout</td><td>3/5</td>
   </tr>
   <tr>
-    <td>SMTP</td><td>3/5</td>
+    <td>WhatsApp</td><td>4/5</td><td>Telegram</td><td>?</td><td>Dropbox</td><td>3/5</td><td>Spotify</td><td>5/5</td>
   </tr>
   <tr>
-    <td>BGP</td><td>5/5</td>
+    <td>SSH</td><td>5/5</td><td>Bitcoin</td><td>4/5</td><td>Ethereum</td><td>4/5</td><td>Zcash</td><td>4/5</td>
   </tr>
   <tr>
-    <td>DHCP</td><td>5/5</td>
+    <td>Monero</td><td>4/5</td><td>Stratum</td><td>5/5</td><td>JSON-RPC</td><td>5/5</td><td>SSDP</td><td>5/5</td>
   </tr>
   <tr>
-    <td>DHCPv6</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>DNS</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>MDNS</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>NTP</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>SIP</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>RTP</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>RTCP</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Skype</td><td>3/5</td>
-  </tr>
-  <tr>
-    <td>Hangout</td><td>3/5</td>
-  </tr>
-  <tr>
-    <td>WhatsApp</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Telegram</td><td>?</td>
-  </tr>
-  <tr>
-    <td>Dropbox</td><td>3/5</td>
-  </tr>
-  <tr>
-    <td>Spotify</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>SSH</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>Bitcoin</td><td>4/5</td>
-  </tr>
-    <tr>
-    <td>Ethereum</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Zcash</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Monero</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Stratum</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>JSON-RPC</td><td>5/5</td>
-  </tr>
-  </tr>
-  <tr>
-    <td>SSDP</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>STUN</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>QUIC</td><td>5/5</td>
+    <td>STUN</td><td>5/5</td><td>QUIC</td><td>5/5</td><td></td><td></td><td></td><td></td>
   </tr>
 </table>
 
