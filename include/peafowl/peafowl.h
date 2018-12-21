@@ -194,6 +194,7 @@ typedef enum {
   PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
   PFWL_PROTO_L7_SSDP,     ///< SSDP
   PFWL_PROTO_L7_STUN,     ///< STUN
+  PFWL_PROTO_L7_QUIC,     ///< QUIC
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
@@ -237,121 +238,93 @@ typedef struct {
 } pfwl_array_t;
 
 /**
+ * A peafowl map (just an array of pairs at the moment).
+ */
+typedef pfwl_array_t pfwl_mmap_t;
+
+/**
  * A generic field extracted by peafowl.
  **/
 typedef struct pfwl_field {
   uint8_t present : 1; ///< 1 if the field has been set, 0 otherwise.
   union {
     pfwl_basic_type_t basic; ///< A basic type.
-    pfwl_pair_t pair;        ///< A pair.
     pfwl_array_t array;      ///< An array.
+    pfwl_pair_t pair;        ///< A pair (will probably be deprecated in next versions).
+    pfwl_mmap_t mmap;        ///< A multi map (i.e. the same key can be present multiple times).
   };
 } pfwl_field_t;
 
 typedef enum {
   PFWL_FIELD_TYPE_STRING = 0,
   PFWL_FIELD_TYPE_NUMBER,
-  PFWL_FIELD_TYPE_MAP
+  PFWL_FIELD_TYPE_ARRAY,
+  PFWL_FIELD_TYPE_PAIR,
+  PFWL_FIELD_TYPE_MMAP
 } pfwl_field_type_t;
-
-typedef struct {
-  pfwl_protocol_l7_t protocol;
-  const char* name;
-  pfwl_field_type_t type;
-} pfwl_field_L7_descriptor;
 
 // clang-format off
 /**
  * Protocol fields which can be extracted by peafowl.
  **/
+//--PROTOFIELDENUMSTART
 typedef enum {
-  /** SIP field **/
-  PFWL_FIELDS_L7_SIP_FIRST = 0,           ///< Dummy value to indicate first SIP field
-  PFWL_FIELDS_L7_SIP_REQUEST_URI,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_METHOD,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CALLID,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_REASON,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RTCPXR_CALLID,       ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CSEQ,                ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING,  ///< [STRING]
-  PFWL_FIELDS_L7_SIP_VIA,                 ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CONTACT_URI,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_USER,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_DOMAIN,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_USER,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_DOMAIN,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_USER,             ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_DOMAIN,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PAI_USER,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PAI_DOMAIN,          ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PID_URI,             ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_URI,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_URI,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_URI,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_TAG,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_TAG,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_LAST,                ///< Dummy value to indicate last SIP field. Must be
-                                          ///< the last field specified for SIP.
-  /** DNS field **/
-  PFWL_FIELDS_L7_DNS_FIRST,               ///< Dummy value to indicate first DNS field
-  PFWL_FIELDS_L7_DNS_NAME_SRV,            ///< Server name [STRING]
-  PFWL_FIELDS_L7_DNS_NS_IP_1,             ///< Server name IP address [STRING]
-  PFWL_FIELDS_L7_DNS_NS_IP_2,             ///< Server name IP address [STRING]
-  PFWL_FIELDS_L7_DNS_AUTH_SRV,            ///< Authority name [STRING]
-  PFWL_FIELDS_L7_DNS_LAST,                ///< Dummy value to indicate last DNS field. Must be
-                                          ///< the last field specified for DNS.
-  /** SSL field **/
-  PFWL_FIELDS_L7_SSL_FIRST,               ///< Dummy value to indicate first SSL field
-  PFWL_FIELDS_L7_SSL_SNI,                 ///< Server name extension found in client certificate [STRING]
-  PFWL_FIELDS_L7_SSL_CERTIFICATE,         ///< Server name found in server certificate [STRING]
-  PFWL_FIELDS_L7_SSL_LAST,                ///< Dummy value to indicate last SSL field. Must be
-                                          ///< the last field specified for SSL.
-  /** HTTP field **/
-  PFWL_FIELDS_L7_HTTP_FIRST,              ///< Dummy value to indicate first HTTP field
-  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUMBER]
-  PFWL_FIELDS_L7_HTTP_VERSION_MINOR,      ///< HTTP Version - Minor [NUMBER]
-  PFWL_FIELDS_L7_HTTP_METHOD,             ///< HTTP Method. [NUMBER] For the possible values,
-                                          ///< please check HTTP_METHOD_MAP in file
-                                          ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_STATUS_CODE,        ///< HTTP Status code [NUMBER]
-  PFWL_FIELDS_L7_HTTP_MSG_TYPE,           ///< HTTP request or response. [NUMBER] For the
-                                          ///< possible values, please check
-                                          ///< pfwl_http_message_type_t enumeration in
-                                          ///< file
-                                          ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_BODY,               ///< HTTP Body [STRING]
-  PFWL_FIELDS_L7_HTTP_URL,                ///< HTTP URL  [STRING]
-  PFWL_FIELDS_L7_HTTP_HEADERS,            ///< HTTP headers names [ARRAY OF PAIRS OF
-                                          ///< STRINGS]. For each pair, the first element
-                                          ///< is the header name and the second element
-                                          ///< is the header value. We suggest using the
-                                          ///< 'pfwl_http_get_header' helper function for
-                                          ///< an easier access.
-  PFWL_FIELDS_L7_HTTP_LAST,               ///< Dummy value to indicate last HTTP field. Must
-                                          ///< be the last field specified for HTTP.
-  /** RTP fields **/
-  PFWL_FIELDS_L7_RTP_FIRST,               ///< Dummy value to indicate first RTP field
-  PFWL_FIELDS_L7_RTP_PTYPE,               ///< RTP Payload Type [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_SEQNUM,              ///< RTP Sequence Number [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_TIMESTP,             ///< RTP Timestamp [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_LAST,                ///< Dummy value to indicate last RTP field. Must
-                                          ///< be the last field specified for RTP
-  /** JSON-RPC fields **/
-  PFWL_FIELDS_L7_JSON_RPC_FIRST,          ///< Dummy value to indicate first JSON-RPC field
-  PFWL_FIELDS_L7_JSON_RPC_VERSION,        ///< JSON-RPC version [NUMBER]
-  PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE,       ///< Msg type [NUMBER] 0 = Request, 1 = Response, 2 = Notification
-  PFWL_FIELDS_L7_JSON_RPC_ID,             ///< Id field [STRING]
-  PFWL_FIELDS_L7_JSON_RPC_METHOD,         ///< Method field [STRING]
-  PFWL_FIELDS_L7_JSON_RPC_PARAMS,         ///< Params field [STRING]
-  PFWL_FIELDS_L7_JSON_RPC_RESULT,         ///< Result field [STRING]
-  PFWL_FIELDS_L7_JSON_RPC_ERROR,          ///< Error field [STRING]
-  PFWL_FIELDS_L7_JSON_RPC_LAST,           ///< Dummy value to indicate last JSON-RPC field. Must
-                                          ///< be the last field specified for JSON-RPC
-  /** **/
-  PFWL_FIELDS_L7_NUM,                     ///< Dummy value to indicate number of fields. Must be
-                                          ///< the last field specified.
-} pfwl_field_id_t;
+  PFWL_FIELDS_L7_SIP_REQUEST_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_METHOD, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CALLID, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_REASON, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RTCPXR_CALLID, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CSEQ, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_VIA, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CONTACT_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RURI_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RURI_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_PAI_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_PAI_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_PID_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RURI_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_TAG, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_TAG, ///< [STRING] 
+  PFWL_FIELDS_L7_DNS_NAME_SRV, ///< [STRING] Server name
+  PFWL_FIELDS_L7_DNS_NS_IP_1, ///< [STRING] Server name IP address
+  PFWL_FIELDS_L7_DNS_NS_IP_2, ///< [STRING] Server name IP address
+  PFWL_FIELDS_L7_DNS_AUTH_SRV, ///< [STRING] Authority name
+  PFWL_FIELDS_L7_SSL_SNI, ///< [STRING] Server name extension found in client certificate
+  PFWL_FIELDS_L7_SSL_CERTIFICATE, ///< [STRING] Server name found in server certificate
+  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR, ///< [NUMBER] HTTP Version - Major
+  PFWL_FIELDS_L7_HTTP_VERSION_MINOR, ///< [NUMBER] HTTP Version - Minor
+  PFWL_FIELDS_L7_HTTP_METHOD, ///< [NUMBER] HTTP Method. For the possible values
+  PFWL_FIELDS_L7_HTTP_STATUS_CODE, ///< [NUMBER] HTTP Status code
+  PFWL_FIELDS_L7_HTTP_MSG_TYPE, ///< [NUMBER] HTTP request or response. For the possible values
+  PFWL_FIELDS_L7_HTTP_BODY, ///< [STRING] HTTP Body
+  PFWL_FIELDS_L7_HTTP_URL, ///< [STRING] HTTP URL
+  PFWL_FIELDS_L7_HTTP_HEADERS, ///< [MMAP] HTTP headers
+  PFWL_FIELDS_L7_RTP_PTYPE, ///< [NUMBER] RTP Payload Type (Host byte order)
+  PFWL_FIELDS_L7_RTP_SEQNUM, ///< [NUMBER] RTP Sequence Number (Host byte order)
+  PFWL_FIELDS_L7_RTP_TIMESTP, ///< [NUMBER] RTP Timestamp (Host byte order)
+  PFWL_FIELDS_L7_RTP_SSRC, ///< [NUMBER] RTP Syncronization Source Identifier (Host byte order)
+  PFWL_FIELDS_L7_JSON_RPC_FIRST, ///< [NUMBER] Dummy value to mark first JSON RPC field.
+  PFWL_FIELDS_L7_JSON_RPC_VERSION, ///< [NUMBER] JSON-RPC version.
+  PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE, ///< [NUMBER] Msg type. 0 = Request
+  PFWL_FIELDS_L7_JSON_RPC_ID, ///< [STRING] Id field.
+  PFWL_FIELDS_L7_JSON_RPC_METHOD, ///< [STRING] Method field.
+  PFWL_FIELDS_L7_JSON_RPC_PARAMS, ///< [STRING] Params field.
+  PFWL_FIELDS_L7_JSON_RPC_RESULT, ///< [STRING] Result field.
+  PFWL_FIELDS_L7_JSON_RPC_ERROR, ///< [STRING] Error field.
+  PFWL_FIELDS_L7_JSON_RPC_LAST, ///< [NUMBER] Dummy value to mark last JSON RPC field.
+  PFWL_FIELDS_L7_QUIC_VERSION, ///< [STRING] Version.
+  PFWL_FIELDS_L7_QUIC_SNI, ///< [STRING] Server Name Indication.
+  PFWL_FIELDS_L7_NUM, ///< [STRING] Dummy value to indicate number of fields. Must be the last field specified.
+}pfwl_field_id_t;
+
+//--PROTOFIELDENUMEND
 
 /**
  * An IP address.
@@ -978,6 +951,14 @@ uint8_t pfwl_set_protocol_accuracy_L7(pfwl_state_t *state,
                                       pfwl_dissector_accuracy_t accuracy);
 
 /**
+ * Returns the type of a field.
+ * @brief pfwl_field_type_get Returns the type of a field.
+ * @param field The field.
+ * @return The type of 'field'.
+ */
+pfwl_field_type_t pfwl_field_type_get(pfwl_field_id_t field);
+
+/**
  * @brief pfwl_field_string_get Extracts a specific string field from a list of
  * fields.
  * @param fields The list of fields.
@@ -1086,7 +1067,7 @@ typedef enum{
 
 /**
  * Loads the associations between fields values and user-defined tags.
- * @brief pfwl_tags_load Loads the associations between fields values and user-defined tags.
+ * @brief pfwl_field_tags_load Loads the associations between fields values and user-defined tags.
  * @param state   A pointer to the state of the library.
  * @param field   The field identifier.
  * @param tags_file The name of the JSON file containing associations between fields values and tags.
@@ -1110,7 +1091,7 @@ typedef enum{
  * tag:           The tag to assign to the packet when the field matches with stringToMatch.
  *
  * ------------------------
- * If 'field' is a map:
+ * If 'field' is a multi map:
  * ------------------------
  *
  * {
@@ -1121,17 +1102,18 @@ typedef enum{
  *   ],
  * }
  *
- * key: The key to match in the map.
+ * key: The key to match in the multi map.
  * 'value', 'matchingType' and 'tag' are the same as in the string case.
  *
- * The 'tags_file' argument can be null and the matching rules can be added later with the pfwl_tags_add call.
+ * The 'tags_file' argument can be NULL and the matching rules can be added later with the pfwl_*_tags_add calls.
+ *
+ * @return 0 if the loading was successful, 1 otherwise (e.g. error while parsing the json file, non existing file, etc...)
  */
-void pfwl_tags_load(pfwl_state_t* state, pfwl_field_id_t field, const char* tags_file);
+int pfwl_field_tags_load_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* tags_file);
 
 /**
- * Adds a tag matching rule for a specific field. pfwl_tags_load must be called before calling
- * this function.
- * @brief pfwl_tags_add Adds a tag matching rule for a specific field.
+ * Adds a tag matching rule for a specific string field.
+ * @brief pfwl_field_string_tags_add Adds a tag matching rule for a specific field.
  * @param state   A pointer to the state of the library.
  * @param field   The field identifier.
  * @param value Is the string to be matched against the field. The comparison will
@@ -1140,15 +1122,31 @@ void pfwl_tags_load(pfwl_state_t* state, pfwl_field_id_t field, const char* tags
  * @param matchingType Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
  * @param tag The tag to assign to the packet when the field matches with 'value'.
  */
-void pfwl_tags_add(pfwl_state_t* state, pfwl_field_id_t field, const char* value, pfwl_field_matching_t matchingType, const char* tag);
+void pfwl_field_string_tags_add_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* value, pfwl_field_matching_t matchingType, const char* tag);
+
+/**
+ * Adds a tag matching rule for a specific multimap field.
+ * @brief pfwl_field_map_tags_add Adds a tag matching rule for a specific field.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ * @param key The key of the multimap value. The comparison will
+ *            always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *            will match as well.
+ * @param value The value of the multimap value. The comparison will
+ *                always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *                will match as well.
+ * @param matchingType Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
+ * @param tag The tag to assign to the packet when the field matches with 'value'.
+ */
+void pfwl_field_mmap_tags_add_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* key, const char* value, pfwl_field_matching_t matchingType, const char* tag);
 
 /**
  * Unloads the associations between fields values and user-defined tags.
- * @brief pfwl_tags_unload Unloads the associations between fields values and user-defined tags.
+ * @brief pfwl_field_tags_unload Unloads the associations between fields values and user-defined tags.
  * @param state   A pointer to the state of the library.
  * @param field   The field identifier.
  */
-void pfwl_tags_unload(pfwl_state_t* state, pfwl_field_id_t field);
+void pfwl_field_tags_unload_L7(pfwl_state_t* state, pfwl_field_id_t field);
 
 /// @cond MC
 pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,

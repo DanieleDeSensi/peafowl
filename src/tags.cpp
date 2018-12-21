@@ -32,6 +32,7 @@
 #include "./external/rapidjson/stringbuffer.h"
 #include "./external/rapidjson/writer.h"
 #include "./external/rapidjson/filereadstream.h"
+#include "./external/rapidjson/istreamwrapper.h"
 
 #include <algorithm>
 #include <iostream>
@@ -58,21 +59,20 @@ typedef struct{
   radix_tree<std::string, std::string> suffixes;
 }pfwl_field_matching_db_t;
 
-static void pfwl_tag_add_internal(void* db, const char* toMatch, pfwl_field_matching_t matchingType, const char* tag){
-  pfwl_field_matching_db_t* db_real = static_cast<pfwl_field_matching_db_t*>(db);
-  std::string toMatchStr(toMatch);
+static void pfwl_field_string_tags_add_internal(pfwl_field_matching_db_t* db, const char* value, pfwl_field_matching_t matchingType, const char* tag){
+  std::string toMatchStr(value);
   std::transform(toMatchStr.begin(), toMatchStr.end(), toMatchStr.begin(), ::tolower);
 
   switch(matchingType){
   case PFWL_FIELD_MATCHING_PREFIX:{
-    db_real->prefixes[toMatchStr] = tag;
+    db->prefixes[toMatchStr] = tag;
   }break;
   case PFWL_FIELD_MATCHING_EXACT:{
-    db_real->exact[toMatchStr] = tag;
+    db->exact[toMatchStr] = tag;
   }break;
   case PFWL_FIELD_MATCHING_SUFFIX:{
     std::reverse(toMatchStr.begin(), toMatchStr.end());
-    db_real->suffixes[toMatchStr] = tag;
+    db->suffixes[toMatchStr] = tag;
   }break;
   case PFWL_FIELD_MATCHING_ERROR:{
     ;
@@ -80,35 +80,51 @@ static void pfwl_tag_add_internal(void* db, const char* toMatch, pfwl_field_matc
   }
 }
 
-static void* pfwl_tags_load(const char* fileName){
-  pfwl_field_matching_db_t* db = new pfwl_field_matching_db_t;
+static void pfwl_field_mmap_tags_add_internal(std::map<std::string, pfwl_field_matching_db_t>* db, const char* key, const char* value, pfwl_field_matching_t matchingType, const char* tag){
+  std::string keyStr(key);
+  std::transform(keyStr.begin(), keyStr.end(), keyStr.begin(), ::tolower);
+  pfwl_field_string_tags_add_internal(&(*db)[keyStr], value, matchingType, tag);
+}
+
+static void* pfwl_field_tags_load_L7(pfwl_field_id_t field, const char* fileName){
+  void* db = NULL;
+  if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_STRING){
+    db = new pfwl_field_matching_db_t;
+  }else if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_MMAP){
+    db = new std::map<std::string, pfwl_field_matching_db_t>;
+  }
+
   if(fileName){
-    FILE* fp = fopen(fileName, "r");
-    if(!fp){
-      delete db;
+    std::ifstream ifs(fileName);
+    IStreamWrapper isw(ifs);
+    Document d;
+    d.ParseStream(isw);
+
+    if (d.HasParseError()){
       return NULL;
     }
-    char readBuffer[65536];
-    FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-    Document d;
-    d.ParseStream(is);
+
     const Value& rules = d["rules"];
     assert(rules.IsArray());
     for (Value::ConstValueIterator itr = rules.Begin(); itr != rules.End(); ++itr) {
-        const Value& stringToMatch = (*itr)["stringToMatch"];
+        const Value& stringToMatch = (*itr)["value"];
         const Value& matchingType = (*itr)["matchingType"];
         const Value& tag = (*itr)["tag"];
-        pfwl_tag_add_internal(db, stringToMatch.GetString(), getFieldMatchingType(matchingType.GetString()), tag.GetString());
+        if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_STRING){
+          pfwl_field_string_tags_add_internal(static_cast<pfwl_field_matching_db_t*>(db), stringToMatch.GetString(), getFieldMatchingType(matchingType.GetString()), tag.GetString());
+        }else if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_MMAP){
+          const Value& key = (*itr)["key"];
+          pfwl_field_mmap_tags_add_internal(static_cast<std::map<std::string, pfwl_field_matching_db_t>*>(db), key.GetString(), stringToMatch.GetString(), getFieldMatchingType(matchingType.GetString()), tag.GetString());
+        }
     }
-    fclose(fp);
   }
-  return static_cast<void*>(db);
+  return db;
 }
 
 
-extern "C" const char* pfwl_tag_get(void* db, pfwl_string_t field){
+extern "C" const char* pfwl_field_string_tag_get(void* db, pfwl_string_t* value){
   pfwl_field_matching_db_t* db_real = static_cast<pfwl_field_matching_db_t*>(db);
-  std::string field_str((const char*) field.value, field.length);
+  std::string field_str((const char*) value->value, value->length);
   std::transform(field_str.begin(), field_str.end(), field_str.begin(), ::tolower);
 
   // Prefixes match
@@ -132,21 +148,43 @@ extern "C" const char* pfwl_tag_get(void* db, pfwl_string_t field){
   return NULL;
 }
 
-extern "C" void pfwl_tags_load(pfwl_state_t* state, pfwl_field_id_t field, const char* tags_file){
+extern "C" const char* pfwl_field_mmap_tag_get(void* db, pfwl_string_t* key, pfwl_string_t* value){
+  std::map<std::string, pfwl_field_matching_db_t>* db_real = static_cast<std::map<std::string, pfwl_field_matching_db_t>*>(db);
+  std::string key_str((const char*) key->value, key->length);
+  std::transform(key_str.begin(), key_str.end(), key_str.begin(), ::tolower);
+  return pfwl_field_string_tag_get(static_cast<void*>(&(*db_real)[key_str]), value);
+}
+
+extern "C" int pfwl_field_tags_load_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* tags_file){
   if(!state->tags_matchers[field]){
     state->tags_matchers_num++;
     pfwl_field_add_L7(state, field);
   }else{
-    pfwl_tags_unload(state, field);
+    pfwl_field_tags_unload_L7(state, field);
   }
-  state->tags_matchers[field] = pfwl_tags_load(tags_file);
+  state->tags_matchers[field] = pfwl_field_tags_load_L7(field, tags_file);
+  if(!state->tags_matchers[field] && tags_file){
+    return 1;
+  }else{
+    return 0;
+  }
 }
 
-extern "C" void pfwl_tags_add(pfwl_state_t* state, pfwl_field_id_t field, const char* toMatch, pfwl_field_matching_t matchingType, const char* tag){
-  pfwl_tag_add_internal(state->tags_matchers[field], toMatch, matchingType, tag);
+extern "C" void pfwl_field_string_tags_add_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* toMatch, pfwl_field_matching_t matchingType, const char* tag){
+  if(!state->tags_matchers[field]){
+    pfwl_field_tags_load_L7(state, field, NULL);
+  }
+  pfwl_field_string_tags_add_internal(static_cast<pfwl_field_matching_db_t*>(state->tags_matchers[field]), toMatch, matchingType, tag);
 }
 
-extern "C" void pfwl_tags_unload(pfwl_state_t* state, pfwl_field_id_t field){
+extern "C" void pfwl_field_mmap_tags_add_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* key, const char* value, pfwl_field_matching_t matchingType, const char* tag){
+  if(!state->tags_matchers[field]){
+    pfwl_field_tags_load_L7(state, field, NULL);
+  }
+  pfwl_field_mmap_tags_add_internal(static_cast<std::map<std::string, pfwl_field_matching_db_t>*>(state->tags_matchers[field]), key, value, matchingType, tag);
+}
+
+extern "C" void pfwl_field_tags_unload_L7(pfwl_state_t* state, pfwl_field_id_t field){
   if(state->tags_matchers[field]){
     state->tags_matchers_num--;
     delete static_cast<pfwl_field_matching_db_t*>(state->tags_matchers[field]);

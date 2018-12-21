@@ -84,3 +84,21 @@ TEST(SSLTest, ServerName) {
   pfwl_terminate(state);
 }
 
+TEST(SSLTest, Tags) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_field_string_tags_add_L7(state, PFWL_FIELDS_L7_SSL_CERTIFICATE, "snakeoil.dom", PFWL_FIELD_MATCHING_SUFFIX, "TAG_SUFFIX");
+
+  std::vector<uint> protocols;
+  bool foundSni = false;
+  getProtocols("./pcaps/ssl-2.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+
+    for(size_t i = 0; i < r.l7.tags_num; i++){
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_SUFFIX")){
+        foundSni = true;
+      }
+    }
+  });
+  EXPECT_TRUE(foundSni);
+  pfwl_terminate(state);
+}

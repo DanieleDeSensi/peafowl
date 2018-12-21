@@ -180,7 +180,73 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_JSON_RPC] = {"JSON-RPC", check_jsonrpc , PFWL_L7_TRANSPORT_TCP_OR_UDP, dep_fields_json_rpc},
   [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL},
   [PFWL_PROTO_L7_STUN]     = {"STUN"    , check_stun    , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+  [PFWL_PROTO_L7_QUIC]     = {"QUIC"    , check_quic    , PFWL_L7_TRANSPORT_UDP       , NULL},
 };
+
+typedef struct {
+  pfwl_protocol_l7_t protocol;
+  const char* name;
+  pfwl_field_type_t type;
+  const char* description;
+} pfwl_field_L7_descriptor_t;
+
+//--PROTOFIELDSTART
+static const pfwl_field_L7_descriptor_t field_L7_descriptors[] = {
+  {PFWL_PROTO_L7_SIP     , "REQUEST_URI",        PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "METHOD",             PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "CALLID",             PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "REASON",             PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "RTCPXR_CALLID",      PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "CSEQ",               PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "CSEQ_METHOD_STRING", PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "VIA",                PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "CONTACT_URI",        PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "RURI_USER",          PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "RURI_DOMAIN",        PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "FROM_USER",          PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "FROM_DOMAIN",        PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "TO_USER",            PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "TO_DOMAIN",          PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "PAI_USER",           PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "PAI_DOMAIN",         PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "PID_URI",            PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "FROM_URI",           PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "TO_URI",             PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "RURI_URI",           PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "TO_TAG",             PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_SIP     , "FROM_TAG",           PFWL_FIELD_TYPE_STRING, ""},
+  {PFWL_PROTO_L7_DNS     , "NAME_SRV",           PFWL_FIELD_TYPE_STRING, "Server name"},
+  {PFWL_PROTO_L7_DNS     , "NS_IP_1",            PFWL_FIELD_TYPE_STRING, "Server name IP address"},
+  {PFWL_PROTO_L7_DNS     , "NS_IP_2",            PFWL_FIELD_TYPE_STRING, "Server name IP address"},
+  {PFWL_PROTO_L7_DNS     , "AUTH_SRV",           PFWL_FIELD_TYPE_STRING, "Authority name"},
+  {PFWL_PROTO_L7_SSL     , "SNI",                PFWL_FIELD_TYPE_STRING, "Server name extension found in client certificate"},
+  {PFWL_PROTO_L7_SSL     , "CERTIFICATE",        PFWL_FIELD_TYPE_STRING, "Server name found in server certificate"},
+  {PFWL_PROTO_L7_HTTP    , "VERSION_MAJOR",      PFWL_FIELD_TYPE_NUMBER, "HTTP Version - Major"},
+  {PFWL_PROTO_L7_HTTP    , "VERSION_MINOR",      PFWL_FIELD_TYPE_NUMBER, "HTTP Version - Minor"},
+  {PFWL_PROTO_L7_HTTP    , "METHOD",             PFWL_FIELD_TYPE_NUMBER, "HTTP Method. For the possible values, please check HTTP_METHOD_MAP in file include/peafowl/inspectors/http_parser_joyent.h"},
+  {PFWL_PROTO_L7_HTTP    , "STATUS_CODE",        PFWL_FIELD_TYPE_NUMBER, "HTTP Status code"},
+  {PFWL_PROTO_L7_HTTP    , "MSG_TYPE",           PFWL_FIELD_TYPE_NUMBER, "HTTP request or response. For the possible values, please check pfwl_http_message_type_t enumeration in file include/peafowl/inspectors/http_parser_joyent.h"},
+  {PFWL_PROTO_L7_HTTP    , "BODY",               PFWL_FIELD_TYPE_STRING, "HTTP Body"},
+  {PFWL_PROTO_L7_HTTP    , "URL",                PFWL_FIELD_TYPE_STRING, "HTTP URL"},
+  {PFWL_PROTO_L7_HTTP    , "HEADERS",            PFWL_FIELD_TYPE_MMAP  , "HTTP headers"},
+  {PFWL_PROTO_L7_RTP     , "PTYPE",              PFWL_FIELD_TYPE_NUMBER, "RTP Payload Type (Host byte order)"},
+  {PFWL_PROTO_L7_RTP     , "SEQNUM",             PFWL_FIELD_TYPE_NUMBER, "RTP Sequence Number (Host byte order)"},
+  {PFWL_PROTO_L7_RTP     , "TIMESTP",            PFWL_FIELD_TYPE_NUMBER, "RTP Timestamp (Host byte order)"},
+  {PFWL_PROTO_L7_RTP     , "SSRC",               PFWL_FIELD_TYPE_NUMBER, "RTP Syncronization Source Identifier (Host byte order)"},
+  {PFWL_PROTO_L7_JSON_RPC, "FIRST",              PFWL_FIELD_TYPE_NUMBER, "Dummy value to mark first JSON RPC field."},
+  {PFWL_PROTO_L7_JSON_RPC, "VERSION",            PFWL_FIELD_TYPE_NUMBER, "JSON-RPC version."},
+  {PFWL_PROTO_L7_JSON_RPC, "MSG_TYPE",           PFWL_FIELD_TYPE_NUMBER, "Msg type. 0 = Request, 1 = Response, 2 = Notification."},
+  {PFWL_PROTO_L7_JSON_RPC, "ID",                 PFWL_FIELD_TYPE_STRING, "Id field."},
+  {PFWL_PROTO_L7_JSON_RPC, "METHOD",             PFWL_FIELD_TYPE_STRING, "Method field."},
+  {PFWL_PROTO_L7_JSON_RPC, "PARAMS",             PFWL_FIELD_TYPE_STRING, "Params field."},
+  {PFWL_PROTO_L7_JSON_RPC, "RESULT",             PFWL_FIELD_TYPE_STRING, "Result field."},
+  {PFWL_PROTO_L7_JSON_RPC, "ERROR",              PFWL_FIELD_TYPE_STRING, "Error field."},
+  {PFWL_PROTO_L7_JSON_RPC, "LAST",               PFWL_FIELD_TYPE_NUMBER, "Dummy value to mark last JSON RPC field."},
+  {PFWL_PROTO_L7_QUIC    , "VERSION",            PFWL_FIELD_TYPE_STRING, "Version."},
+  {PFWL_PROTO_L7_QUIC    , "SNI",                PFWL_FIELD_TYPE_STRING, "Server Name Indication."},
+  {PFWL_PROTO_L7_NUM     , "NUM",                PFWL_FIELD_TYPE_STRING, "Dummy value to indicate number of fields. Must be the last field specified."},
+};
+//--PROTOFIELDEND
 // clang-format on
 
 static int inspect_protocol(pfwl_protocol_l4_t protocol_l4,
@@ -277,7 +343,8 @@ static int8_t pfwl_keep_inspecting(pfwl_state_t* state, pfwl_flow_info_private_t
   }
 }
 
-const char* pfwl_tag_get(void* db, pfwl_string_t);
+const char* pfwl_field_string_tag_get(void* db, pfwl_string_t* value);
+const char* pfwl_field_mmap_tag_get(void* db, pfwl_string_t* key, pfwl_string_t* value);
 
 pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
                               size_t length, pfwl_dissection_info_t *diss_info,
@@ -336,11 +403,25 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
       pfwl_field_t field = diss_info->l7.protocol_fields[i];
       if(state->tags_matchers[i] &&
          field.present){
-        const char* tag = pfwl_tag_get(state->tags_matchers[i], field.basic.string);
-        if(tag){
-          diss_info->l7.tags[diss_info->l7.tags_num++] = tag;
-          if(diss_info->l7.tags_num == PFWL_TAGS_MAX){
-            break;
+
+        if(pfwl_field_type_get(i) == PFWL_FIELD_TYPE_STRING){
+          const char* tag = pfwl_field_string_tag_get(state->tags_matchers[i], &field.basic.string);
+          if(tag){
+            diss_info->l7.tags[diss_info->l7.tags_num++] = tag;
+            if(diss_info->l7.tags_num == PFWL_TAGS_MAX){
+              break;
+            }
+          }
+        }else if(pfwl_field_type_get(i) == PFWL_FIELD_TYPE_MMAP){
+          for(size_t j = 0; j < field.mmap.length; j++){
+            pfwl_pair_t pair = ((pfwl_pair_t*)field.mmap.values)[j];
+            const char* tag = pfwl_field_mmap_tag_get(state->tags_matchers[i], &pair.first.string, &pair.second.string);
+            if(tag){
+              diss_info->l7.tags[diss_info->l7.tags_num++] = tag;
+              if(diss_info->l7.tags_num == PFWL_TAGS_MAX){
+                break;
+              }
+            }
           }
         }
       }
@@ -492,4 +573,12 @@ uint8_t pfwl_protocol_l7_disable_all(pfwl_state_t *state) {
     }
   }
   return 0;
+}
+
+pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
+  return field_L7_descriptors[field].protocol;
+}
+
+pfwl_field_type_t pfwl_field_type_get(pfwl_field_id_t field){
+  return field_L7_descriptors[field].type;
 }

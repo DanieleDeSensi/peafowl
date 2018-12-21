@@ -108,28 +108,3 @@ TEST(GenericTest, NullState) {
   EXPECT_EQ(pfwl_field_remove_L7(NULL, PFWL_FIELDS_L7_DNS_AUTH_SRV), 1);
   EXPECT_EQ(pfwl_set_protocol_accuracy_L7(NULL, PFWL_PROTO_L7_BGP, PFWL_DISSECTOR_ACCURACY_HIGH), 1);
 }
-
-TEST(GenericTest, Tags) {
-  pfwl_state_t* state = pfwl_init();
-  pfwl_tags_load(state, PFWL_FIELDS_L7_HTTP_URL, NULL);
-  pfwl_tags_load(state, PFWL_FIELDS_L7_HTTP_BODY, NULL);
-  pfwl_tags_add(state, PFWL_FIELDS_L7_HTTP_URL, "load.html", PFWL_FIELD_MATCHING_SUFFIX, "TAG_SUFFIX");
-  pfwl_tags_add(state, PFWL_FIELDS_L7_HTTP_BODY, "<?xml version", PFWL_FIELD_MATCHING_PREFIX, "TAG_PREFIX");
-
-  std::vector<uint> protocols;
-  bool foundSuffix = false, foundPrefix = false;
-  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
-    if(r.l7.tags_num &&
-       !strcmp(r.l7.tags[0], "TAG_SUFFIX")){
-      foundSuffix = true;
-    }
-
-    if(r.l7.tags_num &&
-       !strcmp(r.l7.tags[0], "TAG_PREFIX")){
-      foundPrefix = true;
-    }
-  });
-  EXPECT_TRUE(foundSuffix);
-  EXPECT_TRUE(foundPrefix);
-  pfwl_terminate(state);
-}

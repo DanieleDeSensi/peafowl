@@ -47,10 +47,28 @@ static const char* moneroMethods[] = {
   "get_connections",
 };
 
+// https://github.com/xmrig/xmrig-proxy/blob/master/doc/STRATUM.md
+static const char* moneroStratumMethods[] = {
+  "login",
+  "job",
+  "submit",
+  "keepalived"
+};
+
 static bool isMoneroMethod(const char *method, size_t methodLen) {
   size_t numMethods = sizeof(moneroMethods) / sizeof(moneroMethods[0]);
   for(size_t i = 0; i < numMethods; i++){
-    if(!strcmp(method, moneroMethods[i])){
+    if(!strncmp(method, moneroMethods[i], methodLen)){
+       return true;
+    }
+  }
+  return false;
+}
+
+static bool isMoneroStratumMethod(const char *method, size_t methodLen){
+  size_t numMethods = sizeof(moneroStratumMethods) / sizeof(moneroStratumMethods[0]);
+  for(size_t i = 0; i < numMethods; i++){
+    if(!strncmp(method, moneroStratumMethods[i], methodLen)){
        return true;
     }
   }
@@ -66,7 +84,8 @@ uint8_t check_monero(pfwl_state_t *state, const unsigned char *app_data,
   }else if(flow_info_private->l7_protocols_num){
     if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_JSON_RPC){
       pfwl_string_t method;
-      if((!pfwl_field_string_get(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_METHOD, &method) && isMoneroMethod((const char*) method.value, method.length))){
+      if((!pfwl_field_string_get(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_METHOD, &method) &&
+          (isMoneroMethod((const char*) method.value, method.length) || isMoneroStratumMethod((const char*) method.value, method.length)))){
         return PFWL_PROTOCOL_MATCHES;
       }
     }else if(BITTEST(flow_info_private->possible_matching_protocols, PFWL_PROTO_L7_JSON_RPC) &&

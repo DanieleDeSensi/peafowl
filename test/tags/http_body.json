@@ -1,0 +1,5 @@
+{
+"rules": [
+    {"value": "<?xml version", "matchingType": "PREFIX", "tag": "TAG_PREFIX"}
+  ]
+}

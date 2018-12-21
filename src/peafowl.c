@@ -374,29 +374,7 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
   }
 }
 
-pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
-  if (field > PFWL_FIELDS_L7_SIP_FIRST &&
-      field < PFWL_FIELDS_L7_SIP_LAST) {
-      return PFWL_PROTO_L7_SIP;
-  } else if (field > PFWL_FIELDS_L7_DNS_FIRST &&
-             field < PFWL_FIELDS_L7_DNS_LAST) {
-      return PFWL_PROTO_L7_DNS;
-  } else if (field > PFWL_FIELDS_L7_SSL_FIRST &&
-             field < PFWL_FIELDS_L7_SSL_LAST) {
-      return PFWL_PROTO_L7_SSL;
-  } else if (field > PFWL_FIELDS_L7_HTTP_FIRST &&
-             field < PFWL_FIELDS_L7_HTTP_LAST) {
-      return PFWL_PROTO_L7_HTTP;
-  } else if (field > PFWL_FIELDS_L7_RTP_FIRST &&
-             field < PFWL_FIELDS_L7_RTP_LAST) {
-      return PFWL_PROTO_L7_RTP;
-  } else if (field > PFWL_FIELDS_L7_JSON_RPC_FIRST &&
-             field < PFWL_FIELDS_L7_JSON_RPC_LAST) {
-      return PFWL_PROTO_L7_JSON_RPC;
-  } else {
-      return PFWL_PROTO_L7_NUM;
-  }
-}
+pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field);
 
 uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
                                    uint8_t* fields_to_extract, uint8_t* fields_to_extract_num) {
@@ -533,8 +511,8 @@ uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
   pfwl_field_t field =
       dissection_info->l7.protocol_fields[PFWL_FIELDS_L7_HTTP_HEADERS];
   if (field.present) {
-    for (size_t i = 0; i < field.array.length; i++) {      
-      pfwl_pair_t pair = ((pfwl_pair_t *) field.array.values)[i];
+    for (size_t i = 0; i < field.mmap.length; i++) {
+      pfwl_pair_t pair = ((pfwl_pair_t *) field.mmap.values)[i];
       pfwl_string_t key = pair.first.string;
       if (key.length && !strncasecmp(header_name, (const char *) key.value, key.length)) {
         *header_value = pair.second.string;

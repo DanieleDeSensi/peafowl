@@ -275,9 +275,9 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
     }
     if (flow_info_private->http_informations->headers_length) {
       parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].present = 1;
-      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].array.values =
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].mmap.values =
           flow_info_private->http_informations->headers;
-      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].array.length =
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].mmap.length =
           flow_info_private->http_informations->headers_length;
     }
     return PFWL_PROTOCOL_MATCHES;
