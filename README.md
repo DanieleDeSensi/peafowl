@@ -67,7 +67,7 @@ The supported protocols are:
     <td>Monero</td><td>4/5</td><td>Stratum</td><td>5/5</td><td>JSON-RPC</td><td>5/5</td><td>SSDP</td><td>5/5</td>
   </tr>
   <tr>
-    <td>STUN</td><td>5/5</td><td>QUIC</td><td>5/5</td><td></td><td></td><td></td><td></td>
+    <td>STUN</td><td>5/5</td><td>QUIC</td><td>5/5</td><td>MQTT</td><td>5/5</td><td></td><td></td>
   </tr>
 </table>
 

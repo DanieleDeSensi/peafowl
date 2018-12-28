@@ -81,6 +81,8 @@ static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
   [port_monero_rpc_2] = PFWL_PROTO_L7_MONERO,
   [port_stun] = PFWL_PROTO_L7_STUN,
   [port_stun_tls] = PFWL_PROTO_L7_STUN,
+  [port_mqtt] = PFWL_PROTO_L7_MQTT,
+  [port_mqtt_ssl] = PFWL_PROTO_L7_MQTT,
 };
 
 static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
@@ -181,6 +183,7 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL},
   [PFWL_PROTO_L7_STUN]     = {"STUN"    , check_stun    , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
   [PFWL_PROTO_L7_QUIC]     = {"QUIC"    , check_quic    , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_MQTT]     = {"MQTT"    , check_mqtt    , PFWL_L7_TRANSPORT_TCP       , NULL},
 };
 
 typedef struct {

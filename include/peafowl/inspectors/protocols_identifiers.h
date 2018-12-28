@@ -91,6 +91,8 @@ enum protocol_check_statuses {
 #define port_monero_p2p_2 0xB06D  /** 28080 **/
 #define port_stun 0x960D          /** 3478 **/
 #define port_stun_tls 0xE514      /** 5349 **/
+#define port_mqtt 0x5B07          /** 1883 **/
+#define port_mqtt_ssl 0xB322      /** 8883 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define port_ssh 0x0016           /* 22 **/
 #define port_smtp_1 0x0019        /** 25 **/
@@ -129,6 +131,8 @@ enum protocol_check_statuses {
 #define port_monero_p2p_2 0x6DB0  /** 28080 **/
 #define port_stun 0x0D96          /** 3478 **/
 #define port_stun_tls 0x14E5      /** 5349 **/
+#define port_mqtt 0x075B          /** 1883 **/
+#define port_mqtt_ssl 0x22B3      /** 8883 **/
 #else
 #error "Please fix <bits/endian.h>"
 #endif

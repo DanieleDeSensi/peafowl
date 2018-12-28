@@ -195,6 +195,7 @@ typedef enum {
   PFWL_PROTO_L7_SSDP,     ///< SSDP
   PFWL_PROTO_L7_STUN,     ///< STUN
   PFWL_PROTO_L7_QUIC,     ///< QUIC
+  PFWL_PROTO_L7_MQTT,     ///< MQTT
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
