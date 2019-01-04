@@ -177,8 +177,7 @@ uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
   }
 
   ParseResult ok = d->Parse<kParseNumbersAsStringsFlag>((const char*) app_data, data_length);
-  if(!ok &&
-     ok != kParseErrorDocumentRootNotSingular) { // to avoid errors for newlines at the end of the json (ndjson)
+  if(!ok){ 
     debug_print("%s\n", "It is not json-RPC");
     if(PFWL_DEBUG_DISS_JSONRPC)
       fprintf(stderr, "JSON parse error: %s (%lu)\n", GetParseError_En(ok.Code()), ok.Offset());
@@ -190,8 +189,7 @@ uint8_t check_jsonrpc(pfwl_state_t *state, const unsigned char *app_data,
       app_data = http_body;
       data_length = http_body_length;
       ok = d->Parse<kParseNumbersAsStringsFlag>((const char*) app_data, data_length);
-      if (!ok &&
-          ok != kParseErrorDocumentRootNotSingular) { // to avoid errors for CRLF at the end of HTTP body
+      if(!ok){
         debug_print("%s\n", "It is not json-RPC");
         if(PFWL_DEBUG_DISS_JSONRPC)
           fprintf(stderr, "JSON parse error: %s (%lu)\n", GetParseError_En(ok.Code()), ok.Offset());
