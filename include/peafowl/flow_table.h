@@ -315,6 +315,9 @@ pfwl_flow_table_t *pfwl_flow_table_create(uint32_t expected_flows,
 void pflw_flow_table_set_flow_cleaner_callback(
     pfwl_flow_table_t *db, pfwl_flow_cleaner_callback_t *flow_cleaner_callback);
 
+void pflw_flow_table_set_flow_termination_callback(
+    pfwl_flow_table_t *db, pfwl_flow_termination_callback_t *flow_termination_callback);
+
 void pfwl_flow_table_delete(pfwl_flow_table_t *db);
 
 pfwl_flow_t *pfwl_flow_table_find_flow(pfwl_flow_table_t *db, uint32_t index,

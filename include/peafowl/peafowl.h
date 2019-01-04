@@ -468,6 +468,7 @@ typedef struct pfwl_dissection_info {
 
 /**
  * @brief Callback for flow cleaning.
+ * DEPRECATED: You should now use pfwl_flow_termination_callback_t
  * This callback is called when the flow is expired and deleted. It can be
  * used by the user to clear any data he/she associated to the flow through
  * flow_info.udata.
@@ -475,6 +476,15 @@ typedef struct pfwl_dissection_info {
  * flow.
  */
 typedef void(pfwl_flow_cleaner_callback_t)(void *flow_udata);
+
+/**
+ * @brief Callback which is called when a flow terminates.
+ * This callback is called when the flow is expired and deleted. It can be
+ * used by the user to access flow information and to clear any data he/she
+ * associated to the flow.
+ * @param flow_info A pointer to the flow information.
+ */
+typedef void(pfwl_flow_termination_callback_t)(pfwl_flow_info_t* flow_info);
 
 /// @cond Private structures
 typedef struct pfwl_state pfwl_state_t;
@@ -929,6 +939,15 @@ const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
 pfwl_field_id_t pfwl_get_L7_field_id(pfwl_protocol_l7_t protocol, const char* field_name);
 
 /**
+ * Returns the protocol associated to a field identifier.
+ * @param field The field identifier.
+ * @param field_name The name of the field.
+ * @return The protocol associated to a field identifier.
+ */
+pfwl_protocol_l7_t pfwl_get_L7_field_protocol(pfwl_field_id_t field);
+
+/**
+ * DEPRECATED: Please use pfwl_set_flow_termination_callback.
  * Sets the callback that will be called when a flow expires.
  * @param state     A pointer to the state of the library.
  * @param cleaner   The callback used to clear the user data.
@@ -938,6 +957,15 @@ pfwl_field_id_t pfwl_get_L7_field_id(pfwl_protocol_l7_t protocol, const char* fi
 uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
                                        pfwl_flow_cleaner_callback_t *cleaner);
 
+/**
+ * Sets the callback that will be called when a flow expires.
+ * @param state     A pointer to the state of the library.
+ * @param cleaner   The callback used to access flow information when it expires.
+ *
+ * @return 0 if succeeded, 1 otherwise.
+ */
+uint8_t pfwl_set_flow_termination_callback(pfwl_state_t *state,
+                                           pfwl_flow_termination_callback_t *cleaner);
 /**
  * Enables the extraction of a specific L7 field for a given protocol.
  * When a protocol is identified, the default behavior is to not

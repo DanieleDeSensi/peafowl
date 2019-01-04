@@ -374,13 +374,23 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
   }
 }
 
-pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field);
+pfwl_protocol_l7_t pfwl_get_L7_field_protocol(pfwl_field_id_t field);
+
+uint8_t pfwl_set_flow_termination_callback(pfwl_state_t *state,
+                                           pfwl_flow_termination_callback_t *cleaner){
+  if(state){
+    pflw_flow_table_set_flow_termination_callback(state->flow_table, cleaner);
+    return 0;
+  }else{
+    return 1;
+  }
+}
 
 uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
                                    uint8_t* fields_to_extract, uint8_t* fields_to_extract_num) {
   if (state) {
     if (!fields_to_extract[field]) {
-      pfwl_protocol_l7_t protocol = pfwl_get_protocol_from_field(field);
+      pfwl_protocol_l7_t protocol = pfwl_get_L7_field_protocol(field);
       if (protocol == PFWL_PROTO_L7_NUM) {
         return 0;
       }
@@ -406,7 +416,7 @@ uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
 uint8_t pfwl_field_remove_L7(pfwl_state_t *state, pfwl_field_id_t field) {
   if (state) {
     if (state->fields_to_extract[field]) {
-      pfwl_protocol_l7_t protocol = pfwl_get_protocol_from_field(field);
+      pfwl_protocol_l7_t protocol = pfwl_get_L7_field_protocol(field);
       if (protocol == PFWL_PROTO_L7_NUM) {
         return 0;
       }

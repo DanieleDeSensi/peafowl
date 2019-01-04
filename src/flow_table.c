@@ -135,6 +135,7 @@ struct pfwl_flow_table {
    */
   pfwl_flow_t *table;
   pfwl_flow_cleaner_callback_t *flow_cleaner_callback;
+  pfwl_flow_termination_callback_t *flow_termination_callback;
 #if PFWL_FLOW_TABLE_HASH_VERSION == PFWL_MURMUR3_HASH
   uint32_t seed;
 #endif
@@ -277,6 +278,7 @@ pfwl_flow_table_t *pfwl_flow_table_create(uint32_t expected_flows,
     table->max_active_flows = expected_flows;
     table->max_active_flows_strict = strict;
     table->flow_cleaner_callback = NULL;
+    table->flow_termination_callback = NULL;
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     table->start_pool_size = start_pool_size;
 #endif
@@ -316,6 +318,11 @@ void pflw_flow_table_set_flow_cleaner_callback(
     pfwl_flow_table_t *db,
     pfwl_flow_cleaner_callback_t *flow_cleaner_callback) {
   db->flow_cleaner_callback = flow_cleaner_callback;
+}
+
+void pflw_flow_table_set_flow_termination_callback(
+    pfwl_flow_table_t *db, pfwl_flow_termination_callback_t *flow_termination_callback){
+  db->flow_termination_callback = flow_termination_callback;
 }
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t *table,
@@ -400,8 +407,13 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   to_delete->prev->next = to_delete->next;
   to_delete->next->prev = to_delete->prev;
 
-  if (db->flow_cleaner_callback)
+  if (db->flow_cleaner_callback){
     (*(db->flow_cleaner_callback))(*(to_delete->info.udata));
+  }
+
+  if (db->flow_termination_callback){
+    (*(db->flow_termination_callback))(&(to_delete->info));
+  }
   --db->partitions[partition_id].partition.informations.active_flows;
   free(to_delete->info_private.http_informations[0].temp_buffer);
   free(to_delete->info_private.http_informations[1].temp_buffer);

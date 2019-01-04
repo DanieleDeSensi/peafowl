@@ -505,8 +505,11 @@ const char **const pfwl_get_L7_protocols_names() {
 }
 
 uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
-                                          uint8_t* fields_to_extract, uint8_t* fields_to_extract_num);
-pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field);
+                                   uint8_t* fields_to_extract, uint8_t* fields_to_extract_num);
+
+pfwl_protocol_l7_t pfwl_get_L7_field_protocol(pfwl_field_id_t field) {
+  return field_L7_descriptors[field].protocol;
+}
 
 uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
                                 pfwl_protocol_l7_t protocol) {
@@ -532,7 +535,7 @@ uint8_t pfwl_protocol_l7_enable(pfwl_state_t *state,
         memset(dependencies, 0, sizeof(dependencies));
         while(descr.dependencies_fields[i] != PFWL_FIELDS_L7_NUM){
           pfwl_field_id_t field = descr.dependencies_fields[i];
-          pfwl_protocol_l7_t dep_protocol = pfwl_get_protocol_from_field(field);
+          pfwl_protocol_l7_t dep_protocol = pfwl_get_L7_field_protocol(field);
           dependencies[dep_protocol] = 1;
           pfwl_field_add_L7_internal(state, field, state->fields_support, state->fields_support_num);
           ++i;
@@ -601,10 +604,6 @@ uint8_t pfwl_protocol_l7_disable_all(pfwl_state_t *state) {
     }
   }
   return 0;
-}
-
-pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
-  return field_L7_descriptors[field].protocol;
 }
 
 pfwl_field_type_t pfwl_get_L7_field_type(pfwl_field_id_t field){
