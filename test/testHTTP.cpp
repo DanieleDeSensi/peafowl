@@ -26,6 +26,8 @@ TEST(HTTPTest, Generic) {
     EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 9);
     getProtocols("./pcaps/http-segmented.pcap", protocols);
     EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 20);
+    getProtocols("./pcaps/ethereum-js-http.pcap", protocols);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_HTTP], (uint) 7);
 }
 
 TEST(HTTPTest, TCPDuplicates){
@@ -135,3 +137,82 @@ TEST(HTTPTest, ContentType2) {
       pfwl_terminate(state);
     }
 }
+
+TEST(HTTPTest, Tags) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_field_string_tags_add_L7(state, PFWL_FIELDS_L7_HTTP_URL, "load.html", PFWL_FIELD_MATCHING_SUFFIX, "TAG_SUFFIX");
+  pfwl_field_string_tags_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY, "<?xml version", PFWL_FIELD_MATCHING_PREFIX, "TAG_PREFIX");
+  pfwl_field_mmap_tags_add_L7(state, PFWL_FIELDS_L7_HTTP_HEADERS, "user-agent", "mozilla", PFWL_FIELD_MATCHING_PREFIX, "TAG_MOZILLA");
+  pfwl_field_mmap_tags_add_L7(state, PFWL_FIELDS_L7_HTTP_HEADERS, "host", "www.ethereal", PFWL_FIELD_MATCHING_PREFIX, "TAG_ETHEREAL");
+
+  std::vector<uint> protocols;
+  bool foundSuffix = false, foundPrefix = false, foundMozilla = false, foundEthereal = false;
+  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+
+    for(size_t i = 0; i < r.l7.tags_num; i++){
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_SUFFIX")){
+        foundSuffix = true;
+      }
+
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_PREFIX")){
+        foundPrefix = true;
+      }
+
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_MOZILLA")){
+        foundMozilla = true;
+      }
+
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_ETHEREAL")){
+        foundEthereal = true;
+      }
+    }
+  });
+  EXPECT_TRUE(foundSuffix);
+  EXPECT_TRUE(foundPrefix);
+  EXPECT_TRUE(foundMozilla);
+  EXPECT_TRUE(foundEthereal);
+  pfwl_terminate(state);
+}
+
+TEST(HTTPTest, TagsFromFile) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_field_tags_load_L7(state, PFWL_FIELDS_L7_HTTP_URL, "./tags/http_url.json");
+  pfwl_field_tags_load_L7(state, PFWL_FIELDS_L7_HTTP_BODY, "./tags/http_body.json");
+  pfwl_field_tags_load_L7(state, PFWL_FIELDS_L7_HTTP_HEADERS, "./tags/http_headers.json");
+
+  std::vector<uint> protocols;
+  bool foundSuffix = false, foundPrefix = false, foundMozilla = false, foundEthereal = false;
+  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    for(size_t i = 0; i < r.l7.tags_num; i++){
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_SUFFIX")){
+        foundSuffix = true;
+      }
+
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_PREFIX")){
+        foundPrefix = true;
+      }
+
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_MOZILLA")){
+        foundMozilla = true;
+      }
+
+      if(r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_ETHEREAL")){
+        foundEthereal = true;
+      }
+    }
+  });
+  EXPECT_TRUE(foundSuffix);
+  EXPECT_TRUE(foundPrefix);
+  EXPECT_TRUE(foundMozilla);
+  EXPECT_TRUE(foundEthereal);
+  pfwl_terminate(state);
+}
+

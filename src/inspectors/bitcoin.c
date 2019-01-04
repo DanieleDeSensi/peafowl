@@ -30,15 +30,27 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define pfwl_bitcoin_magic_1 0xD9B4BEF9
+#define pfwl_bitcoin_magic_2 0xDAB5BFFA
+#define pfwl_bitcoin_magic_3 0x0709110B
+#define pfwl_bitcoin_magic_4 0xFEB4BEF9
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define pfwl_bitcoin_magic_1 0xF9BEB4D9
+#define pfwl_bitcoin_magic_2 0xDAB5BFFA
+#define pfwl_bitcoin_magic_3 0x0B110907
+#define pfwl_bitcoin_magic_4 0xF9BEB4FE
+#else
+#error "Please fix <bits/endian.h>"
+#endif
+
 uint8_t check_bitcoin(pfwl_state_t *state, const unsigned char *app_data,
                       size_t data_length, pfwl_dissection_info_t *pkt_info,
                       pfwl_flow_info_private_t *flow_info_private) {
-  if ((pkt_info->l4.port_src == port_bitcoin ||
-       pkt_info->l4.port_dst == port_bitcoin) &&
-      (*((uint32_t *) app_data) == 0xD9B4BEF9 ||
-       *((uint32_t *) app_data) == 0xDAB5BFFA ||
-       *((uint32_t *) app_data) == 0x0709110B ||
-       *((uint32_t *) app_data) == 0xFEB4BEF9)) {
+  if ((*((uint32_t *) app_data) == pfwl_bitcoin_magic_1 ||
+       *((uint32_t *) app_data) == pfwl_bitcoin_magic_2 ||
+       *((uint32_t *) app_data) == pfwl_bitcoin_magic_3 ||
+       *((uint32_t *) app_data) == pfwl_bitcoin_magic_4)) {
     return PFWL_PROTOCOL_MATCHES;
   }
   return PFWL_PROTOCOL_NO_MATCHES;

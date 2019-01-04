@@ -43,82 +43,31 @@ The supported protocols are:
 
 <table>
   <tr>
-    <th>Protocol</th><th>Quality</th>
+    <th>Protocol</th><th>Quality</th><th>Protocol</th><th>Quality</th><th>Protocol</th><th>Quality</th><th>Protocol</th><th>Quality</th>
   </tr>
   <tr>
-    <td>HTTP</td><td>5/5</td>
+    <td>HTTP</td><td>5/5</td><td>SSL</td><td>5/5</td><td>POP3</td><td>3/5</td><td>IMAP</td><td>5/5</td>
   </tr>
   <tr>
-  	<td>SSL</td><td>5/5</td>
+    <td>SMTP</td><td>3/5</td><td>BGP</td><td>5/5</td><td>DHCP</td><td>5/5</td><td>DHCPv6</td><td>5/5</td>
   </tr>
   <tr>
-    <td>POP3</td><td>3/5</td>
+    <td>DNS</td><td>5/5</td><td>MDNS</td><td>5/5</td><td>NTP</td><td>5/5</td><td>SIP</td><td>5/5</td>
   </tr>
   <tr>
-    <td>IMAP</td><td>5/5</td>
+    <td>RTP</td><td>4/5</td><td>RTCP</td><td>4/5</td><td>Skype</td><td>3/5</td><td>Hangout</td><td>3/5</td>
   </tr>
   <tr>
-    <td>SMTP</td><td>3/5</td>
+    <td>WhatsApp</td><td>4/5</td><td>Telegram</td><td>?</td><td>Dropbox</td><td>3/5</td><td>Spotify</td><td>5/5</td>
   </tr>
   <tr>
-    <td>BGP</td><td>5/5</td>
+    <td>SSH</td><td>5/5</td><td>Bitcoin</td><td>4/5</td><td>Ethereum</td><td>4/5</td><td>Zcash</td><td>4/5</td>
   </tr>
   <tr>
-    <td>DHCP</td><td>5/5</td>
+    <td>Monero</td><td>4/5</td><td>Stratum</td><td>5/5</td><td>JSON-RPC</td><td>5/5</td><td>SSDP</td><td>5/5</td>
   </tr>
   <tr>
-    <td>DHCPv6</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>DNS</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>MDNS</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>NTP</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>SIP</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>RTP</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>RTCP</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Skype</td><td>3/5</td>
-  </tr>
-  <tr>
-    <td>Hangout</td><td>3/5</td>
-  </tr>
-  <tr>
-    <td>WhatsApp</td><td>4/5</td>
-  </tr>
-  <tr>
-    <td>Telegram</td><td>?</td>
-  </tr>
-  <tr>
-    <td>Dropbox</td><td>3/5</td>
-  </tr>
-  <tr>
-    <td>Spotify</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>SSH</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>Bitcoin</td><td>4/5</td>
-  </tr>
-    <tr>
-    <td>Ethereum</td><td>5/5</td>
-  </tr>
-  <tr>
-    <td>Zcash</td><td>5/5</td>
-  </tr>
-    <tr>
-    <td>Monero</td><td>5/5</td>
+    <td>STUN</td><td>5/5</td><td>QUIC</td><td>5/5</td><td>MQTT</td><td>5/5</td><td></td><td></td>
   </tr>
 </table>
 
@@ -139,6 +88,9 @@ At the moment, data and metadata extraction is supported for the following proto
   </tr>
   <tr>
     <td>DNS</td><td>Server name, authority name</td>
+  </tr>
+  <tr>
+    <td>QUIC</td><td>Version, SNI</td>
   </tr>
 <table>
 
@@ -191,7 +143,7 @@ Sequential version
 At this point, your application can use Peafowl by including the [<peafowl/peafowl.h>](include/peafowl/peafowl.h)
 header and by adding ```-lpeafowl``` to the linker options.
 
-The Peafowl API is based on 4 main calls:
+The Peafowl API is based on 3 main calls:
 
 + ```pfwl_init()```: used to initialize the state of the framework. This call returns an handle to the framework, 
 which will be required as parameter for most of the framework calls;
@@ -209,12 +161,24 @@ and about the data and metadata carried by the different layers.
 Moreover, the struct also contains the number of packets and bytes sent in each direction up to now (for the flow to
 which this packet belongs).
 The call returns a status which provides additional information on the processing (or an error).
-
-+ ```pfwl_field_add_L7(state, field)```: To require the extraction of a specific L7 (application level) protocol field.
  
 + ```pfwl_terminate(state)```: used to terminate the framework. 
 
-For other API calls (e.g. to extract specific L7 fields from the packets), please refer to the documentation in ["src/peafowl.h"](src/peafowl.h).
+Moreover, the following two calls can be used to extract and process specific protocol fields:
+
++ ```pfwl_field_add_L7(state, field)```: To require the extraction of a specific L7 (application level) protocol field (e.g. HTTP URL, DNS Server Name, etc...). Such field can be then accessed packet by packet by using ```pfwl_field_*_get``` calls on the ```dissection_info``` struct returned by the ```pfwl_dissect_from_L2``` call.
+
++ ```pfwl_field_*_tags_add_L7(state, field, value, matchingType, tag)```: To require the library to associate 'tags' to packets according to their content. 
+The parameters are:
+    * The handle to the framework
+    * The identifier of the field
+    * The value to match
+    * The matching type (prefix match, suffix match or exact match)
+    * The tag to associate to the packet when the match is found
+For example, by calling ```pfwl_field_string_tags_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY, "<?xml", PFWL_FIELD_MATCHING_PREFIX, "TAG_XML")```, every time the body of an HTTP packets starts with the ```<?xml``` string, the ```TAG_XML``` tag will be associated with that packet. The user can find the tags associated to each packet in the ```dissection_info``` struct returned by the ```pfwl_dissect_from_L2``` call. Tags matching rules can also be loaded from files by using the ```pfwl_field_tags_load_L7``` call.
+
+For a more detailed description of the aforementioned calls and for other API calls, please refer to the documentation in ["peafowl.h"](include/peafowl/peafowl.h) header.
+
 Documentation can also generated by doing:
 
 ```
@@ -223,8 +187,7 @@ $ cd build
 $ cmake ../ -DENABLE_DOCS=ON
 $ make docs
 ```
-
-Then you will find the documentation in the ```docs``` folder.
+Then, you will find the documentation in the ```docs``` folder.
 
 Multicore version
 ------------------------------------------------------------------------------------------------------------------ 
@@ -386,6 +349,7 @@ These data can be then used by the inspector by accessing the parameter ```flow_
 * name: A string representation for the protocol (e.g. ```"TELNET"```).
 * dissector: The function to detect the if the packet is carrying data for the given protocol. (Described in point 2)
 * transport: PFWL_L7_TRANSPORT_TCP if the protocol can only be carried by TCP packets, PFWL_L7_TRANSPORT_UDP if the protocol can only be carried by UDP packets, PFWL_L7_TRANSPORT_TCP_OR_UDP if the protocol can be carried by both TCP and UDP packets.
+* dependencies_fields: Array of fields (of other protocols) needed to identify this protocol. Last value in the array must always be PFWL_FIELDS_L7_NUM
 
 4) If the protocol usually run on one or more predefined ports, specify the association between the ports and 
 the protocol identifier (```src/parsing_l7.c```).
@@ -451,34 +415,24 @@ inspector you need to follow some simple steps. For example, let us assume that 
 in Peafowl but no field extraction capabilities are provided yet. To extract POP3 fields the following
 steps should be followed:
 
-1) Add to the ```pfwl_field_id_t``` enum in the ```include/peafowl/peafowl.h``` header, the fields identifier for fields you want to extract,
+1) Add to the ```field_L7_descriptors``` array in the ```src/parsing_l7.c``` source file, the descriptors for the fields you want to extract,
 for example
 
 ```C
 typedef enum{
   [...]
-  PFWL_FIELDS_L7_POP3_FIRST,        ///< Dummy value to indicate first POP3 field
-  PFWL_FIELDS_L7_POP3_SRC_ADDR,     ///< Source mail address [STRING]
-  PFWL_FIELDS_L7_POP3_DST_ADDR,     ///< Destination mail address [STRING]
-  PFWL_FIELDS_L7_POP3_LAST,         ///< Dummy value to indicate last POP3 field. Must be the last field specified for SSL.
+  {PFWL_PROTO_L7_POP3     , "SRC_ADDR",             PFWL_FIELD_TYPE_STRING, "POP3 source address"},
+  {PFWL_PROTO_L7_POP3     , "DST_ADDR",             PFWL_FIELD_TYPE_STRING, "POP3 destination address"},
   [...]
 }pfwl_field_id_t;
 ```
 
-The reason why the two dummy values ```PFWL_FIELDS_L7_POP3_FIRST``` and ```PFWL_FIELDS_L7_POP3_LAST``` will be clear in a moment.
+- The first element is the protocol for which we want to extract the field
+- The second element is the short name of the field. Enum values called 'PFWL_FIELDS_L7_POP3_SRC_ADDR' and 'PFWL_FIELDS_L7_POP3_DST_ADDR' will be automatically generated when compiling the code, and could be used by the user inside the application.
+- The third element is the type of field. In this case both addresses are strings.
+- The fourth and last field is a textual description of the field (just used for documentation purposes).
 
-2) In file ```src/peafowl.c``` modify the ```pfwl_get_protocol_from_field``` for mapping the fields to the protocol they belong to.
-For example, it would be sufficient to add:
-
-```C
-[...]
-else if(field > PFWL_FIELDS_L7_POP3_FIRST && field < PFWL_FIELDS_L7_POP3_LAST){
-  return PFWL_PROTO_L7_POP3;
-}
-[...]
-```
-
-3) In the protocol dissector, set the fields once you find them in the packet. Different types of fields are supported, and some helper
+2) In the protocol dissector, set the fields once you find them in the packet. Different types of fields are supported, and some helper
 functions (e.g. ```pfwl_field_string_set(...)```) are provided to simplify setting the fields.
 Peafowl guarantees that the fields are valid only until the next packet for the same flow is received. Accordingly, to avoid data copying,
 for STRING fields you can just set a pointer to the position in the original packet. Instead of copying the data.
@@ -492,7 +446,7 @@ if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_POP3_SRC_ADDR)){
 }
 ```
 
-4) Now, inside the application that is using Peafowl, it is possible to check the fields that have been extracted. Helper function are provided. 
+3) Now, inside the application that is using Peafowl, it is possible to check the fields that have been extracted. Helper function are provided. 
 For example:
 
 ```C
@@ -548,7 +502,7 @@ Peafowl has been mainly developed by Daniele De Sensi (d.desensi.software@gmail.
 
 The following people contributed to Peafowl:
 - Daniele De Sensi (d.desensi.software@gmail.com): Main developer
-- Michele Campus (michelecampus5@gmail.com): DNS dissector, L2 parsing
+- Michele Campus (michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing
 - Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors
 - QXIP B.V. sponsored the development of some parts of Peafowl (e.g. SIP dissector and others)
 - max197616 (https://github.com/max197616): SSL dissector

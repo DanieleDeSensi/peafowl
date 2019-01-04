@@ -1,0 +1,2 @@
+add_executable(ssl_extraction ssl_extraction.c)
+target_link_libraries(ssl_extraction LINK_PUBLIC peafowl pcap)

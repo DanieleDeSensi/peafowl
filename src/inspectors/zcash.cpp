@@ -1,10 +1,6 @@
 /*
  * zcash.c
  *
- * This protocol inspector is adapted from
- * the nDPI Mining dissector
- * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/mining.c)
- *
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
@@ -30,14 +26,31 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 #include <peafowl/utils.h>
+#include "../external/rapidjson/document.h"
+
+using namespace rapidjson;
+
+static bool isZcashMethod(const char *method, size_t methodLen) {
+  if(methodLen < 2){
+    return false;
+  }
+  return !strncmp(method, "z_" , methodLen);
+}
 
 uint8_t check_zcash(pfwl_state_t *state, const unsigned char *app_data,
                     size_t data_length, pfwl_dissection_info_t *pkt_info,
                     pfwl_flow_info_private_t *flow_info_private) {
-  if (pfwl_strnstr((const char *) app_data, "\"method\"", data_length) ||
-      pfwl_strnstr((const char *) app_data, "\"blob\"", data_length) ||
-      pfwl_strnstr((const char *) app_data, "\"id\"", data_length)) {
-    return PFWL_PROTOCOL_MATCHES;
+  if(flow_info_private->l7_protocols_num){
+    if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_JSON_RPC){
+      pfwl_string_t method;
+      if((!pfwl_field_string_get(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_METHOD, &method) && isZcashMethod((const char*) method.value, method.length))){
+        return PFWL_PROTOCOL_MATCHES;
+      }
+    }else if(BITTEST(flow_info_private->possible_matching_protocols, PFWL_PROTO_L7_JSON_RPC) &&
+             flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_NOT_DETERMINED){
+      // Could still become JSON-RPC
+      return PFWL_PROTOCOL_MORE_DATA_NEEDED;
+    }
   }
   return PFWL_PROTOCOL_NO_MATCHES;
 }

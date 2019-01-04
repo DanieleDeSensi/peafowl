@@ -89,6 +89,7 @@ extern "C" {
 typedef struct pfwl_flow_info_private pfwl_flow_info_private_t;
 /// @endcond
 
+// clang-format off
 /** Statuses */
 typedef enum pfwl_status {
   /** Errors **/
@@ -190,12 +191,20 @@ typedef enum {
   PFWL_PROTO_L7_ETHEREUM, ///< Ethereum
   PFWL_PROTO_L7_ZCASH,    ///< Zcash
   PFWL_PROTO_L7_MONERO,   ///< Monero
+  PFWL_PROTO_L7_STRATUM,  ///< Stratum mining protocol (can be used by Bitcoin, Zcash and others)
+  PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
+  PFWL_PROTO_L7_SSDP,     ///< SSDP
+  PFWL_PROTO_L7_STUN,     ///< STUN
+  PFWL_PROTO_L7_QUIC,     ///< QUIC
+  PFWL_PROTO_L7_MQTT,     ///< MQTT
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
   PFWL_PROTO_L7_UNKNOWN ///< Dummy value to indicate that the protocol has not
                         ///< been identified
 } pfwl_protocol_l7_t;
+
+// clang-format on
 
 /**
  * A string as represented by peafowl.
@@ -211,7 +220,7 @@ typedef struct {
  **/
 typedef union {
   pfwl_string_t string; ///< A string.
-  int64_t number;       ///< A number.
+  int64_t number;       ///< A number, in host byte order.
 } pfwl_basic_type_t;
 
 /**
@@ -231,132 +240,95 @@ typedef struct {
 } pfwl_array_t;
 
 /**
+ * A peafowl map (just an array of pairs at the moment).
+ */
+typedef pfwl_array_t pfwl_mmap_t;
+
+/**
  * A generic field extracted by peafowl.
  **/
 typedef struct pfwl_field {
   uint8_t present : 1; ///< 1 if the field has been set, 0 otherwise.
   union {
     pfwl_basic_type_t basic; ///< A basic type.
-    pfwl_pair_t pair;        ///< A pair.
     pfwl_array_t array;      ///< An array.
+    pfwl_pair_t pair;        ///< A pair (will probably be deprecated in next versions).
+    pfwl_mmap_t mmap;        ///< A multi map (i.e. the same key can be present multiple times).
   };
 } pfwl_field_t;
+
+typedef enum {
+  PFWL_FIELD_TYPE_STRING = 0,
+  PFWL_FIELD_TYPE_NUMBER,
+  PFWL_FIELD_TYPE_ARRAY,
+  PFWL_FIELD_TYPE_PAIR,
+  PFWL_FIELD_TYPE_MMAP
+} pfwl_field_type_t;
 
 // clang-format off
 /**
  * Protocol fields which can be extracted by peafowl.
  **/
-//--PROTOFIELDSTART || Do Not Remove This Line
+//--PROTOFIELDENUMSTART
 typedef enum {
-  /** SIP field **/
-  PFWL_FIELDS_L7_SIP_FIRST = 0,           ///< Dummy value to indicate first SIP field
-  PFWL_FIELDS_L7_SIP_REQUEST_URI,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_METHOD,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CALLID,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_REASON,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RTCPXR_CALLID,       ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CSEQ,                ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING,  ///< [STRING]
-  PFWL_FIELDS_L7_SIP_VIA,                 ///< [STRING]
-  PFWL_FIELDS_L7_SIP_CONTACT_URI,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_USER,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_DOMAIN,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_USER,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_DOMAIN,         ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_USER,             ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_DOMAIN,           ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PAI_USER,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PAI_DOMAIN,          ///< [STRING]
-  PFWL_FIELDS_L7_SIP_PID_URI,             ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_URI,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_URI,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_RURI_URI,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_TO_TAG,              ///< [STRING]
-  PFWL_FIELDS_L7_SIP_FROM_TAG,            ///< [STRING]
-  PFWL_FIELDS_L7_SIP_LAST,                ///< Dummy value to indicate last SIP field. Must be
-                                          ///< the last field specified for SIP.
-  /** DNS field **/
-  PFWL_FIELDS_L7_DNS_FIRST,               ///< Dummy value to indicate first DNS field
-  PFWL_FIELDS_L7_DNS_NAME_SRV,            ///< Server name [STRING]
-  PFWL_FIELDS_L7_DNS_NS_IP_1,             ///< Server name IP address [STRING]
-  PFWL_FIELDS_L7_DNS_NS_IP_2,             ///< Server name IP address [STRING]
-  PFWL_FIELDS_L7_DNS_AUTH_SRV,            ///< Authority name [STRING]
-  PFWL_FIELDS_L7_DNS_LAST,                ///< Dummy value to indicate last DNS field. Must be
-                                          ///< the last field specified for DNS.
-  /** SSL field **/
-  PFWL_FIELDS_L7_SSL_FIRST,               ///< Dummy value to indicate first SSL field
-  PFWL_FIELDS_L7_SSL_CERTIFICATE,         ///< Server name [STRING]
-  PFWL_FIELDS_L7_SSL_LAST,                ///< Dummy value to indicate last SSL field. Must be
-                                          ///< the last field specified for SSL.
-  /** HTTP field **/
-  PFWL_FIELDS_L7_HTTP_FIRST,              ///< Dummy value to indicate first HTTP field
-  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR,      ///< HTTP Version - Major [NUMBER]
-  PFWL_FIELDS_L7_HTTP_VERSION_MINOR,      ///< HTTP Version - Minor [NUMBER]
-  PFWL_FIELDS_L7_HTTP_METHOD,             ///< HTTP Method. [NUMBER] For the possible values,
-                                          ///< please check HTTP_METHOD_MAP in file
-                                          ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_STATUS_CODE,        ///< HTTP Status code [NUMBER]
-  PFWL_FIELDS_L7_HTTP_MSG_TYPE,           ///< HTTP request or response. [NUMBER] For the
-                                          ///< possible values, please check
-                                          ///< pfwl_http_message_type_t enumeration in
-                                          ///< file
-                                          ///< include/peafowl/inspectors/http_parser_joyent.h
-  PFWL_FIELDS_L7_HTTP_BODY,               ///< HTTP Body [STRING]
-  PFWL_FIELDS_L7_HTTP_URL,                ///< HTTP URL  [STRING]
-  PFWL_FIELDS_L7_HTTP_HEADERS,            ///< HTTP headers names [ARRAY OF PAIRS OF
-                                          ///< STRINGS]. For each pair, the first element
-                                          ///< is the header name and the second element
-                                          ///< is the header value. We suggest using the
-                                          ///< 'pfwl_http_get_header' helper function for
-                                          ///< an easier access.
-  PFWL_FIELDS_L7_HTTP_LAST,               ///< Dummy value to indicate last HTTP field. Must
-                                          ///< be the last field specified for HTTP.
-  /** RTP fields **/
-  PFWL_FIELDS_L7_RTP_FIRST,               ///< Dummy value to indicate first RTP field
-  PFWL_FIELDS_L7_RTP_PTYPE,               ///< RTP Payload Type [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_SEQNUM,              ///< RTP Sequence Number [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_TIMESTP,             ///< RTP Timestamp [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_SSRC,                ///< RTP Syncronization Source Identifier [NUMBER] (Host byte order)
-  PFWL_FIELDS_L7_RTP_LAST,                ///< Dummy value to indicate last RTP field. Must
-                                          ///< be the last field specified for RTP
-  /** RTCP fields **/
-  PFWL_FIELDS_L7_RTCP_FIRST,               ///< Dummy value to indicate first RTP field
-  // Sender Report fields
-  PFWL_FIELDS_L7_RTCP_SENDER_ALL,          ///< To extract all the Sender fields
-  PFWL_FIELDS_L7_RTCP_SENDER_SSRC,         ///< RTCP Sender SSRC
-  PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW,     ///< RTCP Sender timestamp MSW
-  PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW,     ///< RTCP Sender timestamp LSW
-  PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP,     ///< RTCP Sender timestamp RTP
-  PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT,    ///< RTCP Sender packet count
-  PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT,    ///< RTCP Sender octet count
-  /// Sender Report Block fields
-  PFWL_FIELDS_L7_RTCP_SENDER_ID,           ///< RTCP Sender Identifier
-  PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL,       ///< RTCP Sender Fraction lost + Cumulative pkt lost
-  PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV, ///< RTCP Sender Extended highest sequence number received
-  PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER,   ///< RTCP Sender Interarrival Jitter
-  PFWL_FIELDS_L7_RTCP_SENDER_LSR,          ///< RTCP Sender Last SR timestamp
-  PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR,    ///< RTCP Sender Delay last SR timestamp
-  // Receiver Report fields
-  PFWL_FIELDS_L7_RTCP_RECEIVER_ALL,          ///< To extract all the Receiver fields
-  PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC,         ///< RTCP Receiver SSRC
-  /// Receiver Report Block fields
-  PFWL_FIELDS_L7_RTCP_RECEIVER_ID,           ///< RTCP Receiver Identifier
-  PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL,       ///< RTCP Receiver Fraction lost + Cumulative pkt lost
-  PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV, ///< RTCP Receiver Extended highest sequence number received
-  PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER,   ///< RTCP Receiver Interarrival Jitter
-  PFWL_FIELDS_L7_RTCP_RECEIVER_LSR,          ///< RTCP Receiver Last SR timestamp
-  PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR,    ///< RTCP Receiver Delay last SR timestamp
-  // Source Descrition Items fields
-  PFWL_FIELDS_L7_RTCP_SDES_CSRC,             ///< RTCP Source description CSRC ID
-  PFWL_FIELDS_L7_RTCP_SDES_TEXT,             ///< RTCP Source description Text
-  PFWL_FIELDS_L7_RTCP_LAST,                  ///< Dummy value to indicate last RTP field. Must
-                                             ///< be the last field specified for RTP
-  /** **/
-  PFWL_FIELDS_L7_NUM, ///< Dummy value to indicate number of fields. Must be
-                      ///< the last field specified.
-} pfwl_field_id_t;
-//--PROTOFIELDEND || Do Not Remove This Line
-// clang-format on
+  PFWL_FIELDS_L7_SIP_REQUEST_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_METHOD, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CALLID, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_REASON, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RTCPXR_CALLID, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CSEQ, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CSEQ_METHOD_STRING, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_VIA, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_CONTACT_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RURI_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RURI_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_PAI_USER, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_PAI_DOMAIN, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_PID_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_RURI_URI, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_TO_TAG, ///< [STRING] 
+  PFWL_FIELDS_L7_SIP_FROM_TAG, ///< [STRING] 
+  PFWL_FIELDS_L7_DNS_NAME_SRV, ///< [STRING] Server name
+  PFWL_FIELDS_L7_DNS_NS_IP_1, ///< [STRING] Server name IP address
+  PFWL_FIELDS_L7_DNS_NS_IP_2, ///< [STRING] Server name IP address
+  PFWL_FIELDS_L7_DNS_AUTH_SRV, ///< [STRING] Authority name
+  PFWL_FIELDS_L7_SSL_SNI, ///< [STRING] Server name extension found in client certificate
+  PFWL_FIELDS_L7_SSL_CERTIFICATE, ///< [STRING] Server name found in server certificate
+  PFWL_FIELDS_L7_HTTP_VERSION_MAJOR, ///< [NUMBER] HTTP Version - Major
+  PFWL_FIELDS_L7_HTTP_VERSION_MINOR, ///< [NUMBER] HTTP Version - Minor
+  PFWL_FIELDS_L7_HTTP_METHOD, ///< [NUMBER] HTTP Method. For the possible values
+  PFWL_FIELDS_L7_HTTP_STATUS_CODE, ///< [NUMBER] HTTP Status code
+  PFWL_FIELDS_L7_HTTP_MSG_TYPE, ///< [NUMBER] HTTP request or response. For the possible values
+  PFWL_FIELDS_L7_HTTP_BODY, ///< [STRING] HTTP Body
+  PFWL_FIELDS_L7_HTTP_URL, ///< [STRING] HTTP URL
+  PFWL_FIELDS_L7_HTTP_HEADERS, ///< [MMAP] HTTP headers
+  PFWL_FIELDS_L7_RTP_PTYPE, ///< [NUMBER] RTP Payload Type
+  PFWL_FIELDS_L7_RTP_SEQNUM, ///< [NUMBER] RTP Sequence Number
+  PFWL_FIELDS_L7_RTP_TIMESTP, ///< [NUMBER] RTP Timestamp
+  PFWL_FIELDS_L7_RTP_SSRC, ///< [NUMBER] RTP Syncronization Source Identifier (Host byte order)
+  PFWL_FIELDS_L7_JSON_RPC_FIRST, ///< [NUMBER] Dummy value to mark first JSON RPC field.
+  PFWL_FIELDS_L7_JSON_RPC_VERSION, ///< [NUMBER] JSON-RPC version.
+  PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE, ///< [NUMBER] Msg type. 0 = Request
+  PFWL_FIELDS_L7_JSON_RPC_ID, ///< [STRING] Id field.
+  PFWL_FIELDS_L7_JSON_RPC_METHOD, ///< [STRING] Method field.
+  PFWL_FIELDS_L7_JSON_RPC_PARAMS, ///< [STRING] Params field.
+  PFWL_FIELDS_L7_JSON_RPC_RESULT, ///< [STRING] Result field.
+  PFWL_FIELDS_L7_JSON_RPC_ERROR, ///< [STRING] Error field.
+  PFWL_FIELDS_L7_JSON_RPC_LAST, ///< [NUMBER] Dummy value to mark last JSON RPC field.
+  PFWL_FIELDS_L7_QUIC_VERSION, ///< [STRING] Version.
+  PFWL_FIELDS_L7_QUIC_SNI, ///< [STRING] Server Name Indication.
+  PFWL_FIELDS_L7_STUN_MAPPED_ADDRESS, ///< [STRING] Mapped address (or xor-mapped address) (format x.y.z.w for IPv4 and a:b:c:d:e:f:g:h for IPv6).
+  PFWL_FIELDS_L7_STUN_MAPPED_ADDRESS_PORT, ///< [NUMBER] Mapped address port (or xor-mapped port) .
+  PFWL_FIELDS_L7_NUM, ///< [STRING] Dummy value to indicate number of fields. Must be the last field specified.
+}pfwl_field_id_t;
+
+//--PROTOFIELDENUMEND
 
 /**
  * An IP address.
@@ -393,6 +365,9 @@ typedef struct pfwl_flow_info {
                          ///< for this flow. One value for each direction.
 } pfwl_flow_info_t;
 
+#define PFWL_MAX_L7_SUBPROTO_DEPTH 10
+#define PFWL_TAGS_MAX 128
+
 /**
  * The result of the identification process.
  **/
@@ -420,26 +395,53 @@ typedef struct pfwl_dissection_info {
     uint16_t port_dst;     ///< Destination port, in network byte order.
     uint8_t direction;     ///< Direction of the packet:
                            ///< 0: From source to dest. 1: From dest to source
-    ///< (with respect to src and dst stored in the flow).
-    ///< This is only valid for TCP and UDP packets.
+                           ///< (with respect to src and dst stored in the flow).
+                           ///< This is only valid for TCP and UDP packets.
     const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
     size_t resegmented_pkt_len;  ///< The length of the resegmented TCP payload.
     pfwl_protocol_l4_t protocol; ///< The Level 4 protocol.
   } l4;                          ///< Information known after L4 parsing
   struct {
-    pfwl_protocol_l7_t protocol;                      ///< The level 7 protocol.
+    pfwl_protocol_l7_t protocol;                      ///< The first level 7 protocol.
+    pfwl_protocol_l7_t protocols[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
+                                                              ///< For example, Ethereum may be carried by JSON-RPC, which
+                                                              ///< in turn may be carried by HTTP. If such a flow is found,
+                                                              ///< we will have:
+                                                              ///<   protocols[0] = HTTP
+                                                              ///<   protocols[1] = JSON-RPC
+                                                              ///<   protocols[2] = Ethereum
+                                                              ///< i.e., protocols are shown by the outermost to the innermost.
+                                                              ///< Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
+                                                              ///<   protocols[0] = JSON-RPC
+                                                              ///<   protocols[1] = Ethereum
+                                                              ///<
+                                                              ///< This encapsulation can also hold over different packets of a given flow.
+                                                              ///< E.g.IMAP over SSL has a few packet exchanged with plain IMAP and then
+                                                              ///< the subsequent packets encapsulated within SSL.
+                                                              ///< In such a case, the first IMAP packets will only have
+                                                              ///< protocols[0] = IMAP. However, when the first SSL packet for the flow
+                                                              ///< is received, we will have protocols[0] = IMAP and protocols[1] = SSL
+                                                              ///< for that packet and for all the subsequent packets.
+                                                              ///< Indeed, it is important to remark that protocols are associated to
+                                                              ///< flows and not to packets.
+                                                              ///<
+                                                              ///< The value 'protocol' is always equal to protocols[0]
+    uint8_t protocols_num; ///< Number of values set in 'protocols' array.
     pfwl_field_t protocol_fields[PFWL_FIELDS_L7_NUM]; ///< Fields extracted by
-    /// the dissector. Some of
-    ///< these fields (e.g. strings) are only valid
-    ///< until another packet for the same flow is
-    ///< processed. I.e. if another packet for this
-    ///< flow is received, this data will not be
-    ///< valid anymore. If the user needs to preserve
-    ///< the data for a longer time, a copy of each
-    ///< needed field needs to be done.
+                                                      /// the dissector. Some of
+                                                      ///< these fields (e.g. strings) are only valid
+                                                      ///< until another packet for the same flow is
+                                                      ///< processed. I.e. if another packet for this
+                                                      ///< flow is received, this data will not be
+                                                      ///< valid anymore. If the user needs to preserve
+                                                      ///< the data for a longer time, a copy of each
+                                                      ///< needed field needs to be done.
+    const char* tags[PFWL_TAGS_MAX];                  ///< Tags associated to the packet.
+    uint16_t tags_num;                                ///< Number of values in 'tags' array.
   } l7;                       ///< Information known after L7 parsing
   pfwl_flow_info_t flow_info; ///< Information about the flow.
 } pfwl_dissection_info_t;
+// clang-format on
 
 /**
  * @brief Callback for flow cleaning.
@@ -465,30 +467,6 @@ typedef enum {
   PFWL_DISSECTOR_ACCURACY_MEDIUM,  ///< Medium accuracy
   PFWL_DISSECTOR_ACCURACY_HIGH,    ///< High accuracy
 } pfwl_dissector_accuracy_t;
-
-/// @cond Private structures
-/**
- * @brief A generic protocol dissector.
- * A generic protocol dissector.
- * @param state               A pointer to the peafowl internal state
- * @param app_data            A pointer to the application payload.
- * @param data_length         The length of the application payload.
- * @param identification_info Info about the identification done up to now (up
- * to L4 parsing).
- * @param flow_info_private   A pointer to the private flow information.
- * @return               PFWL_PROTOCOL_MATCHES if the protocol matches.
- *                       PFWL_PROTOCOL_NO_MATCHES if the protocol doesn't
- *                       matches.
- *                       PFWL_PROTOCOL_MORE_DATA_NEEDED if the dissector
- *                       needs more data to decide.
- *                       PFWL_ERROR if an error occurred.
- */
-typedef uint8_t (*pfwl_dissector)(pfwl_state_t *state,
-                                  const unsigned char *app_data,
-                                  size_t data_length,
-                                  pfwl_dissection_info_t *identification_info,
-                                  pfwl_flow_info_private_t *flow_info_private);
-/// @endcond
 
 /**
  * @brief Initializes Peafowl.
@@ -991,6 +969,14 @@ uint8_t pfwl_set_protocol_accuracy_L7(pfwl_state_t *state,
                                       pfwl_dissector_accuracy_t accuracy);
 
 /**
+ * Returns the type of a field.
+ * @brief pfwl_field_type_get Returns the type of a field.
+ * @param field The field.
+ * @return The type of 'field'.
+ */
+pfwl_field_type_t pfwl_field_type_get(pfwl_field_id_t field);
+
+/**
  * @brief pfwl_field_string_get Extracts a specific string field from a list of
  * fields.
  * @param fields The list of fields.
@@ -1007,7 +993,7 @@ uint8_t pfwl_field_string_get(pfwl_field_t *fields, pfwl_field_id_t id,
  * fields.
  * @param fields The list of fields.
  * @param id The field identifier.
- * @param number The extracted field.
+ * @param number The extracted field, in host byte order.
  * @return 0 if the field was present, 1 otherwise. If 1 is returned, 'number'
  * is not set.
  */
@@ -1053,6 +1039,32 @@ uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
                              pfwl_string_t *header_value);
 
 /**
+ * Checks if a specific L7 protocol has been identified in a given dissection info.
+ * ATTENTION: Please note that protocols are associated to flows and not to packets.
+ * For example, if for a given flow, the first packet carries IMAP data and the second
+ * packet carries SSL encrypted data, we will have:
+ *
+ * For the first packet:
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 0
+ *
+ * For the second packet:
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 1
+ *
+ * For all the subsequent packets:
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
+ *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 1
+ *
+ * @brief pfwl_has_protocol_L7 Checks if a specific L7 protocol has been identified in
+ * a given dissection info.
+ * @param dissection_info The dissection info.
+ * @param protocol The L7 protocol.
+ * @return 1 if the L7 protocol is carried by the flow, 0 otherwise.
+ */
+uint8_t pfwl_has_protocol_L7(pfwl_dissection_info_t* dissection_info, pfwl_protocol_l7_t protocol);
+
+/**
  * @brief pfwl_convert_pcap_dlt Converts a pcap datalink type (which can be
  * obtained with the pcap_datalink(...) call), to a pfwl_datalink_type_t.
  * @param dlt The pcap datalink type.
@@ -1060,6 +1072,99 @@ uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
  * specified datalink type is not supported by peafowl.
  */
 pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int dlt);
+
+/**
+ * Possible type of matchings when associating tags to packets.
+ **/
+typedef enum{
+  PFWL_FIELD_MATCHING_PREFIX = 0, ///< Prefix matching.
+  PFWL_FIELD_MATCHING_EXACT,      ///< Exact matching.
+  PFWL_FIELD_MATCHING_SUFFIX,     ///< Suffix matching.
+  PFWL_FIELD_MATCHING_ERROR       ///< Invalid tag matching.
+}pfwl_field_matching_t;
+
+/**
+ * Loads the associations between fields values and user-defined tags.
+ * @brief pfwl_field_tags_load Loads the associations between fields values and user-defined tags.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ * @param tags_file The name of the JSON file containing associations between fields values and tags.
+ * The structure of the JSON file depends from the type of 'field'.
+ *
+ * ------------------------
+ * If 'field' is a string:
+ * ------------------------
+ * {
+ *   "rules": [
+ *     {"value": "google.com", "matchingType": "SUFFIX", "tag": "GOOGLE"},
+ *     {"value": "amazon.com", "matchingType": "SUFFIX", "tag": "AMAZON"},
+ *     ...
+ *   ],
+ * }
+ *
+ * value:         Is the string to be matched against the field. The comparison will
+ *                always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *                will match as well.
+ * matchingType:  Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
+ * tag:           The tag to assign to the packet when the field matches with stringToMatch.
+ *
+ * ------------------------
+ * If 'field' is a multi map:
+ * ------------------------
+ *
+ * {
+ *   "rules": [
+ *     {"key": "Host", "value": "google.com", "matchingType": "SUFFIX", "tag": "GOOGLE"},
+ *     {"key": "Content-Type", "value": "amazon.com", "matchingType": "SUFFIX", "tag": "AMAZON"},
+ *     ...
+ *   ],
+ * }
+ *
+ * key: The key to match in the multi map.
+ * 'value', 'matchingType' and 'tag' are the same as in the string case.
+ *
+ * The 'tags_file' argument can be NULL and the matching rules can be added later with the pfwl_*_tags_add calls.
+ *
+ * @return 0 if the loading was successful, 1 otherwise (e.g. error while parsing the json file, non existing file, etc...)
+ */
+int pfwl_field_tags_load_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* tags_file);
+
+/**
+ * Adds a tag matching rule for a specific string field.
+ * @brief pfwl_field_string_tags_add Adds a tag matching rule for a specific field.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ * @param value Is the string to be matched against the field. The comparison will
+ *                always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *                will match as well.
+ * @param matchingType Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
+ * @param tag The tag to assign to the packet when the field matches with 'value'.
+ */
+void pfwl_field_string_tags_add_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* value, pfwl_field_matching_t matchingType, const char* tag);
+
+/**
+ * Adds a tag matching rule for a specific multimap field.
+ * @brief pfwl_field_map_tags_add Adds a tag matching rule for a specific field.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ * @param key The key of the multimap value. The comparison will
+ *            always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *            will match as well.
+ * @param value The value of the multimap value. The comparison will
+ *                always be case insensitive. I.e. if searching for 'BarFoo', 'barfoo' and 'BaRfOo'
+ *                will match as well.
+ * @param matchingType Can be 'PREFIX', 'EXACT' or 'SUFFIX'.
+ * @param tag The tag to assign to the packet when the field matches with 'value'.
+ */
+void pfwl_field_mmap_tags_add_L7(pfwl_state_t* state, pfwl_field_id_t field, const char* key, const char* value, pfwl_field_matching_t matchingType, const char* tag);
+
+/**
+ * Unloads the associations between fields values and user-defined tags.
+ * @brief pfwl_field_tags_unload Unloads the associations between fields values and user-defined tags.
+ * @param state   A pointer to the state of the library.
+ * @param field   The field identifier.
+ */
+void pfwl_field_tags_unload_L7(pfwl_state_t* state, pfwl_field_id_t field);
 
 /// @cond MC
 pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
@@ -1117,12 +1222,38 @@ typedef struct pfwl_state {
    **/
   uint8_t fields_to_extract_num[PFWL_PROTO_L7_NUM];
 
+  /**
+   * One flag per field.
+   * If 1, the field is extracted. If 0, it is not extracted.
+   * These are the fields needed ONLY for identifying other
+   * protocols. After identification these fields will be ignored.
+   **/
+  uint8_t fields_support[PFWL_FIELDS_L7_NUM];
+  /**
+   * Number of fields to extract, per protocol.
+   * These are the fields needed ONLY for identifying other
+   * protocols. After identification these fields will be ignored.
+   **/
+  uint8_t fields_support_num[PFWL_PROTO_L7_NUM];
+
+  /**
+   * Dependencies among L7 protocols.
+   * E.g. protocol_dependencies[PFWL_PROTO_L7_JSON_RPC] contains
+   * an array of protocols which may be carried by JSON-RPC messages.
+   * The last value of this array must be PFWL_PROTO_L7_NUM.
+   */
+  pfwl_protocol_l7_t protocol_dependencies[PFWL_PROTO_L7_NUM][PFWL_PROTO_L7_NUM + 1];
+
   uint8_t tcp_reordering_enabled : 1;
 
   /** L7 skipping information. **/
   pfwl_l7_skipping_info_t *l7_skip;
 
   pfwl_dissector_accuracy_t inspectors_accuracy[PFWL_PROTO_L7_NUM];
+
+  /** Tags **/
+  void* tags_matchers[PFWL_FIELDS_L7_NUM];
+  size_t tags_matchers_num;
 
   /********************************************************************/
   /** The content of these structures can be modified during the     **/

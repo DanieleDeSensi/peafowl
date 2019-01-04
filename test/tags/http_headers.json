@@ -1,0 +1,6 @@
+{
+"rules": [
+    {"key": "user-agent", "value": "mozilla"     , "matchingType": "PREFIX", "tag": "TAG_MOZILLA"},
+    {"key": "host"      , "value": "www.ethereal", "matchingType": "PREFIX", "tag": "TAG_ETHEREAL"}
+  ]
+}

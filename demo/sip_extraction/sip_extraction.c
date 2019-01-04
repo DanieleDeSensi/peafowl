@@ -46,13 +46,10 @@ int main(int argc, char** argv){
     fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
     return -1;
   }
-  char* pcap_filename=argv[1];
+  char* pcap_filename = argv[1];
   char errbuf[PCAP_ERRBUF_SIZE];
-
-  pfwl_state_t* state=pfwl_init();
-  pcap_t *handle=pcap_open_offline(pcap_filename, errbuf);
-
-  if(handle==NULL){
+  pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
+  if(handle == NULL){
     fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
     return (2);
   }
@@ -60,17 +57,19 @@ int main(int argc, char** argv){
   const u_char* packet;
   struct pcap_pkthdr header;
 
+  pfwl_state_t* state = pfwl_init();
   pfwl_field_add_L7(state, PFWL_FIELDS_L7_SIP_REQUEST_URI);
   pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
-  while((packet = pcap_next(handle, &header))!=NULL){
+  while((packet = pcap_next(handle, &header)) != NULL){
     pfwl_dissection_info_t r;
-    if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &r) > PFWL_STATUS_OK){
+    if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &r) >= PFWL_STATUS_OK){
       pfwl_string_t field;
       if(r.l7.protocol == PFWL_PROTO_L7_SIP &&
-         !pfwl_field_string_get(r.l7.protocol_fields, PFWL_PROTO_L7_SIP, &field)){
+         !pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_SIP_REQUEST_URI, &field)){
         printf("Request URI detected: %.*s\n", (int) field.length, field.value);
       }
     }
   }
+  pfwl_terminate(state);
   return 0;
 }

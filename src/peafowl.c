@@ -85,6 +85,15 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   state->flow_table =
       pfwl_flow_table_create(expected_flows, strict, num_table_partitions);
 #endif
+  // Must be called before pfwl_protocol_l7_enable_all
+  memset(state->fields_to_extract, 0, sizeof(state->fields_to_extract));
+  memset(state->fields_to_extract_num, 0, sizeof(state->fields_to_extract_num));
+  memset(state->fields_support, 0, sizeof(state->fields_support));
+  memset(state->fields_support_num, 0, sizeof(state->fields_support_num));
+  for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+    state->protocol_dependencies[i][0] = PFWL_PROTO_L7_NUM;
+  }
+
   pfwl_set_max_trials(state, PFWL_DEFAULT_MAX_TRIALS_PER_FLOW);
   pfwl_protocol_l7_enable_all(state);
 
@@ -96,13 +105,6 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   pfwl_tcp_reordering_enable(state);
 
   state->l7_skip = NULL;
-
-  for (size_t i = 0; i < PFWL_PROTO_L7_NUM; i++) {
-    memset(state->fields_to_extract, 0, sizeof(state->fields_to_extract));
-    memset(state->fields_to_extract_num, 0,
-           sizeof(state->fields_to_extract_num));
-  }
-
   return state;
 }
 
@@ -372,49 +374,33 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
   }
 }
 
-static pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
-  if (field > PFWL_FIELDS_L7_SIP_FIRST &&
-      field < PFWL_FIELDS_L7_SIP_LAST) {
-      return PFWL_PROTO_L7_SIP;
-  } else if (field > PFWL_FIELDS_L7_DNS_FIRST &&
-             field < PFWL_FIELDS_L7_DNS_LAST) {
-      return PFWL_PROTO_L7_DNS;
-  } else if (field > PFWL_FIELDS_L7_SSL_FIRST &&
-             field < PFWL_FIELDS_L7_SSL_LAST) {
-      return PFWL_PROTO_L7_SSL;
-  } else if (field > PFWL_FIELDS_L7_HTTP_FIRST &&
-             field < PFWL_FIELDS_L7_HTTP_LAST) {
-      return PFWL_PROTO_L7_HTTP;
-  } else if (field > PFWL_FIELDS_L7_RTP_FIRST &&
-             field < PFWL_FIELDS_L7_RTP_LAST) {
-      return PFWL_PROTO_L7_RTP;
-  } else if (field > PFWL_FIELDS_L7_RTCP_FIRST &&
-             field < PFWL_FIELDS_L7_RTCP_LAST) {
-      return PFWL_PROTO_L7_RTCP;
-  } else{
-      return PFWL_PROTO_L7_NUM;
-  }
-}
+pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field);
 
-uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
+uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
+                                   uint8_t* fields_to_extract, uint8_t* fields_to_extract_num) {
   if (state) {
-    if (!state->fields_to_extract[field]) {
+    if (!fields_to_extract[field]) {
       pfwl_protocol_l7_t protocol = pfwl_get_protocol_from_field(field);
       if (protocol == PFWL_PROTO_L7_NUM) {
         return 0;
       }
-      ++state->fields_to_extract_num[protocol];
+      ++fields_to_extract_num[protocol];
+      pfwl_protocol_l7_enable(state, protocol);
       pfwl_set_protocol_accuracy_L7(
           state, protocol,
           PFWL_DISSECTOR_ACCURACY_HIGH); // TODO: mmm, the problem is that we
                                          // do not set back the original
                                          // accuracy when doing field_remove
     }
-    state->fields_to_extract[field] = 1;
+    fields_to_extract[field] = 1;
     return 0;
   } else {
     return 1;
   }
+}
+
+uint8_t pfwl_field_add_L7(pfwl_state_t *state, pfwl_field_id_t field) {
+  return pfwl_field_add_L7_internal(state, field, state->fields_to_extract, state->fields_to_extract_num);
 }
 
 uint8_t pfwl_field_remove_L7(pfwl_state_t *state, pfwl_field_id_t field) {
@@ -434,9 +420,14 @@ uint8_t pfwl_field_remove_L7(pfwl_state_t *state, pfwl_field_id_t field) {
 }
 
 uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
+                                     pfwl_flow_info_private_t* flow_info_private,
                                      pfwl_field_id_t field) {
   if (state) {
-    return state->fields_to_extract[field];
+    if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] == PFWL_PROTO_L7_UNKNOWN){
+      return state->fields_to_extract[field];
+    }else{
+      return state->fields_to_extract[field] || state->fields_support[field];
+    }
   } else {
     return 0;
   }
@@ -455,6 +446,7 @@ void pfwl_field_string_set(pfwl_field_t *fields, pfwl_field_id_t id,
   fields[id].basic.string.length = len;
 }
 
+// ATTENTION: num must be in host byte order
 void pfwl_field_number_set(pfwl_field_t *fields, pfwl_field_id_t id,
                            int64_t num) {
   fields[id].present = 1;
@@ -520,14 +512,23 @@ uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
   pfwl_field_t field =
       dissection_info->l7.protocol_fields[PFWL_FIELDS_L7_HTTP_HEADERS];
   if (field.present) {
-    for (size_t i = 0; i < field.array.length; i++) {
-      pfwl_pair_t pair = ((pfwl_pair_t *) field.array.values)[i];
+    for (size_t i = 0; i < field.mmap.length; i++) {
+      pfwl_pair_t pair = ((pfwl_pair_t *) field.mmap.values)[i];
       pfwl_string_t key = pair.first.string;
-      if (!strncasecmp(header_name, (const char *) key.value, key.length)) {
+      if (key.length && !strncasecmp(header_name, (const char *) key.value, key.length)) {
         *header_value = pair.second.string;
         return 0;
       }
     }
   }
   return 1;
+}
+
+uint8_t pfwl_has_protocol_L7(pfwl_dissection_info_t* dissection_info, pfwl_protocol_l7_t protocol){
+  for(size_t i = 0; i < dissection_info->l7.protocols_num; i++){
+    if(dissection_info->l7.protocols[i] == protocol){
+      return 1;
+    }
+  }
+  return 0;
 }

@@ -221,7 +221,7 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
       /** check accuracy type for fields parsing **/
       if (accuracy == PFWL_DISSECTOR_ACCURACY_HIGH && is_valid) {
         // check name server field
-          if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NAME_SRV)) {
+          if (pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_DNS_NAME_SRV)) {
             const unsigned char* temp = (const unsigned char*)(pq + 1);
             const char* r = strchr((const char*)pq + 1, '\0');
             pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_DNS_NAME_SRV,
@@ -251,14 +251,12 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
               4; // end of Name + Type(2) + Class(2)
 
         // check name server IP
-        if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_NS_IP_1) && is_name_server) {
-
-            /**
-               Note:
-               In case of answer count > 1, we consider (for now) only the first two
-               sections
-            **/
-
+        if (pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_DNS_NS_IP_1) && is_name_server) {
+          /**
+         Note:
+         In case of answer count > 1, we consider (for now) only the first two
+      sections
+      **/
           uint8_t i = 0;
           do {
             // Answer section
@@ -286,7 +284,11 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
           } while (dns_header->answ_count > 0 && i < 2);
         }
         // check auth server
-        if (pfwl_protocol_field_required(state, PFWL_FIELDS_L7_DNS_AUTH_SRV) && is_auth_server) {
+        if (pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_DNS_AUTH_SRV) && is_auth_server) {
+          /* /\** No Answer field(s) present: skip the query section and point
+           * to Authority fields **\/ */
+          /* if(!is_name_server) pq +=
+           * (extracted_fields_dns[PFWL_FIELDS_DNS_NAME_SRV].len + 4); */
 
           /** Answer field(s) present: skip all these sections **/
           if (is_name_server) {

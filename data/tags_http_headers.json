@@ -1,0 +1,5 @@
+{
+"rules": [
+    {"key": "Host", "value": "amazon.com", "matchingType": "SUFFIX", "tag": "TAG_AMAZON"}
+  ]
+}

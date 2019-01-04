@@ -27,6 +27,8 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
+// TODO: We could use this https://github.com/deepfield/MRT/tree/master/src/lib/bgp_proto for a complete parsing
+
 uint8_t check_bgp(pfwl_state_t *state, const unsigned char *app_data,
                   size_t data_length, pfwl_dissection_info_t *pkt_info,
                   pfwl_flow_info_private_t *flow_info_private) {

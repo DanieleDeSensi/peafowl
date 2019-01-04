@@ -12,10 +12,6 @@ TEST(SIPTest, Generic) {
   std::vector<uint> protocols;
   getProtocols("./pcaps/sip-rtp.pcap", protocols);
   EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 102);
-  getProtocols("./pcaps/whatsapp.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 6);
-  getProtocols("./pcaps/dropbox.pcap", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 140);
 }
 
 TEST(SIPTest, CallbackRequestURI){
@@ -37,4 +33,24 @@ TEST(SIPTest, CallbackRequestURI){
     }
   });
   EXPECT_EQ(protocols[PFWL_PROTO_L7_SIP], (uint) 102);
+}
+
+TEST(SIPTest, Tags) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_field_string_tags_add_L7(state, PFWL_FIELDS_L7_SIP_REQUEST_URI, "sip.cybercity.dk", PFWL_FIELD_MATCHING_SUFFIX, "TAG_SUFFIX");
+
+  std::vector<uint> protocols;
+  bool foundRURI = false;
+  getProtocols("./pcaps/sip-rtp.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+
+    for(size_t i = 0; i < r.l7.tags_num; i++){
+      if(r.l7.protocol == PFWL_PROTO_L7_SIP &&
+         r.l7.tags_num &&
+         !strcmp(r.l7.tags[i], "TAG_SUFFIX")){
+        foundRURI = true;
+      }
+    }
+  });
+  EXPECT_TRUE(foundRURI);
+  pfwl_terminate(state);
 }

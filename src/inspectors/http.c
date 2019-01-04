@@ -95,8 +95,7 @@ static
 #ifndef PFWL_DEBUG
 static
 #endif
-    int
-    on_url(http_parser *parser, const char *at, size_t length) {
+int on_url(http_parser *parser, const char *at, size_t length) {
   pfwl_http_internal_informations_t *infos =
       (pfwl_http_internal_informations_t *) parser->data;
   const unsigned char *real_data = (const unsigned char *) at;
@@ -168,10 +167,8 @@ static
     real_length = infos->temp_buffer_size;
     infos->temp_buffer_dirty = 1;
   }
-
   infos->headers[infos->headers_length - 1].second.string.value = real_data;
   infos->headers[infos->headers_length - 1].second.string.length = real_length;
-  ++infos->headers_length;
   return 0;
 }
 
@@ -212,8 +209,6 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
   debug_print("%s\n", "-------------------------------------------");
   debug_print("%s\n", "[http.c] Executing HTTP inspector...");
 
-  uint8_t *required_fields = state->fields_to_extract;
-
   http_parser *parser = &(flow_info_private->http[pkt_info->l4.direction]);
 
   /**
@@ -226,24 +221,23 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
     bzero(&(flow_info_private->http_informations[pkt_info->l4.direction]),
           sizeof(pfwl_http_internal_informations_t));
 
-    parser->required_fields = required_fields;
     parser->extracted_fields = pkt_info->l7.protocol_fields;
     parser->data = flow_info_private->http_informations;
   }
 
   http_parser_settings x = {0};
 
-  if (required_fields[PFWL_FIELDS_L7_HTTP_URL])
+  if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_HTTP_URL))
     x.on_url = on_url;
   else
     x.on_url = 0;
 
-  if (required_fields[PFWL_FIELDS_L7_HTTP_BODY])
+  if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_HTTP_BODY))
     x.on_body = on_body;
   else
     x.on_body = 0;
 
-  if (required_fields[PFWL_FIELDS_L7_HTTP_HEADERS]) {
+  if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_HTTP_HEADERS)) {
     x.on_header_field = on_field;
     x.on_header_value = on_value;
   } else {
@@ -281,9 +275,9 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
     }
     if (flow_info_private->http_informations->headers_length) {
       parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].present = 1;
-      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].array.values =
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].mmap.values =
           flow_info_private->http_informations->headers;
-      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].array.length =
+      parser->extracted_fields[PFWL_FIELDS_L7_HTTP_HEADERS].mmap.length =
           flow_info_private->http_informations->headers_length;
     }
     return PFWL_PROTOCOL_MATCHES;
@@ -304,7 +298,7 @@ uint8_t check_http(pfwl_state_t *state, const unsigned char *app_data,
      * the flow as unknown.
      */
     if (flow_info_private->seen_syn == 0) {
-      http_parser_init(parser, HTTP_BOTH);
+      parser->data = NULL; // To force http_parser_init at next iteration
       return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     } else {
       return PFWL_PROTOCOL_NO_MATCHES;

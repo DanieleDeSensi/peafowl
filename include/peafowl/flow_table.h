@@ -109,6 +109,10 @@ typedef struct pfwl_sip_internal_information {
   unsigned int cSeqNumber;
   uint8_t hasVqRtcpXR;
   pfwl_sip_method_t cSeqMethod;
+  uint8_t hasTo;
+  uint8_t hasFrom;
+  uint8_t hasCseq;
+  uint8_t hasCallid;
 } pfwl_sip_internal_information_t;
 /***************** SIP (end) ******************/
 
@@ -133,13 +137,22 @@ typedef struct pfwl_http_internal_informations {
 /********************** HTTP (END) ************************/
 
 /********************** SSL ************************/
-typedef struct pfwl_ssl_internal_information {
-  uint8_t *pkt_buffer;
-  int pkt_size;
+typedef enum{
+  PFWL_SSLV2 = 0,
+  PFWL_SSLV3
+}pfwl_ssl_version_t;
+
+typedef struct pfwl_ssl_internal_information_new {
+  uint8_t stage;
+  uint8_t certificate_num_checks;
+  uint8_t certificates_detected;
+  pfwl_ssl_version_t version;
 } pfwl_ssl_internal_information_t;
 /********************** SSL (END) ************************/
 
 typedef struct pfwl_flow pfwl_flow_t;
+
+typedef void (*pfwl_flow_cleaner_dissectors)(pfwl_flow_info_private_t *flow_info_private);
 
 /** This must be initialized to zero before use. **/
 typedef struct pfwl_flow_info_private {
@@ -155,7 +168,9 @@ typedef struct pfwl_flow_info_private {
    * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
    * or the matching protocol identifier.
    */
-  pfwl_protocol_l7_t l7prot;
+  pfwl_protocol_l7_t l7_protocols[PFWL_MAX_L7_SUBPROTO_DEPTH];
+  uint8_t l7_protocols_num;
+  uint8_t identification_terminated;
 
   /** Number of times that the library tried to guess the protocol. **/
   uint16_t trials;
@@ -207,55 +222,67 @@ typedef struct pfwl_flow_info_private {
   /************************************/
   /* Protocol inspectors support data */
   /************************************/
+  pfwl_flow_cleaner_dissectors flow_cleaners_dissectors[PFWL_PROTO_L7_NUM];
 
   /*********************************/
-  /** DNS Tracking informations. **/
+  /** DNS Tracking information   **/
   /*********************************/
   pfwl_dns_internal_information_t dns_informations;
 
   /*********************************/
-  /** SSH Tracking informations. **/
+  /** SSH Tracking information   **/
   /*********************************/
   uint8_t ssh_stage : 2;
   char *ssh_client_signature, *ssh_server_signature;
 
   /*********************************/
-  /** HTTP Tracking informations. **/
+  /** HTTP Tracking information   **/
   /*********************************/
   /** One HTTP parser per direction. **/
   http_parser http[2];
   pfwl_http_internal_informations_t http_informations[2];
 
   /*********************************/
-  /** SMTP Tracking informations. **/
+  /** SMTP Tracking information   **/
   /*********************************/
   uint8_t num_smtp_matched_messages : 2;
 
   /*********************************/
-  /** SIP Tracking informations.  **/
+  /** SIP Tracking information    **/
   /*********************************/
   pfwl_sip_internal_information_t sip_informations;
 
   /*********************************/
-  /** POP3 Tracking informations. **/
+  /** POP3 Tracking information   **/
   /*********************************/
   uint8_t num_pop3_matched_messages : 2;
 
   /**********************************/
-  /** IMAP Tracking informations.  **/
+  /** IMAP Tracking information    **/
   /**********************************/
   uint8_t imap_starttls : 2;
   uint8_t imap_stage : 3;
 
   /*********************************/
-  /** SSL Tracking informations. **/
+  /** SSL Tracking information    **/
   /*********************************/
-  pfwl_ssl_internal_information_t ssl_information[2];
+  pfwl_ssl_internal_information_t ssl_information;
 
   /**************************************/
-  /** WhatsApp Tracking informations.  **/
+  /** WhatsApp Tracking information    **/
   /**************************************/
   size_t whatsapp_matched_sequence;
+
+  /*****************************************/
+  /** JSON-RPC and depending protos info. **/
+  /*****************************************/
+  void* json_parser;
+  void* json_stringbuffers[PFWL_FIELDS_L7_JSON_RPC_LAST - PFWL_FIELDS_L7_JSON_RPC_FIRST - 1];
+
+  /***************************************/
+  /** STUN tracking information         **/
+  /***************************************/
+  char stun_mapped_address[INET6_ADDRSTRLEN];
 } pfwl_flow_info_private_t;
 
 struct pfwl_flow {
