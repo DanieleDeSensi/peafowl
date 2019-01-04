@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import sys
+import filecmp
+import os
 
 with open("./src/parsing_l7.c") as f:
     content = f.readlines()
@@ -34,7 +36,7 @@ with open("./include/peafowl/peafowl.h", "r") as f:
     content = f.readlines()
 #content = [x.strip() for x in content]
 
-source = open('./include/peafowl/peafowl.h', 'w')
+source = open('./include/peafowl/peafowl.h.tmp', 'w')
 for line in content:
     if line.startswith("//--PROTOFIELDENUMSTART"):
         source.write(line)
@@ -46,3 +48,10 @@ for line in content:
         source.write(line)
 
 source.close()
+
+if filecmp.cmp('./include/peafowl/peafowl.h.tmp', './include/peafowl/peafowl.h'):
+    # No new modifications
+    os.remove('./include/peafowl/peafowl.h.tmp')
+else:
+    # New fields generated
+    os.rename('./include/peafowl/peafowl.h.tmp', './include/peafowl/peafowl.h')

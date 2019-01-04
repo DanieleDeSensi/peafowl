@@ -446,6 +446,7 @@ void pfwl_field_string_set(pfwl_field_t *fields, pfwl_field_id_t id,
   fields[id].basic.string.length = len;
 }
 
+// ATTENTION: num must be in host byte order
 void pfwl_field_number_set(pfwl_field_t *fields, pfwl_field_id_t id,
                            int64_t num) {
   fields[id].present = 1;

@@ -225,51 +225,51 @@ typedef struct pfwl_flow_info_private {
   pfwl_flow_cleaner_dissectors flow_cleaners_dissectors[PFWL_PROTO_L7_NUM];
 
   /*********************************/
-  /** DNS Tracking informations. **/
+  /** DNS Tracking information   **/
   /*********************************/
   pfwl_dns_internal_information_t dns_informations;
 
   /*********************************/
-  /** SSH Tracking informations. **/
+  /** SSH Tracking information   **/
   /*********************************/
   uint8_t ssh_stage : 2;
   char *ssh_client_signature, *ssh_server_signature;
 
   /*********************************/
-  /** HTTP Tracking informations. **/
+  /** HTTP Tracking information   **/
   /*********************************/
   /** One HTTP parser per direction. **/
   http_parser http[2];
   pfwl_http_internal_informations_t http_informations[2];
 
   /*********************************/
-  /** SMTP Tracking informations. **/
+  /** SMTP Tracking information   **/
   /*********************************/
   uint8_t num_smtp_matched_messages : 2;
 
   /*********************************/
-  /** SIP Tracking informations.  **/
+  /** SIP Tracking information    **/
   /*********************************/
   pfwl_sip_internal_information_t sip_informations;
 
   /*********************************/
-  /** POP3 Tracking informations. **/
+  /** POP3 Tracking information   **/
   /*********************************/
   uint8_t num_pop3_matched_messages : 2;
 
   /**********************************/
-  /** IMAP Tracking informations.  **/
+  /** IMAP Tracking information    **/
   /**********************************/
   uint8_t imap_starttls : 2;
   uint8_t imap_stage : 3;
 
   /*********************************/
-  /** SSL Tracking informations. **/
+  /** SSL Tracking information    **/
   /*********************************/
   pfwl_ssl_internal_information_t ssl_information;
 
   /**************************************/
-  /** WhatsApp Tracking informations.  **/
+  /** WhatsApp Tracking information    **/
   /**************************************/
   size_t whatsapp_matched_sequence;
 
@@ -278,6 +278,11 @@ typedef struct pfwl_flow_info_private {
   /*****************************************/
   void* json_parser;
   void* json_stringbuffers[PFWL_FIELDS_L7_JSON_RPC_LAST - PFWL_FIELDS_L7_JSON_RPC_FIRST - 1];
+
+  /***************************************/
+  /** STUN tracking information         **/
+  /***************************************/
+  char stun_mapped_address[INET6_ADDRSTRLEN];
 } pfwl_flow_info_private_t;
 
 struct pfwl_flow {

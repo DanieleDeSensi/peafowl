@@ -219,7 +219,7 @@ typedef struct {
  **/
 typedef union {
   pfwl_string_t string; ///< A string.
-  int64_t number;       ///< A number.
+  int64_t number;       ///< A number, in host byte order.
 } pfwl_basic_type_t;
 
 /**
@@ -307,9 +307,9 @@ typedef enum {
   PFWL_FIELDS_L7_HTTP_BODY, ///< [STRING] HTTP Body
   PFWL_FIELDS_L7_HTTP_URL, ///< [STRING] HTTP URL
   PFWL_FIELDS_L7_HTTP_HEADERS, ///< [MMAP] HTTP headers
-  PFWL_FIELDS_L7_RTP_PTYPE, ///< [NUMBER] RTP Payload Type (Host byte order)
-  PFWL_FIELDS_L7_RTP_SEQNUM, ///< [NUMBER] RTP Sequence Number (Host byte order)
-  PFWL_FIELDS_L7_RTP_TIMESTP, ///< [NUMBER] RTP Timestamp (Host byte order)
+  PFWL_FIELDS_L7_RTP_PTYPE, ///< [NUMBER] RTP Payload Type
+  PFWL_FIELDS_L7_RTP_SEQNUM, ///< [NUMBER] RTP Sequence Number
+  PFWL_FIELDS_L7_RTP_TIMESTP, ///< [NUMBER] RTP Timestamp
   PFWL_FIELDS_L7_RTP_SSRC, ///< [NUMBER] RTP Syncronization Source Identifier (Host byte order)
   PFWL_FIELDS_L7_JSON_RPC_FIRST, ///< [NUMBER] Dummy value to mark first JSON RPC field.
   PFWL_FIELDS_L7_JSON_RPC_VERSION, ///< [NUMBER] JSON-RPC version.
@@ -322,6 +322,8 @@ typedef enum {
   PFWL_FIELDS_L7_JSON_RPC_LAST, ///< [NUMBER] Dummy value to mark last JSON RPC field.
   PFWL_FIELDS_L7_QUIC_VERSION, ///< [STRING] Version.
   PFWL_FIELDS_L7_QUIC_SNI, ///< [STRING] Server Name Indication.
+  PFWL_FIELDS_L7_STUN_MAPPED_ADDRESS, ///< [STRING] Mapped address (or xor-mapped address) (format x.y.z.w for IPv4 and a:b:c:d:e:f:g:h for IPv6).
+  PFWL_FIELDS_L7_STUN_MAPPED_ADDRESS_PORT, ///< [NUMBER] Mapped address port (or xor-mapped port) .
   PFWL_FIELDS_L7_NUM, ///< [STRING] Dummy value to indicate number of fields. Must be the last field specified.
 }pfwl_field_id_t;
 
@@ -976,7 +978,7 @@ uint8_t pfwl_field_string_get(pfwl_field_t *fields, pfwl_field_id_t id,
  * fields.
  * @param fields The list of fields.
  * @param id The field identifier.
- * @param number The extracted field.
+ * @param number The extracted field, in host byte order.
  * @return 0 if the field was present, 1 otherwise. If 1 is returned, 'number'
  * is not set.
  */

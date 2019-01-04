@@ -59,6 +59,7 @@
 #define get_u16(X, O) (*(uint16_t *) (((uint8_t *) X) + O))
 #define get_u32(X, O) (*(uint32_t *) (((uint8_t *) X) + O))
 #define get_u64(X, O) (*(uint64_t *) (((uint8_t *) X) + O))
+#define get_u128(X, O) (*(uint128_t *) (((uint8_t *) X) + O))
 
 #define PFWL_MIN(x, y)                                                         \
   ({                                                                           \
