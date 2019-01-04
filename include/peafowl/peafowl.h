@@ -312,6 +312,29 @@ typedef enum {
   PFWL_FIELDS_L7_RTP_SEQNUM, ///< [NUMBER] RTP Sequence Number
   PFWL_FIELDS_L7_RTP_TIMESTP, ///< [NUMBER] RTP Timestamp
   PFWL_FIELDS_L7_RTP_SSRC, ///< [NUMBER] RTP Syncronization Source Identifier (Host byte order)
+  PFWL_FIELDS_L7_RTCP_SENDER_ALL, ///< [NUMBER] To extract all the Sender fields
+  PFWL_FIELDS_L7_RTCP_SENDER_SSRC, ///< [NUMBER] RTCP Sender SSRC
+  PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW, ///< [NUMBER] RTCP Sender timestamp MSW
+  PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW, ///< [NUMBER] RTCP Sender timestamp LSW
+  PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP, ///< [NUMBER] RTCP Sender timestamp RTP
+  PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT, ///< [NUMBER] RTCP Sender packet count
+  PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT, ///< [NUMBER] RTCP Sender octet count
+  PFWL_FIELDS_L7_RTCP_SENDER_ID, ///< [NUMBER] RTCP Sender Identifier
+  PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL, ///< [NUMBER] RTCP Sender Fraction lost + Cumulative pkt lost
+  PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV, ///< [NUMBER] RTCP Sender Extended highest sequence number received
+  PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER, ///< [NUMBER] RTCP Sender Interarrival Jitter
+  PFWL_FIELDS_L7_RTCP_SENDER_LSR, ///< [NUMBER] RTCP Sender Last SR timestamp
+  PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR, ///< [NUMBER] RTCP Sender Delay last SR timestamp
+  PFWL_FIELDS_L7_RTCP_RECEIVER_ALL, ///< [NUMBER] To extract all the Receiver fields
+  PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC, ///< [NUMBER] RTCP Receiver SSRC
+  PFWL_FIELDS_L7_RTCP_RECEIVER_ID, ///< [NUMBER] RTCP Receiver Identifier
+  PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL, ///< [NUMBER] RTCP Receiver Fraction lost + Cumulative pkt lost
+  PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV, ///< [NUMBER] RTCP Receiver Extended highest sequence number received
+  PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER, ///< [NUMBER] RTCP Receiver Interarrival Jitter
+  PFWL_FIELDS_L7_RTCP_RECEIVER_LSR, ///< [NUMBER] RTCP Receiver Last SR timestamp
+  PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR, ///< [NUMBER] RTCP Receiver Delay last SR timestamp
+  PFWL_FIELDS_L7_RTCP_SDES_CSRC, ///< [NUMBER] RTCP Source description CSRC ID
+  PFWL_FIELDS_L7_RTCP_SDES_TEXT, ///< [STRING] RTCP Source description Text
   PFWL_FIELDS_L7_JSON_RPC_FIRST, ///< [NUMBER] Dummy value to mark first JSON RPC field.
   PFWL_FIELDS_L7_JSON_RPC_VERSION, ///< [NUMBER] JSON-RPC version.
   PFWL_FIELDS_L7_JSON_RPC_MSG_TYPE, ///< [NUMBER] Msg type. 0 = Request
@@ -899,10 +922,11 @@ const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
 
 /**
  * Returns the id associated to a protocol field name.
+ * @param pfwl_protocol_l7_t protocol The protocol.
  * @param field_name The name of the field.
  * @return The id associated to the protocol field with name 'field_name'.
  */
-pfwl_field_id_t pfwl_get_L7_field_id(const char* field_name);
+pfwl_field_id_t pfwl_get_L7_field_id(pfwl_protocol_l7_t protocol, const char* field_name);
 
 /**
  * Sets the callback that will be called when a flow expires.
@@ -974,7 +998,7 @@ uint8_t pfwl_set_protocol_accuracy_L7(pfwl_state_t *state,
  * @param field The field.
  * @return The type of 'field'.
  */
-pfwl_field_type_t pfwl_field_type_get(pfwl_field_id_t field);
+pfwl_field_type_t pfwl_get_L7_field_type(pfwl_field_id_t field);
 
 /**
  * @brief pfwl_field_string_get Extracts a specific string field from a list of

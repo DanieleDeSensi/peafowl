@@ -184,7 +184,8 @@ static int low_check(struct rtcp_header* rtcp)
 
 // HIGH CHECK (for field extraction)
 static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
-                      int data_length, pfwl_dissection_info_t* pkt_info)
+                      int data_length, pfwl_dissection_info_t* pkt_info,
+                      pfwl_flow_info_private_t* flow_info_private)
 {
     int ret;
     int total = data_length;
@@ -204,75 +205,75 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                 /**
                  *  Extract all the Sender fields
                  **/
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_SSRC)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_SSRC)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_SSRC,
                                           (int64_t) ntohl(sr->ssrc));
                 }
 
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_TIME_MSW,
                                           (int64_t) ntohl(sr->si.ntp_timestamp_msw));
                 }
 
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_TIME_LSW,
                                           (int64_t) ntohl(sr->si.ntp_timestamp_lsw));
                 }
 
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_TIME_RTP,
                                           (int64_t) ntohl(sr->si.rtp_timestamp));
                 }
 
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_PKT_COUNT,
                                           (int64_t) ntohl(sr->si.senders_packet_count));
                 }
 
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_OCT_COUNT,
                                           (int64_t) ntohl(sr->si.senders_octet_count));
                 }
 
                 if(sr->header.rc > 0) {
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ID)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ID)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_ID,
                                               (int64_t) ntohl(sr->rb[0].identifier));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_FLCNPL,
                                               (int64_t) ntohl(sr->rb[0].fl_cnpl));
                     }
                     
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_EXT_SEQN_RCV,
                                               (int64_t) ntohl(sr->rb[0].ext_high_seq_num_rec));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_INT_JITTER,
                                               (int64_t) ntohl(sr->rb[0].interarrival_jitter));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_LSR)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_LSR)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_LSR,
                                               (int64_t) ntohl(sr->rb[0].lsr));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_ALL) || 
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SENDER_DELAY_LSR,
                                               (int64_t) ntohl(sr->rb[0].delay_lsr));
                     }
@@ -287,45 +288,45 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                 /**
                    Extract all the Receiver fields
                 **/
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                   pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_SSRC,
                       (int64_t) ntohl(rr->ssrc));
                 }
                 
                 if(rr->header.rc > 0) {
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ID)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ID)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_ID,
                                               (int64_t) ntohl(rr->rb[0].identifier));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_FLCNPL,
                                               (int64_t) ntohl(rr->rb[0].fl_cnpl));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_EXT_SEQN_RCV,
                                               (int64_t) ntohl(rr->rb[0].ext_high_seq_num_rec));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_INT_JITTER,
                                               (int64_t) ntohl(rr->rb[0].interarrival_jitter));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_LSR)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_LSR)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_LSR,
                                               (int64_t) ntohl(rr->rb[0].lsr));
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
-                       pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_ALL) ||
+                       pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR)) {
                         pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_RECEIVER_DELAY_LSR,
                                               (int64_t) ntohl(rr->rb[0].delay_lsr));
                     }
@@ -344,7 +345,7 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                 rsp = &sdes->item[0];
                 if(rsp >= end) break;
 
-                if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SDES_CSRC)) {
+                if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SDES_CSRC)) {
                     pfwl_field_number_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SDES_CSRC,
                                           (int64_t) ntohl(sdes->csrc));
                 }
@@ -357,7 +358,7 @@ static int high_check(struct rtcp_header* rtcp, pfwl_state_t* state,
                         break;
                     }
 
-                    if(pfwl_protocol_field_required(state, PFWL_FIELDS_L7_RTCP_SDES_TEXT)) {
+                    if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_RTCP_SDES_TEXT)) {
                         const unsigned char* text = (const unsigned char*) rsp->content;
                         pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_RTCP_SDES_TEXT,
                                               text, rsp->len);
@@ -417,7 +418,7 @@ uint8_t check_rtcp(pfwl_state_t* state, const unsigned char* app_data, size_t da
             return low_check(rtcp);
         } else {
             // check packet and extract fields if needed
-            return high_check(rtcp, state, (int) data_length, pkt_info);
+            return high_check(rtcp, state, (int) data_length, pkt_info, flow_info_private);
         }
     }
     return PFWL_PROTOCOL_NO_MATCHES;

@@ -111,7 +111,7 @@ TEST(GenericTest, NullState) {
 
 TEST(GenericTest, FieldNamesConversion) {
   EXPECT_STREQ(pfwl_get_L7_field_name(PFWL_FIELDS_L7_NUM), "NUM");
-  EXPECT_STREQ(pfwl_get_L7_field_name(PFWL_FIELDS_L7_HTTP_BODY), "HTTP_BODY");
-  EXPECT_EQ(pfwl_get_L7_field_id("SSL_CERTIFICATE"), PFWL_FIELDS_L7_SSL_CERTIFICATE);
-  EXPECT_EQ(pfwl_get_L7_field_id("HTTP_URL"), PFWL_FIELDS_L7_HTTP_URL);
+  EXPECT_STREQ(pfwl_get_L7_field_name(PFWL_FIELDS_L7_HTTP_BODY), "BODY");
+  EXPECT_EQ(pfwl_get_L7_field_id(PFWL_PROTO_L7_SSL, "CERTIFICATE"), PFWL_FIELDS_L7_SSL_CERTIFICATE);
+  EXPECT_EQ(pfwl_get_L7_field_id(PFWL_PROTO_L7_HTTP, "URL"), PFWL_FIELDS_L7_HTTP_URL);
 }

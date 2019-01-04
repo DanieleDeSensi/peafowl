@@ -432,7 +432,7 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
       if(state->tags_matchers[i] &&
          field.present){
 
-        if(pfwl_field_type_get(i) == PFWL_FIELD_TYPE_STRING){
+        if(pfwl_get_L7_field_type(i) == PFWL_FIELD_TYPE_STRING){
           const char* tag = pfwl_field_string_tag_get(state->tags_matchers[i], &field.basic.string);
           if(tag){
             diss_info->l7.tags[diss_info->l7.tags_num++] = tag;
@@ -440,7 +440,7 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
               break;
             }
           }
-        }else if(pfwl_field_type_get(i) == PFWL_FIELD_TYPE_MMAP){
+        }else if(pfwl_get_L7_field_type(i) == PFWL_FIELD_TYPE_MMAP){
           for(size_t j = 0; j < field.mmap.length; j++){
             pfwl_pair_t pair = ((pfwl_pair_t*)field.mmap.values)[j];
             const char* tag = pfwl_field_mmap_tag_get(state->tags_matchers[i], &pair.first.string, &pair.second.string);
@@ -607,6 +607,19 @@ pfwl_protocol_l7_t pfwl_get_protocol_from_field(pfwl_field_id_t field) {
   return field_L7_descriptors[field].protocol;
 }
 
-pfwl_field_type_t pfwl_field_type_get(pfwl_field_id_t field){
+pfwl_field_type_t pfwl_get_L7_field_type(pfwl_field_id_t field){
   return field_L7_descriptors[field].type;
+}
+
+const char* pfwl_get_L7_field_name(pfwl_field_id_t field){
+   return field_L7_descriptors[field].name;
+}
+
+pfwl_field_id_t pfwl_get_L7_field_id(pfwl_protocol_l7_t protocol, const char* field_name){
+  for(size_t i = 0; i < PFWL_FIELDS_L7_NUM; i++){
+    if(field_L7_descriptors[i].protocol == protocol && !strcmp(field_name, field_L7_descriptors[i].name)){
+      return (pfwl_field_id_t) i;
+    }    
+  }
+  return PFWL_FIELDS_L7_NUM;
 }

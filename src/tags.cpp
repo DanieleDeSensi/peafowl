@@ -88,9 +88,9 @@ static void pfwl_field_mmap_tags_add_internal(std::map<std::string, pfwl_field_m
 
 static void* pfwl_field_tags_load_L7(pfwl_field_id_t field, const char* fileName){
   void* db = NULL;
-  if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_STRING){
+  if(pfwl_get_L7_field_type(field) == PFWL_FIELD_TYPE_STRING){
     db = new pfwl_field_matching_db_t;
-  }else if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_MMAP){
+  }else if(pfwl_get_L7_field_type(field) == PFWL_FIELD_TYPE_MMAP){
     db = new std::map<std::string, pfwl_field_matching_db_t>;
   }
 
@@ -110,9 +110,9 @@ static void* pfwl_field_tags_load_L7(pfwl_field_id_t field, const char* fileName
         const Value& stringToMatch = (*itr)["value"];
         const Value& matchingType = (*itr)["matchingType"];
         const Value& tag = (*itr)["tag"];
-        if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_STRING){
+        if(pfwl_get_L7_field_type(field) == PFWL_FIELD_TYPE_STRING){
           pfwl_field_string_tags_add_internal(static_cast<pfwl_field_matching_db_t*>(db), stringToMatch.GetString(), getFieldMatchingType(matchingType.GetString()), tag.GetString());
-        }else if(pfwl_field_type_get(field) == PFWL_FIELD_TYPE_MMAP){
+        }else if(pfwl_get_L7_field_type(field) == PFWL_FIELD_TYPE_MMAP){
           const Value& key = (*itr)["key"];
           pfwl_field_mmap_tags_add_internal(static_cast<std::map<std::string, pfwl_field_matching_db_t>*>(db), key.GetString(), stringToMatch.GetString(), getFieldMatchingType(matchingType.GetString()), tag.GetString());
         }

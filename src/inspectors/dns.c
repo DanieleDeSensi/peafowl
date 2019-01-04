@@ -221,7 +221,7 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
       /** check accuracy type for fields parsing **/
       if (accuracy == PFWL_DISSECTOR_ACCURACY_HIGH && is_valid) {
         // check name server field
-          if (pfwl_protocol_field_required(state, flow_info_private,PFWL_FIELDS_L7_DNS_NAME_SRV)) {
+          if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_DNS_NAME_SRV)) {
             const unsigned char* temp = (const unsigned char*)(pq + 1);
             const char* r = strchr((const char*)pq + 1, '\0');
             pfwl_field_string_set(extracted_fields, PFWL_FIELDS_L7_DNS_NAME_SRV,
