@@ -52,7 +52,7 @@ if (ENABLE_TESTS)
         message(FATAL_ERROR "libpcap needs to be installed to run tests")
     else()
         enable_testing()
-        add_subdirectory(test) 
+        add_subdirectory(test)
     endif (NOT PCAP_FOUND)
 endif (ENABLE_TESTS)
 
@@ -89,7 +89,7 @@ if (ENABLE_DOCS)
         configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
         message("Doxygen build started")
 
-        add_custom_target(docs 
+        add_custom_target(docs
             COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs
             COMMENT "Generating API documentation with Doxygen"

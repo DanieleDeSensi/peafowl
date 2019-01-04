@@ -130,23 +130,24 @@ typedef enum pfwl_status {
 /**
  * L2 datalink protocols supported by peafowl.
  **/
+// clang-format off
 typedef enum pfwl_datalink_type {
-  PFWL_PROTO_L2_EN10MB =
-      0, ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
+  PFWL_PROTO_L2_EN10MB = 0,       ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
   PFWL_PROTO_L2_LINUX_SLL,        ///< Linux "cooked" capture encapsulation
   PFWL_PROTO_L2_IEEE802_11_RADIO, ///< Radiotap link-layer information followed
                                   ///< by an 802.11 header
   PFWL_PROTO_L2_IEEE802_11,       ///< IEEE 802.11
   PFWL_PROTO_L2_IEEE802,          ///< IEEE 802.5 Token Ring
-  PFWL_PROTO_L2_SLIP, ///< SLIP, encapsulated with a LINKTYPE_SLIP header
-  PFWL_PROTO_L2_PPP,  ///< PPP, as per RFC 1661 and RFC 1662
-  PFWL_PROTO_L2_FDDI, ///< FDDI, as specified by ANSI INCITS 239-1994
-  PFWL_PROTO_L2_RAW,  ///< Raw IP
-  PFWL_PROTO_L2_LOOP, ///< OpenBSD loopback encapsulation
-  PFWL_PROTO_L2_NULL, ///< BSD loopback encapsulation
-  PFWL_PROTO_L2_NUM   ///< Special value to indicate an unsupported datalink
-                      ///< type. This must be the last value
+  PFWL_PROTO_L2_SLIP,             ///< SLIP, encapsulated with a LINKTYPE_SLIP header
+  PFWL_PROTO_L2_PPP,              ///< PPP, as per RFC 1661 and RFC 1662
+  PFWL_PROTO_L2_FDDI,             ///< FDDI, as specified by ANSI INCITS 239-1994
+  PFWL_PROTO_L2_RAW,              ///< Raw IP
+  PFWL_PROTO_L2_LOOP,             ///< OpenBSD loopback encapsulation
+  PFWL_PROTO_L2_NULL,             ///< BSD loopback encapsulation
+  PFWL_PROTO_L2_NUM               ///< Special value to indicate an unsupported datalink
+                                  ///< type. This must be the last value
 } pfwl_protocol_l2_t;
+// clang-format on
 
 /**
  * L3 (IP) protocol.
@@ -890,6 +891,20 @@ pfwl_protocol_l7_t pfwl_get_L7_protocol_id(const char *const string);
 const char **const pfwl_get_L7_protocols_names();
 
 /**
+ * Returns the string represetation of a protocol field.
+ * @param   field The protocol field identifier.
+ * @return  The string representation of the protocol field with id 'field'.
+ */
+const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
+
+/**
+ * Returns the id associated to a protocol field name.
+ * @param field_name The name of the field.
+ * @return The id associated to the protocol field with name 'field_name'.
+ */
+pfwl_field_id_t pfwl_get_L7_field_id(const char* field_name);
+
+/**
  * Sets the callback that will be called when a flow expires.
  * @param state     A pointer to the state of the library.
  * @param cleaner   The callback used to clear the user data.
@@ -1251,6 +1266,37 @@ typedef struct pfwl_state {
   void *ipv4_frag_state;
   void *ipv6_frag_state;
 } pfwl_state_t;
+
+// Bindings support structures
+typedef struct pfwl_dissection_info_for_bindings {
+  size_t l2_length;
+  pfwl_protocol_l2_t l2_protocol;
+  size_t l3_length;
+  size_t l3_payload_length;
+  pfwl_ip_addr_t l3_addr_src;
+  pfwl_ip_addr_t l3_addr_dst;
+  const unsigned char *l3_refrag_pkt;
+  size_t l3_refrag_pkt_len;
+  pfwl_protocol_l3_t l3_protocol;
+  size_t l4_length;
+  size_t l4_payload_length;
+  uint16_t l4_port_src;
+  uint16_t l4_port_dst;
+  uint8_t l4_direction;
+  const unsigned char *l4_resegmented_pkt;
+  size_t l4_resegmented_pkt_len;
+  pfwl_protocol_l4_t l4_protocol;
+  pfwl_protocol_l7_t l7_protocol;
+  pfwl_field_t l7_protocol_fields[PFWL_FIELDS_L7_NUM];
+  uint64_t flow_info_num_packets[2];
+  uint64_t flow_info_num_bytes[2];
+  uint64_t flow_info_num_packets_l7[2];
+  uint64_t flow_info_num_bytes_l7[2];
+  void **flow_info_udata;
+  uint32_t flow_info_timestamp_first[2];
+  uint32_t flow_info_timestamp_last[2];
+} pfwl_dissection_info_for_bindings_t;
+
 
 /// @endcond
 

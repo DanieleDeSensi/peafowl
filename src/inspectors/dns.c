@@ -257,7 +257,6 @@ uint8_t check_dns(pfwl_state_t *state, const unsigned char *app_data,
          In case of answer count > 1, we consider (for now) only the first two
       sections
       **/
-
           uint8_t i = 0;
           do {
             // Answer section
