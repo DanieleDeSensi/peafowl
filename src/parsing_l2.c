@@ -441,3 +441,40 @@ pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int) {
       "To use the pfwl_convert_pcap_dlt call, libpcap needs to be installed");
 }
 #endif
+
+// clang-format off
+static const char* pfwl_l2_protocols_names[PFWL_PROTO_L2_NUM] = {
+  [PFWL_PROTO_L2_EN10MB]           = "EN10MB",
+  [PFWL_PROTO_L2_LINUX_SLL]        = "LINUX_SSL",
+  [PFWL_PROTO_L2_IEEE802_11_RADIO] = "IEEE802_11_RADIO",
+  [PFWL_PROTO_L2_IEEE802_11]       = "IEEE802_11",
+  [PFWL_PROTO_L2_IEEE802]          = "IEEE802",
+  [PFWL_PROTO_L2_SLIP]             = "SLIP",
+  [PFWL_PROTO_L2_PPP]              = "PPP",
+  [PFWL_PROTO_L2_FDDI]             = "FDDI",
+  [PFWL_PROTO_L2_RAW]              = "RAW",
+  [PFWL_PROTO_L2_LOOP]             = "LOOP",
+  [PFWL_PROTO_L2_NULL]             = "NULL",
+};
+// clang-format on
+
+const char *pfwl_get_L2_protocol_name(pfwl_protocol_l2_t protocol){
+  if(protocol < PFWL_PROTO_L2_NUM){
+    return pfwl_l2_protocols_names[protocol];
+  }else{
+    return "Unknown";
+  }
+}
+
+pfwl_protocol_l2_t pfwl_get_L2_protocol_id(const char *const name){
+  for(size_t i = 0; i < PFWL_PROTO_L2_NUM; i++){
+    if(!strcasecmp(name, pfwl_l2_protocols_names[i])){
+      return (pfwl_protocol_l2_t) i;
+    }
+  }
+  return PFWL_PROTO_L2_NUM;
+}
+
+const char **const pfwl_get_L2_protocols_names(){
+  return pfwl_l2_protocols_names;
+}

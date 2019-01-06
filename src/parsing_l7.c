@@ -295,7 +295,7 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
 
   if (!flow_info_private->identification_terminated) {
     // Set next protocol as not yet determined
-    flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] = PFWL_PROTO_L7_NOT_DETERMINED;
+    flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num] = PFWL_PROTO_L7_NOT_DETERMINED;
     debug_print("%s\n", "Still some protocols to identify.");
     if (diss_info->l4.protocol == IPPROTO_TCP) {
       well_known_ports = pfwl_known_ports_tcp;
@@ -322,7 +322,7 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
           check_result = (*(descr.dissector))(state, pkt, length, diss_info,
                                               flow_info_private);
           if (check_result == PFWL_PROTOCOL_MATCHES) {
-            flow_info_private->l7_protocols[flow_info_private->l7_protocols_num++] = i;
+            flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num++] = i;
 
             // Reset values
             if(state->protocol_dependencies[i]){
@@ -346,7 +346,10 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
             }else{
               debug_print("%s\n", "Marking identification as terminated.");
               flow_info_private->identification_terminated = 1;
-              flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] = PFWL_PROTO_L7_UNKNOWN;
+              flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num] = PFWL_PROTO_L7_UNKNOWN;
+              if(!flow_info_private->info_public->protocols_l7_num){
+                ++flow_info_private->info_public->protocols_l7_num;
+              }
             }
             break;
           } else if (check_result == PFWL_PROTOCOL_NO_MATCHES) {
@@ -364,7 +367,8 @@ void pfwl_dissect_L7_sub(pfwl_state_t *state, const unsigned char *pkt,
 
 static int8_t pfwl_keep_inspecting(pfwl_state_t* state, pfwl_flow_info_private_t *flow_info_private,
                                    pfwl_protocol_l7_t protocol){
-  if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] == PFWL_PROTO_L7_UNKNOWN){
+  if(flow_info_private->info_public->protocols_l7_num &&
+     flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] == PFWL_PROTO_L7_UNKNOWN){
     return state->fields_to_extract_num[protocol];
   }else{
     return state->fields_support_num[protocol] || state->fields_to_extract_num[protocol];
@@ -384,46 +388,53 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
   ((pfwl_flow_info_t *) flow_info_private->info_public)
       ->num_bytes_l7[diss_info->l4.direction] += length;
 
-  if ((diss_info->l4.protocol == IPPROTO_TCP && !state->active_protocols[0]) ||
-      (diss_info->l4.protocol == IPPROTO_UDP && !state->active_protocols[1])) {
-    return PFWL_STATUS_OK;
-  }
-
   diss_info->flow_info.num_packets_l7[diss_info->l4.direction] =
       flow_info_private->info_public->num_packets_l7[diss_info->l4.direction];
   diss_info->flow_info.num_bytes_l7[diss_info->l4.direction] =
       flow_info_private->info_public->num_bytes_l7[diss_info->l4.direction];
 
+  if ((diss_info->l4.protocol == IPPROTO_TCP && !state->active_protocols[0]) ||
+      (diss_info->l4.protocol == IPPROTO_UDP && !state->active_protocols[1])) {
+    return PFWL_STATUS_OK;
+  }
+
   // Extract the fields for all the protocols we identified
   pfwl_protocol_descriptor_t descr;
   for(size_t i = 0; i < diss_info->l7.protocols_num; i++){
     pfwl_protocol_l7_t proto = diss_info->l7.protocols[i];
-    if (pfwl_keep_inspecting(state, flow_info_private, proto)) {
+    if (proto < PFWL_PROTO_L7_NOT_DETERMINED &&
+        pfwl_keep_inspecting(state, flow_info_private, proto)) {
       debug_print("Extracting fields for protocol %d\n", proto);
       descr = protocols_descriptors[proto];
       (*(descr.dissector))(state, pkt, length, diss_info, flow_info_private);
     }
   }
 
-  pfwl_dissect_L7_sub(state, pkt, length, diss_info, flow_info_private);
+  if(!flow_info_private->info_public->protocols_l7_num ||
+     flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] != PFWL_PROTO_L7_UNKNOWN){
+    pfwl_dissect_L7_sub(state, pkt, length, diss_info, flow_info_private);
 
-  /**
-   * If all the protocols don't match or if we still have
-   * ambiguity after the maximum number of trials, then the
-   * library was unable to identify the protocol.
-   **/
-  if (flow_info_private->possible_protocols == 0 ||
-      (state->max_trials &&
-       unlikely(++flow_info_private->trials == state->max_trials))) {
-    flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] = PFWL_PROTO_L7_UNKNOWN;
-    flow_info_private->identification_terminated = 1;
+    /**
+     * If all the protocols don't match or if we still have
+     * ambiguity after the maximum number of trials, then the
+     * library was unable to identify the protocol.
+     **/
+    if (flow_info_private->possible_protocols == 0 ||
+        (state->max_trials &&
+         unlikely(++flow_info_private->trials == state->max_trials))) {
+      flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num] = PFWL_PROTO_L7_UNKNOWN;
+      if(!flow_info_private->info_public->protocols_l7_num){
+        ++flow_info_private->info_public->protocols_l7_num;
+      }
+      flow_info_private->identification_terminated = 1;
+    }
   }
 
-  for(size_t i = 0; i < flow_info_private->l7_protocols_num; i++){
-    diss_info->l7.protocols[i] = flow_info_private->l7_protocols[i];
+  for(size_t i = 0; i < flow_info_private->info_public->protocols_l7_num; i++){
+    diss_info->l7.protocols[i] = flow_info_private->info_public->protocols_l7[i];
   }
-  diss_info->l7.protocols_num = flow_info_private->l7_protocols_num;
-  diss_info->l7.protocol = flow_info_private->l7_protocols[0];
+  diss_info->l7.protocols_num = flow_info_private->info_public->protocols_l7_num;
+  diss_info->l7.protocol = flow_info_private->info_public->protocols_l7[0];
 
   // Set tags
   if(state->tags_matchers_num){

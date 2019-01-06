@@ -33,30 +33,31 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-static inline uint8_t lowCheck(const char *app_data) {
-  return strstr((const char *) app_data, "\"host_int\"") ? 1 : 0;
+static inline uint8_t lowCheck(const char *app_data, size_t data_length) {
+  return pfwl_strnstr((const char *) app_data, "\"host_int\"", data_length) ? 1 : 0;
 }
 
-static inline uint8_t midCheck(const char *app_data) {
-  return strstr((const char *) app_data, "\"namespaces\"") ? 1 : 0;
+static inline uint8_t midCheck(const char *app_data, size_t data_length) {
+  return pfwl_strnstr((const char *) app_data, "\"namespaces\"", data_length) ? 1 : 0;
 }
 
-static inline uint8_t highCheck(const char *app_data) {
-  return (strstr((const char *) app_data, "\"version\"") ? 1 : 0) &&
-         (strstr((const char *) app_data, "\"port\"") ? 1 : 0);
+static inline uint8_t highCheck(const char *app_data, size_t data_length) {
+  return (pfwl_strnstr((const char *) app_data, "\"version\"", data_length) ? 1 : 0) &&
+         (pfwl_strnstr((const char *) app_data, "\"port\"", data_length) ? 1 : 0);
 }
 
 static inline uint8_t hasDropboxFields(const char *app_data,
+                                       size_t data_length,
                                        pfwl_dissector_accuracy_t accuracy) {
   switch (accuracy) {
   case PFWL_DISSECTOR_ACCURACY_LOW: {
-    return lowCheck(app_data);
+    return lowCheck(app_data, data_length);
   } break;
   case PFWL_DISSECTOR_ACCURACY_MEDIUM: {
-    return lowCheck(app_data) && midCheck(app_data);
+    return lowCheck(app_data, data_length) && midCheck(app_data, data_length);
   } break;
   case PFWL_DISSECTOR_ACCURACY_HIGH: {
-    return lowCheck(app_data) && midCheck(app_data) && highCheck(app_data);
+    return lowCheck(app_data, data_length) && midCheck(app_data, data_length) && highCheck(app_data, data_length);
   } break;
   default: { return 0; }
   }
@@ -67,9 +68,10 @@ uint8_t check_dropbox(pfwl_state_t *state, const unsigned char *app_data,
                       pfwl_flow_info_private_t *flow_info_private) {
   pfwl_dissector_accuracy_t accuracy =
       state->inspectors_accuracy[PFWL_PROTO_L7_DROPBOX];
+  // Discovery
   if (pkt_info->l4.port_src == port_dropbox &&
       pkt_info->l4.port_dst == port_dropbox && data_length > 2 &&
-      hasDropboxFields((const char *) app_data, accuracy)) {
+      hasDropboxFields((const char *) app_data, data_length, accuracy)) {
     return PFWL_PROTOCOL_MATCHES;
   }
   return PFWL_PROTOCOL_NO_MATCHES;

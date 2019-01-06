@@ -193,11 +193,11 @@ pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
   }
 
   dissection_info->flow_info = *flow_info_private->info_public;
-  for(size_t i = 0; i < flow_info_private->l7_protocols_num; i++){
-    dissection_info->l7.protocols[i] = flow_info_private->l7_protocols[i];
+  for(size_t i = 0; i < flow_info_private->info_public->protocols_l7_num; i++){
+    dissection_info->l7.protocols[i] = flow_info_private->info_public->protocols_l7[i];
   }
-  dissection_info->l7.protocols_num = flow_info_private->l7_protocols_num;
-  dissection_info->l7.protocol = flow_info_private->l7_protocols[0];
+  dissection_info->l7.protocols_num = flow_info_private->info_public->protocols_l7_num;
+  dissection_info->l7.protocol = flow_info_private->info_public->protocols_l7[0];
 
   // Store L3 fragmented data for later deletion
   if (flow_info_private->last_rebuilt_ip_fragments) {
@@ -262,4 +262,56 @@ pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
                              flow_info_private);
   }
   return status;
+}
+
+static const char* pfwl_l4_protocols_names[IPPROTO_MAX] = {
+  [0 ... IPPROTO_MAX - 1] = "",
+  [IPPROTO_IP]      = "IP",
+  [IPPROTO_ICMP]    = "ICMP",
+  [IPPROTO_IGMP]    = "IGMP",
+  [IPPROTO_IPIP]    = "IPIP",
+  [IPPROTO_TCP]     = "TCP",
+  [IPPROTO_EGP]     = "EGP",
+  [IPPROTO_PUP]     = "PUP",
+  [IPPROTO_UDP]     = "UDP",
+  [IPPROTO_IDP]     = "IDP",
+  [IPPROTO_TP]      = "TP",
+  [IPPROTO_DCCP]    = "DCCP",
+  [IPPROTO_IPV6]    = "IPV6",
+  [IPPROTO_RSVP]    = "RSVP",
+  [IPPROTO_GRE]     = "GRE",
+  [IPPROTO_ESP]     = "ESP",
+  [IPPROTO_AH]      = "AH",
+  [IPPROTO_MTP]     = "MTP",
+  [IPPROTO_BEETPH]  = "BEETPH",
+  [IPPROTO_ENCAP]   = "ENCAP",
+  [IPPROTO_PIM]     = "PIM",
+  [IPPROTO_COMP]    = "COMP",
+  [IPPROTO_SCTP]    = "SCTP",
+  [IPPROTO_UDPLITE] = "UDPLITE",
+  [IPPROTO_MPLS]    = "MPLS",
+  [IPPROTO_RAW]     = "RAW"
+};
+
+const char *pfwl_get_L4_protocol_name(pfwl_protocol_l4_t protocol){
+  if(protocol < IPPROTO_MAX){
+    return pfwl_l4_protocols_names[protocol];
+  }else{
+    return "Unknown";
+  }
+}
+
+pfwl_protocol_l4_t pfwl_get_L4_protocol_id(const char *const name){
+  size_t i;
+  for (i = 0; i < (size_t) IPPROTO_MAX; i++) {
+    if (!strcasecmp(name, pfwl_l4_protocols_names[i])) {
+      return (pfwl_protocol_l4_t) i;
+    }
+  }
+  return 0;
+}
+
+
+const char **const pfwl_get_L4_protocols_names(){
+  return pfwl_l4_protocols_names;
 }

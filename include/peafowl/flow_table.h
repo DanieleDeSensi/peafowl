@@ -161,15 +161,8 @@ typedef struct pfwl_flow_info_private {
   /************************/
   /** Misc information.  **/
   /************************/
-  const pfwl_flow_info_t *info_public;
+  pfwl_flow_info_t *info_public;
   pfwl_flow_t *flow;
-  /**
-   * The protocol of this flow. It can be PFWL_PROTOCOL_NOT_DETERMINED if
-   * it is not been yet determined; PFWL_PROTOCOL_UNKNOWN if it is unknown
-   * or the matching protocol identifier.
-   */
-  pfwl_protocol_l7_t l7_protocols[PFWL_MAX_L7_SUBPROTO_DEPTH];
-  uint8_t l7_protocols_num;
   uint8_t identification_terminated;
 
   /** Number of times that the library tried to guess the protocol. **/
@@ -286,12 +279,6 @@ typedef struct pfwl_flow_info_private {
 } pfwl_flow_info_private_t;
 
 struct pfwl_flow {
-  pfwl_ip_addr_t addr_src;
-  pfwl_ip_addr_t addr_dst;
-  uint16_t port_src;
-  uint16_t port_dst;
-  uint8_t l4prot;
-
   pfwl_flow_t *prev;
   pfwl_flow_t *next;
   pfwl_flow_info_t info;

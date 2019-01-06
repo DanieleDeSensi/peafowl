@@ -74,22 +74,29 @@ static bool isMoneroStratumMethod(const char *method, size_t methodLen){
   }
   return false;
 }
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define MONERO_MAGIC_COOKIE 0x28721586
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define MONERO_MAGIC_COOKIE 0x86157228
+#else
+#error "Please fix <bits/endian.h>"
+#endif
 
 uint8_t check_monero(pfwl_state_t *state, const unsigned char *app_data,
                      size_t data_length, pfwl_dissection_info_t *pkt_info,
                      pfwl_flow_info_private_t *flow_info_private) {
   // Magic number: https://github.com/monero-project/monero/blob/master/src/p2p/p2p_protocol_defs.h
-  if (*((uint32_t *) app_data) == 0x28721586) {
+  if (*((uint32_t *) app_data) == MONERO_MAGIC_COOKIE) {
     return PFWL_PROTOCOL_MATCHES;
-  }else if(flow_info_private->l7_protocols_num){
-    if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_JSON_RPC){
+  }else if(flow_info_private->info_public->protocols_l7_num){
+    if(flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] == PFWL_PROTO_L7_JSON_RPC){
       pfwl_string_t method;
       if((!pfwl_field_string_get(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_JSON_RPC_METHOD, &method) &&
           (isMoneroMethod((const char*) method.value, method.length) || isMoneroStratumMethod((const char*) method.value, method.length)))){
         return PFWL_PROTOCOL_MATCHES;
       }
     }else if(BITTEST(flow_info_private->possible_matching_protocols, PFWL_PROTO_L7_JSON_RPC) &&
-             flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_NOT_DETERMINED){
+             flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] == PFWL_PROTO_L7_NOT_DETERMINED){
       // Could still become JSON-RPC
       return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     }

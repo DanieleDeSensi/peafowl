@@ -369,3 +369,31 @@ pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
   return mc_pfwl_parse_L3_header(state, pkt, length, current_time, 0,
                                  dissection_info);
 }
+
+static const char* pfwl_l3_protocols_names[PFWL_PROTO_L3_NUM] = {
+  [0 ... PFWL_PROTO_L3_NUM - 1] = "",
+  [PFWL_PROTO_L3_IPV4] = "IPv4",
+  [PFWL_PROTO_L3_IPV6] = "IPv6",
+};
+
+const char *pfwl_get_L3_protocol_name(pfwl_protocol_l3_t protocol){
+  if(protocol < PFWL_PROTO_L3_NUM){
+    return pfwl_l3_protocols_names[protocol];
+  }else{
+    return "Unknown";
+  }
+}
+
+pfwl_protocol_l3_t pfwl_get_L3_protocol_id(const char *const name){
+  for(size_t i = 0; i < PFWL_PROTO_L3_NUM; i++){
+    if(!strcasecmp(name, pfwl_l3_protocols_names[i])){
+      return (pfwl_protocol_l3_t) i;
+    }
+  }
+  return PFWL_PROTO_L3_NUM;
+}
+
+
+const char **const pfwl_get_L3_protocols_names(){
+  return pfwl_l3_protocols_names;
+}

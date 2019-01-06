@@ -115,3 +115,23 @@ TEST(GenericTest, FieldNamesConversion) {
   EXPECT_EQ(pfwl_get_L7_field_id(PFWL_PROTO_L7_SSL, "CERTIFICATE"), PFWL_FIELDS_L7_SSL_CERTIFICATE);
   EXPECT_EQ(pfwl_get_L7_field_id(PFWL_PROTO_L7_HTTP, "URL"), PFWL_FIELDS_L7_HTTP_URL);
 }
+
+TEST(GenericTest, ProtoL2NamesConversion) {
+  EXPECT_STREQ(pfwl_get_L2_protocol_name(PFWL_PROTO_L2_FDDI), "FDDI");
+  EXPECT_EQ(pfwl_get_L2_protocol_id("EN10MB"), PFWL_PROTO_L2_EN10MB);
+}
+
+TEST(GenericTest, ProtoL3NamesConversion) {
+  EXPECT_STREQ(pfwl_get_L3_protocol_name(PFWL_PROTO_L3_IPV4), "IPv4");
+  EXPECT_EQ(pfwl_get_L3_protocol_id("IPv6"), PFWL_PROTO_L3_IPV6);
+}
+
+TEST(GenericTest, ProtoL4NamesConversion) {
+  EXPECT_STREQ(pfwl_get_L4_protocol_name(IPPROTO_TCP), "TCP");
+  EXPECT_EQ(pfwl_get_L4_protocol_id("UDP"), IPPROTO_UDP);
+}
+
+TEST(GenericTest, ProtoL7NamesConversion) {
+  EXPECT_STREQ(pfwl_get_L7_protocol_name(PFWL_PROTO_L7_JSON_RPC), "JSON-RPC");
+  EXPECT_EQ(pfwl_get_L7_protocol_id("QUIC"), PFWL_PROTO_L7_QUIC);
+}

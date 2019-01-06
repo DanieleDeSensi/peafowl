@@ -52,8 +52,8 @@ static int isEthMethod(const char *method, size_t methodLen) {
 uint8_t check_ethereum(pfwl_state_t *state, const unsigned char *app_data,
                        size_t data_length, pfwl_dissection_info_t *pkt_info,
                        pfwl_flow_info_private_t *flow_info_private) {
-  if(flow_info_private->l7_protocols_num){
-    if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_JSON_RPC){
+  if(flow_info_private->info_public->protocols_l7_num){
+    if(flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] == PFWL_PROTO_L7_JSON_RPC){
       Document* d = static_cast<Document*>(flow_info_private->json_parser);
       assert(d);
       pfwl_string_t method;
@@ -63,7 +63,7 @@ uint8_t check_ethereum(pfwl_state_t *state, const unsigned char *app_data,
         return PFWL_PROTOCOL_MATCHES;
       }
     }else if(BITTEST(flow_info_private->possible_matching_protocols, PFWL_PROTO_L7_JSON_RPC) &&
-             flow_info_private->l7_protocols[flow_info_private->l7_protocols_num - 1] == PFWL_PROTO_L7_NOT_DETERMINED){
+             flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] == PFWL_PROTO_L7_NOT_DETERMINED){
       // Could still become JSON-RPC
       return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     }

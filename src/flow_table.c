@@ -101,11 +101,12 @@ typedef struct pfwl_flow_DB_partition_specific_informations {
       *delayed_deletion_flow; // This is a flow that received the TCP FIN but we
                               // do not clean immediately, to give the user the
                               // possibility to get the last data found.
+  uint64_t next_flow_id;
 } pfwl_flow_DB_partition_specific_informations_t;
 
 typedef struct pfwl_flow_table_partition {
   struct pfwl_flow_table_real_partition {
-    pfwl_flow_DB_partition_specific_informations_t informations;
+    pfwl_flow_DB_partition_specific_informations_t info;
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     /**
      * If an integer x is contained in this array, then
@@ -155,15 +156,15 @@ static
 #endif
     uint8_t
     v4_equals(pfwl_flow_t *flow, pfwl_dissection_info_t *pkt_info) {
-  return ((flow->addr_src.ipv4 == pkt_info->l3.addr_src.ipv4 &&
-           flow->addr_dst.ipv4 == pkt_info->l3.addr_dst.ipv4 &&
-           flow->port_src == pkt_info->l4.port_src &&
-           flow->port_dst == pkt_info->l4.port_dst) ||
-          (flow->addr_src.ipv4 == pkt_info->l3.addr_dst.ipv4 &&
-           flow->addr_dst.ipv4 == pkt_info->l3.addr_src.ipv4 &&
-           flow->port_src == pkt_info->l4.port_dst &&
-           flow->port_dst == pkt_info->l4.port_src)) &&
-         flow->l4prot == pkt_info->l4.protocol;
+  return ((flow->info.addr_src.ipv4 == pkt_info->l3.addr_src.ipv4 &&
+           flow->info.addr_dst.ipv4 == pkt_info->l3.addr_dst.ipv4 &&
+           flow->info.port_src == pkt_info->l4.port_src &&
+           flow->info.port_dst == pkt_info->l4.port_dst) ||
+          (flow->info.addr_src.ipv4 == pkt_info->l3.addr_dst.ipv4 &&
+           flow->info.addr_dst.ipv4 == pkt_info->l3.addr_src.ipv4 &&
+           flow->info.port_src == pkt_info->l4.port_dst &&
+           flow->info.port_dst == pkt_info->l4.port_src)) &&
+         flow->info.protocol_l4 == pkt_info->l4.protocol;
 }
 
 #ifndef PFWL_DEBUG
@@ -179,28 +180,28 @@ static
   for (i = 0; i < 16; i++) {
     if (direction != 2 &&
         pkt_info->l3.addr_src.ipv6.s6_addr[i] ==
-            flow->addr_src.ipv6.s6_addr[i] &&
+            flow->info.addr_src.ipv6.s6_addr[i] &&
         pkt_info->l3.addr_dst.ipv6.s6_addr[i] ==
-            flow->addr_dst.ipv6.s6_addr[i]) {
+            flow->info.addr_dst.ipv6.s6_addr[i]) {
       direction = 1;
     } else if (direction != 1 &&
                pkt_info->l3.addr_src.ipv6.s6_addr[i] ==
-                   flow->addr_dst.ipv6.s6_addr[i] &&
+                   flow->info.addr_dst.ipv6.s6_addr[i] &&
                pkt_info->l3.addr_dst.ipv6.s6_addr[i] ==
-                   flow->addr_src.ipv6.s6_addr[i]) {
+                   flow->info.addr_src.ipv6.s6_addr[i]) {
       direction = 2;
     } else
       return 0;
   }
 
   if (direction == 1)
-    return flow->port_src == pkt_info->l4.port_src &&
-           flow->port_dst == pkt_info->l4.port_dst &&
-           flow->l4prot == pkt_info->l4.protocol;
+    return flow->info.port_src == pkt_info->l4.port_src &&
+           flow->info.port_dst == pkt_info->l4.port_dst &&
+           flow->info.protocol_l4 == pkt_info->l4.protocol;
   else if (direction == 2)
-    return flow->port_src == pkt_info->l4.port_dst &&
-           flow->port_dst == pkt_info->l4.port_src &&
-           flow->l4prot == pkt_info->l4.protocol;
+    return flow->info.port_src == pkt_info->l4.port_dst &&
+           flow->info.port_dst == pkt_info->l4.port_src &&
+           flow->info.protocol_l4 == pkt_info->l4.protocol;
   else
     return 0;
 }
@@ -239,13 +240,13 @@ static void pfwl_flow_table_update_flow_count(pfwl_flow_table_t *db) {
   if (db != NULL) {
     if (db->table != NULL) {
       for (uint16_t j = 0; j < db->num_partitions; ++j) {
-        db->partitions[j].partition.informations.active_flows = 0;
-        for (uint32_t i = db->partitions[j].partition.informations.lowest_index;
-             i <= db->partitions[j].partition.informations.highest_index; ++i) {
+        db->partitions[j].partition.info.active_flows = 0;
+        for (uint32_t i = db->partitions[j].partition.info.lowest_index;
+             i <= db->partitions[j].partition.info.highest_index; ++i) {
           cur = db->table[i].next;
           while (cur != &(db->table[i])) {
             cur = cur->next;
-            ++db->partitions[j].partition.informations.active_flows;
+            ++db->partitions[j].partition.info.active_flows;
           }
         }
       }
@@ -342,7 +343,7 @@ void pfwl_flow_table_setup_partitions(pfwl_flow_table_t *table,
                 "[%" PRIu32 ", %" PRIu32 "]\n",
                 lowest_index, highest_index);
     pfwl_flow_table_initialize_informations(
-        &(table->partitions[j].partition.informations), lowest_index,
+        &(table->partitions[j].partition.info), lowest_index,
         highest_index, partition_max_active_v4_flows);
     lowest_index = highest_index + 1;
     /**
@@ -414,7 +415,7 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   if (db->flow_termination_callback){
     (*(db->flow_termination_callback))(&(to_delete->info));
   }
-  --db->partitions[partition_id].partition.informations.active_flows;
+  --db->partitions[partition_id].partition.info.active_flows;
   free(to_delete->info_private.http_informations[0].temp_buffer);
   free(to_delete->info_private.http_informations[1].temp_buffer);
   pfwl_reordering_tcp_delete_all_fragments(&(to_delete->info_private));
@@ -456,7 +457,7 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
 void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t *db,
                                           uint16_t partition_id,
                                           pfwl_flow_t *to_delete) {
-  db->partitions[partition_id].partition.informations.delayed_deletion_flow =
+  db->partitions[partition_id].partition.info.delayed_deletion_flow =
       to_delete;
 }
 
@@ -488,8 +489,8 @@ static
 #if !PFWL_USE_MTF
   ipv4_flow_t *current;
 #endif
-  for (i = db->partitions[partition_id].partition.informations.lowest_index;
-       i <= db->partitions[partition_id].partition.informations.highest_index;
+  for (i = db->partitions[partition_id].partition.info.lowest_index;
+       i <= db->partitions[partition_id].partition.info.highest_index;
        i++) {
     /**
      * Set the last timestamp for the sentinel node in such
@@ -549,9 +550,6 @@ void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
       ++flow_info_private->possible_protocols;
     }
   }
-
-  flow_info_private->l7_protocols_num = 0;
-  flow_info_private->l7_protocols[0] = PFWL_PROTO_L7_NOT_DETERMINED;
   flow_info_private->identification_terminated = 0;
   flow_info_private->trials = 0;
   flow_info_private->tcp_reordering_enabled = tcp_reordering_enabled;
@@ -573,11 +571,11 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
 
   // Do it before searching the current flow
   if (db->partitions[partition_id]
-          .partition.informations.delayed_deletion_flow) {
+          .partition.info.delayed_deletion_flow) {
     mc_pfwl_flow_table_delete_flow(
         db, partition_id, db->partitions[partition_id]
-                              .partition.informations.delayed_deletion_flow);
-    db->partitions[partition_id].partition.informations.delayed_deletion_flow =
+                              .partition.info.delayed_deletion_flow);
+    db->partitions[partition_id].partition.info.delayed_deletion_flow =
         NULL;
   }
 
@@ -608,9 +606,9 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   /**Flow not found, add it after the head.**/
   if (iterator == head) {
     if (unlikely(
-            db->partitions[partition_id].partition.informations.active_flows ==
+            db->partitions[partition_id].partition.info.active_flows ==
             db->partitions[partition_id]
-                .partition.informations.max_active_flows))
+                .partition.info.max_active_flows))
       return NULL;
 #if PFWL_FLOW_TABLE_USE_MEMORY_POOL
     if (likely(db->partitions[partition_id].partition.pool_size != 0)) {
@@ -634,23 +632,31 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     assert(iterator);
 
     /**Creates new flow and inserts it in the list.**/
-    iterator->addr_src = pkt_info->l3.addr_src;
-    iterator->addr_dst = pkt_info->l3.addr_dst;
-    iterator->port_src = pkt_info->l4.port_src;
-    iterator->port_dst = pkt_info->l4.port_dst;
-    iterator->l4prot = pkt_info->l4.protocol;
+    pfwl_init_flow_info_public_internal(&iterator->info);
+    pfwl_init_flow_info_internal(&(iterator->info_private),
+                                 protocols_to_inspect, tcp_reordering_enabled);
+    iterator->info.addr_src = pkt_info->l3.addr_src;
+    iterator->info.addr_dst = pkt_info->l3.addr_dst;
+    iterator->info.port_src = pkt_info->l4.port_src;
+    iterator->info.port_dst = pkt_info->l4.port_dst;
+    iterator->info.protocol_l2 = pkt_info->l2.protocol;
+    iterator->info.protocol_l3 = pkt_info->l3.protocol;
+    iterator->info.protocol_l4 = pkt_info->l4.protocol;
+    iterator->info.udata = &(iterator->info_private.udata_private);
+    iterator->info.id = db->partitions[partition_id].partition.info.next_flow_id++;
+    iterator->info.thread_id = partition_id;
+    iterator->info.protocols_l7_num = 0;
+    iterator->info.protocols_l7[0] = PFWL_PROTO_L7_NOT_DETERMINED;
+
+    iterator->info_private.info_public = &iterator->info;
+    iterator->info_private.flow = iterator;
+
     iterator->prev = head;
     iterator->next = head->next;
     iterator->prev->next = iterator;
     iterator->next->prev = iterator;
-    pfwl_init_flow_info_public_internal(&iterator->info);
-    pfwl_init_flow_info_internal(&(iterator->info_private),
-                                 protocols_to_inspect, tcp_reordering_enabled);
-    iterator->info_private.info_public = &iterator->info;
-    iterator->info_private.flow = iterator;
-    iterator->info.udata = &(iterator->info_private.udata_private);
 
-    ++db->partitions[partition_id].partition.informations.active_flows;
+    ++db->partitions[partition_id].partition.info.active_flows;
   }
 #if PFWL_USE_MTF
   else if (iterator->prev != head) {
@@ -669,6 +675,14 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   }
 #endif
 
+  if (memcmp(&(iterator->info.addr_src), &(pkt_info->l3.addr_src),
+             sizeof(pkt_info->l3.addr_src)) == 0 &&
+      iterator->info.port_src == pkt_info->l4.port_src) {
+    pkt_info->l4.direction = 0;
+  } else {
+    pkt_info->l4.direction = 1;
+  }
+
   if (!iterator->info.timestamp_first[pkt_info->l4.direction]) {
     iterator->info.timestamp_first[pkt_info->l4.direction] = timestamp;
   }
@@ -676,19 +690,12 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
 
   if (unlikely(
           timestamp -
-              db->partitions[partition_id].partition.informations.last_walk >=
+              db->partitions[partition_id].partition.info.last_walk >=
           PFWL_FLOW_TABLE_WALK_TIME)) {
     pfwl_flow_table_check_expiration(db, partition_id, timestamp);
-    db->partitions[partition_id].partition.informations.last_walk = timestamp;
+    db->partitions[partition_id].partition.info.last_walk = timestamp;
   }
 
-  if (memcmp(&(iterator->addr_src), &(pkt_info->l3.addr_src),
-             sizeof(pkt_info->l3.addr_src)) == 0 &&
-      iterator->port_src == pkt_info->l4.port_src) {
-    pkt_info->l4.direction = 0;
-  } else {
-    pkt_info->l4.direction = 1;
-  }
   return iterator;
 }
 
@@ -751,8 +758,8 @@ void pfwl_flow_table_delete(pfwl_flow_table_t *db) {
   if (db != NULL) {
     if (db->table != NULL) {
       for (uint16_t j = 0; j < db->num_partitions; ++j) {
-        for (uint32_t i = db->partitions[j].partition.informations.lowest_index;
-             i <= db->partitions[j].partition.informations.highest_index; ++i) {
+        for (uint32_t i = db->partitions[j].partition.info.lowest_index;
+             i <= db->partitions[j].partition.info.highest_index; ++i) {
           while (db->table[i].next != &(db->table[i])) {
             mc_pfwl_flow_table_delete_flow(db, j, db->table[i].next);
           }

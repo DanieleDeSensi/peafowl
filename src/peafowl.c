@@ -433,7 +433,8 @@ uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
                                      pfwl_flow_info_private_t* flow_info_private,
                                      pfwl_field_id_t field) {
   if (state) {
-    if(flow_info_private->l7_protocols[flow_info_private->l7_protocols_num] == PFWL_PROTO_L7_UNKNOWN){
+    if(flow_info_private->info_public->protocols_l7_num &&
+       flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num - 1] == PFWL_PROTO_L7_UNKNOWN){
       return state->fields_to_extract[field];
     }else{
       return state->fields_to_extract[field] || state->fields_support[field];
