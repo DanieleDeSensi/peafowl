@@ -66,7 +66,6 @@ int main(int argc, char** argv){
   while((packet = pcap_next(handle, &header)) != NULL){
     if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &r) >= PFWL_STATUS_OK){
       if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
-        printf("%d %d %d\n", r.l7.protocols[0], r.l7.protocols[1], r.l7.protocols[2]);
         if(r.l7.protocol < PFWL_PROTO_L7_NUM){
           ++protocols[r.l7.protocol];
         }else{
