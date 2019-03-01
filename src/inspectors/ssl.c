@@ -418,7 +418,8 @@ static u_int8_t pfwl_search_sslv3_direction1(const unsigned char *payload,
 uint8_t check_ssl(pfwl_state_t *state, const unsigned char *payload,
                   size_t data_length, pfwl_dissection_info_t *pkt_info,
                   pfwl_flow_info_private_t *flow_info_private) {
-  if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_SSL_CERTIFICATE)){
+  if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_SSL_CERTIFICATE) || 
+     pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_SSL_SNI)){
     if(sslDetectProtocolFromCertificate(payload, data_length, flow_info_private, pkt_info->l7.protocol_fields) == PFWL_PROTOCOL_MATCHES){
       return PFWL_PROTOCOL_MATCHES;
     }
