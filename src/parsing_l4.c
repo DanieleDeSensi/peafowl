@@ -125,6 +125,23 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
 
   *flow_info_private = &flow->info_private;
 
+  // Set flags statistics
+  if(dissection_info->l4.protocol == IPPROTO_TCP){
+    struct tcphdr *tcp = (struct tcphdr *) pkt;
+    if(tcp->syn){
+      dissection_info->l4.has_syn = 1;
+      flow->info.stats_l4.syn_sent[dissection_info->l4.direction]++;
+    }
+    if(tcp->fin){
+      dissection_info->l4.has_fin = 1;
+      flow->info.stats_l4.fin_sent[dissection_info->l4.direction]++;
+    }
+    if(tcp->rst){
+      dissection_info->l4.has_rst = 1;
+      flow->info.stats_l4.rst_sent[dissection_info->l4.direction]++;
+    }
+  }
+
   ++flow->info.num_packets[dissection_info->l4.direction];
   flow->info.num_bytes[dissection_info->l4.direction] +=
       length + dissection_info->l3.length;

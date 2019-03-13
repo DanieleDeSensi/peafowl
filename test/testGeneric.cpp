@@ -59,6 +59,53 @@ TEST(GenericTest, BytesAndPackets) {
   pfwl_terminate(state);
 }
 
+static uint32_t syn_found[2], fin_found[2], rst_found[2];
+void flagchecker(pfwl_flow_info_t* flow_info){
+  if(flow_info->id == 0){
+    syn_found[0] = flow_info->stats_l4.syn_sent[0];
+    syn_found[1] = flow_info->stats_l4.syn_sent[1];
+
+    fin_found[0] = flow_info->stats_l4.fin_sent[0];
+    fin_found[1] = flow_info->stats_l4.fin_sent[1];
+
+    rst_found[0] = flow_info->stats_l4.rst_sent[0];
+    rst_found[1] = flow_info->stats_l4.rst_sent[1];
+  }
+}
+
+TEST(GenericTest, TCPStats) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_set_flow_termination_callback(state, &flagchecker);
+  std::vector<uint> protocols;
+  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    ;
+  });
+  pfwl_terminate(state);
+  EXPECT_EQ(syn_found[0], 1);
+  EXPECT_EQ(syn_found[1], 1);
+  EXPECT_EQ(fin_found[0], 1);
+  EXPECT_EQ(fin_found[1], 1);
+  EXPECT_EQ(rst_found[0], 0);
+  EXPECT_EQ(rst_found[1], 0);
+}
+
+TEST(GenericTest, TCPStatsSynFlood) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_set_flow_termination_callback(state, &flagchecker);
+  pfwl_tcp_reordering_disable(state);
+  std::vector<uint> protocols;
+  getProtocols("./pcaps/http-segmented.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    ;
+  });
+  pfwl_terminate(state);
+  EXPECT_EQ(syn_found[0], 1);
+  EXPECT_EQ(syn_found[1], 1);
+  EXPECT_EQ(fin_found[0], 0);
+  EXPECT_EQ(fin_found[1], 0);
+  EXPECT_EQ(rst_found[0], 0);
+  EXPECT_EQ(rst_found[1], 1);
+}
+
 
 TEST(GenericTest, MaxFlows) {
   pfwl_state_t* state = pfwl_init();

@@ -367,6 +367,15 @@ typedef union pfwl_ip_addr {
 #define PFWL_TAGS_MAX 128 ///< Maximum number of tags that can be associated to a packet
 
 /**
+ * Statistics about L4 (UDP/TCP).
+ **/
+typedef struct pfwl_stats_l4 {
+  uint32_t syn_sent[2]; ///< Number of packets with the SYN flag set (one per direction).
+  uint32_t fin_sent[2]; ///< Number of packets with the FIN flag set (one per direction).
+  uint32_t rst_sent[2]; ///< Number of packets with the RST flag set (one per direction).
+}pfwl_stats_l4_t;
+
+/**
  * Public information about the flow.
  * If pfwl_parse_L7 is explicitely called, when the first packet
  * of a flow is received, this structure must be initialized by
@@ -377,7 +386,7 @@ typedef struct pfwl_flow_info {
                ///< id is per-thread unique, i.e. two different flows, managed by two
                ///< different threads may have the same id. If multithreaded Peafowl
                ///< is used, the unique identifier will be the pair <thread_id, id>
-  uint16_t thread_id; ///< Identifier of the thread that managedthis flow.
+  uint16_t thread_id; ///< Identifier of the thread that managed this flow.
   pfwl_ip_addr_t addr_src; ///< Source address, in network byte order.
   pfwl_ip_addr_t addr_dst; ///< Destination address, in network byte order.
   uint16_t port_src; ///< Source port, in network byte order.
@@ -402,6 +411,7 @@ typedef struct pfwl_flow_info {
   pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
                                   ///< PFWL_IP_VERSION_6 in IPv6.
   uint8_t protocol_l4; ///< The Level 4 protocol.
+  pfwl_stats_l4_t stats_l4; ///< The L4 statistics.
   pfwl_protocol_l7_t protocols_l7[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
                                                                ///< For example, Ethereum may be carried by JSON-RPC, which
                                                                ///< in turn may be carried by HTTP. If such a flow is found,
@@ -464,6 +474,9 @@ typedef struct pfwl_dissection_info {
     const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
     size_t resegmented_pkt_len;  ///< The length of the resegmented TCP payload.
     pfwl_protocol_l4_t protocol; ///< The Level 4 protocol.
+    uint8_t has_syn:1; ///< Set to 1 if the packet has the SYN flag set (TCP only).
+    uint8_t has_fin:1; ///< Set to 1 if the packet has the FIN flag set (TCP only).
+    uint8_t has_rst:1; ///< Set to 1 if the packet has the RST flag set (TCP only).
   } l4;                          ///< Information known after L4 parsing
   struct {
     pfwl_protocol_l7_t protocol;                      ///< The first level 7 protocol.

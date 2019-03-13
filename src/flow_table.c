@@ -233,6 +233,7 @@ static
   table_informations->last_walk = 0;
   table_informations->active_flows = 0;
   table_informations->delayed_deletion_flow = NULL;
+  table_informations->next_flow_id = 0;
 }
 
 static void pfwl_flow_table_update_flow_count(pfwl_flow_table_t *db) {
