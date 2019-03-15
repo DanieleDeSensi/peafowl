@@ -125,7 +125,8 @@ int main(int argc, char** argv){
   peafowl::DissectionInfo r;
   peafowl::ProtocolL2 dlt = peafowl::convertPcapDlt(pcap_datalink(handle));
   while((packet = pcap_next(handle, &header)) != NULL){
-    if(pfwl->dissectFromL2(packet, header.caplen, time(NULL), dlt, r) >= PFWL_STATUS_OK){
+    r = pfwl->dissectFromL2(packet, header.caplen, time(NULL), dlt);
+    if(r.status >= PFWL_STATUS_OK){
       if(r.l4.getProtocol() == IPPROTO_TCP || r.l4.getProtocol() == IPPROTO_UDP){
         if(r.l7.getProtocol() < PFWL_PROTO_L7_NUM){
           ++protocols[r.l7.getProtocol()];

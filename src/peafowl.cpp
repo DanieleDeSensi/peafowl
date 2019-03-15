@@ -558,53 +558,60 @@ void Peafowl::protocolL7DisableAll(){
   }
 }
 
-Status Peafowl::dissectFromL2(const unsigned char *pkt, size_t length, uint32_t timestamp, ProtocolL2 datalinkType, DissectionInfo& dissectionInfo){
+DissectionInfo Peafowl::dissectFromL2(const unsigned char *pkt, size_t length, uint32_t timestamp, ProtocolL2 datalinkType){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_from_L2(_state, pkt, length, timestamp, datalinkType, &info);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
-Status Peafowl::dissectFromL3(const unsigned char *pkt, size_t length, uint32_t timestamp, DissectionInfo& dissectionInfo){
+DissectionInfo Peafowl::dissectFromL3(const unsigned char *pkt, size_t length, uint32_t timestamp){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_from_L3(_state, pkt, length, timestamp, &info);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
-Status Peafowl::dissectFromL4(const unsigned char *pkt, size_t length, uint32_t timestamp, DissectionInfo& dissectionInfo){
+DissectionInfo Peafowl::dissectFromL4(const unsigned char *pkt, size_t length, uint32_t timestamp){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_from_L4(_state, pkt, length, timestamp, &info);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
-Status Peafowl::dissectL2(const unsigned char *packet, pfwl_protocol_l2_t datalinkType, DissectionInfo& dissectionInfo){
+DissectionInfo Peafowl::dissectL2(const unsigned char *packet, pfwl_protocol_l2_t datalinkType){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_L2(packet, datalinkType, &info);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
-Status Peafowl::dissectL3(const unsigned char *pkt, size_t length, uint32_t timestamp, DissectionInfo& dissectionInfo){
+DissectionInfo Peafowl::dissectL3(const unsigned char *pkt, size_t length, uint32_t timestamp){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_L3(_state, pkt, length, timestamp, &info);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
-Status Peafowl::dissectL4(const unsigned char *pkt, size_t length, uint32_t timestamp, DissectionInfo& dissectionInfo, FlowInfoPrivate **flowInfoPrivate){
+DissectionInfo Peafowl::dissectL4(const unsigned char *pkt, size_t length, uint32_t timestamp, FlowInfoPrivate **flowInfoPrivate){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_L4(_state, pkt, length, timestamp, &info, flowInfoPrivate);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
-Status Peafowl::dissectL7(const unsigned char *pkt, size_t length, DissectionInfo& dissectionInfo, FlowInfoPrivate *flowInfoPrivate){
+DissectionInfo Peafowl::dissectL7(const unsigned char *pkt, size_t length, FlowInfoPrivate *flowInfoPrivate){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_L7(_state, pkt, length, &info, flowInfoPrivate);
-  dissectionInfo = info;
-  return s;
+  DissectionInfo r(info);
+  r.status = s;
+  return r;
 }
 
 void Peafowl::initFlowInfo(FlowInfoPrivate *flowInfoPrivate) const{

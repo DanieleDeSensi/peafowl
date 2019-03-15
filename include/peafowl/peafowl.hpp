@@ -187,6 +187,7 @@ public:
 };
 
 typedef pfwl_field_id_t FieldId;
+typedef pfwl_status_t Status;
 
 class DissectionInfo{
 private:
@@ -197,6 +198,7 @@ public:
   DissectionInfoL4 l4;
   DissectionInfoL7 l7;
   FlowInfo flowInfo;
+  Status status;
 
   DissectionInfo();
   DissectionInfo(pfwl_dissection_info_t dissectionInfo);
@@ -249,9 +251,14 @@ public:
    * @return The field with identifier 'id'.
    */
   Field getField(FieldId id) const;
+
+  /**
+   * @brief getStatus Returns the status of the processing.
+   * @return The status of the processing.
+   */
+  Status getStatus() const;
 };
 
-typedef pfwl_status_t Status;
 typedef pfwl_flow_info_private_t FlowInfoPrivate;
 typedef pfwl_dissector_accuracy_t DissectorAccuracy;
 typedef pfwl_field_matching_t FieldMatching;
@@ -445,29 +452,25 @@ public:
    * @param datalinkType The datalink type. They match 1:1 the pcap datalink
    * types. You can convert a PCAP datalink type to a Peafowl datalink type by
    * calling the function 'pfwl_convert_pcap_dlt'.
-   * @param dissectionInfo The result of the dissection. All its bytes must be
+   * @return The result of the dissection. All its bytes must be
    *        set to 0 before calling this call.
    *        Dissection information from L2 to L7 will be filled in by this call.
-   * @return The status of the identification process.
    */
-  Status dissectFromL2(const unsigned char *pkt, size_t length,
-                       uint32_t timestamp,
-                       ProtocolL2 datalinkType,
-                       DissectionInfo& dissectionInfo);
+  DissectionInfo dissectFromL2(const unsigned char *pkt, size_t length,
+                               uint32_t timestamp,
+                               ProtocolL2 datalinkType);
 
   /**
    * Dissects the packet starting from the beginning of the L3 (IP) header.
    * @param   pkt The pointer to the beginning of IP header.
    * @param   length Length of the packet (from the beginning of the IP header).
    * @param   timestamp The current time in seconds.
-   * @param   dissectionInfo The result of the dissection. All its bytes must be
+   * @return  The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information from L3 to L7 will be filled in by this call.
-   * @return  The status of the identification process.
    */
-  Status dissectFromL3(const unsigned char *pkt, size_t length,
-                       uint32_t timestamp,
-                       DissectionInfo& dissectionInfo);
+  DissectionInfo dissectFromL3(const unsigned char *pkt, size_t length,
+                               uint32_t timestamp);
 
   /**
    * Dissects the packet starting from the beginning of the L4 (UDP or TCP)
@@ -476,15 +479,13 @@ public:
    * @param   length Length of the packet (from the beginning of the UDP or TCP
    * header).
    * @param   timestamp The current time in seconds.
-   * @param   dissectionInfo The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information about L3 header must be filled in by the
-   * caller. Dissection information from L4 to L7 will be filled in by this call.
-   * @return  The status of the identification process.
+   * @return The result of the dissection. All its bytes must be
+   *         set to 0 before calling this call.
+   *         Dissection information about L3 header must be filled in by the
+   *         caller. Dissection information from L4 to L7 will be filled in by this call.
    */
-  Status dissectFromL4(const unsigned char *pkt, size_t length,
-                       uint32_t timestamp,
-                       DissectionInfo& dissectionInfo);
+  DissectionInfo dissectFromL4(const unsigned char *pkt, size_t length,
+                               uint32_t timestamp);
 
   /**
    * Extracts from the packet the L2 information.
@@ -492,15 +493,13 @@ public:
    * @param datalinkType The datalink type. They match 1:1 the pcap datalink
    * types. You can convert a PCAP datalink type to a Peafowl datalink type by
    * calling the function 'pfwl_convert_pcap_dlt'.
-   * @param dissectionInfo The result of the dissection. All its bytes must be
+   * @return The result of the dissection. All its bytes must be
    *        set to 0 before calling this call.
    *        Dissection information about L2 headers will be filled in by this
-   * call.
-   * @return The status of the identification process.
+   *        call.
    */
-  Status dissectL2(const unsigned char *packet,
-                   pfwl_protocol_l2_t datalinkType,
-                   DissectionInfo& dissectionInfo);
+  DissectionInfo dissectL2(const unsigned char *packet,
+                           pfwl_protocol_l2_t datalinkType);
 
   /**
    * Extracts from the packet the L3 information.
@@ -508,15 +507,13 @@ public:
    * @param   length Length of the packet (from the beginning of the IP header).
    * @param   timestamp The current time in seconds. It must be
    *          non-decreasing between two consecutive calls.
-   * @param   dissectionInfo The result of the dissection. All its bytes must be
+   * @return The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information about L3 headers will be filled in by this
-   * call.
-   * @return The status of the identification process.
+   *          call.
    */
-  Status dissectL3(const unsigned char *pkt,
-                   size_t length, uint32_t timestamp,
-                   DissectionInfo& dissectionInfo);
+  DissectionInfo dissectL3(const unsigned char *pkt,
+                           size_t length, uint32_t timestamp);
 
   /**
    * Extracts from the packet the L4 information.
@@ -525,19 +522,17 @@ public:
    * header).
    * @param   timestamp The current time in seconds. It must be
    *          non-decreasing between two consecutive calls.
-   * @param   dissectionInfo The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information about L3 headers must be filled in by the
-   * caller. l4.protocol must be filled in by the caller as well. Dissection
-   * information about L4 headers will be filled in by this call.
    * @param   flowInfoPrivate Will be filled by this library. *flow_info_private
    * will point to the private information about the flow.
-   * @return  The status of the identification process.
+   * @return  The result of the dissection. All its bytes must be
+   *          set to 0 before calling this call.
+   *          Dissection information about L3 headers must be filled in by the
+   *          caller. l4.protocol must be filled in by the caller as well. Dissection
+   *          information about L4 headers will be filled in by this call.
    */
-  Status dissectL4(const unsigned char *pkt,
-                   size_t length, uint32_t timestamp,
-                   DissectionInfo& dissectionInfo,
-                   FlowInfoPrivate **flowInfoPrivate);
+  DissectionInfo dissectL4(const unsigned char *pkt,
+                           size_t length, uint32_t timestamp,
+                           FlowInfoPrivate **flowInfoPrivate);
 
   /**
    * Extracts from the packet the L7 information. Before calling it, a check on
@@ -553,19 +548,17 @@ public:
    * @param   pkt The pointer to the beginning of application data.
    * @param   length Length of the packet (from the beginning of the
    *          L7 header).
-   * @param   dissection_info The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information about L3 and L4 headers must be filled in by
-   * the caller. Dissection information about L7 packet will be filled in by this
-   * call.
    * @param   flowInfoPrivate The private information about the flow. It must be
    *          stored by the user and itialized with the pfwl_init_flow_info(...)
    * call.
-   * @return  The status of the identification process.
+   * @return  The result of the dissection. All its bytes must be
+   *          set to 0 before calling this call.
+   *          Dissection information about L3 and L4 headers must be filled in by
+   *          the caller. Dissection information about L7 packet will be filled in by this
+   *          call.
    */
-  Status dissectL7(const unsigned char *pkt, size_t length,
-                   DissectionInfo& dissectionInfo,
-                   FlowInfoPrivate *flowInfoPrivate);
+  DissectionInfo dissectL7(const unsigned char *pkt, size_t length,
+                           FlowInfoPrivate *flowInfoPrivate);
 
   /**
    * Initialize the flow informations passed as argument.
