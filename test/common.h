@@ -2,6 +2,7 @@
 #define PEAFOWL_TEST_COMMON
 
 #include <peafowl/peafowl.h>
+#include <peafowl/peafowl.hpp>
 #include "gtest/gtest.h"
 #include <pcap.h>
 #include <net/ethernet.h>
@@ -33,5 +34,6 @@ public:
 };
 
 void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state = NULL, std::function< void(pfwl_status_t, pfwl_dissection_info_t) > lambda = [](pfwl_status_t, pfwl_dissection_info_t){});
+void getProtocolsCpp(const char* pcapName, std::vector<uint>& protocols, peafowl::Peafowl* state = NULL, std::function< void(peafowl::Status, peafowl::DissectionInfo&) > lambda = [](peafowl::Status, peafowl::DissectionInfo&){});
 
 #endif // PEAFOWL_TEST_COMMON

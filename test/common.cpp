@@ -63,3 +63,33 @@ void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state
     pfwl_terminate(state);
   }
 }
+
+void getProtocolsCpp(const char* pcapName, std::vector<uint>& protocols, peafowl::Peafowl* state, std::function< void(peafowl::Status, peafowl::DissectionInfo&) > lambda){
+  bool terminate = false;
+  if(!state){
+    state = new peafowl::Peafowl();
+    terminate = true;
+  }
+  protocols.clear();
+  protocols.resize(PFWL_PROTO_L7_NUM);
+
+  Pcap pcap(pcapName);
+  peafowl::DissectionInfo r;
+  std::pair<const u_char*, unsigned long> pkt;
+
+  while((pkt = pcap.getNextPacket()).first != NULL){
+    peafowl::Status status = state->dissectFromL2(pkt.first, pkt.second, time(NULL), pcap._datalink_type, r);
+    lambda(status, r);
+    if(r.l4.getProtocol() == IPPROTO_TCP || r.l4.getProtocol() == IPPROTO_UDP){
+      for(auto proto : r.l7.getProtocols()){
+        if(proto < PFWL_PROTO_L7_NUM){
+          ++protocols[proto];
+        }
+      }
+    }
+  }
+
+  if(terminate){
+    delete state;
+  }
+}

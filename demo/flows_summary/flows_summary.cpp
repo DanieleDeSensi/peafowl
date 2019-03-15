@@ -27,7 +27,7 @@
  * =========================================================================
  */
 
-#include <peafowl/peafowl.h>
+#include <peafowl/peafowl.hpp>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <time.h>
@@ -41,63 +41,63 @@
 #include <inttypes.h>
 #include <assert.h>
 
-static void print_header(){
+static void printHeader(){
   printf("#Id\tThreadId\tAddressSrc\tAddressDst\tPortSrc\tPortDst\t"
          "ProtoL2\tProtoL3\tProtoL4\tProtosL7\t"
          "Packets(DirA|DirB)\tBytes(DirA|DirB)\tPacketsL7(DirA|DirB)\tBytesL7(DirA|DirB)\t"
          "TimestampFirst(DirA|DirB)\tTimestampLast(DirA|DirB)\n");
 }
 
-static const char* convert_address(pfwl_ip_addr_t address, pfwl_protocol_l3_t l3prot, char* buf, size_t buf_size){
-  if(l3prot == PFWL_PROTO_L3_IPV4){
+static const char* convertAddress(peafowl::IpAddress address, char* buf, size_t buf_size){
+  if(address.isIPv4()){
     struct in_addr a;
-    a.s_addr = address.ipv4;
+    a.s_addr = address.getIPv4();
     return inet_ntop(AF_INET, (void*) &a, buf, buf_size);
   }else{
-    return inet_ntop(AF_INET6, (void*) &(address.ipv6), buf, buf_size);
+    struct in6_addr tmp = address.getIPv6();
+    return inet_ntop(AF_INET6, (void*) &tmp, buf, buf_size);
   }
 }
 
-static char protocols_tmp[2048];
-static const char* convert_l7_protocols(pfwl_flow_info_t* flow_info){
-  protocols_tmp[0] = 0;
-  for(size_t i = 0; i < flow_info->protocols_l7_num; i++){
-    strcat(protocols_tmp, pfwl_get_L7_protocol_name(flow_info->protocols_l7[i]));
-    if(i != flow_info->protocols_l7_num - 1){
-      strcat(protocols_tmp, ",");
-    }
+static std::string convertL7Protocols(const peafowl::FlowInfo& info){
+  std::string r = "";
+  for(auto prot : info.getProtocolsL7()){
+    r += peafowl::getL7ProtocolName(prot);
   }
-  if(!protocols_tmp[0]){
-    return "Unknown";
-  }else{
-    return protocols_tmp;
+  if(r == ""){
+    r = "Unknown";
   }
+  return r;
 }
 
 static char tmp_srcaddr[64], tmp_dstaddr[64];
-void summarizer(pfwl_flow_info_t* flow_info){
-  printf("%"PRIu64"\t%"PRIu16"\t%s\t%s\t%"PRIu16"\t%"PRIu16"\t"
-         "%s\t%s\t%s\t%s\t"
-         "%"PRIu64"|%"PRIu64"\t%"PRIu64"|%"PRIu64"\t%"PRIu64"|%"PRIu64"\t%"PRIu64"|%"PRIu64"\t"
-         "%"PRIu32"|%"PRIu32"\t%"PRIu32"|%"PRIu32"\n",
-         flow_info->id,
-         flow_info->thread_id,
-         convert_address(flow_info->addr_src, flow_info->protocol_l3, tmp_srcaddr, sizeof(tmp_srcaddr)),
-         convert_address(flow_info->addr_dst, flow_info->protocol_l3, tmp_dstaddr, sizeof(tmp_dstaddr)),
-         ntohs(flow_info->port_src),
-         ntohs(flow_info->port_dst),
-         pfwl_get_L2_protocol_name(flow_info->protocol_l2),
-         pfwl_get_L3_protocol_name(flow_info->protocol_l3),
-         pfwl_get_L4_protocol_name(flow_info->protocol_l4),
-         convert_l7_protocols(flow_info),
-         flow_info->num_packets[PFWL_DIRECTION_OUTBOUND], flow_info->num_packets[PFWL_DIRECTION_INBOUND],
-         flow_info->num_bytes[PFWL_DIRECTION_OUTBOUND], flow_info->num_bytes[PFWL_DIRECTION_INBOUND],
-         flow_info->num_packets_l7[PFWL_DIRECTION_OUTBOUND], flow_info->num_packets_l7[PFWL_DIRECTION_INBOUND],
-         flow_info->num_bytes_l7[PFWL_DIRECTION_OUTBOUND], flow_info->num_bytes_l7[PFWL_DIRECTION_INBOUND],
-         flow_info->timestamp_first[PFWL_DIRECTION_OUTBOUND], flow_info->timestamp_first[PFWL_DIRECTION_INBOUND],
-         flow_info->timestamp_last[PFWL_DIRECTION_OUTBOUND], flow_info->timestamp_last[PFWL_DIRECTION_INBOUND]
-         );
-}
+
+class FlowManager: public peafowl::FlowManager{
+public:
+  void onTermination(const peafowl::FlowInfo& info){
+    printf("%" PRIu64 "\t%" PRIu16 "\t%s\t%s\t%" PRIu16 "\t%" PRIu16 "\t"
+           "%s\t%s\t%s\t%s\t"
+           "%" PRIu64 "|%" PRIu64 "\t%" PRIu64 "|%" PRIu64 "\t%" PRIu64 "|%" PRIu64 "\t%" PRIu64 "|%" PRIu64 "\t"
+           "%" PRIu32 "|%" PRIu32 "\t%" PRIu32 "|%" PRIu32 "\n",
+           info.getId(),
+           info.getThreadId(),
+           convertAddress(info.getAddressSrc(), tmp_srcaddr, sizeof(tmp_srcaddr)),
+           convertAddress(info.getAddressDst(), tmp_dstaddr, sizeof(tmp_dstaddr)),
+           ntohs(info.getPortSrc()),
+           ntohs(info.getPortDst()),
+           peafowl::getL2ProtocolName(info.getProtocolL2()).c_str(),
+           peafowl::getL3ProtocolName(info.getProtocolL3()).c_str(),
+           peafowl::getL4ProtocolName(info.getProtocolL4()).c_str(),
+           convertL7Protocols(info).c_str(),
+           info.getNumPackets(PFWL_DIRECTION_OUTBOUND),     info.getNumPackets(PFWL_DIRECTION_INBOUND),
+           info.getNumBytes(PFWL_DIRECTION_OUTBOUND),       info.getNumBytes(PFWL_DIRECTION_INBOUND),
+           info.getNumPacketsL7(PFWL_DIRECTION_OUTBOUND),   info.getNumPacketsL7(PFWL_DIRECTION_INBOUND),
+           info.getNumBytesL7(PFWL_DIRECTION_OUTBOUND),     info.getNumBytesL7(PFWL_DIRECTION_INBOUND),
+           info.getTimestampFirst(PFWL_DIRECTION_OUTBOUND), info.getTimestampFirst(PFWL_DIRECTION_INBOUND),
+           info.getTimestampLast(PFWL_DIRECTION_OUTBOUND),  info.getTimestampLast(PFWL_DIRECTION_INBOUND)
+           );
+  }
+};
 
 int main(int argc, char** argv){
   if(argc != 2){
@@ -118,16 +118,17 @@ int main(int argc, char** argv){
     return (2);
   }
 
-  pfwl_state_t* state = pfwl_init();
-  pfwl_set_flow_termination_callback(state, &summarizer);
-  print_header();
-  pfwl_dissection_info_t r;
-  pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
+  peafowl::Peafowl* pfwl = new peafowl::Peafowl();
+  FlowManager fm;
+  pfwl->setFlowManager(&fm);
+  printHeader();
+  peafowl::DissectionInfo r;
+  peafowl::ProtocolL2 dlt = peafowl::convertPcapDlt(pcap_datalink(handle));
   while((packet = pcap_next(handle, &header)) != NULL){
-    if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &r) >= PFWL_STATUS_OK){
-      if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
-        if(r.l7.protocol < PFWL_PROTO_L7_NUM){
-          ++protocols[r.l7.protocol];
+    if(pfwl->dissectFromL2(packet, header.caplen, time(NULL), dlt, r) >= PFWL_STATUS_OK){
+      if(r.l4.getProtocol() == IPPROTO_TCP || r.l4.getProtocol() == IPPROTO_UDP){
+        if(r.l7.getProtocol() < PFWL_PROTO_L7_NUM){
+          ++protocols[r.l7.getProtocol()];
         }else{
           ++unknown;
         }
@@ -136,12 +137,12 @@ int main(int argc, char** argv){
       }
     }
   }
-  pfwl_terminate(state);
+  delete pfwl;
 
-  if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+  if (unknown > 0) printf("Unknown packets: %" PRIu32 "\n", unknown);
   for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
     if(protocols[i] > 0){
-      printf("%s packets: %"PRIu32"\n", pfwl_get_L7_protocol_name(i), protocols[i]);
+      printf("%s packets: %" PRIu32 "\n", peafowl::getL7ProtocolName((peafowl::ProtocolL7) i).c_str(), protocols[i]);
     }
   }
   return 0;

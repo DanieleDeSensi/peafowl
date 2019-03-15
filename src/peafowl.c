@@ -517,11 +517,9 @@ uint8_t pfwl_field_array_get_pair(pfwl_field_t *fields, pfwl_field_id_t id,
   }
 }
 
-uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
+uint8_t pfwl_http_get_header_internal(pfwl_field_t field,
                              const char *header_name,
                              pfwl_string_t *header_value) {
-  pfwl_field_t field =
-      dissection_info->l7.protocol_fields[PFWL_FIELDS_L7_HTTP_HEADERS];
   if (field.present) {
     for (size_t i = 0; i < field.mmap.length; i++) {
       pfwl_pair_t pair = ((pfwl_pair_t *) field.mmap.values)[i];
@@ -533,6 +531,14 @@ uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
     }
   }
   return 1;
+}
+
+uint8_t pfwl_http_get_header(pfwl_dissection_info_t *dissection_info,
+                             const char *header_name,
+                             pfwl_string_t *header_value) {
+  return pfwl_http_get_header_internal(dissection_info->l7.protocol_fields[PFWL_FIELDS_L7_HTTP_HEADERS],
+                                       header_name,
+                                       header_value);
 }
 
 uint8_t pfwl_has_protocol_L7(pfwl_dissection_info_t* dissection_info, pfwl_protocol_l7_t protocol){

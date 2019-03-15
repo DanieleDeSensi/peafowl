@@ -259,6 +259,9 @@ typedef struct pfwl_field {
   };
 } pfwl_field_t;
 
+/**
+ * Possible types for peafowl fields.
+ **/
 typedef enum {
   PFWL_FIELD_TYPE_STRING = 0,
   PFWL_FIELD_TYPE_NUMBER,
@@ -266,6 +269,14 @@ typedef enum {
   PFWL_FIELD_TYPE_PAIR,
   PFWL_FIELD_TYPE_MMAP
 } pfwl_field_type_t;
+
+/**
+ * Possible packet directions.
+ **/
+typedef enum {
+  PFWL_DIRECTION_OUTBOUND = 0, ///< From source to destination
+  PFWL_DIRECTION_INBOUND       ///< From destination to source
+} pfwl_direction_t;
 
 // clang-format off
 /**
@@ -443,81 +454,102 @@ typedef struct pfwl_flow_info {
 } pfwl_flow_info_t;
 
 /**
+ * The result of the L2 identification process.
+ **/
+typedef struct pfwl_dissection_info_l2 {
+  size_t length;               ///< Length of L2 header
+  pfwl_protocol_l2_t protocol; ///< L2 (datalink) protocol
+}pfwl_dissection_info_l2_t;
+
+/**
+ * The result of the L3 identification process.
+ **/
+typedef struct pfwl_dissection_info_l3 {
+  size_t length;           ///< Length of L3 header.
+  size_t payload_length;   ///< Length of L3 payload.
+  pfwl_ip_addr_t addr_src; ///< Source address, in network byte order.
+  pfwl_ip_addr_t addr_dst; ///< Destination address, in network byte order.
+  const unsigned char *refrag_pkt; ///< Refragmented IP packet (starting from
+                                   ///< fist byte of L3 packet).
+  size_t refrag_pkt_len; ///< Length of the refragmented packet (without L2
+                         ///< trailer).
+  pfwl_protocol_l3_t protocol; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
+                               ///< PFWL_IP_VERSION_6 in IPv6.
+}pfwl_dissection_info_l3_t;
+
+/**
+ * The result of the L4 identification process.
+ **/
+typedef struct pfwl_dissection_info_l4 {
+  size_t length;         ///< Length of L4 header.
+  size_t payload_length; ///< Length of L4 payload.
+  uint16_t port_src;     ///< Source port, in network byte order.
+  uint16_t port_dst;     ///< Destination port, in network byte order.
+  pfwl_direction_t direction;     ///< Direction of the packet:
+                         ///< 0: From source to dest. 1: From dest to source
+                         ///< (with respect to src and dst stored in the flow).
+                         ///< This is only valid for TCP and UDP packets.
+  const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
+  size_t resegmented_pkt_len;  ///< The length of the resegmented TCP payload.
+  pfwl_protocol_l4_t protocol; ///< The Level 4 protocol.
+  uint8_t has_syn:1; ///< Set to 1 if the packet has the SYN flag set (TCP only).
+  uint8_t has_fin:1; ///< Set to 1 if the packet has the FIN flag set (TCP only).
+  uint8_t has_rst:1; ///< Set to 1 if the packet has the RST flag set (TCP only).
+}pfwl_dissection_info_l4_t;
+
+/**
+ * The result of the L7 identification process.
+ **/
+typedef struct pfwl_dissection_info_l7 {
+  pfwl_protocol_l7_t protocol;                      ///< The first level 7 protocol.
+  pfwl_protocol_l7_t protocols[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
+                                                            ///< For example, Ethereum may be carried by JSON-RPC, which
+                                                            ///< in turn may be carried by HTTP. If such a flow is found,
+                                                            ///< we will have:
+                                                            ///<   protocols[0] = HTTP
+                                                            ///<   protocols[1] = JSON-RPC
+                                                            ///<   protocols[2] = Ethereum
+                                                            ///< i.e., protocols are shown by the outermost to the innermost.
+                                                            ///< Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
+                                                            ///<   protocols[0] = JSON-RPC
+                                                            ///<   protocols[1] = Ethereum
+                                                            ///<
+                                                            ///< This encapsulation can also hold over different packets of a given flow.
+                                                            ///< E.g.IMAP over SSL has a few packet exchanged with plain IMAP and then
+                                                            ///< the subsequent packets encapsulated within SSL.
+                                                            ///< In such a case, the first IMAP packets will only have
+                                                            ///< protocols[0] = IMAP. However, when the first SSL packet for the flow
+                                                            ///< is received, we will have protocols[0] = IMAP and protocols[1] = SSL
+                                                            ///< for that packet and for all the subsequent packets.
+                                                            ///< Indeed, it is important to remark that protocols are associated to
+                                                            ///< flows and not to packets.
+                                                            ///<
+                                                            ///< The value 'protocol' is always equal to protocols[0]
+  uint8_t protocols_num; ///< Number of values set in 'protocols' array.
+  pfwl_field_t protocol_fields[PFWL_FIELDS_L7_NUM]; ///< Fields extracted by
+                                                    /// the dissector. Some of
+                                                    ///< these fields (e.g. strings) are only valid
+                                                    ///< until another packet for the same flow is
+                                                    ///< processed. I.e. if another packet for this
+                                                    ///< flow is received, this data will not be
+                                                    ///< valid anymore. If the user needs to preserve
+                                                    ///< the data for a longer time, a copy of each
+                                                    ///< needed field needs to be done.
+  const char* tags[PFWL_TAGS_MAX];                  ///< Tags associated to the packet.
+  uint16_t tags_num;                                ///< Number of values in 'tags' array.
+}pfwl_dissection_info_l7_t;
+
+/**
  * The result of the identification process.
  **/
 typedef struct pfwl_dissection_info {
-  struct {
-    size_t length;               ///< Length of L2 header
-    pfwl_protocol_l2_t protocol; ///< L2 (datalink) protocol
-  } l2;                          ///< Information known after L2 parsing
-  struct {
-    size_t length;           ///< Length of L3 header.
-    size_t payload_length;   ///< Length of L3 payload.
-    pfwl_ip_addr_t addr_src; ///< Source address, in network byte order.
-    pfwl_ip_addr_t addr_dst; ///< Destination address, in network byte order.
-    const unsigned char *refrag_pkt; ///< Refragmented IP packet (starting from
-                                     ///< fist byte of L3 packet).
-    size_t refrag_pkt_len; ///< Length of the refragmented packet (without L2
-                           ///< trailer).
-    pfwl_protocol_l3_t protocol; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
-                                 ///< PFWL_IP_VERSION_6 in IPv6.
-  } l3;                          ///< Information known after L3 parsing
-  struct {
-    size_t length;         ///< Length of L4 header.
-    size_t payload_length; ///< Length of L4 payload.
-    uint16_t port_src;     ///< Source port, in network byte order.
-    uint16_t port_dst;     ///< Destination port, in network byte order.
-    uint8_t direction;     ///< Direction of the packet:
-                           ///< 0: From source to dest. 1: From dest to source
-                           ///< (with respect to src and dst stored in the flow).
-                           ///< This is only valid for TCP and UDP packets.
-    const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
-    size_t resegmented_pkt_len;  ///< The length of the resegmented TCP payload.
-    pfwl_protocol_l4_t protocol; ///< The Level 4 protocol.
-    uint8_t has_syn:1; ///< Set to 1 if the packet has the SYN flag set (TCP only).
-    uint8_t has_fin:1; ///< Set to 1 if the packet has the FIN flag set (TCP only).
-    uint8_t has_rst:1; ///< Set to 1 if the packet has the RST flag set (TCP only).
-  } l4;                          ///< Information known after L4 parsing
-  struct {
-    pfwl_protocol_l7_t protocol;                      ///< The first level 7 protocol.
-    pfwl_protocol_l7_t protocols[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
-                                                              ///< For example, Ethereum may be carried by JSON-RPC, which
-                                                              ///< in turn may be carried by HTTP. If such a flow is found,
-                                                              ///< we will have:
-                                                              ///<   protocols[0] = HTTP
-                                                              ///<   protocols[1] = JSON-RPC
-                                                              ///<   protocols[2] = Ethereum
-                                                              ///< i.e., protocols are shown by the outermost to the innermost.
-                                                              ///< Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
-                                                              ///<   protocols[0] = JSON-RPC
-                                                              ///<   protocols[1] = Ethereum
-                                                              ///<
-                                                              ///< This encapsulation can also hold over different packets of a given flow.
-                                                              ///< E.g.IMAP over SSL has a few packet exchanged with plain IMAP and then
-                                                              ///< the subsequent packets encapsulated within SSL.
-                                                              ///< In such a case, the first IMAP packets will only have
-                                                              ///< protocols[0] = IMAP. However, when the first SSL packet for the flow
-                                                              ///< is received, we will have protocols[0] = IMAP and protocols[1] = SSL
-                                                              ///< for that packet and for all the subsequent packets.
-                                                              ///< Indeed, it is important to remark that protocols are associated to
-                                                              ///< flows and not to packets.
-                                                              ///<
-                                                              ///< The value 'protocol' is always equal to protocols[0]
-    uint8_t protocols_num; ///< Number of values set in 'protocols' array.
-    pfwl_field_t protocol_fields[PFWL_FIELDS_L7_NUM]; ///< Fields extracted by
-                                                      /// the dissector. Some of
-                                                      ///< these fields (e.g. strings) are only valid
-                                                      ///< until another packet for the same flow is
-                                                      ///< processed. I.e. if another packet for this
-                                                      ///< flow is received, this data will not be
-                                                      ///< valid anymore. If the user needs to preserve
-                                                      ///< the data for a longer time, a copy of each
-                                                      ///< needed field needs to be done.
-    const char* tags[PFWL_TAGS_MAX];                  ///< Tags associated to the packet.
-    uint16_t tags_num;                                ///< Number of values in 'tags' array.
-  } l7;                       ///< Information known after L7 parsing
+  pfwl_dissection_info_l2_t l2; ///< Information known after L2 parsing
+  pfwl_dissection_info_l3_t l3; ///< Information known after L3 parsing
+  pfwl_dissection_info_l4_t l4; ///< Information known after L4 parsing
+  pfwl_dissection_info_l7_t l7; ///< Information known after L7 parsing
   pfwl_flow_info_t flow_info; ///< Information about the flow.
 } pfwl_dissection_info_t;
+
 // clang-format on
 
 /**
@@ -1058,7 +1090,6 @@ pfwl_field_id_t pfwl_get_L7_field_id(pfwl_protocol_l7_t protocol, const char* fi
 /**
  * Returns the protocol associated to a field identifier.
  * @param field The field identifier.
- * @param field_name The name of the field.
  * @return The protocol associated to a field identifier.
  */
 pfwl_protocol_l7_t pfwl_get_L7_field_protocol(pfwl_field_id_t field);

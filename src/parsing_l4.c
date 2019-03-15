@@ -282,7 +282,7 @@ pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
 }
 
 static const char* pfwl_l4_protocols_names[IPPROTO_MAX] = {
-  [0 ... IPPROTO_MAX - 1] = "",
+  [0 ... IPPROTO_MAX - 1] = "Unknown",
 #ifdef IPPROTO_IP
   [IPPROTO_IP]      = "IP",
 #endif
@@ -331,6 +331,7 @@ static const char* pfwl_l4_protocols_names[IPPROTO_MAX] = {
 #ifdef IPPROTO_AH
   [IPPROTO_AH]      = "AH",
 #endif
+  [58]              = "ICMPv6",
 #ifdef IPPROTO_MTP
   [IPPROTO_MTP]     = "MTP",
 #endif
