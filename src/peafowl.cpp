@@ -78,8 +78,10 @@ bool Field::isPresent() const{
   return _field.present;
 }
 
-String Field::getString() const{
-  return _field.basic.string;
+std::string Field::getString() const{
+  std::string s;
+  s.assign((const char*) _field.basic.string.value, _field.basic.string.length);
+  return s;
 }
 
 int64_t Field::getNumber() const{
@@ -219,6 +221,132 @@ pfwl_flow_info_t FlowInfo::getNative() const{
 
 void FlowInfo::setUserData(void* udata){
   *(_flowInfo.udata) = udata;
+}
+
+
+Status::Status(pfwl_status_t status):
+  _status(status){
+  ;
+}
+
+std::string Status::getMessage() const{
+  return pfwl_get_status_msg(_status);
+}
+
+bool Status::isError() const{
+  return _status < 0;
+}
+
+ProtocolL2::ProtocolL2(pfwl_protocol_l2_t protocol):
+  _protocol(protocol), _name(pfwl_get_L2_protocol_name(protocol)){
+  ;
+}
+
+ProtocolL2::ProtocolL2(const std::string& protocol):
+  _protocol(pfwl_get_L2_protocol_id(protocol.c_str())), _name(protocol){
+  ;
+}
+
+const std::string& ProtocolL2::getName() const{
+  return _name;
+}
+
+pfwl_protocol_l2_t ProtocolL2::getId() const{
+  return _protocol;
+}
+
+ProtocolL3::ProtocolL3(pfwl_protocol_l3_t protocol):
+  _protocol(protocol), _name(pfwl_get_L3_protocol_name(protocol)){
+  ;
+}
+
+ProtocolL3::ProtocolL3(const std::string& protocol):
+  _protocol(pfwl_get_L3_protocol_id(protocol.c_str())), _name(protocol){
+  ;
+}
+
+const std::string& ProtocolL3::getName() const{
+  return _name;
+}
+
+pfwl_protocol_l3_t ProtocolL3::getId() const{
+  return _protocol;
+}
+
+ProtocolL4::ProtocolL4(pfwl_protocol_l4_t protocol):
+  _protocol(protocol), _name(pfwl_get_L4_protocol_name(protocol)){
+  ;
+}
+
+ProtocolL4::ProtocolL4(const std::string &protocol):
+  _protocol(pfwl_get_L4_protocol_id(protocol.c_str())), _name(protocol){
+  ;
+}
+
+const std::string& ProtocolL4::getName() const{
+  return _name;
+}
+
+pfwl_protocol_l4_t ProtocolL4::getId() const{
+  return _protocol;
+}
+
+ProtocolL7::ProtocolL7(pfwl_protocol_l7_t protocol):
+  _protocol(protocol), _name(pfwl_get_L7_protocol_name(protocol)){
+  ;
+}
+
+ProtocolL7::ProtocolL7(const std::string &protocol):
+  _protocol(pfwl_get_L7_protocol_id(protocol.c_str())), _name(protocol){
+  ;
+}
+
+const std::string& ProtocolL7::getName() const{
+  return _name;
+}
+
+pfwl_protocol_l7_t ProtocolL7::getId() const{
+  return _protocol;
+}
+
+bool operator== (const ProtocolL2 &p1, const pfwl_protocol_l2_t &p2){
+  return p1._protocol == p2;
+}
+
+bool operator!= (const ProtocolL2 &p1, const pfwl_protocol_l2_t &p2){
+  return !(p1 == p2);
+}
+
+bool operator== (const ProtocolL3 &p1, const pfwl_protocol_l3_t &p2){
+  return p1._protocol == p2;
+}
+
+bool operator!= (const ProtocolL3 &p1, const pfwl_protocol_l3_t &p2){
+  return !(p1 == p2);
+}
+
+bool operator== (const ProtocolL4 &p1, const pfwl_protocol_l4_t &p2){
+  return p1._protocol == p2;
+}
+
+bool operator!= (const ProtocolL4 &p1, const pfwl_protocol_l4_t &p2){
+  return !(p1 == p2);
+}
+
+bool operator== (const ProtocolL4 &p1, const int &p2){
+  return p1 == (pfwl_protocol_l4_t) p2;
+}
+
+bool operator!= (const ProtocolL4 &p1, const int &p2){
+  return p1 != (pfwl_protocol_l4_t) p2;
+}
+
+bool operator== (const ProtocolL7 &p1, const pfwl_protocol_l7_t &p2){
+  return p1._protocol == p2;
+}
+
+bool operator!= (const ProtocolL7 &p1, const pfwl_protocol_l7_t &p2){
+  return !(p1 == p2);
 }
 
 DissectionInfoL2::DissectionInfoL2(){
@@ -361,10 +489,14 @@ std::vector<ProtocolL7> DissectionInfoL7::getProtocols() const{
   return r;
 }
 
+Field DissectionInfoL7::getField(FieldId id) const{
+  return Field(_dissectionInfo.protocol_fields[id]);
+}
+
 std::vector<Field> DissectionInfoL7::getFields() const{
   std::vector<Field> r;
   for(size_t i = 0; i < PFWL_FIELDS_L7_NUM; i++){
-    r.push_back(Field(_dissectionInfo.protocol_fields[i]));
+    r.push_back(getField((FieldId) i));
   }
   return r;
 }
@@ -381,25 +513,22 @@ pfwl_dissection_info_l7_t DissectionInfoL7::getNative() const{
   return _dissectionInfo;
 }
 
-DissectionInfo::DissectionInfo(){
-  memset(&_dissectionInfo, 0, sizeof(_dissectionInfo));
-}
-
-DissectionInfo::DissectionInfo(pfwl_dissection_info_t info):
-  l2(info.l2), l3(info.l3), l4(info.l4), l7(info.l7), flowInfo(info.flow_info){
-  _dissectionInfo = info;
+DissectionInfo::DissectionInfo(pfwl_dissection_info_t info, Status status):
+  _dissectionInfo(info), _l2(info.l2), _l3(info.l3),
+  _l4(info.l4), _l7(info.l7), _flowInfo(info.flow_info),
+  _status(status){
+  ;
 }
 
 DissectionInfo& DissectionInfo::operator=(const pfwl_dissection_info_t& info){
   _dissectionInfo = info;
-  l2 = info.l2;
-  l3 = info.l3;
-  l4 = info.l4;
-  l7 = info.l7;
-  flowInfo = info.flow_info;
+  _l2 = info.l2;
+  _l3 = info.l3;
+  _l4 = info.l4;
+  _l7 = info.l7;
+  _flowInfo = info.flow_info;
   return *this;
 }
-
 
 ProtocolL7 DissectionInfo::guessProtocol() const{
   return pfwl_guess_protocol(_dissectionInfo);
@@ -407,7 +536,7 @@ ProtocolL7 DissectionInfo::guessProtocol() const{
 
 Field DissectionInfo::httpGetHeader(const char *headerName) const{
   pfwl_field_t field;
-  if(!pfwl_http_get_header_internal(l7.getFields()[PFWL_FIELDS_L7_HTTP_HEADERS].getNative(),
+  if(!pfwl_http_get_header_internal(_l7.getFields()[PFWL_FIELDS_L7_HTTP_HEADERS].getNative(),
                                     headerName, &field.basic.string)){
     field.present = 1;
   }else{
@@ -417,16 +546,100 @@ Field DissectionInfo::httpGetHeader(const char *headerName) const{
 }
 
 bool DissectionInfo::hasProtocolL7(ProtocolL7 protocol) const{
-  const std::vector<ProtocolL7>& v = l7.getProtocols();
+  const std::vector<ProtocolL7>& v = _l7.getProtocols();
   return std::find(v.begin(), v.end(), protocol) != v.end();
 }
 
 Field DissectionInfo::getField(FieldId id) const{
-  return l7.getFields()[id];
+  return _l7.getFields()[id];
+}
+
+Status DissectionInfo::getStatus() const{
+  return _status;
+}
+
+DissectionInfoL2 DissectionInfo::getL2() const{
+  return _l2;
+}
+
+DissectionInfoL3 DissectionInfo::getL3() const{
+  return _l3;
+}
+
+DissectionInfoL4 DissectionInfo::getL4() const{
+  return _l4;
+}
+
+DissectionInfoL7 DissectionInfo::getL7() const{
+  return _l7;
+}
+
+FlowInfo DissectionInfo::getFlowInfo() const{
+  return _flowInfo;
 }
 
 FlowManager::~FlowManager(){
   ;
+}
+
+DefragmentationOptions::DefragmentationOptions():
+   _tableSizeIPv4(0), _tableSizeIPv6(0),
+   _perHostMemoryLimitIPv4(0), _perHostMemoryLimitIPv6(0),
+   _totalMemoryLimitIPv4(0), _totalMemoryLimitIPv6(0),
+   _reassemblyTimeoutIPv4(0), _reassemblyTimeoutIPv6(0),
+   _enabledIPv4(false), _enabledIPv6(false),
+   _perHostMemoryLimitIPv4set(false), _perHostMemoryLimitIPv6set(false),
+   _totalMemoryLimitIPv4set(false), _totalMemoryLimitIPv6set(false),
+   _reassemblyTimeoutIPv4set(false), _reassemblyTimeoutIPv6set(false){
+  ;
+}
+
+void DefragmentationOptions::enableIPv4(uint16_t tableSize){
+  _enabledIPv4 = true;
+  _tableSizeIPv4 = tableSize;
+}
+
+void DefragmentationOptions::enableIPv6(uint16_t tableSize){
+  _enabledIPv6 = true;
+  _tableSizeIPv6 = tableSize;
+}
+
+void DefragmentationOptions::setPerHostMemoryLimitIPv4(uint32_t perHostMemoryLimit){
+  _perHostMemoryLimitIPv4set = true;
+  _perHostMemoryLimitIPv4 = perHostMemoryLimit;
+}
+
+void DefragmentationOptions::setPerHostMemoryLimitIPv6(uint32_t perHostMemoryLimit){
+  _perHostMemoryLimitIPv6set = true;
+  _perHostMemoryLimitIPv6 = perHostMemoryLimit;
+}
+
+void DefragmentationOptions::setTotalMemoryLimitIPv4(uint32_t totalMemoryLimit){
+  _totalMemoryLimitIPv4set = true;
+  _totalMemoryLimitIPv4 = totalMemoryLimit;
+}
+
+void DefragmentationOptions::setTotalMemoryLimitIPv6(uint32_t totalMemoryLimit){
+  _totalMemoryLimitIPv6set = true;
+  _totalMemoryLimitIPv6 = totalMemoryLimit;
+}
+
+void DefragmentationOptions::setReassemblyTimeoutIPv4(uint8_t timeoutSeconds){
+  _reassemblyTimeoutIPv4set = true;
+  _reassemblyTimeoutIPv4 = timeoutSeconds;
+}
+
+void DefragmentationOptions::setReassemblyTimeoutIPv6(uint8_t timeoutSeconds){
+  _reassemblyTimeoutIPv6set = true;
+  _reassemblyTimeoutIPv6 = timeoutSeconds;
+}
+
+void DefragmentationOptions::disableIPv4(){
+  _enabledIPv4 = false;
+}
+
+void DefragmentationOptions::disableIPv6(){
+  _enabledIPv6 = false;
 }
 
 Peafowl::Peafowl(){
@@ -461,63 +674,45 @@ void Peafowl::setMaxTrials(uint16_t maxTrials){
   }
 }
 
-
-void Peafowl::defragmentationEnableIPv4(uint16_t tableSize){
-  if(pfwl_defragmentation_enable_ipv4(_state, tableSize)){
+void Peafowl::setDefragmentationOptions(const DefragmentationOptions& options){
+  if(options._enabledIPv4 &&
+     pfwl_defragmentation_enable_ipv4(_state, options._tableSizeIPv4)){
     throw std::runtime_error("pfwl_defragmentation_enable_ipv4 failed\n");
   }
-}
-
-void Peafowl::defragmentationEnableIPv6(uint16_t tableSize){
-  if(pfwl_defragmentation_enable_ipv6(_state, tableSize)){
+  if(options._enabledIPv6 &&
+     pfwl_defragmentation_enable_ipv6(_state, options._tableSizeIPv6)){
     throw std::runtime_error("pfwl_defragmentation_enable_ipv6 failed\n");
   }
-}
-
-void Peafowl::defragmentationSetPerHostMemoryLimitIPv4(uint32_t perHostMemoryLimit){
-  if(pfwl_defragmentation_set_per_host_memory_limit_ipv4(_state, perHostMemoryLimit)){
+  if(options._perHostMemoryLimitIPv4set &&
+     pfwl_defragmentation_set_per_host_memory_limit_ipv4(_state, options._perHostMemoryLimitIPv4)){
     throw std::runtime_error("pfwl_defragmentation_set_per_host_memory_limit_ipv4 failed\n");
   }
-}
-
-void Peafowl::defragmentationSetPerHostMemoryLimitIPv6(uint32_t perHostMemoryLimit){
-  if(pfwl_defragmentation_set_per_host_memory_limit_ipv6(_state, perHostMemoryLimit)){
+  if(options._perHostMemoryLimitIPv6set &&
+     pfwl_defragmentation_set_per_host_memory_limit_ipv6(_state, options._perHostMemoryLimitIPv6)){
     throw std::runtime_error("pfwl_defragmentation_set_per_host_memory_limit_ipv6 failed\n");
   }
-}
-
-void Peafowl::defragmentationSetTotalMemoryLimitIPv4(uint32_t totalMemoryLimit){
-  if(pfwl_defragmentation_set_total_memory_limit_ipv4(_state, totalMemoryLimit)){
+  if(options._totalMemoryLimitIPv4set &&
+     pfwl_defragmentation_set_total_memory_limit_ipv4(_state, options._totalMemoryLimitIPv4)){
     throw std::runtime_error("pfwl_defragmentation_set_total_memory_limit_ipv4 failed\n");
   }
-}
-
-void Peafowl::defragmentationSetTotalMemoryLimitIPv6(uint32_t totalMemoryLimit){
-  if(pfwl_defragmentation_set_total_memory_limit_ipv6(_state, totalMemoryLimit)){
+  if(options._totalMemoryLimitIPv6set &&
+     pfwl_defragmentation_set_total_memory_limit_ipv6(_state, options._totalMemoryLimitIPv6)){
     throw std::runtime_error("pfwl_defragmentation_set_total_memory_limit_ipv6 failed\n");
   }
-}
-
-void Peafowl::defragmentationSetReassemblyTimeoutIPv4(uint8_t timeoutSeconds){
-  if(pfwl_defragmentation_set_reassembly_timeout_ipv4(_state, timeoutSeconds)){
+  if(options._reassemblyTimeoutIPv4set &&
+     pfwl_defragmentation_set_reassembly_timeout_ipv4(_state, options._reassemblyTimeoutIPv4)){
     throw std::runtime_error("pfwl_defragmentation_set_reassembly_timeout_ipv4 failed\n");
   }
-}
-
-void Peafowl::defragmentationSetReassemblyTimeoutIPv6(uint8_t timeoutSeconds){
-  if(pfwl_defragmentation_set_reassembly_timeout_ipv6(_state, timeoutSeconds)){
+  if(options._reassemblyTimeoutIPv6set &&
+     pfwl_defragmentation_set_reassembly_timeout_ipv6(_state, options._reassemblyTimeoutIPv6)){
     throw std::runtime_error("pfwl_defragmentation_set_reassembly_timeout_ipv6 failed\n");
   }
-}
-
-void Peafowl::defragmentationDisableIPv4(){
-  if(pfwl_defragmentation_disable_ipv4(_state)){
+  if(!options._enabledIPv4 &&
+     pfwl_defragmentation_disable_ipv4(_state)){
     throw std::runtime_error("pfwl_defragmentation_disable_ipv4 failed\n");
   }
-}
-
-void Peafowl::defragmentationDisableIPv6(){
-  if(pfwl_defragmentation_disable_ipv6(_state)){
+  if(!options._enabledIPv6 &&
+     pfwl_defragmentation_disable_ipv6(_state)){
     throw std::runtime_error("pfwl_defragmentation_disable_ipv6 failed\n");
   }
 }
@@ -558,68 +753,50 @@ void Peafowl::protocolL7DisableAll(){
   }
 }
 
-DissectionInfo Peafowl::dissectFromL2(const unsigned char *pkt, size_t length, uint32_t timestamp, ProtocolL2 datalinkType){
+DissectionInfo Peafowl::dissectFromL2(const std::string &pkt, uint32_t timestamp, ProtocolL2 datalinkType){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_from_L2(_state, pkt, length, timestamp, datalinkType, &info);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_from_L2(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, datalinkType, &info);
+  return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectFromL3(const unsigned char *pkt, size_t length, uint32_t timestamp){
+DissectionInfo Peafowl::dissectFromL3(const std::string &pkt, uint32_t timestamp){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_from_L3(_state, pkt, length, timestamp, &info);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_from_L3(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
+  return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectFromL4(const unsigned char *pkt, size_t length, uint32_t timestamp){
+DissectionInfo Peafowl::dissectFromL4(const std::string &pkt, uint32_t timestamp){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_from_L4(_state, pkt, length, timestamp, &info);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_from_L4(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
+  return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL2(const unsigned char *packet, pfwl_protocol_l2_t datalinkType){
+DissectionInfo Peafowl::dissectL2(const std::string &pkt, pfwl_protocol_l2_t datalinkType){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_L2(packet, datalinkType, &info);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_L2((const unsigned char*) pkt.c_str(), datalinkType, &info);
+  return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL3(const unsigned char *pkt, size_t length, uint32_t timestamp){
+DissectionInfo Peafowl::dissectL3(const std::string &pkt, uint32_t timestamp){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_L3(_state, pkt, length, timestamp, &info);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_L3(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
+  return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL4(const unsigned char *pkt, size_t length, uint32_t timestamp, FlowInfoPrivate **flowInfoPrivate){
+DissectionInfo Peafowl::dissectL4(const std::string &pkt, uint32_t timestamp, FlowInfoPrivate &flowInfoPrivate){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_L4(_state, pkt, length, timestamp, &info, flowInfoPrivate);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_L4(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info, &(flowInfoPrivate._info));
+  return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL7(const unsigned char *pkt, size_t length, FlowInfoPrivate *flowInfoPrivate){
+DissectionInfo Peafowl::dissectL7(const std::string &pkt, FlowInfoPrivate &flowInfoPrivate){
   pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_L7(_state, pkt, length, &info, flowInfoPrivate);
-  DissectionInfo r(info);
-  r.status = s;
-  return r;
+  Status s = pfwl_dissect_L7(_state, (const unsigned char*) pkt.c_str(), pkt.size(), &info, flowInfoPrivate._info);
+  return DissectionInfo(info, s);
 }
 
-void Peafowl::initFlowInfo(FlowInfoPrivate *flowInfoPrivate) const{
-  pfwl_init_flow_info(_state, flowInfoPrivate);
-}
-
-std::string getStatusMessage(Status status){
-  return pfwl_get_status_msg(status);
+FlowInfoPrivate::FlowInfoPrivate(const Peafowl& state){
+  pfwl_init_flow_info(state._state, _info);
 }
 
 std::string getL2ProtocolName(ProtocolL2 protocol){

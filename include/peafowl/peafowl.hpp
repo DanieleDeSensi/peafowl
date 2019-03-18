@@ -63,7 +63,7 @@ public:
   Field();
   Field(pfwl_field_t field);
   bool isPresent() const;
-  String getString() const;
+  std::string getString() const;
   int64_t getNumber() const;
   pfwl_field_t getNative() const;
 };
@@ -93,10 +93,63 @@ public:
   uint32_t getRstSent(Direction direction) const;
 };
 
-typedef pfwl_protocol_l2_t ProtocolL2;
-typedef pfwl_protocol_l3_t ProtocolL3;
-typedef pfwl_protocol_l4_t ProtocolL4;
-typedef pfwl_protocol_l7_t ProtocolL7;
+class ProtocolL2{
+private:
+  const pfwl_protocol_l2_t _protocol;
+  const std::string _name;
+public:
+  ProtocolL2(pfwl_protocol_l2_t protocol);
+  ProtocolL2(const std::string& protocol);
+  const std::string& getName() const;
+  pfwl_protocol_l2_t getId() const;
+  operator pfwl_protocol_l2_t() const {return _protocol;}
+  friend bool operator== (const ProtocolL2 &p1, const pfwl_protocol_l2_t &p2);
+  friend bool operator!= (const ProtocolL2 &p1, const pfwl_protocol_l2_t &p2);
+};
+
+class ProtocolL3{
+private:
+  const pfwl_protocol_l3_t _protocol;
+  const std::string _name;
+public:
+  ProtocolL3(pfwl_protocol_l3_t protocol);
+  ProtocolL3(const std::string& protocol);
+  const std::string& getName() const;
+  pfwl_protocol_l3_t getId() const;
+  operator pfwl_protocol_l3_t() const {return _protocol;}
+  friend bool operator== (const ProtocolL3 &p1, const pfwl_protocol_l3_t &p2);
+  friend bool operator!= (const ProtocolL3 &p1, const pfwl_protocol_l3_t &p2);
+};
+
+class ProtocolL4{
+private:
+  const pfwl_protocol_l4_t _protocol;
+  const std::string _name;
+public:
+  ProtocolL4(pfwl_protocol_l4_t protocol);
+  ProtocolL4(const std::string& protocol);
+  const std::string& getName() const;
+  pfwl_protocol_l4_t getId() const;
+  operator pfwl_protocol_l4_t() const {return _protocol;}
+  friend bool operator== (const ProtocolL4 &p1, const pfwl_protocol_l4_t &p2);
+  friend bool operator!= (const ProtocolL4 &p1, const pfwl_protocol_l4_t &p2);
+  friend bool operator== (const ProtocolL4 &p1, const int &p2);
+  friend bool operator!= (const ProtocolL4 &p1, const int &p2);
+};
+
+class ProtocolL7{
+private:
+  const pfwl_protocol_l7_t _protocol;
+  const std::string _name;
+public:
+  ProtocolL7(pfwl_protocol_l7_t protocol);
+  ProtocolL7(const std::string& protocol);
+  const std::string& getName() const;
+  pfwl_protocol_l7_t getId() const;
+  operator pfwl_protocol_l7_t() const {return _protocol;}
+  friend bool operator== (const ProtocolL7 &p1, const pfwl_protocol_l7_t &p2);
+  friend bool operator!= (const ProtocolL7 &p1, const pfwl_protocol_l7_t &p2);
+};
 
 class FlowInfo {
 private:
@@ -173,6 +226,8 @@ public:
   pfwl_dissection_info_l4_t getNative() const;
 };
 
+typedef pfwl_field_id_t FieldId;
+
 class DissectionInfoL7{
 private:
   pfwl_dissection_info_l7_t _dissectionInfo;
@@ -181,27 +236,32 @@ public:
   DissectionInfoL7(pfwl_dissection_info_l7_t dissectionInfo);
   ProtocolL7 getProtocol() const;
   std::vector<ProtocolL7> getProtocols() const;
+  Field getField(FieldId id) const;
   std::vector<Field> getFields() const;
   std::vector<std::string> getTags() const;
   pfwl_dissection_info_l7_t getNative() const;
 };
 
-typedef pfwl_field_id_t FieldId;
-typedef pfwl_status_t Status;
+class Status{
+private:
+  pfwl_status_t _status;
+public:
+  Status(pfwl_status_t status);
+  std::string getMessage() const;
+  bool isError() const;
+};
 
 class DissectionInfo{
 private:
   pfwl_dissection_info_t _dissectionInfo;
+  DissectionInfoL2 _l2;
+  DissectionInfoL3 _l3;
+  DissectionInfoL4 _l4;
+  DissectionInfoL7 _l7;
+  FlowInfo _flowInfo;
+  Status _status;
 public:
-  DissectionInfoL2 l2;
-  DissectionInfoL3 l3;
-  DissectionInfoL4 l4;
-  DissectionInfoL7 l7;
-  FlowInfo flowInfo;
-  Status status;
-
-  DissectionInfo();
-  DissectionInfo(pfwl_dissection_info_t dissectionInfo);
+  DissectionInfo(pfwl_dissection_info_t dissectionInfo, Status status);
   DissectionInfo& operator=(const pfwl_dissection_info_t& rhs);
 
   /**
@@ -257,9 +317,48 @@ public:
    * @return The status of the processing.
    */
   Status getStatus() const;
+
+  /**
+   * @brief getL2 Returns the L2 dissection information.
+   * @return The L2 dissection information.
+   */
+  DissectionInfoL2 getL2() const;
+
+  /**
+   * @brief getL3 Returns the L3 dissection information.
+   * @return The L3 dissection information.
+   */
+  DissectionInfoL3 getL3() const;
+
+  /**
+   * @brief getL4 Returns the L4 dissection information.
+   * @return The L4 dissection information.
+   */
+  DissectionInfoL4 getL4() const;
+
+  /**
+   * @brief getL7 Returns the L7 dissection information.
+   * @return The L7 dissection information.
+   */
+  DissectionInfoL7 getL7() const;
+
+  /**
+   * @brief getFlowInfo Returns the flow information.
+   * @return The flow information.
+   */
+  FlowInfo getFlowInfo() const;
 };
 
-typedef pfwl_flow_info_private_t FlowInfoPrivate;
+class Peafowl;
+
+class FlowInfoPrivate{
+  friend class Peafowl;
+private:
+  pfwl_flow_info_private_t* _info;
+public:
+  FlowInfoPrivate(const Peafowl& state);
+};
+
 typedef pfwl_dissector_accuracy_t DissectorAccuracy;
 typedef pfwl_field_matching_t FieldMatching;
 
@@ -281,11 +380,108 @@ public:
    * managed by the implementer.
    * @param info The flow information.
    */
-  virtual void onTermination(const FlowInfo& info) = 0;
+  virtual void onTermination(const FlowInfo& info){;}
+};
+
+/**
+ * @brief The DefragmentationOptions class describes
+ * options to customize Peafowl's defragmentation
+ * routines.
+ */
+class DefragmentationOptions{
+  friend class Peafowl;
+private:
+  uint16_t _tableSizeIPv4, _tableSizeIPv6;
+  uint32_t _perHostMemoryLimitIPv4, _perHostMemoryLimitIPv6;
+  uint32_t _totalMemoryLimitIPv4, _totalMemoryLimitIPv6;
+  uint8_t _reassemblyTimeoutIPv4, _reassemblyTimeoutIPv6;
+  bool _enabledIPv4, _enabledIPv6;
+  bool _perHostMemoryLimitIPv4set, _perHostMemoryLimitIPv6set;
+  bool _totalMemoryLimitIPv4set, _totalMemoryLimitIPv6set;
+  bool _reassemblyTimeoutIPv4set, _reassemblyTimeoutIPv6set;
+public:
+  DefragmentationOptions();
+
+  /**
+   * Enables IPv4 defragmentation. It is enabled by default.
+   * @param tableSize   The size of the table to be used to store IPv4
+   *                     fragments informations.
+   */
+  void enableIPv4(uint16_t tableSize);
+
+  /**
+   * Enables IPv6 defragmentation. It is enabled by default.
+   * @param tableSize   The size of the table to be used to store IPv6
+   *                     fragments informations.
+   */
+  void enableIPv6(uint16_t tableSize);
+
+  /**
+   * Sets the amount of memory (in bytes) that a single host can use for IPv4
+   * defragmentation.
+   * @param perHostMemoryLimit   The maximum amount of memory that
+   *                                any IPv4 host can use.
+   */
+  void setPerHostMemoryLimitIPv4(uint32_t perHostMemoryLimit);
+
+  /**
+   * Sets the amount of memory (in bytes) that a single host can use for IPv6
+   * defragmentation.
+   * @param perHostMemoryLimit   The maximum amount of memory that
+   *                                any IPv6 host can use.
+   */
+  void setPerHostMemoryLimitIPv6(uint32_t perHostMemoryLimit);
+
+  /**
+   * Sets the total amount of memory (in bytes) that can be used for IPv4
+   * defragmentation.
+   * If defragmentation is disabled and then enabled again,
+   * this function must be called again.
+   * @param totalMemoryLimit  The maximum amount of memory that can be used
+   *                            for IPv4 defragmentation.
+   */
+  void setTotalMemoryLimitIPv4(uint32_t totalMemoryLimit);
+
+  /**
+   * Sets the total amount of memory (in bytes) that can be used for IPv6
+   * defragmentation.
+   * If defragmentation is disabled and then enabled again,
+   * this function must be called again.
+   * @param totalMemoryLimit  The maximum amount of memory that can be used
+   *                            for IPv6 defragmentation.
+   */
+  void setTotalMemoryLimitIPv6(uint32_t totalMemoryLimit);
+
+  /**
+   * Sets the maximum time (in seconds) that can be spent to reassembly an
+   * IPv4 fragmented datagram. Is the maximum time gap between the first and
+   * last fragments of the datagram.
+   * @param timeoutSeconds  The reassembly timeout.
+   */
+  void setReassemblyTimeoutIPv4(uint8_t timeoutSeconds);
+
+  /**
+   * Sets the maximum time (in seconds) that can be spent to reassembly an
+   * IPv6 fragmented datagram. Is the maximum time gap between the first and
+   * last fragments of the datagram.
+   * @param timeoutSeconds  The reassembly timeout.
+   */
+  void setReassemblyTimeoutIPv6(uint8_t timeoutSeconds);
+
+  /**
+   * Disables IPv4 defragmentation.
+   */
+  void disableIPv4();
+
+  /**
+   * Disables IPv6 defragmentation.
+   */
+  void disableIPv6();
 };
 
 // clang-format on
 class Peafowl{
+  friend class FlowInfoPrivate;
 private:
   pfwl_state_t* _state;
 public:
@@ -331,80 +527,10 @@ public:
   void setMaxTrials(uint16_t maxTrials);
 
   /**
-   * Enables IPv4 defragmentation. It is enabled by default.
-   * @param tableSize   The size of the table to be used to store IPv4
-   *                     fragments informations.
+   * @brief setDefragmentationOptions Sets the IPv4/IPv6 defragmentation options.
+   * @param options The IPv4/IPv6 defragmentation options.
    */
-  void defragmentationEnableIPv4(uint16_t tableSize);
-
-  /**
-   * Enables IPv6 defragmentation. It is enabled by default.
-   * @param tableSize   The size of the table to be used to store IPv6
-   *                     fragments informations.
-   */
-  void defragmentationEnableIPv6(uint16_t tableSize);
-
-  /**
-   * Sets the amount of memory (in bytes) that a single host can use for IPv4
-   * defragmentation.
-   * @param perHostMemoryLimit   The maximum amount of memory that
-   *                                any IPv4 host can use.
-   */
-  void defragmentationSetPerHostMemoryLimitIPv4(uint32_t perHostMemoryLimit);
-
-  /**
-   * Sets the amount of memory (in bytes) that a single host can use for IPv6
-   * defragmentation.
-   * @param perHostMemoryLimit   The maximum amount of memory that
-   *                                any IPv6 host can use.
-   */
-  void defragmentationSetPerHostMemoryLimitIPv6(uint32_t perHostMemoryLimit);
-
-  /**
-   * Sets the total amount of memory (in bytes) that can be used for IPv4
-   * defragmentation.
-   * If defragmentation is disabled and then enabled again,
-   * this function must be called again.
-   * @param totalMemoryLimit  The maximum amount of memory that can be used
-   *                            for IPv4 defragmentation.
-   */
-  void defragmentationSetTotalMemoryLimitIPv4(uint32_t totalMemoryLimit);
-
-  /**
-   * Sets the total amount of memory (in bytes) that can be used for IPv6
-   * defragmentation.
-   * If defragmentation is disabled and then enabled again,
-   * this function must be called again.
-   * @param totalMemoryLimit  The maximum amount of memory that can be used
-   *                            for IPv6 defragmentation.
-   */
-  void defragmentationSetTotalMemoryLimitIPv6(uint32_t totalMemoryLimit);
-
-  /**
-   * Sets the maximum time (in seconds) that can be spent to reassembly an
-   * IPv4 fragmented datagram. Is the maximum time gap between the first and
-   * last fragments of the datagram.
-   * @param timeoutSeconds  The reassembly timeout.
-   */
-  void defragmentationSetReassemblyTimeoutIPv4(uint8_t timeoutSeconds);
-
-  /**
-   * Sets the maximum time (in seconds) that can be spent to reassembly an
-   * IPv6 fragmented datagram. Is the maximum time gap between the first and
-   * last fragments of the datagram.
-   * @param timeoutSeconds  The reassembly timeout.
-   */
-  void defragmentationSetReassemblyTimeoutIPv6(uint8_t timeoutSeconds);
-
-  /**
-   * Disables IPv4 defragmentation.
-   */
-  void defragmentationDisableIPv4();
-
-  /**
-   * Disables IPv6 defragmentation.
-   */
-  void defragmentationDisableIPv6();
+  void setDefragmentationOptions(const DefragmentationOptions& options);
 
   /**
    * If enabled, the library will reorder out of order TCP packets
@@ -446,8 +572,7 @@ public:
 
   /**
    * Dissects the packet starting from the beginning of the L2 (datalink) header.
-   * @param pkt The pointer to the beginning of datalink header.
-   * @param length Length of the packet.
+   * @param pkt A string containing the packet.
    * @param timestamp The current time in seconds.
    * @param datalinkType The datalink type. They match 1:1 the pcap datalink
    * types. You can convert a PCAP datalink type to a Peafowl datalink type by
@@ -456,40 +581,37 @@ public:
    *        set to 0 before calling this call.
    *        Dissection information from L2 to L7 will be filled in by this call.
    */
-  DissectionInfo dissectFromL2(const unsigned char *pkt, size_t length,
+  DissectionInfo dissectFromL2(const std::string& pkt,
                                uint32_t timestamp,
                                ProtocolL2 datalinkType);
 
   /**
    * Dissects the packet starting from the beginning of the L3 (IP) header.
-   * @param   pkt The pointer to the beginning of IP header.
-   * @param   length Length of the packet (from the beginning of the IP header).
+   * @param   pkt A string containing the packet (starting from the IP header).
    * @param   timestamp The current time in seconds.
    * @return  The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information from L3 to L7 will be filled in by this call.
    */
-  DissectionInfo dissectFromL3(const unsigned char *pkt, size_t length,
+  DissectionInfo dissectFromL3(const std::string& pkt,
                                uint32_t timestamp);
 
   /**
    * Dissects the packet starting from the beginning of the L4 (UDP or TCP)
    * header.
-   * @param   pkt The pointer to the beginning of UDP or TCP header.
-   * @param   length Length of the packet (from the beginning of the UDP or TCP
-   * header).
-   * @param   timestamp The current time in seconds.
+   * @param  pkt A string containing the packet (from the start of TCP/UDP header).
+   * @param  timestamp The current time in seconds.
    * @return The result of the dissection. All its bytes must be
    *         set to 0 before calling this call.
    *         Dissection information about L3 header must be filled in by the
    *         caller. Dissection information from L4 to L7 will be filled in by this call.
    */
-  DissectionInfo dissectFromL4(const unsigned char *pkt, size_t length,
+  DissectionInfo dissectFromL4(const std::string& pkt,
                                uint32_t timestamp);
 
   /**
    * Extracts from the packet the L2 information.
-   * @param packet A pointer to the packet.
+   * @param pkt A string containing the packet.
    * @param datalinkType The datalink type. They match 1:1 the pcap datalink
    * types. You can convert a PCAP datalink type to a Peafowl datalink type by
    * calling the function 'pfwl_convert_pcap_dlt'.
@@ -498,13 +620,12 @@ public:
    *        Dissection information about L2 headers will be filled in by this
    *        call.
    */
-  DissectionInfo dissectL2(const unsigned char *packet,
+  DissectionInfo dissectL2(const std::string& pkt,
                            pfwl_protocol_l2_t datalinkType);
 
   /**
    * Extracts from the packet the L3 information.
-   * @param   pkt The pointer to the beginning of IP header.
-   * @param   length Length of the packet (from the beginning of the IP header).
+   * @param   pkt A string containing the packet (from the start of the IP header).
    * @param   timestamp The current time in seconds. It must be
    *          non-decreasing between two consecutive calls.
    * @return The result of the dissection. All its bytes must be
@@ -512,27 +633,24 @@ public:
    *          Dissection information about L3 headers will be filled in by this
    *          call.
    */
-  DissectionInfo dissectL3(const unsigned char *pkt,
-                           size_t length, uint32_t timestamp);
+  DissectionInfo dissectL3(const std::string& pkt,
+                           uint32_t timestamp);
 
   /**
    * Extracts from the packet the L4 information.
-   * @param   pkt The pointer to the beginning of UDP or TCP header.
-   * @param   length Length of the packet (from the beginning of the UDP or TCP
-   * header).
+   * @param   pkt A string containing the packet (from the start of the TCP/UDP header).
    * @param   timestamp The current time in seconds. It must be
    *          non-decreasing between two consecutive calls.
-   * @param   flowInfoPrivate Will be filled by this library. *flow_info_private
-   * will point to the private information about the flow.
+   * @param   flowInfoPrivate Will be filled by this library.
    * @return  The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information about L3 headers must be filled in by the
    *          caller. l4.protocol must be filled in by the caller as well. Dissection
    *          information about L4 headers will be filled in by this call.
    */
-  DissectionInfo dissectL4(const unsigned char *pkt,
-                           size_t length, uint32_t timestamp,
-                           FlowInfoPrivate **flowInfoPrivate);
+  DissectionInfo dissectL4(const std::string& pkt,
+                           uint32_t timestamp,
+                           FlowInfoPrivate &flowInfoPrivate);
 
   /**
    * Extracts from the packet the L7 information. Before calling it, a check on
@@ -545,27 +663,17 @@ public:
    * flow already present in the application.
    * With this call, information in dissection_info->flow are only set for
    * L7 packets and bytes.
-   * @param   pkt The pointer to the beginning of application data.
-   * @param   length Length of the packet (from the beginning of the
-   *          L7 header).
+   * @param   pkt A string containing the packet (from the start of application data).
    * @param   flowInfoPrivate The private information about the flow. It must be
-   *          stored by the user and itialized with the pfwl_init_flow_info(...)
-   * call.
+   *          stored by the user.
    * @return  The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information about L3 and L4 headers must be filled in by
    *          the caller. Dissection information about L7 packet will be filled in by this
    *          call.
    */
-  DissectionInfo dissectL7(const unsigned char *pkt, size_t length,
-                           FlowInfoPrivate *flowInfoPrivate);
-
-  /**
-   * Initialize the flow informations passed as argument.
-   * @param flowInfoPrivate The private flow information, will be initialized
-   * by the library.
-   */
-  void initFlowInfo(FlowInfoPrivate *flowInfoPrivate) const;
+  DissectionInfo dissectL7(const std::string& pkt,
+                           FlowInfoPrivate &flowInfoPrivate);
 
   /**
    * Enables the extraction of a specific L7 field for a given protocol.
@@ -607,8 +715,6 @@ public:
    * @param accuracy    The accuracy level.
    */
   void setProtocolAccuracyL7(ProtocolL7 protocol, DissectorAccuracy accuracy);
-
-
 
   /**
    * Loads the associations between fields values and user-defined tags.
@@ -690,47 +796,11 @@ public:
 };
 
 /**
- * Returns the string representing the status message associated to the
- * specified status_code.
- * @param   status The status code.
- * @return  The status message.
- */
-std::string getStatusMessage(Status status);
-
-/**
- * Returns the string represetation of an L2 protocol.
- * @param   protocol The L2 protocol identifier.
- * @return  The string representation of the L2 protocol with id 'protocol'.
- */
-std::string getL2ProtocolName(ProtocolL2 protocol);
-
-/**
- * Returns the L2 protocol id corresponding to an L2 protocol string.
- * @param string The protocol string.
- * @return The L2 protocol id corresponding to an L2 protocol string.
- */
-ProtocolL2 getL2ProtocolId(std::string name);
-
-/**
  * Returns the string represetations of the L2 protocols.
  * @return An array A of string, such that A[i] is the
  * string representation of the L2 protocol with id 'i'.
  */
 std::vector<std::string> getL2ProtocolsNames();
-
-/**
- * Returns the string represetation of an L3 protocol.
- * @param   protocol The L3 protocol identifier.
- * @return  The string representation of the L3 protocol with id 'protocol'.
- */
-std::string getL3ProtocolName(ProtocolL3 protocol);
-
-/**
- * Returns the L3 protocol id corresponding to an L3 protocol string.
- * @param string The protocol string.
- * @return The L3 protocol id corresponding to an L3 protocol string.
- */
-ProtocolL3 getL3ProtocolId(std::string name);
 
 /**
  * Returns the string represetations of the L3 protocols.
@@ -740,39 +810,11 @@ ProtocolL3 getL3ProtocolId(std::string name);
 std::vector<std::string> getL3ProtocolsNames();
 
 /**
- * Returns the string represetation of an L4 protocol.
- * @param   protocol The L4 protocol identifier.
- * @return  The string representation of the L4 protocol with id 'protocol'.
- */
-std::string getL4ProtocolName(ProtocolL4 protocol);
-
-/**
- * Returns the L4 protocol id corresponding to an L4 protocol string.
- * @param string The protocol string.
- * @return The L4 protocol id corresponding to an L4 protocol string.
- */
-ProtocolL4 getL4ProtocolId(std::string name);
-
-/**
  * Returns the string represetations of the L4 protocols.
  * @return An array A of string, such that A[i] is the
  * string representation of the L4 protocol with id 'i'.
  */
 std::vector<std::string> getL4ProtocolsNames();
-
-/**
- * Returns the string represetation of an L7 protocol.
- * @param   protocol The L7 protocol identifier.
- * @return  The string representation of the protocol with id 'protocol'.
- */
-std::string getL7ProtocolName(ProtocolL7 protocol);
-
-/**
- * Returns the L7 protocol id corresponding to an L7 protocol string.
- * @param string The protocol string.
- * @return The L7 protocol id corresponding to an L7 protocol string.
- */
-ProtocolL7 getL7ProtocolId(std::string name);
 
 /**
  * Returns the string represetations of the L7 protocols.

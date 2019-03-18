@@ -13,6 +13,7 @@ option (ENABLE_CPPCHECK "Enables cppcheck checks" OFF)
 option (ENABLE_CODECOV "Enables code coverage reports" OFF)
 option (ENABLE_CLANGFORMAT "Enables clang-format formatting" OFF)
 option (ENABLE_DOCS "Enables documentation generation" OFF)
+option (ENABLE_PYTHON "Enables generation of Python code" OFF)
 
 add_compile_options(-Wall -finline-functions -O3)
 

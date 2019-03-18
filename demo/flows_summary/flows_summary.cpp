@@ -62,7 +62,7 @@ static const char* convertAddress(peafowl::IpAddress address, char* buf, size_t 
 static std::string convertL7Protocols(const peafowl::FlowInfo& info){
   std::string r = "";
   for(auto prot : info.getProtocolsL7()){
-    r += peafowl::getL7ProtocolName(prot);
+    r += prot.getName();
   }
   if(r == ""){
     r = "Unknown";
@@ -85,9 +85,9 @@ public:
            convertAddress(info.getAddressDst(), tmp_dstaddr, sizeof(tmp_dstaddr)),
            ntohs(info.getPortSrc()),
            ntohs(info.getPortDst()),
-           peafowl::getL2ProtocolName(info.getProtocolL2()).c_str(),
-           peafowl::getL3ProtocolName(info.getProtocolL3()).c_str(),
-           peafowl::getL4ProtocolName(info.getProtocolL4()).c_str(),
+           info.getProtocolL2().getName().c_str(),
+           info.getProtocolL3().getName().c_str(),
+           info.getProtocolL4().getName().c_str(),
            convertL7Protocols(info).c_str(),
            info.getNumPackets(PFWL_DIRECTION_OUTBOUND),     info.getNumPackets(PFWL_DIRECTION_INBOUND),
            info.getNumBytes(PFWL_DIRECTION_OUTBOUND),       info.getNumBytes(PFWL_DIRECTION_INBOUND),
@@ -122,14 +122,16 @@ int main(int argc, char** argv){
   FlowManager fm;
   pfwl->setFlowManager(&fm);
   printHeader();
-  peafowl::DissectionInfo r;
   peafowl::ProtocolL2 dlt = peafowl::convertPcapDlt(pcap_datalink(handle));
   while((packet = pcap_next(handle, &header)) != NULL){
-    r = pfwl->dissectFromL2(packet, header.caplen, time(NULL), dlt);
-    if(r.status >= PFWL_STATUS_OK){
-      if(r.l4.getProtocol() == IPPROTO_TCP || r.l4.getProtocol() == IPPROTO_UDP){
-        if(r.l7.getProtocol() < PFWL_PROTO_L7_NUM){
-          ++protocols[r.l7.getProtocol()];
+    std::string pkt;
+    pkt.assign((const char*) packet, header.caplen);
+    peafowl::DissectionInfo r = pfwl->dissectFromL2(pkt, time(NULL), dlt);
+    if(!r.getStatus().isError()){
+      if(r.getL4().getProtocol() == IPPROTO_TCP ||
+         r.getL4().getProtocol() == IPPROTO_UDP){
+        if(r.getL7().getProtocol() < PFWL_PROTO_L7_NUM){
+          ++protocols[r.getL7().getProtocol()];
         }else{
           ++unknown;
         }
@@ -143,7 +145,7 @@ int main(int argc, char** argv){
   if (unknown > 0) printf("Unknown packets: %" PRIu32 "\n", unknown);
   for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
     if(protocols[i] > 0){
-      printf("%s packets: %" PRIu32 "\n", peafowl::getL7ProtocolName((peafowl::ProtocolL7) i).c_str(), protocols[i]);
+      printf("%s packets: %" PRIu32 "\n", peafowl::ProtocolL7((pfwl_protocol_l7_t) i).getName().c_str(), protocols[i]);
     }
   }
   return 0;
