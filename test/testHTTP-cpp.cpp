@@ -53,25 +53,26 @@ TEST(HTTPTest, ContentType) {
   bool bodyFound = false;
   peafowl::Field field;
   getProtocolsCpp("./pcaps/http-jpeg.pcap", protocols, &state, [&](peafowl::Status status, peafowl::DissectionInfo& r){
-  if(r.l7.getProtocol() == PFWL_PROTO_L7_HTTP){
-    if((*r.flowInfo.getUserData() == NULL) &&
+  if(r.getL7().getProtocol() == PFWL_PROTO_L7_HTTP){
+    if((*r.getFlowInfo().getUserData() == NULL) &&
        (field = r.httpGetHeader("Content-Type")).isPresent() &&
-       (strncmp((const char*) field.getString().getValue(), "image/jpeg", field.getString().getLength()) == 0)){
+       field.getString() == "image/jpeg"){
       ctFound = true;
-      r.flowInfo.setUserData((void*) 1);
+      r.getFlowInfo().setUserData((void*) 1);
     }
 
     if((field = r.getField(PFWL_FIELDS_L7_HTTP_BODY)).isPresent() &&
-       *r.flowInfo.getUserData()){
+       *r.getFlowInfo().getUserData()){
       bodyFound = true;
+      std::string s = field.getString();
       for(size_t i = 0; i < sizeof(first_bytes); ++i){
-        EXPECT_EQ(field.getString().getValue()[i], first_bytes[i]);
+        EXPECT_TRUE((unsigned char) s[i] == first_bytes[i]);
       }
 
       for(size_t i = 0; i < sizeof(last_bytes); i++){
-        EXPECT_EQ(field.getString().getValue()[field.getString().getLength() - sizeof(last_bytes) + i], last_bytes[i]);
+        EXPECT_TRUE((unsigned char) s[s.size() - sizeof(last_bytes) + i] == last_bytes[i]);
       }
-      r.flowInfo.setUserData(0);
+      r.getFlowInfo().setUserData(0);
     }
   }
   });
@@ -89,24 +90,24 @@ TEST(HTTPTest, ContentType2) {
       bool cTypeFound = false, bodyFound = false, uAgentFound = false, hostFound = false;
       size_t packet_id = 1; // Just simpler to compare with Wireshark dissection, where packets start from 1
       getProtocolsCpp(filename, protocols, &state, [&](peafowl::Status status, peafowl::DissectionInfo& r){
-        if(r.l7.getProtocol() == PFWL_PROTO_L7_HTTP){
+        if(r.getL7().getProtocol() == PFWL_PROTO_L7_HTTP){
           // Content type
           peafowl::Field field;
           if((field = r.httpGetHeader("Content-Type")).isPresent()){
             cTypeFound = true;
-            EXPECT_FALSE(strncmp((const char*) field.getString().getValue(), "text/html", field.getString().getLength()));
+            EXPECT_STREQ(field.getString().c_str(), "text/html");
           }
 
           // Host
           if((field = r.httpGetHeader("Host")).isPresent()){
             hostFound = true;
-            EXPECT_FALSE(strncmp((const char*) field.getString().getValue(), "bill.ins.com", field.getString().getLength()));
+            EXPECT_STREQ(field.getString().c_str(), "bill.ins.com");
           }
 
           // User agent
           if((field = r.httpGetHeader("User-Agent")).isPresent()){
             uAgentFound = true;
-            EXPECT_FALSE(strncmp((const char*) field.getString().getValue(), "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; SV1; .NET CLR 1.1.4322)", field.getString().getLength()));
+            EXPECT_STREQ(field.getString().c_str(), "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; SV1; .NET CLR 1.1.4322)");
           }
 
           // Body
@@ -119,9 +120,10 @@ TEST(HTTPTest, ContentType2) {
             }
             if(packet_id == body_packet_id){
               bodyFound = true;
-              EXPECT_FALSE(strncmp((const char*) field.getString().getValue(), "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">", 90));
-              EXPECT_EQ(field.getString().getValue()[field.getString().getLength() - 4], 'L');
-              EXPECT_EQ(field.getString().getValue()[field.getString().getLength() - 3], '>');
+              std::string s = field.getString();
+              EXPECT_FALSE(strncmp((const char*) s.c_str(), "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">", 90));
+              EXPECT_EQ(s[s.size() - 4], 'L');
+              EXPECT_EQ(s[s.size() - 3], '>');
             }
           }
         }
@@ -146,7 +148,7 @@ TEST(HTTPTest, Tags) {
   bool foundSuffix = false, foundPrefix = false, foundMozilla = false, foundEthereal = false;
   getProtocolsCpp("./pcaps/http.cap", protocols, &state, [&](peafowl::Status status, peafowl::DissectionInfo& r){
 
-    for(auto tag : r.l7.getTags()){
+    for(auto tag : r.getL7().getTags()){
       if(tag == "TAG_SUFFIX"){
         foundSuffix = true;
       }
@@ -179,7 +181,7 @@ TEST(HTTPTest, TagsFromFile) {
   std::vector<uint> protocols;
   bool foundSuffix = false, foundPrefix = false, foundMozilla = false, foundEthereal = false;
   getProtocolsCpp("./pcaps/http.cap", protocols, &state, [&](peafowl::Status status, peafowl::DissectionInfo& r){
-    for(auto tag : r.l7.getTags()){
+    for(auto tag : r.getL7().getTags()){
       if(tag == "TAG_SUFFIX"){
         foundSuffix = true;
       }

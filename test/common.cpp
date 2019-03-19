@@ -74,14 +74,16 @@ void getProtocolsCpp(const char* pcapName, std::vector<uint>& protocols, peafowl
   protocols.resize(PFWL_PROTO_L7_NUM);
 
   Pcap pcap(pcapName);
-  peafowl::DissectionInfo r;
   std::pair<const u_char*, unsigned long> pkt;
 
   while((pkt = pcap.getNextPacket()).first != NULL){
-    r = state->dissectFromL2(pkt.first, pkt.second, time(NULL), pcap._datalink_type);
-    lambda(r.status, r);
-    if(r.l4.getProtocol() == IPPROTO_TCP || r.l4.getProtocol() == IPPROTO_UDP){
-      for(auto proto : r.l7.getProtocols()){
+    std::string s;
+    s.assign((const char*) pkt.first, pkt.second);
+    peafowl::DissectionInfo r = state->dissectFromL2(s, time(NULL), pcap._datalink_type);
+    lambda(r.getStatus(), r);
+    if(r.getL4().getProtocol() == IPPROTO_TCP || 
+       r.getL4().getProtocol() == IPPROTO_UDP){
+      for(auto proto : r.getL7().getProtocols()){
         if(proto < PFWL_PROTO_L7_NUM){
           ++protocols[proto];
         }
