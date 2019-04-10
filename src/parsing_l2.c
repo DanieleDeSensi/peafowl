@@ -435,7 +435,7 @@ pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int dlt) {
   }
 }
 #else
-pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int) {
+pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int x) {
   fprintf(
       stderr,
       "To use the pfwl_convert_pcap_dlt call, libpcap needs to be installed");
