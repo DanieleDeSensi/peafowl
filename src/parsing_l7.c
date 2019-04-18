@@ -626,6 +626,11 @@ uint8_t pfwl_protocol_l7_disable_all(pfwl_state_t *state) {
   return 0;
 }
 
+uint8_t pfwl_set_timestamp_unit(pfwl_state_t *state, pfwl_timestamp_unit_t unit){
+  state->ts_unit = unit;
+  return 0;
+}
+
 pfwl_field_type_t pfwl_get_L7_field_type(pfwl_field_id_t field){
   return field_L7_descriptors[field].type;
 }

@@ -245,6 +245,14 @@ typedef enum {
 // clang-format on
 
 /**
+ * Units of timestamps used by Peafowl.
+ **/
+typedef enum {
+  PFWL_TIMESTAMP_UNIT_MILLISECONDS = 0, ///< Milliseconds
+  PFWL_TIMESTAMP_UNIT_SECONDS         , ///< Seconds
+} pfwl_timestamp_unit_t;
+
+/**
  * A string as represented by peafowl.
  **/
 typedef struct {
@@ -447,12 +455,12 @@ typedef struct pfwl_flow_info {
                        ///< DEPRECATED. This field will be remove in v2.0.0
                        ///< Use statistics field instead.
   uint32_t
-      timestamp_first[2]; ///< Timestamp (seconds) of the first packet received
+      timestamp_first[2]; ///< Timestamp of the first packet received
                           ///< for this flow. One value for each direction.
                           ///< DEPRECATED. This field will be remove in v2.0.0
                           ///< Use statistics field instead.
   uint32_t
-      timestamp_last[2]; ///< Timestamp (seconds) of the last packet received
+      timestamp_last[2]; ///< Timestamp of the last packet received
                          ///< for this flow. One value for each direction.
                          ///< DEPRECATED. This field will be remove in v2.0.0
                          ///< Use statistics field instead.
@@ -857,11 +865,23 @@ uint8_t pfwl_protocol_l7_enable_all(pfwl_state_t *state);
 uint8_t pfwl_protocol_l7_disable_all(pfwl_state_t *state);
 
 /**
+ * Sets the unit of the timestamps used in the
+ * pfwl_dissect_* calls.
+ * @param state The state of the library.
+ * @param unit The unit of the timestamps.
+ * @return 0 if succeeded,
+ *         1 otherwise.
+ */
+uint8_t pfwl_set_timestamp_unit(pfwl_state_t *state, pfwl_timestamp_unit_t unit);
+
+/**
  * Dissects the packet starting from the beginning of the L2 (datalink) header.
  * @param state The state of the library.
  * @param pkt The pointer to the beginning of datalink header.
  * @param length Length of the packet.
- * @param timestamp The current time in seconds.
+ * @param timestamp The current time. The time unit depends on the timers used by the
+ * caller and can be set through the pfwl_set_timestamp_unit call. By default
+ * it is assumed that the timestamps unit is 'seconds'.
  * @param datalink_type The datalink type. They match 1:1 the pcap datalink
  * types. You can convert a PCAP datalink type to a Peafowl datalink type by
  * calling the function 'pfwl_convert_pcap_dlt'.
@@ -881,7 +901,9 @@ pfwl_status_t pfwl_dissect_from_L2(pfwl_state_t *state,
  * @param   state The state of the library.
  * @param   pkt The pointer to the beginning of IP header.
  * @param   length Length of the packet (from the beginning of the IP header).
- * @param   timestamp The current time in seconds.
+ * @param timestamp The current time. The time unit depends on the timers used by the
+ * caller and can be set through the pfwl_set_timestamp_unit call. By default
+ * it is assumed that the timestamps unit is 'seconds'.
  * @param   dissection_info The result of the dissection. All its bytes must be
  *          set to 0 before calling this call.
  *          Dissection information from L3 to L7 will be filled in by this call.
@@ -899,7 +921,9 @@ pfwl_status_t pfwl_dissect_from_L3(pfwl_state_t *state,
  * @param   pkt The pointer to the beginning of UDP or TCP header.
  * @param   length Length of the packet (from the beginning of the UDP or TCP
  * header).
- * @param   timestamp The current time in seconds.
+ * @param timestamp The current time. The time unit depends on the timers used by the
+ * caller and can be set through the pfwl_set_timestamp_unit call. By default
+ * it is assumed that the timestamps unit is 'seconds'.
  * @param   dissection_info The result of the dissection. All its bytes must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 header must be filled in by the
@@ -932,8 +956,9 @@ pfwl_status_t pfwl_dissect_L2(const unsigned char *packet,
  * @param   state The state of the library.
  * @param   pkt The pointer to the beginning of IP header.
  * @param   length Length of the packet (from the beginning of the IP header).
- * @param   timestamp The current time in seconds. It must be
- *          non-decreasing between two consecutive calls.
+ * @param timestamp The current time. The time unit depends on the timers used by the
+ * caller and can be set through the pfwl_set_timestamp_unit call. By default
+ * it is assumed that the timestamps unit is 'seconds'.
  * @param   dissection_info The result of the dissection. All its bytes must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 headers will be filled in by this
@@ -950,8 +975,9 @@ pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
  * @param   pkt The pointer to the beginning of UDP or TCP header.
  * @param   length Length of the packet (from the beginning of the UDP or TCP
  * header).
- * @param   timestamp The current time in seconds. It must be
- *          non-decreasing between two consecutive calls.
+ * @param timestamp The current time. The time unit depends on the timers used by the
+ * caller and can be set through the pfwl_set_timestamp_unit call. By default
+ * it is assumed that the timestamps unit is 'seconds'.
  * @param   dissection_info The result of the dissection. All its bytes must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 headers must be filled in by the
@@ -1465,6 +1491,8 @@ typedef struct pfwl_state {
   pfwl_protocol_l7_t active_protocols[2]; // 0 for TCP, 1 for UDP
 
   uint16_t max_trials;
+
+  pfwl_timestamp_unit_t ts_unit;
 
   /** Field extraction. **/
   /**

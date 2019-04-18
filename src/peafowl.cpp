@@ -724,6 +724,12 @@ void Peafowl::protocolL7DisableAll(){
   }
 }
 
+void Peafowl::setTimestampUnit(TimestampUnit unit){
+  if(pfwl_set_timestamp_unit(_state, unit)){
+    throw std::runtime_error("pfwl_set_timestamp_unit failed\n");
+  }
+}
+
 DissectionInfo Peafowl::dissectFromL2(const std::string &pkt, uint32_t timestamp, ProtocolL2 datalinkType){
   pfwl_dissection_info_t info;
   Status s = pfwl_dissect_from_L2(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, datalinkType, &info);

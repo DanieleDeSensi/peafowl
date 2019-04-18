@@ -58,6 +58,8 @@ typedef pfwl_field_type_t FieldType;
 
 typedef pfwl_statistic_t Statistic;
 
+typedef pfwl_timestamp_unit_t TimestampUnit;
+
 class Field {
 private:
   pfwl_field_t _field;
@@ -560,9 +562,18 @@ public:
   void protocolL7DisableAll();
 
   /**
+   * Sets the unit of the timestamps used in the
+   * dissect* calls.
+   * @param unit The unit of the timestamps.
+   */
+  void setTimestampUnit(TimestampUnit unit);
+
+  /**
    * Dissects the packet starting from the beginning of the L2 (datalink) header.
    * @param pkt A string containing the packet.
-   * @param timestamp The current time in seconds.
+   * @param timestamp The current time. The time unit depends on the timers used by the
+   * caller and can be set through the setTimestampUnit call. By default
+   * it is assumed that the timestamps unit is 'seconds'.
    * @param datalinkType The datalink type. They match 1:1 the pcap datalink
    * types. You can convert a PCAP datalink type to a Peafowl datalink type by
    * calling the function 'pfwl_convert_pcap_dlt'.
@@ -577,7 +588,9 @@ public:
   /**
    * Dissects the packet starting from the beginning of the L3 (IP) header.
    * @param   pkt A string containing the packet (starting from the IP header).
-   * @param   timestamp The current time in seconds.
+   * @param timestamp The current time. The time unit depends on the timers used by the
+   * caller and can be set through the setTimestampUnit call. By default
+   * it is assumed that the timestamps unit is 'seconds'.
    * @return  The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information from L3 to L7 will be filled in by this call.
@@ -589,7 +602,9 @@ public:
    * Dissects the packet starting from the beginning of the L4 (UDP or TCP)
    * header.
    * @param  pkt A string containing the packet (from the start of TCP/UDP header).
-   * @param  timestamp The current time in seconds.
+   * @param timestamp The current time. The time unit depends on the timers used by the
+   * caller and can be set through the setTimestampUnit call. By default
+   * it is assumed that the timestamps unit is 'seconds'.
    * @return The result of the dissection. All its bytes must be
    *         set to 0 before calling this call.
    *         Dissection information about L3 header must be filled in by the
@@ -615,8 +630,9 @@ public:
   /**
    * Extracts from the packet the L3 information.
    * @param   pkt A string containing the packet (from the start of the IP header).
-   * @param   timestamp The current time in seconds. It must be
-   *          non-decreasing between two consecutive calls.
+   * @param timestamp The current time. The time unit depends on the timers used by the
+   * caller and can be set through the setTimestampUnit call. By default
+   * it is assumed that the timestamps unit is 'seconds'.
    * @return The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.
    *          Dissection information about L3 headers will be filled in by this
@@ -628,8 +644,9 @@ public:
   /**
    * Extracts from the packet the L4 information.
    * @param   pkt A string containing the packet (from the start of the TCP/UDP header).
-   * @param   timestamp The current time in seconds. It must be
-   *          non-decreasing between two consecutive calls.
+   * @param timestamp The current time. The time unit depends on the timers used by the
+   * caller and can be set through the setTimestampUnit call. By default
+   * it is assumed that the timestamps unit is 'seconds'.
    * @param   flowInfoPrivate Will be filled by this library.
    * @return  The result of the dissection. All its bytes must be
    *          set to 0 before calling this call.

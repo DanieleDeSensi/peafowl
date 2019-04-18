@@ -479,13 +479,43 @@ void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
     _x > _y ? _x : _y;                                                         \
   })
 
+
+static uint32_t get_max_idle_time(pfwl_timestamp_unit_t unit){
+  switch(unit){
+  case PFWL_TIMESTAMP_UNIT_MILLISECONDS:{
+    return PFWL_FLOW_TABLE_MAX_IDLE_TIME / 1000.0;
+  }break;
+  case PFWL_TIMESTAMP_UNIT_SECONDS:{
+    return PFWL_FLOW_TABLE_MAX_IDLE_TIME;
+  }break;
+  default:{
+    return PFWL_FLOW_TABLE_MAX_IDLE_TIME;
+  }
+  }
+}
+
+static uint32_t get_walk_time(pfwl_timestamp_unit_t unit){
+  switch(unit){
+  case PFWL_TIMESTAMP_UNIT_MILLISECONDS:{
+    return PFWL_FLOW_TABLE_WALK_TIME / 1000.0;
+  }break;
+  case PFWL_TIMESTAMP_UNIT_SECONDS:{
+    return PFWL_FLOW_TABLE_WALK_TIME;
+  }break;
+  default:{
+    return PFWL_FLOW_TABLE_WALK_TIME;
+  }
+  }
+}
+
 #ifndef PFWL_DEBUG
 static
 #endif
     void
     pfwl_flow_table_check_expiration(pfwl_flow_table_t *db,
                                      uint16_t partition_id,
-                                     uint32_t current_time) {
+                                     uint32_t current_time,
+                                     pfwl_timestamp_unit_t unit) {
   uint32_t i;
 #if !PFWL_USE_MTF
   ipv4_flow_t *current;
@@ -506,14 +536,14 @@ static
 #if PFWL_USE_MTF
     while (current_time - MAX(db->table[i].prev->info.statistics[PFWL_STAT_TIMESTAMP_LAST][0],
                               db->table[i].prev->info.statistics[PFWL_STAT_TIMESTAMP_LAST][1]) >
-           PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
+           get_max_idle_time(unit)) {
       mc_pfwl_flow_table_delete_flow(db, partition_id, db->table[i].prev);
     }
 #else
     current = db->table[i].prev;
     while (current != &(db->table[i])) {
       if (current_time - db->table[i].prev->info.last_timestamp >
-          PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
+          get_max_idle_time(unit)) {
         mc_pfwl_flow_table_delete_flow(db, flow_cleaner_callback, partition_id,
                                        db->table[i].prev);
       }
@@ -569,7 +599,8 @@ static void pfwl_init_flow_info_public_internal(pfwl_flow_info_t *flow_info) {
 pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t *db, uint16_t partition_id, uint32_t index,
     pfwl_dissection_info_t *pkt_info, char *protocols_to_inspect,
-    uint8_t tcp_reordering_enabled, uint32_t timestamp, uint8_t syn) {
+    uint8_t tcp_reordering_enabled, uint32_t timestamp, uint8_t syn,
+    pfwl_timestamp_unit_t unit) {
   debug_print("%s\n", "[flow_table.c]: "
                       "pfwl_flow_table_find_or_create_flow_v4 invoked.");
 
@@ -697,8 +728,8 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   if (unlikely(
           timestamp -
               db->partitions[partition_id].partition.info.last_walk >=
-          PFWL_FLOW_TABLE_WALK_TIME)) {
-    pfwl_flow_table_check_expiration(db, partition_id, timestamp);
+          get_walk_time(unit))) {
+    pfwl_flow_table_check_expiration(db, partition_id, timestamp, unit);
     db->partitions[partition_id].partition.info.last_walk = timestamp;
   }
 
@@ -723,10 +754,10 @@ pfwl_compute_v4_hash_function(pfwl_flow_table_t *db,
 pfwl_flow_t *pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t *db, pfwl_dissection_info_t *pkt_info,
     char *protocols_to_inspect, uint8_t tcp_reordering_enabled,
-    uint32_t timestamp, uint8_t syn) {
+    uint32_t timestamp, uint8_t syn, pfwl_timestamp_unit_t unit) {
   return mc_pfwl_flow_table_find_or_create_flow(
       db, 0, pfwl_compute_v4_hash_function(db, pkt_info), pkt_info,
-      protocols_to_inspect, tcp_reordering_enabled, timestamp, syn);
+      protocols_to_inspect, tcp_reordering_enabled, timestamp, syn, unit);
 }
 
 uint32_t

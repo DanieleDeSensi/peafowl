@@ -152,5 +152,6 @@ PYBIND11_MODULE(pypeafowl, m) {
       .def("fieldAddL7", &Peafowl::fieldAddL7)
       .def("fieldRemoveL7", &Peafowl::fieldRemoveL7)
       .def("setFlowManager", &Peafowl::setFlowManager)
+      .def("setTimestampUnit", &Peafowl::setTimestampUnit)
       ;
 }

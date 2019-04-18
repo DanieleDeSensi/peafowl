@@ -105,6 +105,7 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
   pfwl_tcp_reordering_enable(state);
 
   state->l7_skip = NULL;
+  state->ts_unit = PFWL_TIMESTAMP_UNIT_SECONDS;
   return state;
 }
 

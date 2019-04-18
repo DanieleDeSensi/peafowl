@@ -118,7 +118,7 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
   dissection_info->l4.payload_length = length - dissection_info->l4.length;
   pfwl_flow_t *flow = pfwl_flow_table_find_or_create_flow(
       state->flow_table, dissection_info, state->protocols_to_inspect,
-      state->tcp_reordering_enabled, timestamp, syn);
+      state->tcp_reordering_enabled, timestamp, syn, state->ts_unit);
   if (unlikely(flow == NULL)) {
     return PFWL_ERROR_MAX_FLOWS;
   }
