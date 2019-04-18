@@ -56,28 +56,6 @@ static void print_stats(pfwl_dissection_info_t *r, int unk, uint32_t *protocols)
         if(protocols[i] > 0){
             printf("# %s packets: %"PRIu32"\n", pfwl_get_L7_protocol_name(i), protocols[i]);
         }
-
-        /* printf(" # Discarded bytes             = %d\n",   fcp->stats.discarded_bytes); */
-        /* printf(" # Ethernet pkts               = %d\n",   fcp->stats.ethernet_pkts); */
-
-        /* printf(" # ARP pkts                    = %d\n",   fcp->stats.arp_pkts); */
-        /* printf(" # IPv4 pkts                   = %d\n",   fcp->stats.ipv4_pkts); */
-        /* printf(" # IPv6 pkts                   = %d\n",   fcp->stats.ipv6_pkts); */
-
-        /* printf(" # VLAN pkts                   = %d\n",   fcp->stats.vlan_pkts); */
-        /* printf(" # MPLS pkts                   = %d\n",   fcp->stats.mpls_pkts); */
-        /* printf(" # PPPoE pkts                  = %d\n",   fcp->stats.pppoe_pkts); */
-
-        /* printf(" # TCP pkts                    = %d\n",   fcp->stats.tcp_pkts); */
-        /* printf(" # UDP pkts                    = %d\n\n", fcp->stats.udp_pkts); */
-
-        /* printf("\033[0;33m"); */
-        /* printf(" # TLS handshake pkts          = %d\n",   fcp->stats.num_tls_pkts); */
-        /* printf(" # RTCP pkts                   = %d\n",   fcp->stats.num_rtcp_pkts); */
-        /* printf(" # DIAMETER pkts               = %d\n",   fcp->stats.num_diameter_pkts); */
-        /* printf(" # NGCP pkts                   = %d\n",   fcp->stats.num_ngcp_pkts); */
-        /* printf(" # RTSP pkts                   = %d\n",   fcp->stats.num_rtsp_pkts); */
-        /* printf("\033[0m"); */
     }
     printf("\n----------- ------------------ -----------\n\n");
 }

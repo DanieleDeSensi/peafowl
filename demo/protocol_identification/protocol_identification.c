@@ -1,9 +1,9 @@
 /*
- * peafowl_eye.c
+ * demo_identification.c
  *
- *  Identifies the protocol of all the packets contained in it (from live or pcap)
+ * Given a .pcap file, it identifies the protocol of all the packets contained in it.
  *
- * Created on: 118/04/2019 by Michele Campus (mcampus@qxip.net)
+ * Created on: 19/09/2012
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
@@ -41,29 +41,6 @@
 #include <inttypes.h>
 #include <assert.h>
 
-/**
-   Print statistic about the entire session
-*/
-static void print_stats(pfwl_dissection_info_t *r, int unk, uint32_t *protocols)
-{
-    printf(" \n---------- PEAFOWL_EYE STATISTICS ----------\n");
-
-    // Unknown pkts
-    if (unk > 0) printf("\n# Unknown packets: %"PRIu32"\n", unk);
-
-    /* TODO: add more stats of other levels + extract fields */
-
-    // L7 pkts
-    printf("\n*** Application layer pkts ***\n");
-    for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
-        if(protocols[i] > 0){
-            printf("# %s packets: %"PRIu32"\n", pfwl_get_L7_protocol_name(i), protocols[i]);
-        }
-    }
-    printf("\n----------- ------------------ -----------\n\n");
-}
-
-
 int main(int argc, char** argv){
   if(argc != 2){
     fprintf(stderr, "Usage: %s pcap_file\n", argv[0]);
@@ -79,7 +56,7 @@ int main(int argc, char** argv){
 
   pcap_t *handle = pcap_open_offline(pcap_filename, errbuf);
   if(handle == NULL){
-      fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
+    fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
     return (2);
   }
 
@@ -99,10 +76,13 @@ int main(int argc, char** argv){
       }
     }
   }
-  // terminate
   pfwl_terminate(state);
 
-  // print stats
-  print_stats(&r, unknown, protocols);
+  if (unknown > 0) printf("Unknown packets: %"PRIu32"\n", unknown);
+  for(size_t i = 0; i < PFWL_PROTO_L7_NUM; i++){
+    if(protocols[i] > 0){
+      printf("%s packets: %"PRIu32"\n", pfwl_get_L7_protocol_name(i), protocols[i]);
+    }
+  }
   return 0;
 }
