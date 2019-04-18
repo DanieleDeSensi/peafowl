@@ -154,7 +154,7 @@ pfwl_reassembly_insert_fragment(pfwl_reassembly_fragment_t **head,
    */
 
   /**
-   *  Check for overlaps with the previous fragment. We will left the
+   *  Check for overlaps with the previous fragment. We will leave the
    *  previous fragment untouched and in case copy the new part.
    **/
   if (prev != NULL && pfwl_reassembly_before(offset, prev->end)) {

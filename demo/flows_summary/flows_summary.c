@@ -78,8 +78,8 @@ static char tmp_srcaddr[64], tmp_dstaddr[64];
 void summarizer(pfwl_flow_info_t* flow_info){
   printf("%"PRIu64"\t%"PRIu16"\t%s\t%s\t%"PRIu16"\t%"PRIu16"\t"
          "%s\t%s\t%s\t%s\t"
-         "%"PRIu64"|%"PRIu64"\t%"PRIu64"|%"PRIu64"\t%"PRIu64"|%"PRIu64"\t%"PRIu64"|%"PRIu64"\t"
-         "%"PRIu32"|%"PRIu32"\t%"PRIu32"|%"PRIu32"\n",
+         "%.0f|%.0f\t%.0f|%.0f\t%.0f|%.0f\t%.0f|%.0f\t"
+         "%.0f|%.0f\t%.0f|%.0f\n",
          flow_info->id,
          flow_info->thread_id,
          convert_address(flow_info->addr_src, flow_info->protocol_l3, tmp_srcaddr, sizeof(tmp_srcaddr)),
@@ -90,12 +90,12 @@ void summarizer(pfwl_flow_info_t* flow_info){
          pfwl_get_L3_protocol_name(flow_info->protocol_l3),
          pfwl_get_L4_protocol_name(flow_info->protocol_l4),
          convert_l7_protocols(flow_info),
-         flow_info->num_packets[PFWL_DIRECTION_OUTBOUND], flow_info->num_packets[PFWL_DIRECTION_INBOUND],
-         flow_info->num_bytes[PFWL_DIRECTION_OUTBOUND], flow_info->num_bytes[PFWL_DIRECTION_INBOUND],
-         flow_info->num_packets_l7[PFWL_DIRECTION_OUTBOUND], flow_info->num_packets_l7[PFWL_DIRECTION_INBOUND],
-         flow_info->num_bytes_l7[PFWL_DIRECTION_OUTBOUND], flow_info->num_bytes_l7[PFWL_DIRECTION_INBOUND],
-         flow_info->timestamp_first[PFWL_DIRECTION_OUTBOUND], flow_info->timestamp_first[PFWL_DIRECTION_INBOUND],
-         flow_info->timestamp_last[PFWL_DIRECTION_OUTBOUND], flow_info->timestamp_last[PFWL_DIRECTION_INBOUND]
+         flow_info->statistics[PFWL_STAT_PACKETS][PFWL_DIRECTION_OUTBOUND], flow_info->statistics[PFWL_STAT_PACKETS][PFWL_DIRECTION_INBOUND],
+         flow_info->statistics[PFWL_STAT_BYTES][PFWL_DIRECTION_OUTBOUND], flow_info->statistics[PFWL_STAT_BYTES][PFWL_DIRECTION_INBOUND],
+         flow_info->statistics[PFWL_STAT_L7_PACKETS][PFWL_DIRECTION_OUTBOUND], flow_info->statistics[PFWL_STAT_L7_PACKETS][PFWL_DIRECTION_INBOUND],
+         flow_info->statistics[PFWL_STAT_L7_BYTES][PFWL_DIRECTION_OUTBOUND], flow_info->statistics[PFWL_STAT_L7_BYTES][PFWL_DIRECTION_INBOUND],
+         flow_info->statistics[PFWL_STAT_TIMESTAMP_FIRST][PFWL_DIRECTION_OUTBOUND], flow_info->statistics[PFWL_STAT_TIMESTAMP_FIRST][PFWL_DIRECTION_INBOUND],
+         flow_info->statistics[PFWL_STAT_TIMESTAMP_LAST][PFWL_DIRECTION_OUTBOUND], flow_info->statistics[PFWL_STAT_TIMESTAMP_LAST][PFWL_DIRECTION_INBOUND]
          );
 }
 

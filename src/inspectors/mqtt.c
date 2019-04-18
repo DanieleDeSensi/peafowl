@@ -54,11 +54,11 @@ uint8_t check_mqtt(pfwl_state_t *state, const unsigned char *app_data,
   uint8_t len_valid = mqtt_validate_length(app_data, data_length);
   //uint8_t flags = control_hdr | 0xF;
   if(flow_info_private->seen_syn){
-    if(pkt_info->flow_info.num_packets_l7[0] == 1){
+    if(pkt_info->flow_info.statistics[PFWL_STAT_L7_PACKETS][0] == 1){
       if(pkt_type & 0x1 && len_valid){
         return PFWL_PROTOCOL_MORE_DATA_NEEDED;
       }
-    }else if(pkt_info->flow_info.num_packets_l7[1] == 1){
+    }else if(pkt_info->flow_info.statistics[PFWL_STAT_L7_PACKETS][1] == 1){
       if(pkt_type & 0x2 && len_valid){
         return PFWL_PROTOCOL_MATCHES;
       }

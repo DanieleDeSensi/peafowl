@@ -232,27 +232,28 @@ static
   to_return.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
 
   struct tcphdr *tcph = (struct tcphdr *) (pkt);
+  pfwl_direction_t direction = dissection_info->l4.direction;
   uint32_t received_seq_num = ntohl(tcph->seq);
   uint32_t expected_seq_num =
-      tracking->expected_seq_num[dissection_info->l4.direction];
+      tracking->expected_seq_num[direction];
   /** Automatically wrapped when exceed the 32bit limit. **/
   uint32_t end = received_seq_num + dissection_info->l4.payload_length;
 
-  debug_print("Direction: %d\n", dissection_info->l4.direction);
+  debug_print("Direction: %d\n", direction);
   debug_print("Received Seq Num: %" PRIu32 " Expected: %" PRIu32 "\n",
               received_seq_num,
-              tracking->expected_seq_num[dissection_info->l4.direction]);
+              tracking->expected_seq_num[direction]);
 
   if (received_seq_num == expected_seq_num) {
     debug_print("%s\n", "Received in order segment");
     to_return.status = PFWL_TCP_REORDERING_STATUS_IN_ORDER;
-    tracking->expected_seq_num[dissection_info->l4.direction] = end;
+    tracking->expected_seq_num[direction] = end;
     if (tcph->fin == 1) {
-      ++tracking->expected_seq_num[dissection_info->l4.direction];
-      SET_BIT(tracking->seen_fin, dissection_info->l4.direction);
+      ++tracking->expected_seq_num[direction];
+      SET_BIT(tracking->seen_fin, direction);
     }
     if (tcph->rst == 1) {
-      ++tracking->expected_seq_num[dissection_info->l4.direction];
+      ++tracking->expected_seq_num[direction];
       tracking->seen_rst = 1;
     }
 
@@ -273,8 +274,18 @@ static
 
     if (dissection_info->l4.payload_length == 0) {
       debug_print("%s\n", "The segment has no payload");
+      if(!tracking->seen_fin &&
+         (!pfwl_reordering_tcp_is_new_segment(received_seq_num, tracking, direction) ||
+          (tracking->last_seq[direction] == tcph->seq && tracking->last_ack[direction] == tcph->ack_seq))){
+        to_return.status = PFWL_TCP_REORDERING_STATUS_RETRANSMISSION;
+      }
+      tracking->last_seq[direction] = tcph->seq;
+      tracking->last_ack[direction] = tcph->ack_seq;
       return to_return;
     }
+
+    tracking->last_seq[direction] = tcph->seq;
+    tracking->last_ack[direction] = tcph->ack_seq;
 
     /**
      * If there was out of order segments and this segment fills an
@@ -282,8 +293,8 @@ static
      * segment. We check offset<=end because the received fragment
      * could overlap with the pool_head of the segments.
      **/
-    if (tracking->segments[dissection_info->l4.direction] &&
-        tracking->segments[dissection_info->l4.direction]->offset <= end) {
+    if (tracking->segments[direction] &&
+        tracking->segments[direction]->offset <= end) {
       uint32_t overlap =
           end - tracking->segments[dissection_info->l4.direction]->offset;
       uint32_t pkt_length = dissection_info->l4.payload_length - overlap;
@@ -333,7 +344,7 @@ static
   } else {
     debug_print("Received old segment. SeqNum: %" PRIu32 "\n",
                 received_seq_num);
-    to_return.status = PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER;
+    to_return.status = PFWL_TCP_REORDERING_STATUS_RETRANSMISSION;
     return to_return;
   }
 }

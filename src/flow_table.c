@@ -499,10 +499,13 @@ static
      **/
     db->table[i].info.timestamp_last[0] = current_time;
     db->table[i].info.timestamp_last[1] = 0;
+    db->table[i].info.statistics[PFWL_STAT_TIMESTAMP_LAST][0] = current_time;
+    db->table[i].info.statistics[PFWL_STAT_TIMESTAMP_LAST][1] = 0;
+
 
 #if PFWL_USE_MTF
-    while (current_time - MAX(db->table[i].prev->info.timestamp_last[0],
-                              db->table[i].prev->info.timestamp_last[1]) >
+    while (current_time - MAX(db->table[i].prev->info.statistics[PFWL_STAT_TIMESTAMP_LAST][0],
+                              db->table[i].prev->info.statistics[PFWL_STAT_TIMESTAMP_LAST][1]) >
            PFWL_FLOW_TABLE_MAX_IDLE_TIME) {
       mc_pfwl_flow_table_delete_flow(db, partition_id, db->table[i].prev);
     }
@@ -686,8 +689,10 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
 
   if (!iterator->info.timestamp_first[pkt_info->l4.direction]) {
     iterator->info.timestamp_first[pkt_info->l4.direction] = timestamp;
+    iterator->info.statistics[PFWL_STAT_TIMESTAMP_FIRST][pkt_info->l4.direction] = timestamp;
   }
   iterator->info.timestamp_last[pkt_info->l4.direction] = timestamp;
+  iterator->info.statistics[PFWL_STAT_TIMESTAMP_LAST][pkt_info->l4.direction] = timestamp;
 
   if (unlikely(
           timestamp -

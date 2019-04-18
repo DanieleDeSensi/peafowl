@@ -113,23 +113,6 @@ struct in6_addr IpAddress::getIPv6() const{
   return _addr.ipv6;
 }
 
-StatisticsL4::StatisticsL4(pfwl_stats_l4_t stats):
-  _stats(stats){
-  ;
-}
-
-uint32_t StatisticsL4::getSynSent(Direction direction) const{
-  return _stats.syn_sent[direction];
-}
-
-uint32_t StatisticsL4::getFinSent(Direction direction) const{
-  return _stats.fin_sent[direction];
-}
-
-uint32_t StatisticsL4::getRstSent(Direction direction) const{
-  return _stats.rst_sent[direction];
-}
-
 FlowInfo::FlowInfo(){
   memset(&_flowInfo, 0, sizeof(_flowInfo));
 }
@@ -207,8 +190,8 @@ std::vector<ProtocolL7> FlowInfo::getProtocolsL7() const{
   return r;
 }
 
-StatisticsL4 FlowInfo::getStatisticsL4() const{
-  return _flowInfo.stats_l4;
+double FlowInfo::getStatistic(Statistic stat, Direction dir) const{
+  return _flowInfo.statistics[stat][dir];
 }
 
 void** FlowInfo::getUserData() const{
@@ -450,18 +433,6 @@ size_t DissectionInfoL4::getResegmentedPacketLength() const{
 
 ProtocolL4 DissectionInfoL4::getProtocol() const{
   return _dissectionInfo.protocol;
-}
-
-bool DissectionInfoL4::hasSyn() const{
-  return _dissectionInfo.has_syn;
-}
-
-bool DissectionInfoL4::hasFin() const{
-  return _dissectionInfo.has_fin;
-}
-
-bool DissectionInfoL4::hasRst() const{
-  return _dissectionInfo.has_rst;
 }
 
 pfwl_dissection_info_l4_t DissectionInfoL4::getNative() const{
@@ -925,6 +896,19 @@ void Peafowl::fieldMmapTagsAddL7(FieldId field, const std::string& key, const st
 
 void Peafowl::fieldTagsUnloadL7(FieldId field){
   pfwl_field_tags_unload_L7(_state, field);
+}
+
+void Peafowl::statisticAdd(Statistic stat){
+  if(pfwl_statistic_add(_state, stat)){
+    throw std::runtime_error("pfwl_statistic_add failed\n");
+  }
+}
+
+
+void Peafowl::statisticRemove(Statistic stat){
+  if(pfwl_statistic_remove(_state, stat)){
+    throw std::runtime_error("pfwl_statistic_remove failed\n");
+  }
 }
 
 } // namespace peafowl

@@ -124,26 +124,37 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
   }
 
   *flow_info_private = &flow->info_private;
-
+  pfwl_direction_t direction = dissection_info->l4.direction;
   // Set flags statistics
   if(dissection_info->l4.protocol == IPPROTO_TCP){
     struct tcphdr *tcp = (struct tcphdr *) pkt;
     if(tcp->syn){
-      dissection_info->l4.has_syn = 1;
-      flow->info.stats_l4.syn_sent[dissection_info->l4.direction]++;
+      flow->info.statistics[PFWL_STAT_L4_TCP_COUNT_SYN][direction]++;
     }
     if(tcp->fin){
-      dissection_info->l4.has_fin = 1;
-      flow->info.stats_l4.fin_sent[dissection_info->l4.direction]++;
+      flow->info.statistics[PFWL_STAT_L4_TCP_COUNT_FIN][direction]++;
     }
     if(tcp->rst){
-      dissection_info->l4.has_rst = 1;
-      flow->info.stats_l4.rst_sent[dissection_info->l4.direction]++;
+      flow->info.statistics[PFWL_STAT_L4_TCP_COUNT_RST][direction]++;
+    }
+    if(tcp->window == 0){
+      flow->info.statistics[PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW][direction]++;
+    }
+    if(tcp->syn && tcp->ack){
+      flow->info_private.synack_acknum = tcp->ack_seq;
+      flow->info.statistics[PFWL_STAT_L4_TCP_RTT_SYN_ACK][1 - direction] = timestamp - flow->info.statistics[PFWL_STAT_TIMESTAMP_LAST][1 - direction];
+    }
+    if(tcp->seq == flow->info_private.synack_acknum &&
+       direction == PFWL_DIRECTION_OUTBOUND){
+      flow->info.statistics[PFWL_STAT_L4_TCP_RTT_SYN_ACK][1 - direction] = timestamp - flow->info.statistics[PFWL_STAT_TIMESTAMP_LAST][1 - direction];
     }
   }
 
-  ++flow->info.num_packets[dissection_info->l4.direction];
-  flow->info.num_bytes[dissection_info->l4.direction] +=
+  ++flow->info.num_packets[direction];
+  ++flow->info.statistics[PFWL_STAT_PACKETS][direction];
+  flow->info.num_bytes[direction] +=
+      length + dissection_info->l3.length;
+  flow->info.statistics[PFWL_STAT_BYTES][direction] +=
       length + dissection_info->l3.length;
 
   if (flow->info_private.last_rebuilt_tcp_data) {
@@ -162,9 +173,12 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
       seg = pfwl_reordering_tcp_track_connection(dissection_info,
                                                  &flow->info_private, pkt);
 
-      if (seg.status == PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
+      if(seg.status == PFWL_TCP_REORDERING_STATUS_OUT_OF_ORDER) {
         return PFWL_STATUS_TCP_OUT_OF_ORDER;
-      } else if (seg.status == PFWL_TCP_REORDERING_STATUS_REBUILT) {
+      }else if(seg.status == PFWL_TCP_REORDERING_STATUS_RETRANSMISSION){
+        flow->info.statistics[PFWL_STAT_L4_TCP_COUNT_RETRANSMISSIONS][direction]++;
+        return PFWL_STATUS_TCP_OUT_OF_ORDER;
+      }else if (seg.status == PFWL_TCP_REORDERING_STATUS_REBUILT) {
         dissection_info->l4.resegmented_pkt = seg.data;
         dissection_info->l4.resegmented_pkt_len = seg.data_length;
         flow->info_private.last_rebuilt_tcp_data = seg.data;

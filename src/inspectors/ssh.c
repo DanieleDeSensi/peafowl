@@ -79,8 +79,8 @@ uint8_t check_ssh(pfwl_state_t *state, const unsigned char *app_data,
 
   if (flow_info_private->ssh_stage >= 2) {
     return PFWL_PROTOCOL_MATCHES;
-  } else if(flow_info_private->info_public->num_packets_l7[0] +
-            flow_info_private->info_public->num_packets_l7[1] < PFWL_SSH_MAX_ATTEMPTS){
+  } else if(flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][0] +
+            flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][1] < PFWL_SSH_MAX_ATTEMPTS){
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
   }
 

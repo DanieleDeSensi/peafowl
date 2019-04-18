@@ -189,6 +189,13 @@ typedef struct pfwl_flow_info_private {
    * (Stored in host byte order).
    **/
   uint32_t expected_seq_num[2];
+
+  /** Last sequence number saw in each direction. **/
+  uint32_t last_seq[2];
+
+  /** Last ack number saw in each direction. **/
+  uint32_t last_ack[2];
+
   /** A pointer to out of order segments. **/
   pfwl_reassembly_fragment_t *segments[2];
 
@@ -211,6 +218,8 @@ typedef struct pfwl_flow_info_private {
 
   uint8_t first_packet_arrived : 2;
   uint32_t highest_ack[2];
+
+  uint32_t synack_acknum;
 
   /************************************/
   /* Protocol inspectors support data */

@@ -77,8 +77,8 @@ public:
   void onTermination(const peafowl::FlowInfo& info){
     printf("%" PRIu64 "\t%" PRIu16 "\t%s\t%s\t%" PRIu16 "\t%" PRIu16 "\t"
            "%s\t%s\t%s\t%s\t"
-           "%" PRIu64 "|%" PRIu64 "\t%" PRIu64 "|%" PRIu64 "\t%" PRIu64 "|%" PRIu64 "\t%" PRIu64 "|%" PRIu64 "\t"
-           "%" PRIu32 "|%" PRIu32 "\t%" PRIu32 "|%" PRIu32 "\n",
+           "%.0f|%.0f\t%.0f|%.0f\t%.0f|%.0f\t%.0f|%.0f\t"
+           "%.0f|%.0f\t%.0f|%.0f\n",
            info.getId(),
            info.getThreadId(),
            convertAddress(info.getAddressSrc(), tmp_srcaddr, sizeof(tmp_srcaddr)),
@@ -89,12 +89,12 @@ public:
            info.getProtocolL3().getName().c_str(),
            info.getProtocolL4().getName().c_str(),
            convertL7Protocols(info).c_str(),
-           info.getNumPackets(PFWL_DIRECTION_OUTBOUND),     info.getNumPackets(PFWL_DIRECTION_INBOUND),
-           info.getNumBytes(PFWL_DIRECTION_OUTBOUND),       info.getNumBytes(PFWL_DIRECTION_INBOUND),
-           info.getNumPacketsL7(PFWL_DIRECTION_OUTBOUND),   info.getNumPacketsL7(PFWL_DIRECTION_INBOUND),
-           info.getNumBytesL7(PFWL_DIRECTION_OUTBOUND),     info.getNumBytesL7(PFWL_DIRECTION_INBOUND),
-           info.getTimestampFirst(PFWL_DIRECTION_OUTBOUND), info.getTimestampFirst(PFWL_DIRECTION_INBOUND),
-           info.getTimestampLast(PFWL_DIRECTION_OUTBOUND),  info.getTimestampLast(PFWL_DIRECTION_INBOUND)
+           info.getStatistic(PFWL_STAT_PACKETS, PFWL_DIRECTION_OUTBOUND)        , info.getStatistic(PFWL_STAT_PACKETS, PFWL_DIRECTION_INBOUND),
+           info.getStatistic(PFWL_STAT_BYTES, PFWL_DIRECTION_OUTBOUND)          , info.getStatistic(PFWL_STAT_BYTES, PFWL_DIRECTION_INBOUND),
+           info.getStatistic(PFWL_STAT_L7_PACKETS, PFWL_DIRECTION_OUTBOUND)     , info.getStatistic(PFWL_STAT_L7_PACKETS, PFWL_DIRECTION_INBOUND),
+           info.getStatistic(PFWL_STAT_L7_BYTES, PFWL_DIRECTION_OUTBOUND)       , info.getStatistic(PFWL_STAT_L7_BYTES, PFWL_DIRECTION_INBOUND),
+           info.getStatistic(PFWL_STAT_TIMESTAMP_FIRST, PFWL_DIRECTION_OUTBOUND), info.getStatistic(PFWL_STAT_TIMESTAMP_FIRST, PFWL_DIRECTION_INBOUND),
+           info.getStatistic(PFWL_STAT_TIMESTAMP_LAST, PFWL_DIRECTION_OUTBOUND) , info.getStatistic(PFWL_STAT_TIMESTAMP_LAST, PFWL_DIRECTION_INBOUND)
            );
   }
 };

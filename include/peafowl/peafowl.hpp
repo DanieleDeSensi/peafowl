@@ -56,6 +56,8 @@ public:
 
 typedef pfwl_field_type_t FieldType;
 
+typedef pfwl_statistic_t Statistic;
+
 class Field {
 private:
   pfwl_field_t _field;
@@ -82,16 +84,6 @@ public:
 };
 
 typedef pfwl_direction_t Direction;
-
-class StatisticsL4 {
-private:
-  pfwl_stats_l4_t _stats;
-public:
-  StatisticsL4(pfwl_stats_l4_t stats);
-  uint32_t getSynSent(Direction direction) const;
-  uint32_t getFinSent(Direction direction) const;
-  uint32_t getRstSent(Direction direction) const;
-};
 
 class ProtocolL2{
 private:
@@ -173,7 +165,7 @@ public:
   ProtocolL3 getProtocolL3() const;
   ProtocolL4 getProtocolL4() const;
   std::vector<ProtocolL7> getProtocolsL7() const;
-  StatisticsL4 getStatisticsL4() const;
+  double getStatistic(Statistic stat, Direction dir) const;
   void** getUserData() const;
   pfwl_flow_info_t getNative() const;
   void setUserData(void* udata);
@@ -220,9 +212,6 @@ public:
   const unsigned char* getResegmentedPacket() const;
   size_t getResegmentedPacketLength() const;
   ProtocolL4 getProtocol() const;
-  bool hasSyn() const;
-  bool hasFin() const;
-  bool hasRst() const;
   pfwl_dissection_info_l4_t getNative() const;
 };
 
@@ -793,6 +782,23 @@ public:
    * @param field   The field identifier.
    */
   void fieldTagsUnloadL7(FieldId field);
+
+
+  /**
+   * Enables the computation of a specific flow statistic.
+   * @param stat The statistic to be enabled.
+   * @return 0 if succeeded,
+   *         1 otherwise.
+   */
+  void statisticAdd(Statistic stat);
+
+  /**
+   * Disables the computation of a specific flow statistic.
+   * @param stat The statistic to be enabled.
+   * @return 0 if succeeded,
+   *         1 otherwise.
+   */
+  void statisticRemove(Statistic stat);
 };
 
 /**

@@ -450,7 +450,7 @@ uint8_t check_ssl(pfwl_state_t *state, const unsigned char *payload,
 
   if(data_length > 40 &&
      flow_info_private->ssl_information.stage == 1 + pkt_info->l4.direction &&
-     flow_info_private->info_public->num_packets_l7[pkt_info->l4.direction] < 5) {
+     flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][pkt_info->l4.direction] < 5) {
     return PFWL_PROTOCOL_MATCHES;
   }
 
@@ -474,7 +474,7 @@ uint8_t check_ssl(pfwl_state_t *state, const unsigned char *payload,
     }
 
     if(data_length > 40 &&
-       flow_info_private->info_public->num_packets_l7[pkt_info->l4.direction] < 5) {
+       flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][pkt_info->l4.direction] < 5) {
       debug_print("%s\n", "ssl more data needed");
       return PFWL_PROTOCOL_MORE_DATA_NEEDED;
     }

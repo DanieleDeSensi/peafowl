@@ -385,8 +385,8 @@ imap_excluded:
   // one command or response was seen before
   if ((data_length >= 2 &&
        ntohs(get_u16(app_data, data_length - 2)) == 0x0d0a) &&
-      flow_info_private->info_public->num_packets_l7[0] +
-              flow_info_private->info_public->num_packets_l7[1] <
+      flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][0] +
+              flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][1] <
           6 &&
       flow_info_private->imap_stage >= 1) {
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;

@@ -387,11 +387,20 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
       ->num_packets_l7[diss_info->l4.direction];
   ((pfwl_flow_info_t *) flow_info_private->info_public)
       ->num_bytes_l7[diss_info->l4.direction] += length;
+  ++((pfwl_flow_info_t *) flow_info_private->info_public)
+      ->statistics[PFWL_STAT_L7_PACKETS][diss_info->l4.direction];
+  ((pfwl_flow_info_t *) flow_info_private->info_public)
+      ->statistics[PFWL_STAT_L7_BYTES][diss_info->l4.direction] += length;
 
   diss_info->flow_info.num_packets_l7[diss_info->l4.direction] =
-      flow_info_private->info_public->num_packets_l7[diss_info->l4.direction];
+      flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][diss_info->l4.direction];
   diss_info->flow_info.num_bytes_l7[diss_info->l4.direction] =
-      flow_info_private->info_public->num_bytes_l7[diss_info->l4.direction];
+      flow_info_private->info_public->statistics[PFWL_STAT_L7_BYTES][diss_info->l4.direction];
+
+  diss_info->flow_info.statistics[PFWL_STAT_L7_PACKETS][diss_info->l4.direction] =
+      flow_info_private->info_public->statistics[PFWL_STAT_L7_PACKETS][diss_info->l4.direction];
+  diss_info->flow_info.statistics[PFWL_STAT_L7_BYTES][diss_info->l4.direction] =
+      flow_info_private->info_public->statistics[PFWL_STAT_L7_BYTES][diss_info->l4.direction];
 
   if ((diss_info->l4.protocol == IPPROTO_TCP && !state->active_protocols[0]) ||
       (diss_info->l4.protocol == IPPROTO_UDP && !state->active_protocols[1])) {

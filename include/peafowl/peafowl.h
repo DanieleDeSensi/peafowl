@@ -175,7 +175,7 @@ typedef enum {
   PFWL_PROTO_L7_NTP,      ///< NTP
   PFWL_PROTO_L7_SIP,      ///< SIP
   PFWL_PROTO_L7_RTP,      ///< RTP
-  PFWL_PROTO_L7_RTCP,      ///< RTCP
+  PFWL_PROTO_L7_RTCP,     ///< RTCP
   PFWL_PROTO_L7_SSH,      ///< SSH
   PFWL_PROTO_L7_SKYPE,    ///< Skype
   PFWL_PROTO_L7_HTTP,     ///< HTTP
@@ -205,6 +205,42 @@ typedef enum {
   PFWL_PROTO_L7_UNKNOWN ///< Dummy value to indicate that the protocol has not
                         ///< been identified
 } pfwl_protocol_l7_t;
+
+
+/**
+ * A generic statistic for the flow.
+ * While a field is something related to the packet,
+ * a statistic is something related to the flow
+ * (e.g. packets per second, etc...).
+ **/
+typedef enum {
+  PFWL_STAT_PACKETS = 0                  , ///< Number of packets, one value for each
+                                           ///< direction. Multiple IP fragments count like a
+                                           ///< single packet.
+  PFWL_STAT_BYTES                        , ///< Number of bytes (from L3 start to end of packet).
+  PFWL_STAT_TIMESTAMP_FIRST              , ///< Timestamp of the first packet received
+                                           ///< for this flow.
+                                           ///< Resolution depends on the values provided through
+                                           ///< the pfwl_dissect_from_L* calls.
+  PFWL_STAT_TIMESTAMP_LAST               , ///< Timestamp of the last packet received
+                                           ///< for this flow.
+                                           ///< Resolution depends on the values provided through
+                                           ///< the pfwl_dissect_from_L* calls.
+  PFWL_STAT_L4_TCP_RTT_SYN_ACK           , ///< Round-Trip-Time (RTT), measuring delay from the first SYN received
+                                           ///< to the corresponding ACK.
+                                           ///< Resolution depends on the values provided through
+                                           ///< the pfwl_dissect_from_L* calls.
+  PFWL_STAT_L4_TCP_COUNT_SYN             , ///< Number of segments with SYN bit set.
+  PFWL_STAT_L4_TCP_COUNT_FIN             , ///< Number of segments with FIN bit set.
+  PFWL_STAT_L4_TCP_COUNT_RST             , ///< Number of segments with RST bit set.
+  PFWL_STAT_L4_TCP_COUNT_RETRANSMISSIONS , ///< Number of retransmitted packets.
+  PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW     , ///< Number of zero window segments.
+  PFWL_STAT_L4_TCP_WINDOW_SCALING        , ///< Window scaling value, if present.
+  PFWL_STAT_L7_PACKETS                   , ///< Number of packets with a non-zero L7
+                                           ///< payload.
+  PFWL_STAT_L7_BYTES                     , ///< Number of L7 bytes. One value for each direction.
+  PFWL_STAT_NUM                          , ///< Dummy value to indicate number of statistics. Must be the last stat specified.
+} pfwl_statistic_t;
 
 // clang-format on
 
@@ -378,15 +414,6 @@ typedef union pfwl_ip_addr {
 #define PFWL_TAGS_MAX 128 ///< Maximum number of tags that can be associated to a packet
 
 /**
- * Statistics about L4 (UDP/TCP).
- **/
-typedef struct pfwl_stats_l4 {
-  uint32_t syn_sent[2]; ///< Number of packets with the SYN flag set (one per direction).
-  uint32_t fin_sent[2]; ///< Number of packets with the FIN flag set (one per direction).
-  uint32_t rst_sent[2]; ///< Number of packets with the RST flag set (one per direction).
-}pfwl_stats_l4_t;
-
-/**
  * Public information about the flow.
  * If pfwl_parse_L7 is explicitely called, when the first packet
  * of a flow is received, this structure must be initialized by
@@ -405,24 +432,36 @@ typedef struct pfwl_flow_info {
   uint64_t num_packets[2]; ///< Number of packets, one value for each
                            ///< direction. Multiple IP fragments count like a
                            ///< single packet. One value for each direction.
+                           ///< DEPRECATED. This field will be remove in v2.0.0
+                           ///< Use statistics field instead.
   uint64_t num_bytes[2]; ///< Number of bytes (from L3 start to end of packet).
                          ///< One value for each direction.
+                         ///< DEPRECATED. This field will be remove in v2.0.0
+                         ///< Use statistics field instead.
   uint64_t num_packets_l7[2]; ///< Number of packets with a non-zero L7
                               ///< payload. One value for each direction
+                              ///< DEPRECATED. This field will be remove in v2.0.0
+                              ///< Use statistics field instead.
   uint64_t
       num_bytes_l7[2]; ///< Number of L7 bytes. One value for each direction.
+                       ///< DEPRECATED. This field will be remove in v2.0.0
+                       ///< Use statistics field instead.
   uint32_t
       timestamp_first[2]; ///< Timestamp (seconds) of the first packet received
                           ///< for this flow. One value for each direction.
+                          ///< DEPRECATED. This field will be remove in v2.0.0
+                          ///< Use statistics field instead.
   uint32_t
       timestamp_last[2]; ///< Timestamp (seconds) of the last packet received
                          ///< for this flow. One value for each direction.
+                         ///< DEPRECATED. This field will be remove in v2.0.0
+                         ///< Use statistics field instead.
 
   pfwl_protocol_l2_t protocol_l2; ///< L2 (datalink) protocol
   pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
                                   ///< PFWL_IP_VERSION_6 in IPv6.
   uint8_t protocol_l4; ///< The Level 4 protocol.
-  pfwl_stats_l4_t stats_l4; ///< The L4 statistics.
+  double statistics[PFWL_STAT_NUM][2]; ///< The flow statistics (one set per direction).
   pfwl_protocol_l7_t protocols_l7[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
                                                                ///< For example, Ethereum may be carried by JSON-RPC, which
                                                                ///< in turn may be carried by HTTP. If such a flow is found,
@@ -492,9 +531,6 @@ typedef struct pfwl_dissection_info_l4 {
   const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
   size_t resegmented_pkt_len;  ///< The length of the resegmented TCP payload.
   pfwl_protocol_l4_t protocol; ///< The Level 4 protocol.
-  uint8_t has_syn:1; ///< Set to 1 if the packet has the SYN flag set (TCP only).
-  uint8_t has_fin:1; ///< Set to 1 if the packet has the FIN flag set (TCP only).
-  uint8_t has_rst:1; ///< Set to 1 if the packet has the RST flag set (TCP only).
 }pfwl_dissection_info_l4_t;
 
 /**
@@ -1114,6 +1150,25 @@ uint8_t pfwl_set_flow_cleaner_callback(pfwl_state_t *state,
  */
 uint8_t pfwl_set_flow_termination_callback(pfwl_state_t *state,
                                            pfwl_flow_termination_callback_t *cleaner);
+
+/**
+ * @brief pfwl_statistic_add Enables the computation of a specific flow statistic.
+ * @param state A pointer to the state of the library.
+ * @param stat The statistic to be enabled.
+ * @return 0 if succeeded,
+ *         1 otherwise.
+ */
+uint8_t pfwl_statistic_add(pfwl_state_t* state, pfwl_statistic_t stat);
+
+/**
+ * @brief pfwl_statistic_remove Disables the computation of a specific flow statistic.
+ * @param state A pointer to the state of the library.
+ * @param stat The statistic to be enabled.
+ * @return 0 if succeeded,
+ *         1 otherwise.
+ */
+uint8_t pfwl_statistic_remove(pfwl_state_t* state, pfwl_statistic_t stat);
+
 /**
  * Enables the extraction of a specific L7 field for a given protocol.
  * When a protocol is identified, the default behavior is to not
@@ -1417,6 +1472,13 @@ typedef struct pfwl_state {
    * If 1, the field is extracted. If 0, it is not extracted.
    **/
   uint8_t fields_to_extract[PFWL_FIELDS_L7_NUM];
+
+  /**
+   * One flag per stat.
+   * If 1, the stat is computed. If 0, it is not computed.
+   */
+  uint8_t stats_to_compute[PFWL_STAT_NUM];
+
   /**
    * Number of fields to extract, per protocol.
    **/

@@ -386,6 +386,16 @@ uint8_t pfwl_set_flow_termination_callback(pfwl_state_t *state,
   }
 }
 
+uint8_t pfwl_statistic_add(pfwl_state_t* state, pfwl_statistic_t stat){
+  state->stats_to_compute[stat] = 1;
+  return 0;
+}
+
+uint8_t pfwl_statistic_remove(pfwl_state_t* state, pfwl_statistic_t stat){
+  state->stats_to_compute[stat] = 0;
+  return 0;
+}
+
 uint8_t pfwl_field_add_L7_internal(pfwl_state_t *state, pfwl_field_id_t field,
                                    uint8_t* fields_to_extract, uint8_t* fields_to_extract_num) {
   if (state) {

@@ -62,15 +62,9 @@ PYBIND11_MODULE(pypeafowl, m) {
       .def("getProtocolL3", &FlowInfo::getProtocolL3)
       .def("getProtocolL4", &FlowInfo::getProtocolL4)
       .def("getProtocolsL7", &FlowInfo::getProtocolsL7)
-      .def("getStatisticsL4", &FlowInfo::getStatisticsL4)
+      .def("getStatisticL4", &FlowInfo::getStatistic)
       .def("getUserData", &FlowInfo::getUserData)
       .def("setUserData", &FlowInfo::setUserData)
-      ;
-
-  py::class_<StatisticsL4>(m, "StatisticsL4")
-      .def("getSynSent", &StatisticsL4::getSynSent)
-      .def("getFinSent", &StatisticsL4::getFinSent)
-      .def("getRstSent", &StatisticsL4::getRstSent)
       ;
 
   py::class_<DissectionInfoL2>(m, "DissectionInfoL2")
@@ -100,9 +94,6 @@ PYBIND11_MODULE(pypeafowl, m) {
       .def("getResegmentedPacket", &DissectionInfoL4::getResegmentedPacket)
       .def("getResegmentedPacketLength", &DissectionInfoL4::getResegmentedPacketLength)
       .def("getProtocol", &DissectionInfoL4::getProtocol)
-      .def("hasSyn", &DissectionInfoL4::hasSyn)
-      .def("hasFin", &DissectionInfoL4::hasFin)
-      .def("hasRst", &DissectionInfoL4::hasRst)
       ;
 
   py::class_<DissectionInfoL7>(m, "DissectionInfoL7")
