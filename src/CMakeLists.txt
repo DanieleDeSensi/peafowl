@@ -44,13 +44,13 @@ endif (ENABLE_PARALLEL)
 
 
 install(TARGETS peafowl 
-        LIBRARY DESTINATION /usr/lib)
+        LIBRARY DESTINATION lib)
 
 install(TARGETS peafowl_static 
-        ARCHIVE DESTINATION /usr/lib)
+        ARCHIVE DESTINATION lib)
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/peafowl
-        DESTINATION /usr/include)
+        DESTINATION include)
 
 ##########
 # Python #
