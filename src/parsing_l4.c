@@ -82,6 +82,34 @@ uint8_t pfwl_skip_L7_parsing_by_port(pfwl_state_t* state, uint8_t l4prot,
 }
 #endif
 
+
+static void parse_tcp_opt_hdrs(pfwl_state_t *state, const unsigned char *pkt,
+                               size_t length, pfwl_flow_t *flow, pfwl_direction_t direction){
+  struct tcphdr *tcp = (struct tcphdr *) pkt;
+  if(tcp->doff > 5 && state->stats_to_compute[PFWL_STAT_L4_TCP_WINDOW_SCALING]){
+    const unsigned char* hdr = pkt + sizeof(struct tcphdr);
+    while(hdr < pkt + length){
+      uint8_t type = get_u8(hdr, 0);
+      uint8_t length;
+      if(type <= 1){
+        // EOL (0) and NOP (1)
+        length = 1;
+      }else{
+        length = get_u8(hdr, 1);
+        if(type == 3){
+          // Window Scaling
+          if(length != 3){
+            // Error
+          }else{
+            flow->info.statistics[PFWL_STAT_L4_TCP_WINDOW_SCALING][direction] = get_u8(hdr, 2);
+          }
+        }
+      }
+      hdr += length;
+    }
+  }
+}
+
 pfwl_status_t
 mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
                         size_t length, uint32_t timestamp, int tid,
@@ -99,7 +127,7 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
     dissection_info->l4.port_src = tcp->source;
     dissection_info->l4.port_dst = tcp->dest;
     dissection_info->l4.length = (tcp->doff * 4);
-    syn = tcp->syn;
+    syn = tcp->syn;    
   } break;
   case IPPROTO_UDP: {
     struct udphdr *udp = (struct udphdr *) pkt;
@@ -148,6 +176,7 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
        direction == PFWL_DIRECTION_OUTBOUND){
       flow->info.statistics[PFWL_STAT_L4_TCP_RTT_SYN_ACK][1 - direction] = timestamp - flow->info.statistics[PFWL_STAT_TIMESTAMP_LAST][1 - direction];
     }
+    parse_tcp_opt_hdrs(state, pkt, length, flow, direction);
   }
 
   ++flow->info.num_packets[direction];

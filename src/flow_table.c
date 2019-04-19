@@ -594,6 +594,8 @@ void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
 
 static void pfwl_init_flow_info_public_internal(pfwl_flow_info_t *flow_info) {
   memset(flow_info, 0, sizeof(pfwl_flow_info_t));
+  flow_info->statistics[PFWL_STAT_L4_TCP_WINDOW_SCALING][0] = -1;
+  flow_info->statistics[PFWL_STAT_L4_TCP_WINDOW_SCALING][1] = -1;
 }
 
 pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(

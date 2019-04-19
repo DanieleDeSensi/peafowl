@@ -62,7 +62,7 @@ TEST(StatisticsTest, BytesAndPackets) {
   pfwl_terminate(state);
 }
 
-static double syn_found[2], fin_found[2], rst_found[2], retrans[2], zerowin[2];
+static double syn_found[2], fin_found[2], rst_found[2], retrans[2], zerowin[2], winscaling[2];
 static uint32_t targetflow = 0;
 void flagchecker(pfwl_flow_info_t* flow_info){
   if(flow_info->id == targetflow){
@@ -79,7 +79,10 @@ void flagchecker(pfwl_flow_info_t* flow_info){
     retrans[1] = flow_info->statistics[PFWL_STAT_L4_TCP_COUNT_RETRANSMISSIONS][1];
 
     zerowin[0] = flow_info->statistics[PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW][0];
-    zerowin[1] = flow_info->statistics[PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW][1];    
+    zerowin[1] = flow_info->statistics[PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW][1];
+
+    winscaling[0] = flow_info->statistics[PFWL_STAT_L4_TCP_WINDOW_SCALING][0];
+    winscaling[1] = flow_info->statistics[PFWL_STAT_L4_TCP_WINDOW_SCALING][1];
   }
 }
 
@@ -152,4 +155,32 @@ TEST(StatisticsTest, TCPZeroWindow) {
   pfwl_terminate(state);
   EXPECT_EQ(zerowin[0], 1);
   EXPECT_EQ(zerowin[1], 0);
+}
+
+TEST(StatisticsTest, TCPWindowScaling) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_statistic_add(state, PFWL_STAT_L4_TCP_WINDOW_SCALING);
+  pfwl_set_flow_termination_callback(state, &flagchecker);
+  std::vector<uint> protocols;
+  targetflow = 0;
+  getProtocols("./pcaps/http-segmented.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    ;
+  });
+  pfwl_terminate(state);
+  EXPECT_EQ(winscaling[0], 7);
+  EXPECT_EQ(winscaling[1], 0);
+}
+
+TEST(StatisticsTest, TCPNoWindowScaling) {
+  pfwl_state_t* state = pfwl_init();
+  pfwl_statistic_add(state, PFWL_STAT_L4_TCP_WINDOW_SCALING);
+  pfwl_set_flow_termination_callback(state, &flagchecker);
+  std::vector<uint> protocols;
+  targetflow = 0;
+  getProtocols("./pcaps/http.cap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
+    ;
+  });
+  pfwl_terminate(state);
+  EXPECT_EQ(winscaling[0], -1);
+  EXPECT_EQ(winscaling[1], -1);
 }
