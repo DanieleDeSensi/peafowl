@@ -504,8 +504,9 @@ The following people contributed to Peafowl:
 - Daniele De Sensi (d.desensi.software@gmail.com): Main developer
 - Michele Campus (michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing
 - Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors
-- QXIP B.V. sponsored the development of some parts of Peafowl (e.g. SIP dissector and others)
 - max197616 (https://github.com/max197616): SSL dissector
+- QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl features (e.g. SIP, RTP, RTCP dissectors and others)
+- CounterFlowAI (https://www.counterflow.ai/) sponsored the development of some Peafowl features (e.g. TCP statistics)
 
 I would like to thank Prof. Marco Danelutto, Dr. Luca Deri and Dr. Massimo Torquati for their essential help and
 valuable advices.

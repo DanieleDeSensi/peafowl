@@ -235,7 +235,7 @@ typedef enum {
   PFWL_STAT_L4_TCP_COUNT_RST             , ///< Number of segments with RST bit set.
   PFWL_STAT_L4_TCP_COUNT_RETRANSMISSIONS , ///< Number of retransmitted packets.
   PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW     , ///< Number of zero window segments.
-  PFWL_STAT_L4_TCP_WINDOW_SCALING        , ///< Window scaling value, if present.
+  PFWL_STAT_L4_TCP_WINDOW_SCALING        , ///< Window scaling value (shift count) or -1 if the TCP option was not present.
   PFWL_STAT_L7_PACKETS                   , ///< Number of packets with a non-zero L7
                                            ///< payload.
   PFWL_STAT_L7_BYTES                     , ///< Number of L7 bytes. One value for each direction.
