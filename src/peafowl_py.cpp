@@ -6,6 +6,22 @@ namespace py = pybind11;
 
 using namespace peafowl;
 
+class FlowManagerTramp : public FlowManager {
+public:
+    /* Inherit the constructors */
+    using FlowManager::FlowManager;
+
+    /* Trampoline (need one for each virtual function) */
+    void onTermination(const FlowInfo& finfo) override {
+        PYBIND11_OVERLOAD(
+            void,          /* Return type */
+            FlowManager,   /* Parent class */
+            onTermination, /* Name of function in C++ (must match Python name) */
+            finfo          /* Argument(s) */
+        );
+    }
+};
+
 PYBIND11_MODULE(pypeafowl, m) {
   m.doc() = R"pbdoc(
       Peafowl python binding
@@ -15,7 +31,7 @@ PYBIND11_MODULE(pypeafowl, m) {
          :toctree: _generate
   )pbdoc";
 
-  py::class_<FlowManager>(m, "FlowManager")
+  py::class_<FlowManager, FlowManagerTramp>(m, "FlowManager")
       .def(py::init<>())
       .def("onTermination", &FlowManager::onTermination)
       ;
@@ -26,7 +42,29 @@ PYBIND11_MODULE(pypeafowl, m) {
       .def("getLength", &String::getLength)
       ;
 
-  py::enum_<pfwl_field_id_t>(m, "FieldId")
+  py::enum_<Direction>(m, "Direction")
+      .value("OUTBOUND", PFWL_DIRECTION_OUTBOUND)
+      .value("INBOUND", PFWL_DIRECTION_INBOUND)
+      .export_values();
+
+  py::enum_<Statistic>(m, "Statistic")
+      .value("PACKETS", PFWL_STAT_PACKETS)
+      .value("BYTES", PFWL_STAT_BYTES)
+      .value("TIMESTAMP_FIRST", PFWL_STAT_TIMESTAMP_FIRST)
+      .value("TIMESTAMP_LAST", PFWL_STAT_TIMESTAMP_LAST)
+      .value("L4_TCP_RTT_SYN_ACK", PFWL_STAT_L4_TCP_RTT_SYN_ACK)
+      .value("L4_TCP_COUNT_SYN", PFWL_STAT_L4_TCP_COUNT_SYN)
+      .value("L4_TCP_COUNT_FIN", PFWL_STAT_L4_TCP_COUNT_FIN)
+      .value("L4_TCP_COUNT_RST", PFWL_STAT_L4_TCP_COUNT_RST)
+      .value("L4_TCP_COUNT_RETRANSMISSIONS", PFWL_STAT_L4_TCP_COUNT_RETRANSMISSIONS)
+      .value("L4_TCP_COUNT_ZERO_WINDOW", PFWL_STAT_L4_TCP_COUNT_ZERO_WINDOW)
+      .value("L4_TCP_WINDOW_SCALING", PFWL_STAT_L4_TCP_WINDOW_SCALING)
+      .value("L7_PACKETS", PFWL_STAT_L7_PACKETS)
+      .value("L7_BYTES", PFWL_STAT_L7_BYTES)
+      .value("STAT_NUM", PFWL_STAT_NUM)
+      .export_values();
+
+  py::enum_<FieldId>(m, "FieldId")
       .value("HTTP_URL", PFWL_FIELDS_L7_HTTP_URL)
       .export_values();
 
@@ -42,6 +80,7 @@ PYBIND11_MODULE(pypeafowl, m) {
       .def("isIPv6", &IpAddress::isIPv6)
       .def("getIPv4", &IpAddress::getIPv4)
       .def("getIPv6", &IpAddress::getIPv6)
+      .def("toString", &IpAddress::toString)
       ;
 
   py::class_<FlowInfo>(m, "FlowInfo")
@@ -62,7 +101,7 @@ PYBIND11_MODULE(pypeafowl, m) {
       .def("getProtocolL3", &FlowInfo::getProtocolL3)
       .def("getProtocolL4", &FlowInfo::getProtocolL4)
       .def("getProtocolsL7", &FlowInfo::getProtocolsL7)
-      .def("getStatisticL4", &FlowInfo::getStatistic)
+      .def("getStatistic", &FlowInfo::getStatistic)
       .def("getUserData", &FlowInfo::getUserData)
       .def("setUserData", &FlowInfo::setUserData)
       ;

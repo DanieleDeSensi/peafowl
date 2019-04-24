@@ -30,6 +30,8 @@
 #include <stdexcept>
 #include <algorithm>
 #include <string.h>
+#include <arpa/inet.h>
+
 
 extern "C" uint8_t pfwl_http_get_header_internal(pfwl_field_t field, const char *header_name, pfwl_string_t *header_value);
 
@@ -111,6 +113,18 @@ uint32_t IpAddress::getIPv4() const{
 
 struct in6_addr IpAddress::getIPv6() const{
   return _addr.ipv6;
+}
+
+std::string IpAddress::toString() const{
+  char buf[64];
+  size_t buf_size = 64;
+  if(isIPv4()){
+    struct in_addr a;
+    a.s_addr = _addr.ipv4;
+    return inet_ntop(AF_INET, (void*) &a, buf, buf_size);
+  }else{
+    return inet_ntop(AF_INET6, (void*) &(_addr.ipv6), buf, buf_size);
+  }
 }
 
 FlowInfo::FlowInfo(){

@@ -83,6 +83,7 @@ public:
   bool isIPv6() const;
   uint32_t getIPv4() const;
   struct in6_addr getIPv6() const;
+  std::string toString() const;
 };
 
 typedef pfwl_direction_t Direction;
