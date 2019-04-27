@@ -14,6 +14,7 @@ option (ENABLE_CODECOV "Enables code coverage reports" OFF)
 option (ENABLE_CLANGFORMAT "Enables clang-format formatting" OFF)
 option (ENABLE_DOCS "Enables documentation generation" OFF)
 option (ENABLE_PYTHON "Enables generation of Python code" OFF)
+option (ENABLE_C "Enables generation of C/C++ libraries" ON)
 
 add_compile_options(-Wall -finline-functions -O3)
 
@@ -36,7 +37,9 @@ endif (ENABLE_CODECOV)
 # Library #
 ###########
 add_subdirectory(src)
-add_subdirectory(demo)
+if (ENABLE_C)
+    add_subdirectory(demo)
+endif (ENABLE_C)
 
 ############
 # cppcheck #

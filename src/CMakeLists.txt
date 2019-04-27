@@ -23,34 +23,36 @@ endif (ENABLE_PARALLEL)
 ####################
 # Library building #
 ####################
-add_library(peafowl SHARED ${SOURCES})
-add_library(peafowl_static STATIC ${SOURCES})
+if (ENABLE_C)
+    add_library(peafowl SHARED ${SOURCES})
+    add_library(peafowl_static STATIC ${SOURCES})
 
-# Generate protocol fields names before building
-find_package(PythonInterp 2 REQUIRED)
+    # Generate protocol fields names before building
+    find_package(PythonInterp 2 REQUIRED)
 
-add_custom_target(
-    generate_fields_names
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/src/generate_fields_enum.py
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
-add_dependencies(peafowl generate_fields_names)
-add_dependencies(peafowl_static generate_fields_names)
+    add_custom_target(
+        generate_fields_names
+        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/src/generate_fields_enum.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    add_dependencies(peafowl generate_fields_names)
+    add_dependencies(peafowl_static generate_fields_names)
 
-if (ENABLE_PARALLEL)
-  include_directories(${CMAKE_SOURCE_DIR}/include/peafowl/external/fastflow/)
-  target_link_libraries(peafowl ${CMAKE_THREAD_LIBS_INIT})
-endif (ENABLE_PARALLEL)
+    if (ENABLE_PARALLEL)
+      include_directories(${CMAKE_SOURCE_DIR}/include/peafowl/external/fastflow/)
+      target_link_libraries(peafowl ${CMAKE_THREAD_LIBS_INIT})
+    endif (ENABLE_PARALLEL)
 
 
-install(TARGETS peafowl 
-        LIBRARY DESTINATION lib)
+    install(TARGETS peafowl 
+            LIBRARY DESTINATION lib)
 
-install(TARGETS peafowl_static 
-        ARCHIVE DESTINATION lib)
+    install(TARGETS peafowl_static 
+            ARCHIVE DESTINATION lib)
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/peafowl
-        DESTINATION include)
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/peafowl
+            DESTINATION include)
+endif(ENABLE_C)
 
 ##########
 # Python #
@@ -61,8 +63,7 @@ if (ENABLE_PYTHON)
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     add_subdirectory(external/pybind11)
     find_package(PythonLibs REQUIRED)
-    pybind11_add_module(pypeafowl peafowl_py.cpp)
-    target_link_libraries(pypeafowl PRIVATE peafowl)
+    pybind11_add_module(pypeafowl ${SOURCES} peafowl_py.cpp)
     target_include_directories(pypeafowl PUBLIC ${CMAKE_SOURCE_DIR}/src/external/pybind11/include/)
     target_include_directories(pypeafowl PUBLIC ${PYTHON_INCLUDE_DIRS})
 endif (ENABLE_PYTHON)
