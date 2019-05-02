@@ -2,3 +2,4 @@ sphinx-tabs
 breathe
 exhale
 -e git+https://github.com/mithro/sphinx-contrib-mithro#egg=sphinx-contrib-exhale-multiproject&subdirectory=sphinx-contrib-exhale-multiproject
+cmake
