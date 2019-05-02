@@ -20,6 +20,6 @@ formats: all
 python:
   version: 3.5
   install:
+    - requirements: docs/requirements.txt
     - method: pip
       path: .
-    - requirements: docs/requirements.txt
