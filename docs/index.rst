@@ -3,26 +3,60 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to peafowl's documentation!
-===================================
+Peafowl User Guide
+******************
+.. include:: introduction.rst
 
-Contents:
 
-.. toctree::
-   :maxdepth: 2
+Building and Installing
+=======================
+.. include:: build.rst
 
-Indices and tables
-==================
+Basic Usage
+===========
+.. include:: basic.rst
 
-* :ref:`genindex`
-* :ref:`search`
+Flows
+=====
+.. include:: flows.rst
 
-API Documentation
+Fields Extraction
 =================
+.. include:: fields.rst
+
+Tagging
+=======
+TODO
+
+Supported Protocols
+===================
+.. include:: protocols.rst
+
+API Reference
+=============
 .. autosummary::
    :toctree: _autosummary
 
    pypeafowl
 
+|
+|
+|
+|
+
+Customizing and Extending Peafowl
+*********************************
+
+Low-level Configuration
+=======================
+.. include:: configuration.rst
+
+Adding New Protocols
+====================
+.. include:: newprotocols.rst
+
+Adding New Fields
+=================
+.. include:: newfields.rst
 
 

@@ -924,7 +924,6 @@ void Peafowl::statisticAdd(Statistic stat){
   }
 }
 
-
 void Peafowl::statisticRemove(Statistic stat){
   if(pfwl_statistic_remove(_state, stat)){
     throw std::runtime_error("pfwl_statistic_remove failed\n");
