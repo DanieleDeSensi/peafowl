@@ -17,6 +17,7 @@ install:
   - pip install requests[security]
   - pip install --user gcovr
   # Doc
+  # sudo apt-get install doxygen
   # pip install sphinx
   # pip install sphinx-tabs
 

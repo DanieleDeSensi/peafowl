@@ -49,7 +49,7 @@ help:
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)/*
+	rm -rf $(BUILDDIR)/* api_c/ api_cpp/
 
 .PHONY: html
 html:

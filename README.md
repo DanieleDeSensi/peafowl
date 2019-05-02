@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/DanieleDeSensi/peafowl.svg?branch=master)](https://travis-ci.org/DanieleDeSensi/peafowl) 
 [![release](https://img.shields.io/github/release/danieledesensi/peafowl.svg)](https://github.com/danieledesensi/peafowl/releases/latest)
+[![Documentation Status](https://readthedocs.org/projects/peafowl/badge/?version=latest)](https://peafowl.readthedocs.io/en/latest/?badge=latest)
 [![CodeFactor](https://www.codefactor.io/repository/github/danieledesensi/peafowl/badge)](https://www.codefactor.io/repository/github/danieledesensi/peafowl/)
 [![HitCount](http://hits.dwyl.io/DanieleDeSensi/Peafowl.svg)](http://hits.dwyl.io/DanieleDeSensi/Peafowl)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
@@ -34,25 +35,7 @@ TCP stream reassembly.
 **If you use Peafowl for scientific purposes, please cite our paper:**
 *"Deep Packet Inspection on Commodity Hardware using FastFlow"*, M. Danelutto, L. Deri, D. De Sensi, M. Torquati
 
-How it works
-================================================================================================================
-To identify the application protocol, packets are classified in bidirectional sets of packets all sharing the 
-same:
-
-+ Source IP and Destination IP addressess
-+ Source and Destination Ports
-+ Layer4 protocol (TCP or UDP)
-
-These sets are called "flows" and for each of them the framework stores some data into an hash table. These
-informations are mantained for all the duration the TCP connection or until the flow is active. If we receive
-no packets for a flow for a given amount of time (30 seconds by default), the corresponding data will be removed
-from the table.
-
-The framework also performs IP defragmentation and TCP stream reassembly, in such a way that the protocol is 
-correctly identified also when its data is split among multiple fragments or segments. Moreover, this is useful
-to avoid evasion attacks that use IP fragmentation and TCP segmentation.
-
-A more detailed (but outdated) description can be found in the thesis which lead to the development of this framework: [Thesis.pdf](Thesis.pdf)
+For a detailed description of the framework, of its usage, and on how to extend it, please refer to the [documentation](https://peafowl.readthedocs.io/en/latest/).
 
 Usage
 ================================================================================================================
@@ -117,7 +100,8 @@ The parameters are:
     * The tag to associate to the packet when the match is found
 For example, by calling ```pfwl_field_string_tags_add_L7(state, PFWL_FIELDS_L7_HTTP_BODY, "<?xml", PFWL_FIELD_MATCHING_PREFIX, "TAG_XML")```, every time the body of an HTTP packets starts with the ```<?xml``` string, the ```TAG_XML``` tag will be associated with that packet. The user can find the tags associated to each packet in the ```dissection_info``` struct returned by the ```pfwl_dissect_from_L2``` call. Tags matching rules can also be loaded from files by using the ```pfwl_field_tags_load_L7``` call.
 
-For a more detailed description of the aforementioned calls and for other API calls, please refer to the documentation in ["peafowl.h"](include/peafowl/peafowl.h) header.
+For a more detailed description of the framework please refer to the [documentation](https://peafowl.readthedocs.io/en/latest/).
+
 
 Contributions
 ================================================================================================================

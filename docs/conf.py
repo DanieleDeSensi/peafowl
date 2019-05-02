@@ -14,7 +14,10 @@
 
 import sys
 import os
+import subprocess
+import exhale_multiproject_monkeypatch
 
+ 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -37,9 +40,46 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinx_tabs.tabs',
+    'breathe',
+    'exhale',
 ]
 
 autosummary_generate = True
+
+# Invoke doxygen
+subprocess.call('doxygen Doxyfile.in.c', shell=True)
+subprocess.call('doxygen Doxyfile.in.cpp', shell=True)
+
+breathe_projects = {
+    "peafowl-c":"./_build/doxyxml_c",
+    "peafowl-cpp":"./_build/doxyxml_cpp",
+}
+
+# Setup the exhale extension
+exhale_args = {
+    # These arguments are required
+    "containmentFolder":     "./api_c",
+    "rootFileName":          "library_root.rst",
+    "rootFileTitle":         "Peafowl C API",
+    "doxygenStripFromPath":  "..",
+    # Suggested optional arguments
+    "createTreeView":        True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # "treeViewIsBootstrap": True,
+}
+
+exhale_projects_args = {
+    "peafowl-c": { 
+      "containmentFolder": "./api_c",
+      "rootFileTitle":     "Peafowl C API",
+    },
+    "peafowl-cpp": { 
+      "containmentFolder": "./api_cpp",
+      "rootFileTitle":     "Peafowl C++ API",
+    },
+}
+
+breathe_default_project = "peafowl-c"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -56,7 +96,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'peafowl'
+project = u'Peafowl'
 copyright = u'2019, Daniele De Sensi'
 author = u'Daniele De Sensi'
 
@@ -118,7 +158,7 @@ todo_include_todos = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'classic'
+#html_theme = 'classic'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -147,7 +187,7 @@ html_theme = 'classic'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -199,7 +239,7 @@ html_static_path = ['_static']
 # Sphinx supports the following languages:
 #   'da', 'de', 'en', 'es', 'fi', 'fr', 'hu', 'it', 'ja'
 #   'nl', 'no', 'pt', 'ro', 'ru', 'sv', 'tr'
-#html_search_language = 'en'
+html_search_language = 'en'
 
 # A dictionary with options for the search language support, empty by default.
 # Now only 'ja' uses this config value
@@ -232,7 +272,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'peafowl.tex', u'peafowl Documentation',
+    (master_doc, 'peafowl.tex', u'Peafowl Documentation',
      u'Daniele De Sensi', 'manual'),
 ]
 
@@ -262,7 +302,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'peafowl', u'peafowl Documentation',
+    (master_doc, 'Peafowl', u'Peafowl Documentation',
      [author], 1)
 ]
 
@@ -276,8 +316,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'peafowl', u'peafowl Documentation',
-     author, 'peafowl', 'One line description of project.',
+    (master_doc, 'Peafowl', u'Peafowl Documentation',
+     author, 'Peafowl', 'High-performance Deep Packet Inspection (DPI) framework.',
      'Miscellaneous'),
 ]
 
@@ -296,3 +336,6 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+#html_theme = 'sphinx_rtd_theme'
+html_theme = 'classic'

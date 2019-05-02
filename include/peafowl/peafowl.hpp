@@ -472,6 +472,9 @@ public:
 };
 
 // clang-format on
+/**
+ * @brief This class is the Peafowl handler.
+ */
 class Peafowl{
   friend class FlowInfoPrivate;
 private:

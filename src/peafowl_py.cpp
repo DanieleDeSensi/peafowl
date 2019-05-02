@@ -25,8 +25,8 @@ public:
 
 PYBIND11_MODULE(pypeafowl, m) {
   m.doc() = R"pbdoc(
-      Peafowl python binding
-      ----------------------
+      Peafowl python API
+      ------------------
   )pbdoc";
 
   py::class_<FlowManager, FlowManagerTramp>(m, "FlowManager")
