@@ -47,11 +47,12 @@ extensions = [
 autosummary_generate = True
 
 # Set working directory to current directory
+'''
 import os
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
-print("moved to " + dname)
+'''
 
 # Invoke doxygen
 subprocess.call('doxygen Doxyfile.in.c', shell=True)

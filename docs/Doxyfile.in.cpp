@@ -1,5 +1,5 @@
 OUTPUT_DIRECTORY       = .
-INPUT                  = ../include/peafowl/inspectors/fields.h ../include/peafowl/peafowl.hpp
+INPUT                  = ../include/peafowl/peafowl.hpp
 OPTIMIZE_OUTPUT_FOR_C  = YES
 PROJECT_NAME           = Peafowl
 GENERATE_XML           = YES
