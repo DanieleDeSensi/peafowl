@@ -55,6 +55,7 @@ os.chdir(dname)
 '''
 
 # Invoke doxygen
+os.mkdir("./_build/")
 subprocess.call('doxygen Doxyfile.in.c', shell=True)
 subprocess.call('doxygen Doxyfile.in.cpp', shell=True)
 
