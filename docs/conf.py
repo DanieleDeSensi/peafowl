@@ -114,6 +114,8 @@ breathe_domain_by_extension = {
   "h" : "c",
 }
 
+sphinx_tabs_nowarn = True # There is a problem when using Sphinx > 2.0.0
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
