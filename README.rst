@@ -36,6 +36,9 @@ multiple IP fragments and/or TCP segments and to avoid the possibility
 of evasion attacks, if required, the framework can perform IP
 defragmentation and TCP stream reassembly.
 
+For a detailed description of the framework, of its usage, its API and
+on how to extend it, please refer to the `documentation`_.
+
 .. note::
    If you use Peafowl for scientific purposes, please cite our paper:   
    
@@ -56,9 +59,6 @@ defragmentation and TCP stream reassembly.
    |      year = {2013}
    |  }
    
-For a detailed description of the framework, of its usage, its API and
-on how to extend it, please refer to the `documentation`_.
-
 Contributions
 =============
 

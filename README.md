@@ -35,29 +35,42 @@ and to avoid the possibility of evasion attacks, if required, the framework can 
 TCP stream reassembly.
 
 
+For a detailed description of the framework, of its usage, its API and on how to extend it, please refer to 
+the [documentation](https://peafowl.readthedocs.io/en/latest/).
+
 > If you use Peafowl for scientific purposes, please cite our paper:
 >  
 > @inproceedings{ff:DPI:14,
+>
 >     address = {Munich, Germany},
+>
 >     author = {Danelutto, Marco and Deri, Luca and De Sensi, Daniele and Torquati, Massimo},
+>
 >     booktitle = {Proceedings of 15th International Parallel Computing Conference ({ParCo})},
+>
 >     doi = {10.3233/978-1-61499-381-0-92},
+>
 >     editor = {Michael Bader and Arndt Bode and Hans-Joachim Bungartz and Michael Gerndt and Gerhard R. Joubert and Frans Peters},
+>
 >     keywords = {fastflow, dpi, network monitoring},
+>
 >     pages = {92 -- 99},
+>
 >     pdf = {http://pages.di.unipi.it/desensi/assets/pdf/2013_ParCo.pdf},
+>
 >     publisher = {IOS Press},
+>
 >     series = {Advances in Parallel Computing},
+>
 >     title = {Deep Packet Inspection on Commodity Hardware using FastFlow},
+>
 >     url = {http://ebooks.iospress.nl/publication/35869},
+>
 >     volume = {25},
+>
 >     year = {2013}
+>
 > }
-
-
-
-For a detailed description of the framework, of its usage, its API and on how to extend it, please refer to 
-the [documentation](https://peafowl.readthedocs.io/en/latest/).
 
 
 Contributions
