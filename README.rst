@@ -56,6 +56,40 @@ defragmentation and TCP stream reassembly.
    |      year = {2013}
    |  }
    
+For a detailed description of the framework, of its usage, its API and
+on how to extend it, please refer to the `documentation`_.
+
+Contributions
+=============
+
+Peafowl has been mainly developed by Daniele De Sensi
+(d.desensi.software@gmail.com).
+
+The following people contributed to Peafowl: - Daniele De Sensi
+(d.desensi.software@gmail.com): Main developer - Michele Campus
+(michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing -
+Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype
+dissectors - max197616 (https://github.com/max197616): SSL dissector -
+QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl
+features (e.g. SIP, RTP, RTCP dissectors and others) - CounterFlowAI
+(https://www.counterflow.ai/) sponsored the development of some Peafowl
+features (e.g. TCP statistics)
+
+I would like to thank Prof. Marco Danelutto, Dr. Luca Deri and
+Dr. Massimo Torquati for their essential help and valuable advices.
+
+Contributing
+============
+
+If you would like to contribute to Peafowl development, for example by
+adding new protocols, please refer to the
+`documentation <https://peafowl.readthedocs.io/en/latest/customize.html>`__.
+
+Disclaimer
+==========
+The authors of Peafowl are strongly against any form of censorship.
+Please make sure that you respect the privacy of users and you have
+proper authorization to listen, capture and inspect network traffic.
 
 
 .. |Build Status| image:: https://travis-ci.org/DanieleDeSensi/peafowl.svg?branch=master
@@ -76,3 +110,4 @@ defragmentation and TCP stream reassembly.
    :target: https://saythanks.io/to/DanieleDeSensi
 .. |Donate| image:: https://img.shields.io/badge/Donate-PayPal-green.svg
    :target: http://paypal.me/DanieleDeSensi
+.. _documentation: https://peafowl.readthedocs.io/en/latest/
