@@ -134,7 +134,7 @@ typedef enum pfwl_status {
  **/
 // clang-format off
 typedef enum pfwl_datalink_type {
-  PFWL_PROTO_L2_EN10MB = 0,       ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
+  PFWL_PROTO_L2_EN10MB,           ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
   PFWL_PROTO_L2_LINUX_SLL,        ///< Linux "cooked" capture encapsulation
   PFWL_PROTO_L2_IEEE802_11_RADIO, ///< Radiotap link-layer information followed
                                   ///< by an 802.11 header
@@ -168,7 +168,7 @@ typedef uint8_t pfwl_protocol_l4_t; ///< L4 protocol. Values defined in
  * L7 (application level) protocol.
  **/
 typedef enum {
-  PFWL_PROTO_L7_DNS = 0,  ///< DNS
+  PFWL_PROTO_L7_DNS,      ///< DNS
   PFWL_PROTO_L7_MDNS,     ///< MDNS
   PFWL_PROTO_L7_DHCP,     ///< DHCP
   PFWL_PROTO_L7_DHCPv6,   ///< DHCPv6
@@ -214,7 +214,7 @@ typedef enum {
  * (e.g. packets per second, etc...).
  **/
 typedef enum {
-  PFWL_STAT_PACKETS = 0                  , ///< Number of packets, one value for each
+  PFWL_STAT_PACKETS                      , ///< Number of packets, one value for each
                                            ///< direction. Multiple IP fragments count like a
                                            ///< single packet.
   PFWL_STAT_BYTES                        , ///< Number of bytes (from L3 start to end of packet).
@@ -248,8 +248,8 @@ typedef enum {
  * Units of timestamps used by Peafowl.
  **/
 typedef enum {
-  PFWL_TIMESTAMP_UNIT_MILLISECONDS = 0, ///< Milliseconds
-  PFWL_TIMESTAMP_UNIT_SECONDS         , ///< Seconds
+  PFWL_TIMESTAMP_UNIT_MILLISECONDS, ///< Milliseconds
+  PFWL_TIMESTAMP_UNIT_SECONDS     , ///< Seconds
 } pfwl_timestamp_unit_t;
 
 /**
@@ -294,7 +294,7 @@ typedef pfwl_array_t pfwl_mmap_t;
  * A generic field extracted by peafowl.
  **/
 typedef struct pfwl_field {
-  uint8_t present : 1; ///< 1 if the field has been set, 0 otherwise.
+  uint8_t present;           ///< 1 if the field has been set, 0 otherwise.
   union {
     pfwl_basic_type_t basic; ///< A basic type.
     pfwl_array_t array;      ///< An array.
@@ -307,7 +307,7 @@ typedef struct pfwl_field {
  * Possible types for peafowl fields.
  **/
 typedef enum {
-  PFWL_FIELD_TYPE_STRING = 0,
+  PFWL_FIELD_TYPE_STRING,
   PFWL_FIELD_TYPE_NUMBER,
   PFWL_FIELD_TYPE_ARRAY,
   PFWL_FIELD_TYPE_PAIR,
@@ -318,7 +318,7 @@ typedef enum {
  * Possible packet directions.
  **/
 typedef enum {
-  PFWL_DIRECTION_OUTBOUND = 0, ///< From source to destination
+  PFWL_DIRECTION_OUTBOUND, ///< From source to destination
   PFWL_DIRECTION_INBOUND       ///< From destination to source
 } pfwl_direction_t;
 
@@ -626,9 +626,9 @@ typedef struct pfwl_state pfwl_state_t;
  * of accuracy that may be required to a dissector.
  **/
 typedef enum {
-  PFWL_DISSECTOR_ACCURACY_LOW = 0, ///< Low accuracy
-  PFWL_DISSECTOR_ACCURACY_MEDIUM,  ///< Medium accuracy
-  PFWL_DISSECTOR_ACCURACY_HIGH,    ///< High accuracy
+  PFWL_DISSECTOR_ACCURACY_LOW,    ///< Low accuracy
+  PFWL_DISSECTOR_ACCURACY_MEDIUM, ///< Medium accuracy
+  PFWL_DISSECTOR_ACCURACY_HIGH,   ///< High accuracy
 } pfwl_dissector_accuracy_t;
 
 /**
@@ -1358,10 +1358,10 @@ pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int dlt);
  * Possible type of matchings when associating tags to packets.
  **/
 typedef enum{
-  PFWL_FIELD_MATCHING_PREFIX = 0, ///< Prefix matching.
-  PFWL_FIELD_MATCHING_EXACT,      ///< Exact matching.
-  PFWL_FIELD_MATCHING_SUFFIX,     ///< Suffix matching.
-  PFWL_FIELD_MATCHING_ERROR       ///< Invalid tag matching.
+  PFWL_FIELD_MATCHING_PREFIX, ///< Prefix matching.
+  PFWL_FIELD_MATCHING_EXACT,  ///< Exact matching.
+  PFWL_FIELD_MATCHING_SUFFIX, ///< Suffix matching.
+  PFWL_FIELD_MATCHING_ERROR   ///< Invalid tag matching.
 }pfwl_field_matching_t;
 
 /**

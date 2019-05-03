@@ -16,6 +16,7 @@ import sys
 import os
 import subprocess
 import exhale_multiproject_monkeypatch
+from exhale import utils
 
  
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -46,49 +47,72 @@ extensions = [
 
 autosummary_generate = True
 
-# Set working directory to current directory
-'''
-import os
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
-'''
-
 # Invoke doxygen
+'''
 os.mkdir("./_build/")
 subprocess.call('doxygen Doxyfile.in.c', shell=True)
 subprocess.call('doxygen Doxyfile.in.cpp', shell=True)
+'''
 
 breathe_projects = {
-    "peafowl-c":"./_build/doxyxml_c",
-    "peafowl-cpp":"./_build/doxyxml_cpp",
+    "peafowl-c":"./_build/doxyxml_c/xml",
+    "peafowl-cpp":"./_build/doxyxml_cpp/xml",
+}
+
+breathe_projects_source = {
+    "peafowl-c"  :("../include/peafowl/", ["peafowl.h"]),
+    "peafowl-cpp":("../include/peafowl/", ["peafowl.hpp"]),
 }
 
 # Setup the exhale extension
 exhale_args = {
+    'verboseBuild': True,
     # These arguments are required
-    "containmentFolder":     "./api_c",
     "rootFileName":          "library_root.rst",
-    "rootFileTitle":         "Peafowl C API",
-    "doxygenStripFromPath":  "..",
+    "rootFileTitle":        "Unknown",
+    "containmentFolder":    "unknown",
+    "doxygenStripFromPath":  "../",
     # Suggested optional arguments
     "createTreeView":        True,
+    "exhaleExecutesDoxygen": True,
     # TIP: if using the sphinx-bootstrap-theme, you need
     # "treeViewIsBootstrap": True,
 }
 
+def specificationsForCPP(kind):
+  if kind == "class" or kind == "struct": 
+    return [":members:",
+            ":protected-members:",
+            ":undoc-members:",
+            ":project: peafowl-cpp"
+           ]
+  elif kind == "function" or kind == "typedef":
+    return [":project: peafowl-cpp"]
+  else:
+    return []
+
 exhale_projects_args = {
     "peafowl-c": { 
+      "exhaleDoxygenStdin":  "INPUT = ../include/peafowl/peafowl.h",
       "containmentFolder": "./api_c",
       "rootFileTitle":     "Peafowl C API",
     },
     "peafowl-cpp": { 
+      "exhaleDoxygenStdin":  "INPUT = ../include/peafowl/peafowl.hpp",
       "containmentFolder": "./api_cpp",
       "rootFileTitle":     "Peafowl C++ API",
+      "customSpecificationsMapping": utils.makeCustomSpecificationsMapping(
+        specificationsForCPP
+      )
     },
 }
 
 breathe_default_project = "peafowl-c"
+
+breathe_domain_by_extension = {
+  "hpp" : "cpp",
+  "h" : "c",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
