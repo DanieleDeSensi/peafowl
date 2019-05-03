@@ -91,19 +91,21 @@ def specificationsForCPP(kind):
   else:
     return []
 
+def specificationsForC(kind):
+  return []
+
 exhale_projects_args = {
     "peafowl-c": { 
       "exhaleDoxygenStdin":  "INPUT = ../include/peafowl/peafowl.h",
       "containmentFolder": "./api_c",
       "rootFileTitle":     "Peafowl C API",
+      "customSpecificationsMapping": utils.makeCustomSpecificationsMapping(specificationsForC)
     },
     "peafowl-cpp": { 
       "exhaleDoxygenStdin":  "INPUT = ../include/peafowl/peafowl.hpp",
       "containmentFolder": "./api_cpp",
       "rootFileTitle":     "Peafowl C++ API",
-      "customSpecificationsMapping": utils.makeCustomSpecificationsMapping(
-        specificationsForCPP
-      )
+      "customSpecificationsMapping": utils.makeCustomSpecificationsMapping(specificationsForCPP)
     },
 }
 
@@ -372,5 +374,14 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
 
-#html_theme = 'sphinx_rtd_theme'
-html_theme = 'classic'
+html_theme = 'sphinx_rtd_theme'
+#html_theme = 'classic'
+
+html_theme_options = {
+    # Toc options
+    'collapse_navigation': False,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
