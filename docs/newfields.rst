@@ -1,3 +1,5 @@
+Adding New Fields
+=================
 As described before, besides protocol identification, it is possible to seamlessly provide data and metadata carried by the protocols to the application that uses the framework. To add this capability to existing  inspector you need to follow some simple steps. 
 
 For example, let us assume that POP3 dissector is available in Peafowl but no field extraction capabilities are provided yet. To extract POP3 fields the following steps must be followed:

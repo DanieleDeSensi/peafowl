@@ -1,3 +1,5 @@
+Adding New Protocols
+====================
 If you want to add the support for new protocols, you can do it by following some simple steps. Protocols must be added in the **C** implementation. They will then be automatically available to the **C++** and **Python** interfaces as well. 
 
 For example, if you want to add the support for the Telnet protocol:

@@ -1,3 +1,5 @@
+Low-level Configuration
+=======================
 Peafowl can be tuned by modifying some low-level configuration parameters, by modifying 
 some ``#define`` in the ``include/config.h`` file before compiling and installing the library. 
 The most important are the following:

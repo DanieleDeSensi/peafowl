@@ -1,3 +1,6 @@
+Building and Installing
+=======================
+
 First of all, download Peafowl:
 
 .. code-block:: shell

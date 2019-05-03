@@ -160,30 +160,6 @@ uint16_t FlowInfo::getPortDst() const{
   return _flowInfo.port_dst;
 }
 
-uint64_t FlowInfo::getNumPackets(Direction direction) const{
-  return _flowInfo.num_packets[direction];
-}
-
-uint64_t FlowInfo::getNumBytes(Direction direction) const{
-  return _flowInfo.num_bytes[direction];
-}
-
-uint64_t FlowInfo::getNumPacketsL7(Direction direction) const{
-  return _flowInfo.num_packets_l7[direction];
-}
-
-uint64_t FlowInfo::getNumBytesL7(Direction direction) const{
-  return _flowInfo.num_bytes_l7[direction];
-}
-
-uint32_t FlowInfo::getTimestampFirst(Direction direction) const{
-  return _flowInfo.timestamp_first[direction];
-}
-
-uint32_t FlowInfo::getTimestampLast(Direction direction) const{
-  return _flowInfo.timestamp_last[direction];
-}
-
 ProtocolL2 FlowInfo::getProtocolL2() const{
   return _flowInfo.protocol_l2;
 }
@@ -392,12 +368,8 @@ IpAddress DissectionInfoL3::getAddressDst() const{
   return IpAddress(_dissectionInfo.addr_dst, _dissectionInfo.protocol == PFWL_PROTO_L3_IPV6);
 }
 
-const unsigned char* DissectionInfoL3::getRefragmentedPacket() const{
-  return _dissectionInfo.refrag_pkt;
-}
-
-size_t DissectionInfoL3::getRefragmentedPacketLength() const{
-  return _dissectionInfo.refrag_pkt_len;
+std::pair<const unsigned char*, size_t> DissectionInfoL3::getRefragmentedPacket() const{
+  return std::pair<const unsigned char*, size_t>(_dissectionInfo.refrag_pkt, _dissectionInfo.refrag_pkt_len);
 }
 
 ProtocolL3 DissectionInfoL3::getProtocol() const{
@@ -437,12 +409,8 @@ Direction DissectionInfoL4::getDirection() const{
   return _dissectionInfo.direction;
 }
 
-const unsigned char* DissectionInfoL4::getResegmentedPacket() const{
-  return _dissectionInfo.resegmented_pkt;
-}
-
-size_t DissectionInfoL4::getResegmentedPacketLength() const{
-  return _dissectionInfo.resegmented_pkt_len;
+std::pair<const unsigned char*, size_t> DissectionInfoL4::getResegmentedPacket() const{
+  return std::pair<const unsigned char*, size_t>(_dissectionInfo.resegmented_pkt, _dissectionInfo.resegmented_pkt_len);
 }
 
 ProtocolL4 DissectionInfoL4::getProtocol() const{
@@ -494,6 +462,17 @@ std::vector<std::string> DissectionInfoL7::getTags() const{
   return r;
 }
 
+Field DissectionInfoL7::httpGetHeader(const char *headerName) const{
+  pfwl_field_t field;
+  if(!pfwl_http_get_header_internal(getFields()[PFWL_FIELDS_L7_HTTP_HEADERS].getNative(),
+                                    headerName, &field.basic.string)){
+    field.present = 1;
+  }else{
+    field.present = 0;
+  }
+  return Field(field);
+}
+
 pfwl_dissection_info_l7_t DissectionInfoL7::getNative() const{
   return _dissectionInfo;
 }
@@ -519,24 +498,9 @@ ProtocolL7 DissectionInfo::guessProtocol() const{
   return pfwl_guess_protocol(_dissectionInfo);
 }
 
-Field DissectionInfo::httpGetHeader(const char *headerName) const{
-  pfwl_field_t field;
-  if(!pfwl_http_get_header_internal(_l7.getFields()[PFWL_FIELDS_L7_HTTP_HEADERS].getNative(),
-                                    headerName, &field.basic.string)){
-    field.present = 1;
-  }else{
-    field.present = 0;
-  }
-  return Field(field);
-}
-
 bool DissectionInfo::hasProtocolL7(ProtocolL7 protocol) const{
   const std::vector<ProtocolL7>& v = _l7.getProtocols();
   return std::find(v.begin(), v.end(), protocol) != v.end();
-}
-
-Field DissectionInfo::getField(FieldId id) const{
-  return _l7.getFields()[id];
 }
 
 Status DissectionInfo::getStatus() const{
@@ -562,6 +526,11 @@ DissectionInfoL7 DissectionInfo::getL7() const{
 FlowInfo DissectionInfo::getFlowInfo() const{
   return _flowInfo;
 }
+
+const pfwl_dissection_info_t& DissectionInfo::getNativeInfo() const{
+  return _dissectionInfo;
+}
+
 
 FlowManager::~FlowManager(){
   ;
@@ -746,44 +715,55 @@ void Peafowl::setTimestampUnit(TimestampUnit unit){
 
 DissectionInfo Peafowl::dissectFromL2(const std::string &pkt, uint32_t timestamp, ProtocolL2 datalinkType){
   pfwl_dissection_info_t info;
+  memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_from_L2(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, datalinkType, &info);
   return DissectionInfo(info, s);
 }
 
 DissectionInfo Peafowl::dissectFromL3(const std::string &pkt, uint32_t timestamp){
   pfwl_dissection_info_t info;
+  memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_from_L3(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
   return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectFromL4(const std::string &pkt, uint32_t timestamp){
-  pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_from_L4(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
-  return DissectionInfo(info, s);
+DissectionInfo Peafowl::dissectFromL4(const std::string &pkt, uint32_t timestamp, const DissectionInfo& info){
+  pfwl_dissection_info_t d = info.getNativeInfo();
+  memset(&(d.l4), 0, sizeof(d.l4));
+  memset(&(d.l7), 0, sizeof(d.l7));
+  Status s = pfwl_dissect_from_L4(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &d);
+  return DissectionInfo(d, s);
 }
 
 DissectionInfo Peafowl::dissectL2(const std::string &pkt, pfwl_protocol_l2_t datalinkType){
   pfwl_dissection_info_t info;
+  memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_L2((const unsigned char*) pkt.c_str(), datalinkType, &info);
   return DissectionInfo(info, s);
 }
 
 DissectionInfo Peafowl::dissectL3(const std::string &pkt, uint32_t timestamp){
   pfwl_dissection_info_t info;
+  memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_L3(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
   return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL4(const std::string &pkt, uint32_t timestamp, FlowInfoPrivate &flowInfoPrivate){
-  pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_L4(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info, &(flowInfoPrivate._info));
-  return DissectionInfo(info, s);
+DissectionInfo Peafowl::dissectL4(const std::string &pkt, uint32_t timestamp, const DissectionInfo& info, FlowInfoPrivate &flowInfoPrivate){
+  pfwl_dissection_info_t d = info.getNativeInfo();
+  pfwl_protocol_l4_t proto = d.l4.protocol;
+  memset(&(d.l4), 0, sizeof(d.l4));
+  memset(&(d.l7), 0, sizeof(d.l7));
+  d.l4.protocol = proto;
+  Status s = pfwl_dissect_L4(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &d, &(flowInfoPrivate._info));
+  return DissectionInfo(d, s);
 }
 
-DissectionInfo Peafowl::dissectL7(const std::string &pkt, FlowInfoPrivate &flowInfoPrivate){
-  pfwl_dissection_info_t info;
-  Status s = pfwl_dissect_L7(_state, (const unsigned char*) pkt.c_str(), pkt.size(), &info, flowInfoPrivate._info);
-  return DissectionInfo(info, s);
+DissectionInfo Peafowl::dissectL7(const std::string &pkt, const DissectionInfo &info, FlowInfoPrivate &flowInfoPrivate){
+  pfwl_dissection_info_t d = info.getNativeInfo();
+  memset(&(d.l7), 0, sizeof(d.l7));
+  Status s = pfwl_dissect_L7(_state, (const unsigned char*) pkt.c_str(), pkt.size(), &d, flowInfoPrivate._info);
+  return DissectionInfo(d, s);
 }
 
 FlowInfoPrivate::FlowInfoPrivate(const Peafowl& state){

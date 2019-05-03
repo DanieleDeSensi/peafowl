@@ -3,11 +3,33 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+#######
+Peafowl
+#######
+.. include:: ../README.rst
+
 .. toctree::
-   :maxdepth: 4
+   :caption: User Guide
+   :maxdepth: 2
 
-   userguide
-   api
-   customize
+   build
+   basic
+   flows
+   fields
+   protocols
 
+.. toctree::
+   :caption: API Reference
+   :maxdepth: 2
 
+   apic
+   apicpp
+   apipython
+
+.. toctree::
+   :caption: Customize
+   :maxdepth: 2
+
+   newprotocols
+   newfields
+   configuration

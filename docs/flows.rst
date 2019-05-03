@@ -1,3 +1,6 @@
+Flows
+=====
+
 To identify the application protocol, packets are classified in bidirectional sets of packets called *flows*. All the packets in a *flow* share the same:
 
 + Source IP and Destination IP addressess

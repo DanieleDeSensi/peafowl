@@ -1,3 +1,6 @@
+Basic Usage
+===========
+
 After installing Peafowl, it can be used by your application by specifying the appropriate compilation flags for C and C++ or by loading the ``pypeafowl`` module for Python:
 
 .. tabs::

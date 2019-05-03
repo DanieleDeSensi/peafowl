@@ -219,6 +219,7 @@ static inline uint8_t getBits(uint16_t x, int p, int n) {
 pfwl_status_t pfwl_dissect_L2(const unsigned char *packet,
                               pfwl_protocol_l2_t datalink_type,
                               pfwl_dissection_info_t *dissection_info) {
+  memset(dissection_info, 0, sizeof(pfwl_dissection_info_t));
   // check parameters
   if (!packet || datalink_type == PFWL_PROTO_L2_NUM) {
     return PFWL_ERROR_L2_PARSING;

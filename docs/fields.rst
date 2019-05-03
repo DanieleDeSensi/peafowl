@@ -1,3 +1,6 @@
+Fields Extraction
+=================
+
 Besides identifying the application protocol carried by the packets, Peafowl can also extract some data and metadata carried by the application protocol (e.g. HTTP URL, DNS Server Name, etc...). We call each of these piece of information *fields* (i.e., HTTP URL is a *field*).
 
 To avoid performance overhead caused by extracting fields which would not be needed by the user, the user needs first to specify which fields must be extracted by Peafowl. Then, the user can check, packet-by-packet if the field was present. If the field is present, the user can then check its value. 

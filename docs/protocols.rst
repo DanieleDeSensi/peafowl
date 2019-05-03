@@ -1,3 +1,6 @@
+Supported Protocols
+===================
+
 Peafowl can identify some of the most common protocols. To add more protocols refer to the corresponding
 section in this document. 
 The supported protocols are:
