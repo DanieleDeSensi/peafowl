@@ -66,6 +66,7 @@ Peafowl has been mainly developed by Daniele De Sensi
 (d.desensi.software@gmail.com).
 
 The following people contributed to Peafowl: 
+
 - Daniele De Sensi (d.desensi.software@gmail.com): Main developer 
 - Michele Campus (michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing 
 - Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors 
