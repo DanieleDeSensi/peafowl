@@ -65,15 +65,13 @@ Contributions
 Peafowl has been mainly developed by Daniele De Sensi
 (d.desensi.software@gmail.com).
 
-The following people contributed to Peafowl: - Daniele De Sensi
-(d.desensi.software@gmail.com): Main developer - Michele Campus
-(michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing -
-Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype
-dissectors - max197616 (https://github.com/max197616): SSL dissector -
-QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl
-features (e.g. SIP, RTP, RTCP dissectors and others) - CounterFlowAI
-(https://www.counterflow.ai/) sponsored the development of some Peafowl
-features (e.g. TCP statistics)
+The following people contributed to Peafowl: 
+- Daniele De Sensi (d.desensi.software@gmail.com): Main developer 
+- Michele Campus (michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing 
+- Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors 
+- max197616 (https://github.com/max197616): SSL dissector 
+- QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl features (e.g. SIP, RTP, RTCP dissectors and others) 
+- CounterFlowAI (https://www.counterflow.ai/) sponsored the development of some Peafowl features (e.g. TCP statistics)
 
 I would like to thank Prof. Marco Danelutto, Dr. Luca Deri and
 Dr. Massimo Torquati for their essential help and valuable advices.
@@ -83,7 +81,7 @@ Contributing
 
 If you would like to contribute to Peafowl development, for example by
 adding new protocols, please refer to the
-`documentation <https://peafowl.readthedocs.io/en/latest/customize.html>`__.
+`documentation <https://peafowl.readthedocs.io/en/latest/newprotocols.html>`__.
 
 Disclaimer
 ==========
