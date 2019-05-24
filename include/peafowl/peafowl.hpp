@@ -35,213 +35,835 @@
 
 namespace peafowl{
 
+/**
+ * A string as represented by peafowl.
+ **/
 class String {
 private:
   pfwl_string_t _string;
 public:
+  /**
+   * Constructs an empty string.
+   */
   String();
+
+  /**
+   * Copy constructor.
+   * @param string Field to be copied.
+   */
   String(pfwl_string_t string);
+
+  /**
+   * Returns the buffer containing the protocol field.
+   * @return The buffer containing the protocol field.
+   */
   const unsigned char* getValue() const;
+
+  /**
+   * Returns the length of the buffer.
+   * @return The length of the buffer.
+   */
   size_t getLength() const;
 };
 
+/**
+ * A peafowl pair.
+ **/
 template <typename T>
 class Pair{
 private:
   T _first, _second;
 public:
+  /**
+   * Constructs an empty pair.
+   */
   Pair();
+
+  /**
+   * Constructs a pair.
+   * @param first The first element of the pair.
+   * @param second The second element of the pair.
+   */
   Pair(T first, T second);
 };
 
+/**
+ * Possible types for peafowl fields.
+ **/
 typedef pfwl_field_type_t FieldType;
 
+/**
+ * A generic statistic for the flow.
+ * While a field is something related to the packet,
+ * a statistic is something related to the flow
+ * (e.g. packets per second, etc...).
+ **/
 typedef pfwl_statistic_t Statistic;
 
+/**
+ * Units of timestamps used by Peafowl.
+ **/
 typedef pfwl_timestamp_unit_t TimestampUnit;
 
+/**
+ * A generic field extracted by peafowl.
+ **/
 class Field {
 private:
   pfwl_field_t _field;
 public:
+  /**
+   * Constructs an empty field.
+   */
   Field();
+
+  /**
+   * Copy constructor.
+   * @param field Field to be copied.
+   */
   Field(pfwl_field_t field);
+
+  /**
+   * Checks if the field was present in the packet.
+   * @return True if the field was present, false otherwise.
+   */
   bool isPresent() const;
+
+  /**
+   * Gets the field (as a string).
+   * @return The field (as a string).
+   */
   std::string getString() const;
+
+  /**
+   * Gets the field (as a number).
+   * @return The field (as a number).
+   */
   int64_t getNumber() const;
+
+  /**
+   * Gets the C representation of the field.
+   * @return The C representation of the field.
+   */
   pfwl_field_t getNative() const;
 };
 
+/**
+ * IP Address.
+ */
 class IpAddress {
 private:
   pfwl_ip_addr _addr;
   bool _isIPv6;
 public:
+  /**
+   * Builds the IP address.
+   * @param addr The IP address.
+   * @param isIPv6 True if the address is an IPv6 address, false otherwise.
+   */
   IpAddress(pfwl_ip_addr addr, bool isIPv6 = false);
 
+  /**
+   * Checks if the address is an IPv4 address.
+   * @return True if the address is an IPv4 address, false otherwise.
+   */
   bool isIPv4() const;
+
+  /**
+   * Checks if the address is an IPv6 address.
+   * @return True if the address is an IPv6 address, false otherwise.
+   */
   bool isIPv6() const;
+
+  /**
+   * Gets the address as an IPv4 address.
+   * @return The IPv4 address.
+   */
   uint32_t getIPv4() const;
+
+  /**
+   * Gets the address as an IPv6 address.
+   * @return The IPv6 address.
+   */
   struct in6_addr getIPv6() const;
+
+  /**
+   * Returns a string representation of the IP address.
+   * @return A string representation of the IP address.
+   */
+  std::string toString() const;
 };
 
+/**
+ * Possible packet directions.
+ **/
 typedef pfwl_direction_t Direction;
 
+/**
+ * L2 datalink protocols supported by peafowl.
+ * When adding a new protocol, please update the pfwl_l2_protocols_names
+ * array in parsing_l2.c
+ **/
 class ProtocolL2{
 private:
   const pfwl_protocol_l2_t _protocol;
   const std::string _name;
 public:
+  /**
+   * Copy constructor
+   * @param protocol The protocol to copy.
+   */
   ProtocolL2(pfwl_protocol_l2_t protocol);
+
+  /**
+   * Build the protocol starting from its name.
+   * @param protocol The protocol name.
+   */
   ProtocolL2(const std::string& protocol);
+
+  /**
+   * Returns the name of the protocol.
+   * @return The name of the protocol.
+   */
   const std::string& getName() const;
+
+  /**
+   * Returns the identifier of the protocol.
+   * @return The identifier of the protocol.
+   */
   pfwl_protocol_l2_t getId() const;
+
+  /**
+   * Accesses the protocol.
+   */
   operator pfwl_protocol_l2_t() const {return _protocol;}
+
+  /**
+   * Checks if two protocols are equal.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are equal, false otherwise.
+   */
   friend bool operator== (const ProtocolL2 &p1, const pfwl_protocol_l2_t &p2);
+
+  /**
+   * Checks if two protocols are different.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are different, false otherwise.
+   */
   friend bool operator!= (const ProtocolL2 &p1, const pfwl_protocol_l2_t &p2);
 };
 
+/**
+ * L3 (IP) protocol.
+ **/
 class ProtocolL3{
 private:
   const pfwl_protocol_l3_t _protocol;
   const std::string _name;
 public:
+  /**
+   * Copy constructor
+   * @param protocol The protocol to copy.
+   */
   ProtocolL3(pfwl_protocol_l3_t protocol);
+
+  /**
+   * Build the protocol starting from its name.
+   * @param protocol The protocol name.
+   */
   ProtocolL3(const std::string& protocol);
+
+  /**
+   * Returns the name of the protocol.
+   * @return The name of the protocol.
+   */
   const std::string& getName() const;
+
+  /**
+   * Returns the identifier of the protocol.
+   * @return The identifier of the protocol.
+   */
   pfwl_protocol_l3_t getId() const;
+
+  /**
+   * Accesses the protocol.
+   */
   operator pfwl_protocol_l3_t() const {return _protocol;}
+
+  /**
+   * Checks if two protocols are equal.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are equal, false otherwise.
+   */
   friend bool operator== (const ProtocolL3 &p1, const pfwl_protocol_l3_t &p2);
+
+  /**
+   * Checks if two protocols are different.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are different, false otherwise.
+   */
   friend bool operator!= (const ProtocolL3 &p1, const pfwl_protocol_l3_t &p2);
 };
 
+/**
+ * L4 protocol. Values defined in
+ * include/netinet/in.h (IPPROTO_TCP,
+ * IPPROTO_UDP, IPPROTO_ICMP, etc...)
+ **/
 class ProtocolL4{
 private:
   const pfwl_protocol_l4_t _protocol;
   const std::string _name;
 public:
+  /**
+   * Copy constructor
+   * @param protocol The protocol to copy.
+   */
   ProtocolL4(pfwl_protocol_l4_t protocol);
+
+  /**
+   * Build the protocol starting from its name.
+   * @param protocol The protocol name.
+   */
   ProtocolL4(const std::string& protocol);
+
+  /**
+   * Returns the name of the protocol.
+   * @return The name of the protocol.
+   */
   const std::string& getName() const;
+
+  /**
+   * Returns the identifier of the protocol.
+   * @return The identifier of the protocol.
+   */
   pfwl_protocol_l4_t getId() const;
+
+  /**
+   * Accesses the protocol.
+   */
   operator pfwl_protocol_l4_t() const {return _protocol;}
+
+  /**
+   * Checks if two protocols are equal.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are equal, false otherwise.
+   */
   friend bool operator== (const ProtocolL4 &p1, const pfwl_protocol_l4_t &p2);
+
+  /**
+   * Checks if two protocols are different.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are different, false otherwise.
+   */
   friend bool operator!= (const ProtocolL4 &p1, const pfwl_protocol_l4_t &p2);
+
+  /**
+   * Checks if two protocols are equal.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are equal, false otherwise.
+   */
   friend bool operator== (const ProtocolL4 &p1, const int &p2);
+
+  /**
+   * Checks if two protocols are different.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are different, false otherwise.
+   */
   friend bool operator!= (const ProtocolL4 &p1, const int &p2);
 };
 
+/**
+ * L7 (application level) protocol.
+ **/
 class ProtocolL7{
 private:
   const pfwl_protocol_l7_t _protocol;
   const std::string _name;
 public:
+  /**
+   * Copy constructor
+   * @param protocol The protocol to copy.
+   */
   ProtocolL7(pfwl_protocol_l7_t protocol);
+
+  /**
+   * Build the protocol starting from its name.
+   * @param protocol The protocol name.
+   */
   ProtocolL7(const std::string& protocol);
+
+  /**
+   * Returns the name of the protocol.
+   * @return The name of the protocol.
+   */
   const std::string& getName() const;
+
+  /**
+   * Returns the identifier of the protocol.
+   * @return The identifier of the protocol.
+   */
   pfwl_protocol_l7_t getId() const;
+
+  /**
+   * Accesses the protocol.
+   */
   operator pfwl_protocol_l7_t() const {return _protocol;}
+
+  /**
+   * Checks if two protocols are equal.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are equal, false otherwise.
+   */
   friend bool operator== (const ProtocolL7 &p1, const pfwl_protocol_l7_t &p2);
+
+  /**
+   * Checks if two protocols are different.
+   * @param p1 The first protocol.
+   * @param p2 The second protocol.
+   * @return True if the two protocols are different, false otherwise.
+   */
   friend bool operator!= (const ProtocolL7 &p1, const pfwl_protocol_l7_t &p2);
 };
 
+/**
+ * Public information about the flow.
+ **/
 class FlowInfo {
 private:
   pfwl_flow_info_t _flowInfo;
 public:
+  /**
+   * Constructor.
+   */
   FlowInfo();
+
+  /**
+   * Copy constructor.
+   * @param info The information to be copied.
+   */
   FlowInfo(pfwl_flow_info_t info);
+
+  /**
+   * Returns the unique identifier of the flow. If multithreaded version is used,
+   * id is per-thread unique, i.e. two different flows, managed by two
+   * different threads may have the same id. If multithreaded Peafowl
+   * is used, the unique identifier will be the pair <thread_id, id>
+   * @return The unique identifier of the flow.
+   */
   uint64_t getId() const;
+
+  /**
+   * Returns the identifier of the thread that managed this flow.
+   * @return The identifier of the thread that managed this flow.
+   */
   uint16_t getThreadId() const;
+
+  /**
+   * Returns the source address, in network byte order.
+   * @return The source address, in network byte order.
+   */
   IpAddress getAddressSrc() const;
+
+  /**
+   * Returns the destination address, in network byte order.
+   * @return The destination address, in network byte order.
+   */
   IpAddress getAddressDst() const;
+
+  /**
+   * Returns the source port, in network byte order.
+   * @return The source port, in network byte order.
+   */
   uint16_t getPortSrc() const;
+
+  /**
+   * Returns the destination port, in network byte order.
+   * @return The destination port, in network byte order.
+   */
   uint16_t getPortDst() const;
-  uint64_t getNumPackets(Direction direction) const;
-  uint64_t getNumBytes(Direction direction) const;
-  uint64_t getNumPacketsL7(Direction direction) const;
-  uint64_t getNumBytesL7(Direction direction) const;
-  uint32_t getTimestampFirst(Direction direction) const;
-  uint32_t getTimestampLast(Direction direction) const;
+
+  /**
+   * Returns the L2 protocol.
+   * @return The L2 protocol.
+   */
   ProtocolL2 getProtocolL2() const;
+
+  /**
+   * Returns the L3 protocol.
+   * @return The L3 protocol.
+   */
   ProtocolL3 getProtocolL3() const;
+
+  /**
+   * Returns the L4 protocol.
+   * @return The L4 protocol.
+   */
   ProtocolL4 getProtocolL4() const;
+
+  /**
+   * Some L7 protocols may be carried by other L7 protocols.
+   * For example, Ethereum may be carried by JSON-RPC, which
+   * in turn may be carried by HTTP. If such a flow is found,
+   * we will have:
+   *
+   *   protocols[0] = HTTP
+   *
+   *   protocols[1] = JSON-RPC
+   *
+   *   protocols[2] = Ethereum
+   *
+   * i.e., protocols are shown by the outermost to the innermost.
+   * Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
+   *
+   *   protocols[0] = JSON-RPC
+   *
+   *   protocols[1] = Ethereum
+   *
+   * This encapsulation can also hold over different packets of a given flow.
+   * E.g.IMAP over SSL has a few packet exchanged with plain IMAP and then
+   * the subsequent packets encapsulated within SSL.
+   * In such a case, the first IMAP packets will only have
+   * protocols[0] = IMAP. However, when the first SSL packet for the flow
+   * is received, we will have protocols[0] = IMAP and protocols[1] = SSL
+   * for that packet and for all the subsequent packets.
+   * Indeed, it is important to remark that protocols are associated to
+   * flows and not to packets.
+   * This call returns the list of L7 protocols identified for this flow.
+   * @return The list of L7 protocols identified for this flow.
+   **/
   std::vector<ProtocolL7> getProtocolsL7() const;
+
+  /**
+   * Returns a flow statistic for a specific flow direction.
+   * @param stat The statistic.
+   * @param dir The direction.
+   * @return A flow statistic for a specific flow direction.
+   */
   double getStatistic(Statistic stat, Direction dir) const;
+
+  /**
+   * Returns the user data associated to this flow.
+   * @return The user data associated to this flow.
+   */
   void** getUserData() const;
+
+  /**
+   * Returns the C flow representation.
+   * @return The C flow representation.
+   */
   pfwl_flow_info_t getNative() const;
+
+  /**
+   * Sets some user-specific data for this flow.
+   * @param udata User-specific data for this flow.
+   */
   void setUserData(void* udata);
 };
 
+/**
+ * The result of the L2 identification process.
+ **/
 class DissectionInfoL2{
 private:
   pfwl_dissection_info_l2_t _dissectionInfo;
 public:
+  /**
+   * Constructor.
+   */
   DissectionInfoL2();
+
+  /**
+   * Copy constructor.
+   * @param dissectionInfo The information to be copied.
+   */
   DissectionInfoL2(pfwl_dissection_info_l2_t dissectionInfo);
+
+  /**
+   * Returns the length of the L2 header.
+   * @return The length of the L2 header.
+   */
   size_t getLength() const;
+
+  /**
+   * Returns the L2 protocol.
+   * @return The L2 protocol.
+   */
   ProtocolL2 getProtocol() const;
+
+  /**
+   * Returns the C representation of the L2 protocol.
+   * @return The C representation of the L2 protocol.
+   */
   pfwl_dissection_info_l2_t getNative() const;
 };
 
+/**
+ * The result of the L3 identification process.
+ **/
 class DissectionInfoL3{
 private:
   pfwl_dissection_info_l3_t _dissectionInfo;
 public:
+  /**
+   * Constructor.
+   */
   DissectionInfoL3();
+
+  /**
+   * Copy constructor.
+   * @param dissectionInfo The information to be copied.
+   */
   DissectionInfoL3(pfwl_dissection_info_l3_t dissectionInfo);
+
+  /**
+   * Returns the length of the L3 header.
+   * @return The length of the L3 header.
+   */
   size_t getLength() const;
+
+  /**
+   * Returns the length of the L3 payload.
+   * @return The length of the L3 payload.
+   */
   size_t getPayloadLength() const;
+
+  /**
+   * Returns the source address, in network byte order.
+   * @return The source address, in network byte order.
+   */
   IpAddress getAddressSrc() const;
+
+  /**
+   * Returns the destination address, in network byte order.
+   * @return The destination address, in network byte order.
+   */
   IpAddress getAddressDst() const;
-  const unsigned char* getRefragmentedPacket() const;
-  size_t getRefragmentedPacketLength() const;
+
+  /**
+   * Returns the refragmented IP packet (if it was fragmented, starting from
+   * the first byte of L3 packet) and its length.
+   * @return The refragmented IP packet (if it was fragmented, starting from
+   * the first byte of L3 packet) and its length.
+   **/
+  std::pair<const unsigned char*, size_t> getRefragmentedPacket() const;
+
+  /**
+   * Returns the L3 protocol.
+   * @return The L3 protocol.
+   */
   ProtocolL3 getProtocol() const;
+
+  /**
+   * Returns the C representation of the L3 protocol.
+   * @return The C representation of the L3 protocol.
+   */
   pfwl_dissection_info_l3_t getNative() const;
 };
 
+/**
+ * The result of the L4 identification process.
+ **/
 class DissectionInfoL4{
 private:
   pfwl_dissection_info_l4_t _dissectionInfo;
 public:
+  /**
+   * Constructor.
+   */
   DissectionInfoL4();
+
+  /**
+   * Copy constructor.
+   * @param dissectionInfo The information to be copied.
+   */
   DissectionInfoL4(pfwl_dissection_info_l4_t dissectionInfo);
+
+  /**
+   * Returns the length of the L4 header.
+   * @return The length of the L4 header.
+   */
   size_t getLength() const;
+
+  /**
+   * Returns the length of the L4 payload.
+   * @return The length of the L4 payload.
+   */
   size_t getPayloadLength() const;
+
+  /**
+   * Returns the source port, in network byte order.
+   * @return The source port, in network byte order.
+   */
   uint16_t getPortSrc() const;
+
+  /**
+   * Returns the destination port, in network byte order.
+   * @return The destination port, in network byte order.
+   */
   uint16_t getPortDst() const;
+
+  /**
+   * Returns the packet direction (with respect to the source and destination
+   * addresses specified in the flow).
+   * @return The packet direction.
+   */
   Direction getDirection() const;
-  const unsigned char* getResegmentedPacket() const;
-  size_t getResegmentedPacketLength() const;
+
+  /**
+   * Returns the resegmented TCP payload and its length.
+   * @return The resegmented TCP payload and its length.
+   */
+  std::pair<const unsigned char*, size_t> getResegmentedPacket() const;
+
+  /**
+   * Returns the L4 protocol.
+   * @return The L4 protocol.
+   */
   ProtocolL4 getProtocol() const;
+
+  /**
+   * Returns the C representation of the L4 protocol.
+   * @return The C representation of the L4 protocol.
+   */
   pfwl_dissection_info_l4_t getNative() const;
 };
 
+/**
+ * Protocol fields which can be extracted by peafowl.
+ **/
 typedef pfwl_field_id_t FieldId;
 
+/**
+ * The result of the L7 identification process.
+ **/
 class DissectionInfoL7{
 private:
   pfwl_dissection_info_l7_t _dissectionInfo;
 public:
+  /**
+   * Constructor.
+   */
   DissectionInfoL7();
+
+  /**
+   * Copy constructor.
+   * @param dissectionInfo The information to be copied.
+   */
   DissectionInfoL7(pfwl_dissection_info_l7_t dissectionInfo);
-  ProtocolL7 getProtocol() const;
+
+  /**
+   * Some L7 protocols may be carried by other L7 protocols.
+   * For example, Ethereum may be carried by JSON-RPC, which
+   * in turn may be carried by HTTP. If such a flow is found,
+   * we will have:
+   *
+   *   protocols[0] = HTTP
+   *
+   *   protocols[1] = JSON-RPC
+   *
+   *   protocols[2] = Ethereum
+   *
+   * i.e., protocols are shown by the outermost to the innermost.
+   * Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
+   *
+   *   protocols[0] = JSON-RPC
+   *
+   *   protocols[1] = Ethereum
+   *
+   * This encapsulation can also hold over different packets of a given flow.
+   * E.g.IMAP over SSL has a few packet exchanged with plain IMAP and then
+   * the subsequent packets encapsulated within SSL.
+   * In such a case, the first IMAP packets will only have
+   * protocols[0] = IMAP. However, when the first SSL packet for the flow
+   * is received, we will have protocols[0] = IMAP and protocols[1] = SSL
+   * for that packet and for all the subsequent packets.
+   * Indeed, it is important to remark that protocols are associated to
+   * flows and not to packets.
+   * This call returns the list of L7 protocols identified for this packet.
+   * @return The list of L7 protocols identified for this packet.
+   **/
   std::vector<ProtocolL7> getProtocols() const;
+
+  /**
+   * Returns the first protocol of the list, i.e. this call is equivalent to
+   * getProtocols()[0].
+   * @return The first protocol of the list.
+   */
+  ProtocolL7 getProtocol() const;
+
+  /**
+   * Returns a specific protocol field.
+   * @param id The identifier of the field.
+   * @return The protocol field.
+   */
   Field getField(FieldId id) const;
+
+  /**
+   * Returns all the protocol fields.
+   * @return All the protocol fields.
+   */
   std::vector<Field> getFields() const;
+
+  /**
+   * Returns the tags associated to this packet.
+   * @return The tags associated to this packet.
+   */
   std::vector<std::string> getTags() const;
+
+  /**
+   * @brief httpGetHeader Extracts a specific HTTP header from the
+   * dissection info.
+   * @param headerName The name of the header ('\0' terminated).
+   * @return The header value.
+   */
+  Field httpGetHeader(const char *headerName) const;
+
+  /**
+   * Returns the C representation of the L7 protocol.
+   * @return The C representation of the L7 protocol.
+   */
   pfwl_dissection_info_l7_t getNative() const;
 };
 
+/**
+ * Status of the identification process
+ **/
 class Status{
 private:
   pfwl_status_t _status;
 public:
+  /**
+   * Copy constructor.
+   * @param status The C status.
+   */
   Status(pfwl_status_t status);
+
+  /**
+   * Returns a string message associated to this status.
+   * @return A string message associated to this status.
+   */
   std::string getMessage() const;
+
+  /**
+   * Checks if this status is an error status.
+   * @return True if this status is an error status, false otherwise.
+   */
   bool isError() const;
 };
 
+/**
+ * The result of the identification process.
+ **/
 class DissectionInfo{
 private:
   pfwl_dissection_info_t _dissectionInfo;
@@ -252,16 +874,19 @@ private:
   FlowInfo _flowInfo;
   Status _status;
 public:
+  /**
+   * Constructor.
+   * @param dissectionInfo The C dissection info.
+   * @param status The status of the processing.
+   */
   DissectionInfo(pfwl_dissection_info_t dissectionInfo, Status status);
-  DissectionInfo& operator=(const pfwl_dissection_info_t& rhs);
 
   /**
-   * @brief httpGetHeader Extracts a specific HTTP header from the
-   * dissection info.
-   * @param headerName The name of the header ('\0' terminated).
-   * @return The header value.
+   * Assignment operator.
+   * @param rhs The C dissection info.
+   * @return The CPP dissection info.
    */
-  Field httpGetHeader(const char *headerName) const;
+  DissectionInfo& operator=(const pfwl_dissection_info_t& rhs);
 
   /**
    * Guesses the protocol looking only at source/destination ports.
@@ -278,16 +903,16 @@ public:
    * packet carries SSL encrypted data, we will have:
    *
    * For the first packet:
-   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
-   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 0
+   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): true
+   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): false
    *
    * For the second packet:
-   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
-   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 1
+   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): true
+   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): true
    *
    * For all the subsequent packets:
-   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): 1
-   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): 1
+   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_IMAP): true
+   *  - pfwl_has_protocol_L7(info, PFWL_PROTO_L7_SSL): true
    *
    * @brief hasProtocolL7 Checks if a specific L7 protocol has been identified in
    * a given dissection info.
@@ -295,13 +920,6 @@ public:
    * @return True if the L7 protocol is carried by the flow, false otherwise.
    */
   bool hasProtocolL7(ProtocolL7 protocol) const;
-
-  /**
-   * @brief getField Returns a given field.
-   * @param id The field identifier.
-   * @return The field with identifier 'id'.
-   */
-  Field getField(FieldId id) const;
 
   /**
    * @brief getStatus Returns the status of the processing.
@@ -338,10 +956,17 @@ public:
    * @return The flow information.
    */
   FlowInfo getFlowInfo() const;
+
+  /**
+   * Returns the C dissection info.
+   * @return The C dissection info.
+   */
+  const pfwl_dissection_info_t& getNativeInfo() const;
 };
 
 class Peafowl;
 
+/// @cond EXTERNAL
 class FlowInfoPrivate{
   friend class Peafowl;
 private:
@@ -349,8 +974,16 @@ private:
 public:
   FlowInfoPrivate(const Peafowl& state);
 };
+/// @endcond
 
+/**
+ * The accuracy of the dissector.
+ */
 typedef pfwl_dissector_accuracy_t DissectorAccuracy;
+
+/**
+ * The field matching rule to be used in tagging packets.
+ */
 typedef pfwl_field_matching_t FieldMatching;
 
 /**
@@ -391,6 +1024,9 @@ private:
   bool _totalMemoryLimitIPv4set, _totalMemoryLimitIPv6set;
   bool _reassemblyTimeoutIPv4set, _reassemblyTimeoutIPv6set;
 public:
+  /**
+   * Constructor.
+   */
   DefragmentationOptions();
 
   /**
@@ -471,6 +1107,9 @@ public:
 };
 
 // clang-format on
+/**
+ * @brief This class is the Peafowl handler.
+ */
 class Peafowl{
   friend class FlowInfoPrivate;
 private:
@@ -490,7 +1129,7 @@ public:
   /**
    * @brief setFlowManager Sets the functor object which is called
    * when the flow terminates.
-   * @param flowManager
+   * @param flowManager The functor object.
    */
   void setFlowManager(FlowManager* flowManager);
 
@@ -574,12 +1213,9 @@ public:
    * @param timestamp The current time. The time unit depends on the timers used by the
    * caller and can be set through the setTimestampUnit call. By default
    * it is assumed that the timestamps unit is 'seconds'.
-   * @param datalinkType The datalink type. They match 1:1 the pcap datalink
-   * types. You can convert a PCAP datalink type to a Peafowl datalink type by
-   * calling the function 'pfwl_convert_pcap_dlt'.
-   * @return The result of the dissection. All its bytes must be
-   *        set to 0 before calling this call.
-   *        Dissection information from L2 to L7 will be filled in by this call.
+   * @param datalinkType The datalink type. You can convert a PCAP datalink type
+   * to a Peafowl datalink type by calling the function 'convertPcapDlt'.
+   * @return The result of the dissection from L2 to L7.
    */
   DissectionInfo dissectFromL2(const std::string& pkt,
                                uint32_t timestamp,
@@ -591,9 +1227,7 @@ public:
    * @param timestamp The current time. The time unit depends on the timers used by the
    * caller and can be set through the setTimestampUnit call. By default
    * it is assumed that the timestamps unit is 'seconds'.
-   * @return  The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information from L3 to L7 will be filled in by this call.
+   * @return The result of the dissection from L3 to L7.
    */
   DissectionInfo dissectFromL3(const std::string& pkt,
                                uint32_t timestamp);
@@ -605,24 +1239,20 @@ public:
    * @param timestamp The current time. The time unit depends on the timers used by the
    * caller and can be set through the setTimestampUnit call. By default
    * it is assumed that the timestamps unit is 'seconds'.
-   * @return The result of the dissection. All its bytes must be
-   *         set to 0 before calling this call.
-   *         Dissection information about L3 header must be filled in by the
-   *         caller. Dissection information from L4 to L7 will be filled in by this call.
+   * @param info The dissection information about L3 header.
+   * @return The result of the dissection from L3 to L7.
    */
   DissectionInfo dissectFromL4(const std::string& pkt,
-                               uint32_t timestamp);
+                               uint32_t timestamp,
+                               const DissectionInfo& info);
 
   /**
    * Extracts from the packet the L2 information.
    * @param pkt A string containing the packet.
    * @param datalinkType The datalink type. They match 1:1 the pcap datalink
    * types. You can convert a PCAP datalink type to a Peafowl datalink type by
-   * calling the function 'pfwl_convert_pcap_dlt'.
-   * @return The result of the dissection. All its bytes must be
-   *        set to 0 before calling this call.
-   *        Dissection information about L2 headers will be filled in by this
-   *        call.
+   * calling the function 'convertPcapDlt'.
+   * @return The result of the L2 dissection.
    */
   DissectionInfo dissectL2(const std::string& pkt,
                            pfwl_protocol_l2_t datalinkType);
@@ -633,10 +1263,7 @@ public:
    * @param timestamp The current time. The time unit depends on the timers used by the
    * caller and can be set through the setTimestampUnit call. By default
    * it is assumed that the timestamps unit is 'seconds'.
-   * @return The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information about L3 headers will be filled in by this
-   *          call.
+   * @return The result of the L3 dissection.
    */
   DissectionInfo dissectL3(const std::string& pkt,
                            uint32_t timestamp);
@@ -647,22 +1274,21 @@ public:
    * @param timestamp The current time. The time unit depends on the timers used by the
    * caller and can be set through the setTimestampUnit call. By default
    * it is assumed that the timestamps unit is 'seconds'.
-   * @param   flowInfoPrivate Will be filled by this library.
-   * @return  The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information about L3 headers must be filled in by the
-   *          caller. l4.protocol must be filled in by the caller as well. Dissection
-   *          information about L4 headers will be filled in by this call.
+   * @param info The dissection information about L3 header. L4 protocol
+   * must be specified by the caller as well.
+   * @param   flowInfoPrivate Will be filled by this call.
+   * @return  The result of the L4 dissection.
    */
   DissectionInfo dissectL4(const std::string& pkt,
                            uint32_t timestamp,
+                           const DissectionInfo& info,
                            FlowInfoPrivate &flowInfoPrivate);
 
   /**
    * Extracts from the packet the L7 information. Before calling it, a check on
    * L4 protocol should be done and the function should be called only if
    * the packet is TCP or UDP.
-   * It should be used if the application already called pfwl_dissect_L4 or
+   * It should be used if the application already called dissectL7 or
    * if the application already has the concept of 'flow'. In this case the
    * first time that the flow is  passed to the call, flow_info_private must
    * be initialized with pfwl_init_flow_info(...) and stored with the
@@ -670,15 +1296,13 @@ public:
    * With this call, information in dissection_info->flow are only set for
    * L7 packets and bytes.
    * @param   pkt A string containing the packet (from the start of application data).
+   * @param info The dissection information about L3 and L4 headers.
    * @param   flowInfoPrivate The private information about the flow. It must be
    *          stored by the user.
-   * @return  The result of the dissection. All its bytes must be
-   *          set to 0 before calling this call.
-   *          Dissection information about L3 and L4 headers must be filled in by
-   *          the caller. Dissection information about L7 packet will be filled in by this
-   *          call.
+   * @return  The result of the L7 dissection.
    */
   DissectionInfo dissectL7(const std::string& pkt,
+                           const DissectionInfo& info,
                            FlowInfoPrivate &flowInfoPrivate);
 
   /**

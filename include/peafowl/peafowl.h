@@ -90,7 +90,9 @@ typedef struct pfwl_flow_info_private pfwl_flow_info_private_t;
 /// @endcond
 
 // clang-format off
-/** Statuses */
+/**
+ * Status of the identification process
+ **/
 typedef enum pfwl_status {
   /** Errors **/
   PFWL_ERROR_L2_PARSING = -7, ///< L2 data unsupported, truncated or corrupted
@@ -134,7 +136,7 @@ typedef enum pfwl_status {
  **/
 // clang-format off
 typedef enum pfwl_datalink_type {
-  PFWL_PROTO_L2_EN10MB = 0,       ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
+  PFWL_PROTO_L2_EN10MB,           ///< IEEE 802.3 Ethernet (10Mb, 100Mb, 1000Mb, and up)
   PFWL_PROTO_L2_LINUX_SLL,        ///< Linux "cooked" capture encapsulation
   PFWL_PROTO_L2_IEEE802_11_RADIO, ///< Radiotap link-layer information followed
                                   ///< by an 802.11 header
@@ -160,15 +162,18 @@ typedef enum {
   PFWL_PROTO_L3_NUM         ///< Special value. This must be the last value
 } pfwl_protocol_l3_t;
 
-typedef uint8_t pfwl_protocol_l4_t; ///< L4 protocol. Values defined in
-                                    ///< include/netinet/in.h (IPPROTO_TCP,
-                                    ///< IPPROTO_UDP, IPPROTO_ICMP, etc...)
+/**
+ * L4 protocol. Values defined in
+ * include/netinet/in.h (IPPROTO_TCP,
+ * IPPROTO_UDP, IPPROTO_ICMP, etc...)
+ **/
+typedef uint8_t pfwl_protocol_l4_t;
 
 /**
  * L7 (application level) protocol.
  **/
 typedef enum {
-  PFWL_PROTO_L7_DNS = 0,  ///< DNS
+  PFWL_PROTO_L7_DNS,      ///< DNS
   PFWL_PROTO_L7_MDNS,     ///< MDNS
   PFWL_PROTO_L7_DHCP,     ///< DHCP
   PFWL_PROTO_L7_DHCPv6,   ///< DHCPv6
@@ -214,7 +219,7 @@ typedef enum {
  * (e.g. packets per second, etc...).
  **/
 typedef enum {
-  PFWL_STAT_PACKETS = 0                  , ///< Number of packets, one value for each
+  PFWL_STAT_PACKETS                      , ///< Number of packets, one value for each
                                            ///< direction. Multiple IP fragments count like a
                                            ///< single packet.
   PFWL_STAT_BYTES                        , ///< Number of bytes (from L3 start to end of packet).
@@ -248,8 +253,8 @@ typedef enum {
  * Units of timestamps used by Peafowl.
  **/
 typedef enum {
-  PFWL_TIMESTAMP_UNIT_MILLISECONDS = 0, ///< Milliseconds
-  PFWL_TIMESTAMP_UNIT_SECONDS         , ///< Seconds
+  PFWL_TIMESTAMP_UNIT_MILLISECONDS, ///< Milliseconds
+  PFWL_TIMESTAMP_UNIT_SECONDS     , ///< Seconds
 } pfwl_timestamp_unit_t;
 
 /**
@@ -294,7 +299,7 @@ typedef pfwl_array_t pfwl_mmap_t;
  * A generic field extracted by peafowl.
  **/
 typedef struct pfwl_field {
-  uint8_t present : 1; ///< 1 if the field has been set, 0 otherwise.
+  uint8_t present;           ///< 1 if the field has been set, 0 otherwise.
   union {
     pfwl_basic_type_t basic; ///< A basic type.
     pfwl_array_t array;      ///< An array.
@@ -307,7 +312,7 @@ typedef struct pfwl_field {
  * Possible types for peafowl fields.
  **/
 typedef enum {
-  PFWL_FIELD_TYPE_STRING = 0,
+  PFWL_FIELD_TYPE_STRING,
   PFWL_FIELD_TYPE_NUMBER,
   PFWL_FIELD_TYPE_ARRAY,
   PFWL_FIELD_TYPE_PAIR,
@@ -318,8 +323,8 @@ typedef enum {
  * Possible packet directions.
  **/
 typedef enum {
-  PFWL_DIRECTION_OUTBOUND = 0, ///< From source to destination
-  PFWL_DIRECTION_INBOUND       ///< From destination to source
+  PFWL_DIRECTION_OUTBOUND, ///< From source to destination
+  PFWL_DIRECTION_INBOUND   ///< From destination to source
 } pfwl_direction_t;
 
 // clang-format off
@@ -423,9 +428,6 @@ typedef union pfwl_ip_addr {
 
 /**
  * Public information about the flow.
- * If pfwl_parse_L7 is explicitely called, when the first packet
- * of a flow is received, this structure must be initialized by
- * the user with the 'pfwl_init_flow_info' call.
  **/
 typedef struct pfwl_flow_info {
   uint64_t id; ///< Unique identifier of the flow. If multithreaded version is used,
@@ -474,12 +476,18 @@ typedef struct pfwl_flow_info {
                                                                ///< For example, Ethereum may be carried by JSON-RPC, which
                                                                ///< in turn may be carried by HTTP. If such a flow is found,
                                                                ///< we will have:
+                                                               ///<
                                                                ///<   protocols[0] = HTTP
+                                                               ///<
                                                                ///<   protocols[1] = JSON-RPC
+                                                               ///<
                                                                ///<   protocols[2] = Ethereum
+                                                               ///<
                                                                ///< i.e., protocols are shown by the outermost to the innermost.
                                                                ///< Similarly, if Ethereum is carried by plain JSON-RPC, we would have:
+                                                               ///<
                                                                ///<   protocols[0] = JSON-RPC
+                                                               ///<
                                                                ///<   protocols[1] = Ethereum
                                                                ///<
                                                                ///< This encapsulation can also hold over different packets of a given flow.
@@ -517,7 +525,7 @@ typedef struct pfwl_dissection_info_l3 {
   pfwl_ip_addr_t addr_src; ///< Source address, in network byte order.
   pfwl_ip_addr_t addr_dst; ///< Destination address, in network byte order.
   const unsigned char *refrag_pkt; ///< Refragmented IP packet (starting from
-                                   ///< fist byte of L3 packet).
+                                   ///< the first byte of L3 packet).
   size_t refrag_pkt_len; ///< Length of the refragmented packet (without L2
                          ///< trailer).
   pfwl_protocol_l3_t protocol; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
@@ -533,7 +541,7 @@ typedef struct pfwl_dissection_info_l4 {
   uint16_t port_src;     ///< Source port, in network byte order.
   uint16_t port_dst;     ///< Destination port, in network byte order.
   pfwl_direction_t direction;     ///< Direction of the packet:
-                         ///< 0: From source to dest. 1: From dest to source
+                         ///< OUTBOUND: From source to dest. INBOUND: From dest to source
                          ///< (with respect to src and dst stored in the flow).
                          ///< This is only valid for TCP and UDP packets.
   const unsigned char *resegmented_pkt; ///< Resegmented TCP payload.
@@ -626,9 +634,9 @@ typedef struct pfwl_state pfwl_state_t;
  * of accuracy that may be required to a dissector.
  **/
 typedef enum {
-  PFWL_DISSECTOR_ACCURACY_LOW = 0, ///< Low accuracy
-  PFWL_DISSECTOR_ACCURACY_MEDIUM,  ///< Medium accuracy
-  PFWL_DISSECTOR_ACCURACY_HIGH,    ///< High accuracy
+  PFWL_DISSECTOR_ACCURACY_LOW,    ///< Low accuracy
+  PFWL_DISSECTOR_ACCURACY_MEDIUM, ///< Medium accuracy
+  PFWL_DISSECTOR_ACCURACY_HIGH,   ///< High accuracy
 } pfwl_dissector_accuracy_t;
 
 /**
@@ -938,11 +946,10 @@ pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
 /**
  * Extracts from the packet the L2 information.
  * @param packet A pointer to the packet.
- * @param datalink_type The datalink type. They match 1:1 the pcap datalink
- * types. You can convert a PCAP datalink type to a Peafowl datalink type by
+ * @param datalink_type The datalink type.
+ * You can convert a PCAP datalink type to a Peafowl datalink type by
  * calling the function 'pfwl_convert_pcap_dlt'.
- * @param dissection_info The result of the dissection. All its bytes must be
- *        set to 0 before calling this call.
+ * @param dissection_info The result of the dissection.
  *        Dissection information about L2 headers will be filled in by this
  * call.
  * @return The status of the identification process.
@@ -1059,7 +1066,7 @@ const char *pfwl_get_L2_protocol_name(pfwl_protocol_l2_t protocol);
 
 /**
  * Returns the L2 protocol id corresponding to an L2 protocol string.
- * @param string The protocol string.
+ * @param name The protocol string.
  * @return The L2 protocol id corresponding to an L2 protocol string.
  */
 pfwl_protocol_l2_t pfwl_get_L2_protocol_id(const char *const name);
@@ -1080,7 +1087,7 @@ const char *pfwl_get_L3_protocol_name(pfwl_protocol_l3_t protocol);
 
 /**
  * Returns the L3 protocol id corresponding to an L3 protocol string.
- * @param string The protocol string.
+ * @param name The protocol string.
  * @return The L3 protocol id corresponding to an L3 protocol string.
  */
 pfwl_protocol_l3_t pfwl_get_L3_protocol_id(const char *const name);
@@ -1101,7 +1108,7 @@ const char *pfwl_get_L4_protocol_name(pfwl_protocol_l4_t protocol);
 
 /**
  * Returns the L4 protocol id corresponding to an L4 protocol string.
- * @param string The protocol string.
+ * @param name The protocol string.
  * @return The L4 protocol id corresponding to an L4 protocol string.
  */
 pfwl_protocol_l4_t pfwl_get_L4_protocol_id(const char *const name);
@@ -1122,7 +1129,7 @@ const char *pfwl_get_L7_protocol_name(pfwl_protocol_l7_t protocol);
 
 /**
  * Returns the L7 protocol id corresponding to an L7 protocol string.
- * @param string The protocol string.
+ * @param name The protocol string.
  * @return The L7 protocol id corresponding to an L7 protocol string.
  */
 pfwl_protocol_l7_t pfwl_get_L7_protocol_id(const char *const name);
@@ -1143,7 +1150,7 @@ const char* pfwl_get_L7_field_name(pfwl_field_id_t field);
 
 /**
  * Returns the id associated to a protocol field name.
- * @param pfwl_protocol_l7_t protocol The protocol.
+ * @param protocol The protocol.
  * @param field_name The name of the field.
  * @return The id associated to the protocol field with name 'field_name'.
  */
@@ -1358,10 +1365,10 @@ pfwl_protocol_l2_t pfwl_convert_pcap_dlt(int dlt);
  * Possible type of matchings when associating tags to packets.
  **/
 typedef enum{
-  PFWL_FIELD_MATCHING_PREFIX = 0, ///< Prefix matching.
-  PFWL_FIELD_MATCHING_EXACT,      ///< Exact matching.
-  PFWL_FIELD_MATCHING_SUFFIX,     ///< Suffix matching.
-  PFWL_FIELD_MATCHING_ERROR       ///< Invalid tag matching.
+  PFWL_FIELD_MATCHING_PREFIX, ///< Prefix matching.
+  PFWL_FIELD_MATCHING_EXACT,  ///< Exact matching.
+  PFWL_FIELD_MATCHING_SUFFIX, ///< Suffix matching.
+  PFWL_FIELD_MATCHING_ERROR   ///< Invalid tag matching.
 }pfwl_field_matching_t;
 
 /**

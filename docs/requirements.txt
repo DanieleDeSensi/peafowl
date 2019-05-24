@@ -1,0 +1,8 @@
+sphinx>=2.0.1
+sphinx-tabs
+breathe>=4.13
+exhale>=0.2.2
+sphinx_rtd_theme>=0.4.3
+-e git+https://github.com/mithro/sphinx-contrib-mithro#egg=sphinx-contrib-exhale-multiproject&subdirectory=sphinx-contrib-exhale-multiproject
+git+git://github.com/rtfd/sphinx_rtd_theme.git@a49a812c8821123091166fae1897d702cdc2d627
+cmake

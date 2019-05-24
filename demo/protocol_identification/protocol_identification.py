@@ -14,7 +14,7 @@ def pkt_callback(p):
     if name in protocolsCount:
         protocolsCount[name] += 1
     else:
-        protocolsCount[name] = 0
+        protocolsCount[name] = 1
   return pfwl_processing
 
 if(len(sys.argv) < 2):

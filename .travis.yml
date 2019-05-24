@@ -16,6 +16,10 @@ install:
   - sudo apt-get install python-pip
   - pip install requests[security]
   - pip install --user gcovr
+  # Doc
+  # sudo apt-get install doxygen
+  # pip install sphinx
+  # pip install sphinx-tabs
 
 script:
   # Runs compilation, cppcheck, tests and coverage collection

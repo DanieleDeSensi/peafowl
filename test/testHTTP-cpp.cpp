@@ -55,13 +55,13 @@ TEST(HTTPTest, ContentType) {
   getProtocolsCpp("./pcaps/http-jpeg.pcap", protocols, &state, [&](peafowl::Status status, peafowl::DissectionInfo& r){
   if(r.getL7().getProtocol() == PFWL_PROTO_L7_HTTP){
     if((*r.getFlowInfo().getUserData() == NULL) &&
-       (field = r.httpGetHeader("Content-Type")).isPresent() &&
+       (field = r.getL7().httpGetHeader("Content-Type")).isPresent() &&
        field.getString() == "image/jpeg"){
       ctFound = true;
       r.getFlowInfo().setUserData((void*) 1);
     }
 
-    if((field = r.getField(PFWL_FIELDS_L7_HTTP_BODY)).isPresent() &&
+    if((field = r.getL7().getField(PFWL_FIELDS_L7_HTTP_BODY)).isPresent() &&
        *r.getFlowInfo().getUserData()){
       bodyFound = true;
       std::string s = field.getString();
@@ -93,25 +93,25 @@ TEST(HTTPTest, ContentType2) {
         if(r.getL7().getProtocol() == PFWL_PROTO_L7_HTTP){
           // Content type
           peafowl::Field field;
-          if((field = r.httpGetHeader("Content-Type")).isPresent()){
+          if((field = r.getL7().httpGetHeader("Content-Type")).isPresent()){
             cTypeFound = true;
             EXPECT_STREQ(field.getString().c_str(), "text/html");
           }
 
           // Host
-          if((field = r.httpGetHeader("Host")).isPresent()){
+          if((field = r.getL7().httpGetHeader("Host")).isPresent()){
             hostFound = true;
             EXPECT_STREQ(field.getString().c_str(), "bill.ins.com");
           }
 
           // User agent
-          if((field = r.httpGetHeader("User-Agent")).isPresent()){
+          if((field = r.getL7().httpGetHeader("User-Agent")).isPresent()){
             uAgentFound = true;
             EXPECT_STREQ(field.getString().c_str(), "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; SV1; .NET CLR 1.1.4322)");
           }
 
           // Body
-          if((field = r.getField(PFWL_FIELDS_L7_HTTP_BODY)).isPresent()){
+          if((field = r.getL7().getField(PFWL_FIELDS_L7_HTTP_BODY)).isPresent()){
             size_t body_packet_id;
             if(strstr(filename, "out-of-order")){
               body_packet_id = 5;
