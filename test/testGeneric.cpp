@@ -23,7 +23,7 @@ TEST(GenericTest, MaxTrials) {
   std::vector<uint> protocols;
   pfwl_set_max_trials(state, 1);
   getProtocols("./pcaps/imap.cap", protocols, state);
-  EXPECT_EQ(protocols[PFWL_PROTO_L7_IMAP], 0);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_IMAP], 5);
   pfwl_terminate(state);
 }
 

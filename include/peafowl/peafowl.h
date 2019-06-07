@@ -173,7 +173,7 @@ typedef uint8_t pfwl_protocol_l4_t;
  * L7 (application level) protocol.
  **/
 typedef enum {
-  PFWL_PROTO_L7_DNS,      ///< DNS
+  PFWL_PROTO_L7_DNS = 0,  ///< DNS
   PFWL_PROTO_L7_MDNS,     ///< MDNS
   PFWL_PROTO_L7_DHCP,     ///< DHCP
   PFWL_PROTO_L7_DHCPv6,   ///< DHCPv6
@@ -202,13 +202,19 @@ typedef enum {
   PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
   PFWL_PROTO_L7_SSDP,     ///< SSDP
   PFWL_PROTO_L7_STUN,     ///< STUN
-  PFWL_PROTO_L7_QUIC,     ///< QUIC
+  PFWL_PROTO_L7_QUIC,     ///< QUIC    
   PFWL_PROTO_L7_MQTT,     ///< MQTT
+  PFWL_PROTO_L7_MYSQL,    ///< MySQL
+  PFWL_PROTO_L7_VIBER,    ///< Viber
+  PFWL_PROTO_L7_KERBEROS, ///< Kerberos
+  PFWL_PROTO_L7_TOR,      ///< Tor
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
-  PFWL_PROTO_L7_UNKNOWN ///< Dummy value to indicate that the protocol has not
+  PFWL_PROTO_L7_UNKNOWN, ///< Dummy value to indicate that the protocol has not
                         ///< been identified
+  
+  
 } pfwl_protocol_l7_t;
 
 
