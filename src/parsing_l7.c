@@ -184,6 +184,13 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_STUN]     = {"STUN"    , check_stun    , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
   [PFWL_PROTO_L7_QUIC]     = {"QUIC"    , check_quic    , PFWL_L7_TRANSPORT_UDP       , NULL},
   [PFWL_PROTO_L7_MQTT]     = {"MQTT"    , check_mqtt    , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_MYSQL] = {"MySql",check_mysql,PFWL_L7_TRANSPORT_TCP},
+	[PFWL_PROTO_L7_VIBER] = {"Viber",check_viber,PFWL_L7_TRANSPORT_UDP},
+  [PFWL_PROTO_L7_KERBEROS] = {"Kerberos",check_kerberos,PFWL_L7_TRANSPORT_TCP_OR_UDP},
+	[PFWL_PROTO_L7_TOR] = {"Tor",check_tor,PFWL_L7_TRANSPORT_TCP}
+};
+    
+  
 };
 
 typedef struct {
