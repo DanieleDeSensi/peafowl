@@ -83,6 +83,11 @@ static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
   [port_stun_tls] = PFWL_PROTO_L7_STUN,
   [port_mqtt] = PFWL_PROTO_L7_MQTT,
   [port_mqtt_ssl] = PFWL_PROTO_L7_MQTT,
+  [port_viber_1] = PFWL_PROTO_L7_VIBER,
+  [port_viber_3] = PFWL_PROTO_L7_VIBER,
+  [port_viber_4] = PFWL_PROTO_L7_VIBER,
+  [port_viber_5] = PFWL_PROTO_L7_VIBER,
+  [port_kerberos] = PFWL_PROTO_L7_KERBEROS,
 };
 
 static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
@@ -107,6 +112,12 @@ static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
   [port_spotify] = PFWL_PROTO_L7_SPOTIFY,
   [port_ssdp] = PFWL_PROTO_L7_SSDP,
   [port_stun] = PFWL_PROTO_L7_STUN,
+  [port_viber_1] = PFWL_PROTO_L7_VIBER,
+  [port_viber_2] = PFWL_PROTO_L7_VIBER,
+  [port_viber_3] = PFWL_PROTO_L7_VIBER,
+  [port_viber_4] = PFWL_PROTO_L7_VIBER,
+  [port_viber_5] = PFWL_PROTO_L7_VIBER,
+  [port_kerberos] = PFWL_PROTO_L7_KERBEROS,
 };
 // clang-format on
 
@@ -184,15 +195,12 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_STUN]     = {"STUN"    , check_stun    , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
   [PFWL_PROTO_L7_QUIC]     = {"QUIC"    , check_quic    , PFWL_L7_TRANSPORT_UDP       , NULL},
   [PFWL_PROTO_L7_MQTT]     = {"MQTT"    , check_mqtt    , PFWL_L7_TRANSPORT_TCP       , NULL},
-  [PFWL_PROTO_L7_MYSQL] = {"MySql",check_mysql,PFWL_L7_TRANSPORT_TCP},
-	[PFWL_PROTO_L7_VIBER] = {"Viber",check_viber,PFWL_L7_TRANSPORT_UDP},
-  [PFWL_PROTO_L7_KERBEROS] = {"Kerberos",check_kerberos,PFWL_L7_TRANSPORT_TCP_OR_UDP},
-	[PFWL_PROTO_L7_TOR] = {"Tor",check_tor,PFWL_L7_TRANSPORT_TCP}
+  [PFWL_PROTO_L7_MYSQL]    = {"MySQL"   , check_mysql   , PFWL_L7_TRANSPORT_TCP       , NULL},
+	[PFWL_PROTO_L7_VIBER]    = {"Viber"   , check_viber   , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+  [PFWL_PROTO_L7_KERBEROS] = {"Kerberos", check_kerberos, PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
+	[PFWL_PROTO_L7_TOR]      = {"Tor"     , check_tor     , PFWL_L7_TRANSPORT_TCP       , NULL}
 };
     
-  
-};
-
 typedef struct {
   pfwl_protocol_l7_t protocol;
   const char* name;
@@ -438,11 +446,21 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
     if (flow_info_private->possible_protocols == 0 ||
         (state->max_trials &&
          unlikely(++flow_info_private->trials == state->max_trials))) {
-      flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num] = PFWL_PROTO_L7_UNKNOWN;
-      if(!flow_info_private->info_public->protocols_l7_num){
-        ++flow_info_private->info_public->protocols_l7_num;
-      }
+      
       flow_info_private->identification_terminated = 1;
+
+      pfwl_protocol_l7_t guessed = PFWL_PROTO_L7_UNKNOWN;
+      if(!flow_info_private->info_public->protocols_l7_num){
+          guessed = pfwl_guess_protocol(*diss_info);
+      }
+      if(guessed != PFWL_PROTO_L7_UNKNOWN){
+        flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num++] = guessed;
+      }else{
+        flow_info_private->info_public->protocols_l7[flow_info_private->info_public->protocols_l7_num] = PFWL_PROTO_L7_UNKNOWN;
+        if(!flow_info_private->info_public->protocols_l7_num){
+          ++flow_info_private->info_public->protocols_l7_num;
+        }
+      }
     }
   }
 
@@ -486,6 +504,7 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
   return PFWL_STATUS_OK;
 }
 
+// TODO: Deprecate and pass reference or pointer
 pfwl_protocol_l7_t
 pfwl_guess_protocol(pfwl_dissection_info_t identification_info) {
   pfwl_protocol_l7_t r = PFWL_PROTO_L7_UNKNOWN;
@@ -495,8 +514,9 @@ pfwl_guess_protocol(pfwl_dissection_info_t identification_info) {
       r = pfwl_known_ports_tcp[identification_info.l4.port_dst];
   } else if (identification_info.l4.protocol == IPPROTO_UDP) {
     r = pfwl_known_ports_udp[identification_info.l4.port_src];
-    if (r == PFWL_PROTO_L7_UNKNOWN)
+    if(r == PFWL_PROTO_L7_UNKNOWN){
       r = pfwl_known_ports_udp[identification_info.l4.port_dst];
+    }
   } else {
     r = PFWL_PROTO_L7_UNKNOWN;
   }

@@ -1,10 +1,13 @@
 /*
  * viber.c
- * Created by : Indu 
- * Created on: 30/05/2019
- * SignatureDerived from : nDPI
+ * author: (https://github.com/InSdi) (indu@cdac.in)
+ * Created on: 07/06/2019
+ * This protocol inspector is adapted from
+ * the nDPI viber dissector
+ * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/viber.c)
+ *
  * =========================================================================
- * 
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,30 +31,14 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 uint8_t check_viber(pfwl_state_t *state, const unsigned char *app_data,
-                  size_t data_length, pfwl_dissection_info_t *pkt_info,
-                  pfwl_flow_info_private_t *flow_info_private) {
- 
-if(app_data)
-//printf("%x %x %x\n",app_data[0],app_data[2],app_data[3]);
-  if((data_length == 12 && app_data[2] == 0x03 && app_data[3] == 0x00)
-       || (data_length == 20 && app_data[2] == 0x09 && app_data[3] == 0x00)
-       || ((data_length < 135) && (app_data[0] == 0x11))) {
-     printf("%s","protocol matches\n");
+                    size_t data_length, pfwl_dissection_info_t *pkt_info,
+                    pfwl_flow_info_private_t *flow_info_private){  
+  if(app_data){
+    if((data_length == 12  && app_data[2] == 0x03 && app_data[3] == 0x00) || 
+       (data_length == 20  && app_data[2] == 0x09 && app_data[3] == 0x00) || 
+       (data_length < 135 && app_data[0] == 0x11)){
       return PFWL_PROTOCOL_MATCHES;
-    } else
-      return PFWL_PROTOCOL_NO_MATCHES;
-
-
-  } 
-
-
-
-/*
-
-    if((packet->payload_packet_len == 12 && packet->payload[2] == 0x03 && packet->payload[3] == 0x00)
-       || (packet->payload_packet_len == 20 && packet->payload[2] == 0x09 && packet->payload[3] == 0x00)
-       || ((packet->payload_packet_len < 135) && (packet->payload[0] == 0x11))) {
-      NDPI_LOG_DBG(ndpi_struct, "found VIBER\n");
-      ndpi_set_detected_protocol(ndpi_struct, flow, NDPI_PROTOCOL_VIBER, NDPI_PROTOCOL_UNKNOWN);
-      return;
-*/
+    }
+  }
+  return PFWL_PROTOCOL_NO_MATCHES;
+} 

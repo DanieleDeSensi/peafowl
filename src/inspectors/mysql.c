@@ -1,10 +1,13 @@
 /*
  * mysql.c
- * Created by : Indu 
- * Created on: 27/05/2019
- * SignatureDerived from : nDPI
+ * author: (https://github.com/InSdi) (indu@cdac.in)
+ * Created on: 07/06/2019
+ * This protocol inspector is adapted from
+ * the nDPI mysql dissector
+ * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/mysql.c)
+ *
  * =========================================================================
- * indu@cdac.in
+ * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,44 +31,32 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-/* the get_uXX will return raw network packet bytes !! */
-#define get_u_int8_t(X,O)  (*(u_int8_t *)(((u_int8_t *)X) + O))
-#define get_u_int16_t(X,O)  (*(u_int16_t *)(((u_int8_t *)X) + O))
-#define get_u_int32_t(X,O)  (*(u_int32_t *)(((u_int8_t *)X) + O))
-#define get_u_int64_t(X,O)  (*(u_int64_t *)(((u_int8_t *)X) + O))
-
 uint8_t check_mysql(pfwl_state_t *state, const unsigned char *app_data,
                   size_t data_length, pfwl_dissection_info_t *pkt_info,
-                  pfwl_flow_info_private_t *flow_info_private) 
-{
+                  pfwl_flow_info_private_t *flow_info_private){
 
-if (data_length > 38
-         && get_u_int16_t(app_data,0) == data_length - 4	//first 3 bytes are length
-   	 && get_u_int8_t(app_data, 2) == 0x00	//3rd byte of packet length
-	 && get_u_int8_t(app_data, 3) == 0x00	//packet sequence number is 0 for startup packet
-	 && get_u_int8_t(app_data, 5) > 0x30	//server version > 0
-	 && get_u_int8_t(app_data, 5) < 0x37	//server version < 7
-	 && get_u_int8_t(app_data, 6) == 0x2e	//dot
-	) 
-	
- 	 {
-      		u_int32_t a;
-                //printf("%s","Inside MySQL");
-      		for (a = 7; a + 31 < data_length; a++)  {
-		if (app_data[a] == 0x00){
-	  		if (get_u_int8_t(app_data, a + 13) == 0x00	//filler byte
-	      		&& get_u_int64_t(app_data, a + 19) == 0x0ULL	//13 more
-	      		&& get_u_int32_t(app_data, a + 27) == 0x0	//filler bytes
-	      		&& get_u_int8_t(app_data, a + 31) == 0x0 )       
-      			return PFWL_PROTOCOL_MATCHES;
-   	              else
-         		return PFWL_PROTOCOL_NO_MATCHES;
-      					 } 
-		}
-	   }
-
-else
+    if(data_length > 38
+        && get_u16(app_data,0) == data_length - 4	//first 3 bytes are length
+      	&& get_u8(app_data, 2) == 0x00	//3rd byte of packet length
+   	    && get_u8(app_data, 3) == 0x00	//packet sequence number is 0 for startup packet
+   	    && get_u8(app_data, 5) > 0x30	//server version > 0
+   	    && get_u8(app_data, 5) < 0x37	//server version < 7
+   	    && get_u8(app_data, 6) == 0x2e	//dot
+	  ){
+        u_int32_t a;
+        for(a = 7; a + 31 < data_length; a++){
+            if(app_data[a] == 0x00){
+                if(get_u8(app_data, a + 13) == 0x00	//filler byte
+                   && get_u64(app_data, a + 19) == 0x0ULL	//13 more
+                   && get_u32(app_data, a + 27) == 0x0	//filler bytes
+                   && get_u8(app_data, a + 31) == 0x0){       
+                    return PFWL_PROTOCOL_MATCHES;
+                }else{
+                    return PFWL_PROTOCOL_NO_MATCHES;
+                } 
+            }
+        }
+    }
     return PFWL_PROTOCOL_MORE_DATA_NEEDED;
-
 }
 

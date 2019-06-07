@@ -180,7 +180,7 @@ typedef enum {
   PFWL_PROTO_L7_NTP,      ///< NTP
   PFWL_PROTO_L7_SIP,      ///< SIP
   PFWL_PROTO_L7_RTP,      ///< RTP
-  PFWL_PROTO_L7_RTCP,      ///< RTCP
+  PFWL_PROTO_L7_RTCP,     ///< RTCP
   PFWL_PROTO_L7_SSH,      ///< SSH
   PFWL_PROTO_L7_SKYPE,    ///< Skype
   PFWL_PROTO_L7_HTTP,     ///< HTTP
@@ -198,10 +198,16 @@ typedef enum {
   PFWL_PROTO_L7_ETHEREUM, ///< Ethereum
   PFWL_PROTO_L7_ZCASH,    ///< Zcash
   PFWL_PROTO_L7_MONERO,   ///< Monero
-  PFWL_PROTO_L7_MYSQL,///<MYSQL
-  PFWL_PROTO_L7_VIBER,///<VIBER
-  PFWL_PROTO_L7_KERBEROS,///<KERBEROS
-  PFWL_PROTO_L7_TOR,
+  PFWL_PROTO_L7_STRATUM,  ///< Stratum mining protocol (can be used by Bitcoin, Zcash and others)
+  PFWL_PROTO_L7_JSON_RPC, ///< Json-RPC
+  PFWL_PROTO_L7_SSDP,     ///< SSDP
+  PFWL_PROTO_L7_STUN,     ///< STUN
+  PFWL_PROTO_L7_QUIC,     ///< QUIC    
+  PFWL_PROTO_L7_MQTT,     ///< MQTT
+  PFWL_PROTO_L7_MYSQL,    ///< MySQL
+  PFWL_PROTO_L7_VIBER,    ///< Viber
+  PFWL_PROTO_L7_KERBEROS, ///< Kerberos
+  PFWL_PROTO_L7_TOR,      ///< Tor
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
