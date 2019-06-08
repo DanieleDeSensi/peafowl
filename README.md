@@ -67,7 +67,7 @@ The following people contributed to Peafowl:
 - Michele Campus (michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing
 - Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors
 - max197616 (https://github.com/max197616): SSL dissector
-- InSdi (https://github.com/InSdi) (indu@cdac.in): Viber, Kerberos and MySQL dissectors
+- InSdi (https://github.com/InSdi) (indu.mss@gmail.com): Viber, Kerberos and MySQL dissectors
 - QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl features (e.g. SIP, RTP, RTCP dissectors and others)
 - CounterFlowAI (https://www.counterflow.ai/) sponsored the development of some Peafowl features (e.g. TCP statistics)
 

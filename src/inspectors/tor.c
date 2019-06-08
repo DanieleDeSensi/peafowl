@@ -1,6 +1,6 @@
 /*
  * tor.c
- * author: (https://github.com/InSdi) (indu@cdac.in)
+ * author: (https://github.com/InSdi) (indu.mss@gmail.com)
  * Created on: 07/06/2019
  * This protocol inspector is adapted from
  * the nDPI tor dissector
