@@ -101,7 +101,7 @@ proper authorization to listen, capture and inspect network traffic.
 .. |CodeFactor| image:: https://www.codefactor.io/repository/github/danieledesensi/peafowl/badge
    :target: https://www.codefactor.io/repository/github/danieledesensi/peafowl/
 .. |Generic badge| image:: https://img.shields.io/badge/API-C/C++/Python-green.svg
-   :target: https://peafowl.readthedocs.io/en/latest/?badge=latest
+   :target: https://peafowl.readthedocs.io/en/latest/
 .. |HitCount| image:: http://hits.dwyl.io/DanieleDeSensi/Peafowl.svg
    :target: http://hits.dwyl.io/DanieleDeSensi/Peafowl
 .. |MIT Licence| image:: https://badges.frapsoft.com/os/mit/mit.svg?v=103

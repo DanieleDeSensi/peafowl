@@ -479,33 +479,29 @@ void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
     _x > _y ? _x : _y;                                                         \
   })
 
-
-static uint32_t get_max_idle_time(pfwl_timestamp_unit_t unit){
+static uint32_t convert_time(uint32_t time, pfwl_timestamp_unit_t unit){
   switch(unit){
+  case PFWL_TIMESTAMP_UNIT_MICROSECONDS:{
+    return time / 1000000.0;
+  }break;
   case PFWL_TIMESTAMP_UNIT_MILLISECONDS:{
-    return PFWL_FLOW_TABLE_MAX_IDLE_TIME / 1000.0;
+    return time / 1000.0;
   }break;
   case PFWL_TIMESTAMP_UNIT_SECONDS:{
-    return PFWL_FLOW_TABLE_MAX_IDLE_TIME;
+    return time;
   }break;
   default:{
-    return PFWL_FLOW_TABLE_MAX_IDLE_TIME;
+    return time;
   }
   }
 }
 
+static uint32_t get_max_idle_time(pfwl_timestamp_unit_t unit){
+  return convert_time(PFWL_FLOW_TABLE_MAX_IDLE_TIME, unit);
+}
+
 static uint32_t get_walk_time(pfwl_timestamp_unit_t unit){
-  switch(unit){
-  case PFWL_TIMESTAMP_UNIT_MILLISECONDS:{
-    return PFWL_FLOW_TABLE_WALK_TIME / 1000.0;
-  }break;
-  case PFWL_TIMESTAMP_UNIT_SECONDS:{
-    return PFWL_FLOW_TABLE_WALK_TIME;
-  }break;
-  default:{
-    return PFWL_FLOW_TABLE_WALK_TIME;
-  }
-  }
+  return convert_time(PFWL_FLOW_TABLE_WALK_TIME, unit);
 }
 
 #ifndef PFWL_DEBUG

@@ -259,6 +259,7 @@ typedef enum {
  * Units of timestamps used by Peafowl.
  **/
 typedef enum {
+  PFWL_TIMESTAMP_UNIT_MICROSECONDS, ///< Microseconds
   PFWL_TIMESTAMP_UNIT_MILLISECONDS, ///< Milliseconds
   PFWL_TIMESTAMP_UNIT_SECONDS     , ///< Seconds
 } pfwl_timestamp_unit_t;

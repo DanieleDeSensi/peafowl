@@ -2,7 +2,7 @@
 [![release](https://img.shields.io/github/release/danieledesensi/peafowl.svg)](https://github.com/danieledesensi/peafowl/releases/latest)
 [![Documentation Status](https://readthedocs.org/projects/peafowl/badge/?version=latest)](https://peafowl.readthedocs.io/en/latest/?badge=latest)
 [![CodeFactor](https://www.codefactor.io/repository/github/danieledesensi/peafowl/badge)](https://www.codefactor.io/repository/github/danieledesensi/peafowl/)
-[![Generic badge](https://img.shields.io/badge/API-C/C++/Python-green.svg)](https://peafowl.readthedocs.io/en/latest/?badge=latest)
+[![Generic badge](https://img.shields.io/badge/API-C/C++/Python-green.svg)](https://peafowl.readthedocs.io/en/latest/)
 [![HitCount](http://hits.dwyl.io/DanieleDeSensi/Peafowl.svg)](http://hits.dwyl.io/DanieleDeSensi/Peafowl)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/DanieleDeSensi)
