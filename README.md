@@ -2,7 +2,7 @@
 [![release](https://img.shields.io/github/release/danieledesensi/peafowl.svg)](https://github.com/danieledesensi/peafowl/releases/latest)
 [![Documentation Status](https://readthedocs.org/projects/peafowl/badge/?version=latest)](https://peafowl.readthedocs.io/en/latest/?badge=latest)
 [![CodeFactor](https://www.codefactor.io/repository/github/danieledesensi/peafowl/badge)](https://www.codefactor.io/repository/github/danieledesensi/peafowl/)
-[![Generic badge](https://img.shields.io/badge/API-C/C++/Python-green.svg)](https://peafowl.readthedocs.io/en/latest/api.html)
+[![Generic badge](https://img.shields.io/badge/API-C/C++/Python-green.svg)](https://peafowl.readthedocs.io/en/latest/)
 [![HitCount](http://hits.dwyl.io/DanieleDeSensi/Peafowl.svg)](http://hits.dwyl.io/DanieleDeSensi/Peafowl)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/DanieleDeSensi)
@@ -67,6 +67,7 @@ The following people contributed to Peafowl:
 - Michele Campus (michelecampus5@gmail.com): DNS, RTP and RTCP dissectors, L2 parsing
 - Lorenzo Mangani (lorenzo.mangani@gmail.com): SIP, RTP and Skype dissectors
 - max197616 (https://github.com/max197616): SSL dissector
+- InSdi (https://github.com/InSdi) (indu.mss@gmail.com): Viber, Kerberos and MySQL dissectors
 - QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl features (e.g. SIP, RTP, RTCP dissectors and others)
 - CounterFlowAI (https://www.counterflow.ai/) sponsored the development of some Peafowl features (e.g. TCP statistics)
 

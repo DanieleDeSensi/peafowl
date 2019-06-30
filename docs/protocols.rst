@@ -22,7 +22,9 @@ The supported protocols are:
 +----------+---------+----------+---------+----------+---------+----------+---------+
 | Monero   | 4/5     | Stratum  | 5/5     | JSON-RPC | 5/5     | SSDP     | 5/5     |
 +----------+---------+----------+---------+----------+---------+----------+---------+
-| STUN     | 5/5     | QUIC     | 5/5     | MQTT     | 5/5     |          |         |
+| STUN     | 5/5     | QUIC     | 5/5     | MQTT     | 5/5     | Viber    | 3/5     |
++----------+---------+----------+---------+----------+---------+----------+---------+
+| Kerberos | 3/5     | MySQL    | 5/5     |          |         |          |         |
 +----------+---------+----------+---------+----------+---------+----------+---------+
 
 At the moment, data and metadata extraction is supported for the following protocols (for a full list of fields please refer to the [Peafowl](include/peafowl/peafowl.h) header:
