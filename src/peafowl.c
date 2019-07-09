@@ -273,7 +273,7 @@ void pfwl_terminate(pfwl_state_t *state) {
 
 pfwl_status_t pfwl_dissect_from_L2(pfwl_state_t *state,
                                    const unsigned char *pkt, size_t length,
-                                   uint32_t timestamp,
+                                   double timestamp,
                                    pfwl_protocol_l2_t datalink_type,
                                    pfwl_dissection_info_t *dissection_info) {
   memset(dissection_info, 0, sizeof(pfwl_dissection_info_t));
@@ -294,7 +294,7 @@ pfwl_flow_t *pfwl_parse_L4_internal(pfwl_state_t *state,
 
 pfwl_status_t pfwl_dissect_from_L3(pfwl_state_t *state,
                                    const unsigned char *pkt, size_t length,
-                                   uint32_t timestamp,
+                                   double timestamp,
                                    pfwl_dissection_info_t *r) {
   pfwl_status_t status;
   status = pfwl_dissect_L3(state, pkt, length, timestamp, r);

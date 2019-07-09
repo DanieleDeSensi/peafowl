@@ -219,7 +219,9 @@ typedef struct pfwl_flow_info_private {
   uint8_t first_packet_arrived : 2;
   uint32_t highest_ack[2];
 
-  uint32_t synack_acknum;
+  uint32_t synack_acknum; 
+
+  double timestamp_last_payload[2]; // Timestamp of the last non-zero payload packet received
 
   /************************************/
   /* Protocol inspectors support data */
@@ -321,7 +323,7 @@ pfwl_flow_t *pfwl_flow_table_find_flow(pfwl_flow_table_t *db, uint32_t index,
 
 pfwl_flow_t *pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, pfwl_dissection_info_t *pkt_info,
     char *protocols_to_inspect, uint8_t tcp_reordering_enabled,
-    uint32_t timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
+    double timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
 
 void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db, pfwl_flow_t *to_delete);
 void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t *db,
@@ -345,7 +347,7 @@ void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
 
 pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, uint16_t partition_id, uint32_t index,
     pfwl_dissection_info_t *pkt_info, char *protocols_to_inspect,
-    uint8_t tcp_reordering_enabled, uint32_t timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
+    uint8_t tcp_reordering_enabled, double timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t *table,
                                       uint16_t num_partitions);

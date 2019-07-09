@@ -16,24 +16,26 @@ Pcap::~Pcap(){
   pcap_close(_handle);
 }
 
-std::pair<const u_char*, unsigned long> Pcap::getNextPacket(){
-  std::pair<const u_char*, unsigned long> r;
+pcap_pkt_t Pcap::getNextPacket(){
+  pcap_pkt_t r;
   struct pcap_pkthdr header;
 
   while(true){
     const u_char* packet = pcap_next(_handle, &header);
     if(!packet){
-      r.first = NULL;
-      r.second = 0;
+      r.pkt = NULL;
+      r.caplen = 0;
+      r.ts = 0;
       return r;
     }
-    r.second = header.caplen;
-    r.first = packet;
+    r.caplen = header.caplen;
+    r.pkt = packet;
+    r.ts = header.ts.tv_sec * 1000.0 * 1000.0 + header.ts.tv_usec;
     return r;
   }
 }
 
-void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state, std::function< void(pfwl_status_t, pfwl_dissection_info_t) > lambda){
+void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state_t* state, std::function< void(pfwl_status_t, pfwl_dissection_info_t) > lambda, bool pcap_ts){
   bool terminate = false;
   if(!state){
     state = pfwl_init();
@@ -44,10 +46,16 @@ void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state
 
   Pcap pcap(pcapName);
   pfwl_dissection_info_t r;
-  std::pair<const u_char*, unsigned long> pkt;
+  pcap_pkt_t pkt;
 
-  while((pkt = pcap.getNextPacket()).first != NULL){
-    pfwl_status_t status = pfwl_dissect_from_L2(state, pkt.first, pkt.second, time(NULL), pcap._datalink_type, &r);
+  while((pkt = pcap.getNextPacket()).pkt != NULL){
+    uint timestamp;
+    if(pcap_ts){
+      timestamp = pkt.ts;
+    }else{
+      timestamp = time(NULL);
+    }
+    pfwl_status_t status = pfwl_dissect_from_L2(state, pkt.pkt, pkt.caplen, timestamp, pcap._datalink_type, &r);
     lambda(status, r);
     if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
       for(size_t i = 0; i < r.l7.protocols_num; i++){
@@ -64,7 +72,7 @@ void getProtocols(const char* pcapName, std::vector<uint>& protocols, pfwl_state
   }
 }
 
-void getProtocolsCpp(const char* pcapName, std::vector<uint>& protocols, peafowl::Peafowl* state, std::function< void(peafowl::Status, peafowl::DissectionInfo&) > lambda){
+void getProtocolsCpp(const char* pcapName, std::vector<uint>& protocols, peafowl::Peafowl* state, std::function< void(peafowl::Status, peafowl::DissectionInfo&) > lambda, bool pcap_ts){
   bool terminate = false;
   if(!state){
     state = new peafowl::Peafowl();
@@ -74,12 +82,18 @@ void getProtocolsCpp(const char* pcapName, std::vector<uint>& protocols, peafowl
   protocols.resize(PFWL_PROTO_L7_NUM);
 
   Pcap pcap(pcapName);
-  std::pair<const u_char*, unsigned long> pkt;
+  pcap_pkt_t pkt;
 
-  while((pkt = pcap.getNextPacket()).first != NULL){
+  while((pkt = pcap.getNextPacket()).pkt != NULL){
     std::string s;
-    s.assign((const char*) pkt.first, pkt.second);
-    peafowl::DissectionInfo r = state->dissectFromL2(s, time(NULL), pcap._datalink_type);
+    s.assign((const char*) pkt.pkt, pkt.caplen);
+    uint timestamp;
+    if(pcap_ts){
+      timestamp = pkt.ts;
+    }else{
+      timestamp = time(NULL);
+    }
+    peafowl::DissectionInfo r = state->dissectFromL2(s, timestamp, pcap._datalink_type);
     lambda(r.getStatus(), r);
     if(r.getL4().getProtocol() == IPPROTO_TCP || 
        r.getL4().getProtocol() == IPPROTO_UDP){

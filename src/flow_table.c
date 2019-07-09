@@ -414,7 +414,8 @@ void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   }
 
   if (db->flow_termination_callback){
-    (*(db->flow_termination_callback))(&(to_delete->info));
+    pfwl_flow_info_t* info = &(to_delete->info);
+    (*(db->flow_termination_callback))(info);
   }
   --db->partitions[partition_id].partition.info.active_flows;
   free(to_delete->info_private.http_informations[0].temp_buffer);
@@ -479,13 +480,13 @@ void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
     _x > _y ? _x : _y;                                                         \
   })
 
-static uint32_t convert_time(uint32_t time, pfwl_timestamp_unit_t unit){
+static double convert_time(uint32_t time, pfwl_timestamp_unit_t unit){  
   switch(unit){
   case PFWL_TIMESTAMP_UNIT_MICROSECONDS:{
-    return time / 1000000.0;
+    return time * 1000000.0;
   }break;
   case PFWL_TIMESTAMP_UNIT_MILLISECONDS:{
-    return time / 1000.0;
+    return time * 1000.0;
   }break;
   case PFWL_TIMESTAMP_UNIT_SECONDS:{
     return time;
@@ -496,11 +497,11 @@ static uint32_t convert_time(uint32_t time, pfwl_timestamp_unit_t unit){
   }
 }
 
-static uint32_t get_max_idle_time(pfwl_timestamp_unit_t unit){
+static double get_max_idle_time(pfwl_timestamp_unit_t unit){
   return convert_time(PFWL_FLOW_TABLE_MAX_IDLE_TIME, unit);
 }
 
-static uint32_t get_walk_time(pfwl_timestamp_unit_t unit){
+static double get_walk_time(pfwl_timestamp_unit_t unit){
   return convert_time(PFWL_FLOW_TABLE_WALK_TIME, unit);
 }
 
@@ -510,7 +511,7 @@ static
     void
     pfwl_flow_table_check_expiration(pfwl_flow_table_t *db,
                                      uint16_t partition_id,
-                                     uint32_t current_time,
+                                     double current_time,
                                      pfwl_timestamp_unit_t unit) {
   uint32_t i;
 #if !PFWL_USE_MTF
@@ -597,7 +598,7 @@ static void pfwl_init_flow_info_public_internal(pfwl_flow_info_t *flow_info) {
 pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t *db, uint16_t partition_id, uint32_t index,
     pfwl_dissection_info_t *pkt_info, char *protocols_to_inspect,
-    uint8_t tcp_reordering_enabled, uint32_t timestamp, uint8_t syn,
+    uint8_t tcp_reordering_enabled, double timestamp, uint8_t syn,
     pfwl_timestamp_unit_t unit) {
   debug_print("%s\n", "[flow_table.c]: "
                       "pfwl_flow_table_find_or_create_flow_v4 invoked.");
@@ -717,6 +718,7 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   }
 
   if (!iterator->info.timestamp_first[pkt_info->l4.direction]) {
+    // First packet
     iterator->info.timestamp_first[pkt_info->l4.direction] = timestamp;
     iterator->info.statistics[PFWL_STAT_TIMESTAMP_FIRST][pkt_info->l4.direction] = timestamp;
   }
@@ -752,7 +754,7 @@ pfwl_compute_v4_hash_function(pfwl_flow_table_t *db,
 pfwl_flow_t *pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t *db, pfwl_dissection_info_t *pkt_info,
     char *protocols_to_inspect, uint8_t tcp_reordering_enabled,
-    uint32_t timestamp, uint8_t syn, pfwl_timestamp_unit_t unit) {
+    double timestamp, uint8_t syn, pfwl_timestamp_unit_t unit) {
   return mc_pfwl_flow_table_find_or_create_flow(
       db, 0, pfwl_compute_v4_hash_function(db, pkt_info), pkt_info,
       protocols_to_inspect, tcp_reordering_enabled, timestamp, syn, unit);

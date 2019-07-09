@@ -713,21 +713,21 @@ void Peafowl::setTimestampUnit(TimestampUnit unit){
   }
 }
 
-DissectionInfo Peafowl::dissectFromL2(const std::string &pkt, uint32_t timestamp, ProtocolL2 datalinkType){
+DissectionInfo Peafowl::dissectFromL2(const std::string &pkt, double timestamp, ProtocolL2 datalinkType){
   pfwl_dissection_info_t info;
   memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_from_L2(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, datalinkType, &info);
   return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectFromL3(const std::string &pkt, uint32_t timestamp){
+DissectionInfo Peafowl::dissectFromL3(const std::string &pkt, double timestamp){
   pfwl_dissection_info_t info;
   memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_from_L3(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
   return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectFromL4(const std::string &pkt, uint32_t timestamp, const DissectionInfo& info){
+DissectionInfo Peafowl::dissectFromL4(const std::string &pkt, double timestamp, const DissectionInfo& info){
   pfwl_dissection_info_t d = info.getNativeInfo();
   memset(&(d.l4), 0, sizeof(d.l4));
   memset(&(d.l7), 0, sizeof(d.l7));
@@ -742,14 +742,14 @@ DissectionInfo Peafowl::dissectL2(const std::string &pkt, pfwl_protocol_l2_t dat
   return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL3(const std::string &pkt, uint32_t timestamp){
+DissectionInfo Peafowl::dissectL3(const std::string &pkt, double timestamp){
   pfwl_dissection_info_t info;
   memset(&info, 0, sizeof(info));
   Status s = pfwl_dissect_L3(_state, (const unsigned char*) pkt.c_str(), pkt.size(), timestamp, &info);
   return DissectionInfo(info, s);
 }
 
-DissectionInfo Peafowl::dissectL4(const std::string &pkt, uint32_t timestamp, const DissectionInfo& info, FlowInfoPrivate &flowInfoPrivate){
+DissectionInfo Peafowl::dissectL4(const std::string &pkt, double timestamp, const DissectionInfo& info, FlowInfoPrivate &flowInfoPrivate){
   pfwl_dissection_info_t d = info.getNativeInfo();
   pfwl_protocol_l4_t proto = d.l4.protocol;
   memset(&(d.l4), 0, sizeof(d.l4));
