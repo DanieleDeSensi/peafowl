@@ -501,6 +501,7 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
     }
   }
 
+  diss_info->flow_info = *flow_info_private->info_public; // To be DEPRECATED. flow_info should become a pointer to avoid copying
   return PFWL_STATUS_OK;
 }
 
