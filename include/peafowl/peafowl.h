@@ -477,7 +477,7 @@ typedef struct pfwl_flow_info {
   pfwl_protocol_l2_t protocol_l2; ///< L2 (datalink) protocol
   pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
                                   ///< PFWL_IP_VERSION_6 in IPv6.
-  uint8_t protocol_l4; ///< The Level 4 protocol.
+  pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol.
   double statistics[PFWL_STAT_NUM][2]; ///< The flow statistics (one set per direction).
   pfwl_protocol_l7_t protocols_l7[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
                                                                ///< For example, Ethereum may be carried by JSON-RPC, which
