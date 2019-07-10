@@ -67,7 +67,8 @@ static void print_all_devices(pcap_if_t *all_devs, pcap_if_t *d)
 static void print_header(){
     printf("#Id\tThreadId\tAddressSrc\tAddressDst\tPortSrc\tPortDst\t"
            "ProtoL2\tProtoL3\tProtoL4\tProtosL7\t"
-           "Packets\tBytes\t\n");
+           "Packets(DirA|DirB)\tBytes(DirA|DirB)\tPacketsL7(DirA|DirB)\tBytesL7(DirA|DirB)\t"
+           "TimestampFirst(DirA|DirB)\tTimestampLast(DirA|DirB)\n");
 }
 
 static const char* convert_address(pfwl_ip_addr_t address, pfwl_protocol_l3_t l3prot, char* buf, size_t buf_size){
