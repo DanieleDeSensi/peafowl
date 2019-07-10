@@ -1,7 +1,7 @@
 /*
  * flows_summary.c
  *
- * Given a .pcap file, prints summary information about the contained flows.
+ * From live or given a .pcap file, prints summary information about the contained flows.
  *
  * Created on: 05/01/2019
  * =========================================================================
