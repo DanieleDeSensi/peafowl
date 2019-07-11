@@ -521,6 +521,8 @@ typedef struct pfwl_flow_info {
 typedef struct pfwl_dissection_info_l2 {
   size_t length;               ///< Length of L2 header
   pfwl_protocol_l2_t protocol; ///< L2 (datalink) protocol
+  uint8_t mac_src[6];           ///< source MAC address 
+  uint8_t mac_dst[6];           ///< dest MAC address
 }pfwl_dissection_info_l2_t;
 
 /**
