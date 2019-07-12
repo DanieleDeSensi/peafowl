@@ -51,7 +51,6 @@ pfwl_status_t mc_pfwl_parse_L3_header(pfwl_state_t *state,
                                       size_t p_length, uint32_t current_time,
                                       int tid,
                                       pfwl_dissection_info_t *dissection_info) {
-  memset(dissection_info, 0, sizeof(*dissection_info));
   if (unlikely(p_length == 0)) {
     return PFWL_STATUS_OK;
   }

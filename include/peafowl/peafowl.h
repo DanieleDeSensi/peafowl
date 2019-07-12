@@ -84,6 +84,7 @@ extern "C" {
 
 #include <peafowl/utils.h>
 #include <sys/types.h>
+#include <net/ethernet.h>
 
 /// @cond EXTERNAL
 typedef struct pfwl_flow_info_private pfwl_flow_info_private_t;
@@ -521,8 +522,8 @@ typedef struct pfwl_flow_info {
 typedef struct pfwl_dissection_info_l2 {
   size_t length;               ///< Length of L2 header
   pfwl_protocol_l2_t protocol; ///< L2 (datalink) protocol
-  uint8_t mac_src[6];           ///< source MAC address 
-  uint8_t mac_dst[6];           ///< dest MAC address
+  uint8_t mac_src[ETH_ALEN];           ///< source MAC address 
+  uint8_t mac_dst[ETH_ALEN];           ///< dest MAC address
 }pfwl_dissection_info_l2_t;
 
 /**
@@ -921,7 +922,8 @@ pfwl_status_t pfwl_dissect_from_L2(pfwl_state_t *state,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l3, dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information from L3 to L7 will be filled in by this call.
  * @return  The status of the identification process.
@@ -941,10 +943,12 @@ pfwl_status_t pfwl_dissect_from_L3(pfwl_state_t *state,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 header must be filled in by the
- * caller. Dissection information from L4 to L7 will be filled in by this call.
+ *          caller. Dissection information from L4 to L7 will be filled in by 
+*           this call.
  * @return  The status of the identification process.
  */
 pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
@@ -975,7 +979,8 @@ pfwl_status_t pfwl_dissect_L2(const unsigned char *packet,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l3, dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 headers will be filled in by this
  * call.
@@ -994,7 +999,8 @@ pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 headers must be filled in by the
  * caller. l4.protocol must be filled in by the caller as well. Dissection
@@ -1023,8 +1029,8 @@ pfwl_status_t pfwl_dissect_L4(pfwl_state_t *state, const unsigned char *pkt,
  * @param   pkt The pointer to the beginning of application data.
  * @param   length Length of the packet (from the beginning of the
  *          L7 header).
- * @param   dissection_info The result of the dissection. All its bytes must be
- *          set to 0 before calling this call.
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l7 must be set to 0 before calling this call.
  *          Dissection information about L3 and L4 headers must be filled in by
  * the caller. Dissection information about L7 packet will be filled in by this
  * call.
