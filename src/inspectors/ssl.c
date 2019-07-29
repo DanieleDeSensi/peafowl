@@ -322,9 +322,10 @@ static u_int8_t pfwl_search_sslv3_direction1(const unsigned char *payload,
                                              size_t data_length,
                                              pfwl_flow_info_private_t* flow) {
 
-  if(flow->ssl_information.version == PFWL_SSLV3) {
+  if(flow->ssl_information.version == PFWL_SSLV3 || 
+     flow->ssl_information.version == PFWL_TLSV1_2) {
     u_int32_t temp;
-    debug_print("%s\n", "search sslv3");
+    debug_print("%s\n", "search sslv3 or tlsv1.2");
     // SSLv3 Record
     if(data_length >= 1300) {
       return 1;
@@ -418,6 +419,7 @@ static u_int8_t pfwl_search_sslv3_direction1(const unsigned char *payload,
 uint8_t check_ssl(pfwl_state_t *state, const unsigned char *payload,
                   size_t data_length, pfwl_dissection_info_t *pkt_info,
                   pfwl_flow_info_private_t *flow_info_private) {
+  debug_print("%s\n", "checking ssl...");
   if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_SSL_CERTIFICATE) || 
      pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_SSL_SNI)){
     if(sslDetectProtocolFromCertificate(payload, data_length, flow_info_private, pkt_info->l7.protocol_fields) == PFWL_PROTOCOL_MATCHES){
@@ -438,11 +440,17 @@ uint8_t check_ssl(pfwl_state_t *state, const unsigned char *payload,
     }
 
     // SSLv3 Record
-    if(payload[0] == 0x16 && payload[1] == 0x03
+    if((payload[0] == 0x16 || payload[0] == 0x17)
+       && payload[1] == 0x03
        && (payload[2] == 0x00 || payload[2] == 0x01 || payload[2] == 0x02 || payload[2] == 0x03)
        && (data_length - ntohs(get_u16(payload, 3)) == 5)) {
-      flow_info_private->ssl_information.version = PFWL_SSLV3;
-      debug_print("%s\n", "sslv3 len match");
+      if(payload[0] == 0x16){
+        flow_info_private->ssl_information.version = PFWL_SSLV3;
+        debug_print("%s\n", "sslv3 len match");
+      }else{
+        flow_info_private->ssl_information.version = PFWL_TLSV1_2;
+        debug_print("%s\n", "TLS v1.2 len match");
+      }
       flow_info_private->ssl_information.stage = 1 + pkt_info->l4.direction;
       return PFWL_PROTOCOL_MATCHES;
     }

@@ -139,7 +139,8 @@ typedef struct pfwl_http_internal_informations {
 /********************** SSL ************************/
 typedef enum{
   PFWL_SSLV2 = 0,
-  PFWL_SSLV3
+  PFWL_SSLV3,
+  PFWL_TLSV1_2
 }pfwl_ssl_version_t;
 
 typedef struct pfwl_ssl_internal_information_new {

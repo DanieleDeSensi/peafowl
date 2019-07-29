@@ -12,7 +12,7 @@ TEST(SSLTest, Generic) {
   getProtocols("./pcaps/dropbox.pcap", protocols);
   EXPECT_EQ(protocols[PFWL_PROTO_L7_SSL], (uint) 224);
   getProtocols("./pcaps/spotify.pcapng", protocols);
-  EXPECT_EQ(protocols[PFWL_PROTO_L7_SSL], (uint) 11);
+  EXPECT_EQ(protocols[PFWL_PROTO_L7_SSL], (uint) 13);
   getProtocols("./pcaps/ssl-2.cap", protocols);
   EXPECT_EQ(protocols[PFWL_PROTO_L7_SSL], (uint) 52);
   getProtocols("./pcaps/ssl-3.pcap", protocols);
