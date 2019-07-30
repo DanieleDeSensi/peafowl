@@ -442,6 +442,7 @@ typedef struct pfwl_flow_info {
                ///< id is per-thread unique, i.e. two different flows, managed by two
                ///< different threads may have the same id. If multithreaded Peafowl
                ///< is used, the unique identifier will be the pair <thread_id, id>
+  uint32_t id_hash;  ///< Hash value associated with flow id
   uint16_t thread_id; ///< Identifier of the thread that managed this flow.
   pfwl_ip_addr_t addr_src; ///< Source address, in network byte order.
   pfwl_ip_addr_t addr_dst; ///< Destination address, in network byte order.
