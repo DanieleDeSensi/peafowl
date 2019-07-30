@@ -677,6 +677,7 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     iterator->info.protocol_l4 = pkt_info->l4.protocol;
     iterator->info.udata = &(iterator->info_private.udata_private);
     iterator->info.id = db->partitions[partition_id].partition.info.next_flow_id++;
+    iterator->info.id_hash = index;
     iterator->info.thread_id = partition_id;
     iterator->info.protocols_l7_num = 0;
     iterator->info.protocols_l7[0] = PFWL_PROTO_L7_NOT_DETERMINED;
