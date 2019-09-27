@@ -37,7 +37,8 @@ uint8_t check_tor(pfwl_state_t *state, const unsigned char *app_data,
   if (((app_data[0] == 0x17) || (app_data[0] == 0x16)) 
 	    && (app_data[1] == 0x03) 
 	    && (app_data[2] == 0x01) 
-	    && (app_data[3] == 0x00)){
+	    && (app_data[3] == 0x00)
+      && (pkt_info->l4.port_src == port_tor || pkt_info->l4.port_dst == port_tor)){ // If we do not match port, the rest of the rule is the same as SSL
       return PFWL_PROTOCOL_MATCHES;
   }else{
       return PFWL_PROTOCOL_NO_MATCHES;

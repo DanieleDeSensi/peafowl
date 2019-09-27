@@ -99,6 +99,7 @@ enum protocol_check_statuses {
 #define port_viber_4 0x7B14       /** 5243 **/
 #define port_viber_5 0x9410       /** 4244 **/
 #define port_kerberos 0x5800      /** 88 **/
+#define port_tor 0x2923           /** 9001 **/
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define port_ssh 0x0016           /* 22 **/
 #define port_smtp_1 0x0019        /** 25 **/
@@ -145,6 +146,7 @@ enum protocol_check_statuses {
 #define port_viber_4 0x147B       /** 5243 **/
 #define port_viber_5 0x1094       /** 4244 **/
 #define port_kerberos 0x0058      /** 88 **/
+#define port_tor 0x2329           /** 9001 **/
 #else
 #error "Please fix <bits/endian.h>"
 #endif

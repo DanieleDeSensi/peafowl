@@ -68,6 +68,7 @@ static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
   [port_imap] = PFWL_PROTO_L7_IMAP,
   [port_imap_ssl] = PFWL_PROTO_L7_IMAP,
   [port_ssl] = PFWL_PROTO_L7_SSL,
+  [port_tor] = PFWL_PROTO_L7_TOR,
   [port_hangout_19305] = PFWL_PROTO_L7_HANGOUT,
   [port_hangout_19306] = PFWL_PROTO_L7_HANGOUT,
   [port_hangout_19307] = PFWL_PROTO_L7_HANGOUT,

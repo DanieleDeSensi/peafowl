@@ -147,6 +147,11 @@ typedef struct pfwl_ssl_internal_information_new {
   uint8_t stage;
   uint8_t certificate_num_checks;
   uint8_t certificates_detected;
+  unsigned char first_bytes[2][6];
+  uint8_t next_first_bytes[2];
+  uint32_t processed_bytes[2];
+  uint32_t next_server_extension;
+  uint32_t remaining_extension_len;
   pfwl_ssl_version_t version;
 } pfwl_ssl_internal_information_t;
 /********************** SSL (END) ************************/
