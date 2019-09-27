@@ -257,7 +257,7 @@ static int getSSLcertificate(uint32_t proc_bytes,
           }
         }
       } else if(handshake_protocol == 0x01 /* Client Hello */) {
-        int offset, base_offset = 43;
+        int base_offset = 43;
        	if(*next_server_extension){
        		return searchNameInExtensions(0, payload, *remaining_extension_len, *next_server_extension, data_length, buffer, buffer_len, fields, next_server_extension, remaining_extension_len);
        	}
@@ -267,6 +267,7 @@ static int getSSLcertificate(uint32_t proc_bytes,
 
           // TODO: Replace ssl_length with data_length, and if checks are not satisfied manage segmentation
           if((session_id_len+base_offset+2) <= ssl_length) {
+            int offset;
             u_int16_t cypher_len =  payload[session_id_len+base_offset+2] + (payload[session_id_len+base_offset+1] << 8);
             offset = base_offset + session_id_len + cypher_len + 2;
 
