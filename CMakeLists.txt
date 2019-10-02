@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(peafowl VERSION 1.0.0)
-set (CMAKE_BUILD_TYPE Release)
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_C_STANDARD 11)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -15,8 +14,6 @@ option (ENABLE_CLANGFORMAT "Enables clang-format formatting" OFF)
 option (ENABLE_DOCS "Enables documentation generation" OFF)
 option (ENABLE_PYTHON "Enables generation of Python code" OFF)
 option (ENABLE_C "Enables generation of C/C++ libraries" ON)
-
-add_compile_options(-Wall -finline-functions -O3)
 
 find_package(PCAP)
 
