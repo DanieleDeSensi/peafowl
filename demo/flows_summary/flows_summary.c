@@ -194,12 +194,13 @@ int main(int argc, char** argv)
     }
 
     pfwl_state_t* state = pfwl_init();
+    //pfwl_set_expected_flows(state, 8, PFWL_FLOWS_STRATEGY_NONE);
     pfwl_set_flow_termination_callback(state, &summarizer);    
     print_header();
     pfwl_dissection_info_t r;
     pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
     while((packet = pcap_next(handle, &header)) != NULL){
-        if(pfwl_dissect_from_L2(state, packet, header.caplen, time(NULL), dlt, &r) >= PFWL_STATUS_OK){
+        if(pfwl_dissect_from_L2(state, packet, header.caplen, header.ts.tv_sec, dlt, &r) >= PFWL_STATUS_OK){
             if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
                 if(r.l7.protocol < PFWL_PROTO_L7_NUM){
                     ++protocols[r.l7.protocol];

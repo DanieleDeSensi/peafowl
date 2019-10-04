@@ -616,7 +616,7 @@ void Peafowl::setFlowManager(FlowManager* flowManager){
 }
 
 
-void Peafowl::setExpectedFlows(uint32_t flows, uint8_t strict){
+void Peafowl::setExpectedFlows(uint32_t flows, FlowsStrategy strict){
   if(pfwl_set_expected_flows(_state, flows, strict)){
     throw std::runtime_error("pfwl_set_expected_flows failed\n");
   }

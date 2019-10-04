@@ -209,6 +209,7 @@ typedef enum {
   PFWL_PROTO_L7_VIBER,    ///< Viber
   PFWL_PROTO_L7_KERBEROS, ///< Kerberos
   PFWL_PROTO_L7_TOR,      ///< Tor
+  PFWL_PROTO_L7_GIT,      ///< Git
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
@@ -264,6 +265,19 @@ typedef enum {
   PFWL_TIMESTAMP_UNIT_MILLISECONDS, ///< Milliseconds
   PFWL_TIMESTAMP_UNIT_SECONDS     , ///< Seconds
 } pfwl_timestamp_unit_t;
+
+/**
+ * Possible strategies to adopt when there are
+ * too many flows in the flows table.
+ **/
+typedef enum{
+  PFWL_FLOWS_STRATEGY_NONE, ///< Flows are always added to the table.
+  PFWL_FLOWS_STRATEGY_SKIP, ///< If the maximum capacity of the table 
+                            ///< is reached, new flows are not stored.
+  PFWL_FLOWS_STRATEGY_EVICT ///< If the maximum capacity of the table 
+                            ///< is reached, when a new flow is added
+                            ///< the oldest flow is evicted.
+}pfwl_flows_strategy_t;
 
 /**
  * A string as represented by peafowl.
@@ -477,8 +491,8 @@ typedef struct pfwl_flow_info {
                          ///< Use statistics field instead.
 
   pfwl_protocol_l2_t protocol_l2; ///< L2 (datalink) protocol
-  pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
-                                  ///< PFWL_IP_VERSION_6 in IPv6.
+  pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_PROTO_L3_IPV4 if IPv4,
+                                  ///< PFWL_PROTO_L3_IPV6 in IPv6.
   pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol.
   double statistics[PFWL_STAT_NUM][2]; ///< The flow statistics (one set per direction).
   pfwl_protocol_l7_t protocols_l7[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
@@ -539,8 +553,8 @@ typedef struct pfwl_dissection_info_l3 {
                                    ///< the first byte of L3 packet).
   size_t refrag_pkt_len; ///< Length of the refragmented packet (without L2
                          ///< trailer).
-  pfwl_protocol_l3_t protocol; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
-                               ///< PFWL_IP_VERSION_6 in IPv6.
+  pfwl_protocol_l3_t protocol; ///< IP version, PFWL_PROTO_L3_IPV4 if IPv4,
+                               ///< PFWL_PROTO_L3_IPV6 in IPv6.
 }pfwl_dissection_info_l3_t;
 
 /**
@@ -667,15 +681,18 @@ void pfwl_terminate(pfwl_state_t *state);
  * @brief Sets the number of simultaneously active flows to be expected.
  * @param state A pointer to the state of the library.
  * @param flows The number of simultaneously active flows.
- * @param strict If 1, when that number of active flows is reached,
- * an error will be returned (PFWL_ERROR_MAX_FLOWS) and new flows
- * will not be created. If 0, there will not be any limit to the number
- * of simultaneously active flows. However, this could lead to slowdown
- * when retrieving flow information.
+ * @param strategy If PFWL_FLOWS_STRATEGY_NONE, there will not be any limit 
+ * to the number of simultaneously active flows. However, this could lead 
+ * to slowdown when retrieving flow information.
+ * If PFWL_FLOWS_STRATEGY_SKIP, when that number of active flows is reached,
+ * if a new flow is created an error will be returned (PFWL_ERROR_MAX_FLOWS) 
+ * and new flows will not be created. 
+ * If PFWL_FLOWS_STRATEGY_EVICT, when when that number of active flows 
+ * is reached, if a new flow is created the oldest flow will be evicted.
  * @return 0 if succeeded, 1 otherwise.
  */
 uint8_t pfwl_set_expected_flows(pfwl_state_t *state, uint32_t flows,
-                                uint8_t strict);
+                                pfwl_flows_strategy_t strategy);
 
 /**
  * Sets the maximum number of packets to use to identify the protocol.
