@@ -94,6 +94,12 @@ PYBIND11_MODULE(pypeafowl, m) {
       .value("HTTP_URL", PFWL_FIELDS_L7_HTTP_URL)
       .export_values();
 
+  py::enum_<FlowsStrategy>(m, "FlowsStrategy")
+      .value("FLOWS_STRATEGY_NONE", PFWL_FLOWS_STRATEGY_NONE)
+      .value("FLOWS_STRATEGY_SKIP", PFWL_FLOWS_STRATEGY_SKIP) 
+      .value("FLOWS_STRATEGY_EVICT", PFWL_FLOWS_STRATEGY_EVICT) 
+      .export_values();
+
   py::class_<Field>(m, "Field")
       .def(py::init<>())
       .def("isPresent", &Field::isPresent, R"pbdoc(
@@ -778,6 +784,23 @@ PYBIND11_MODULE(pypeafowl, m) {
              Args:
                flowManager
                  The functor object.
+           )pbdoc")
+      .def("setExpectedFlows", &Peafowl::setExpectedFlows, py::arg("flows"), py::arg("strategy"),
+           R"pbdoc(
+             Sets the number of simultaneously active flows to be expected.
+
+             Args:
+               flows 
+                 The number of simultaneously active flows.
+               strategy 
+                 If PFWL_FLOWS_STRATEGY_NONE, there will not be any limit 
+                 to the number of simultaneously active flows. However, this could lead 
+                 to slowdown when retrieving flow information.
+                 If PFWL_FLOWS_STRATEGY_SKIP, when that number of active flows is reached,
+                 if a new flow is created an error will be returned (PFWL_ERROR_MAX_FLOWS) 
+                 and new flows will not be created. 
+                 If PFWL_FLOWS_STRATEGY_EVICT, when when that number of active flows 
+                 is reached, if a new flow is created the oldest flow will be evicted.
            )pbdoc")
       .def("setTimestampUnit", &Peafowl::setTimestampUnit, py::arg("unit"),
            R"pbdoc(

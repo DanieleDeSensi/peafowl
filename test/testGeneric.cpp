@@ -7,7 +7,7 @@
 TEST(GenericTest, MaxFlows) {
   pfwl_state_t* state = pfwl_init();
   std::vector<uint> protocols;
-  pfwl_set_expected_flows(state, 1, 1);
+  pfwl_set_expected_flows(state, 1, PFWL_FLOWS_STRATEGY_SKIP);
   uint errors = 0;
   getProtocols("./pcaps/whatsapp.pcap", protocols, state, [&](pfwl_status_t status, pfwl_dissection_info_t r){
     if(status == PFWL_ERROR_MAX_FLOWS){
@@ -29,7 +29,7 @@ TEST(GenericTest, MaxTrials) {
 
 
 TEST(GenericTest, NullState) {
-  EXPECT_EQ(pfwl_set_expected_flows(NULL, 0, 0), 1);
+  EXPECT_EQ(pfwl_set_expected_flows(NULL, 0, PFWL_FLOWS_STRATEGY_NONE), 1);
   EXPECT_EQ(pfwl_set_max_trials(NULL, 0), 1);
   EXPECT_EQ(pfwl_defragmentation_enable_ipv4(NULL, 0), 1);
   EXPECT_EQ(pfwl_defragmentation_enable_ipv6(NULL, 0), 1);

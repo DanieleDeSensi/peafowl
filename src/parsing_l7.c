@@ -89,6 +89,7 @@ static const pfwl_protocol_l7_t pfwl_known_ports_tcp[PFWL_MAX_UINT_16 + 1] = {
   [port_viber_4] = PFWL_PROTO_L7_VIBER,
   [port_viber_5] = PFWL_PROTO_L7_VIBER,
   [port_kerberos] = PFWL_PROTO_L7_KERBEROS,
+  [port_git] = PFWL_PROTO_L7_GIT,
 };
 
 static const pfwl_protocol_l7_t pfwl_known_ports_udp[PFWL_MAX_UINT_16 + 1] = {
@@ -199,7 +200,8 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_MYSQL]    = {"MySQL"   , check_mysql   , PFWL_L7_TRANSPORT_TCP       , NULL},
 	[PFWL_PROTO_L7_VIBER]    = {"Viber"   , check_viber   , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
   [PFWL_PROTO_L7_KERBEROS] = {"Kerberos", check_kerberos, PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
-	[PFWL_PROTO_L7_TOR]      = {"Tor"     , check_tor     , PFWL_L7_TRANSPORT_TCP       , NULL}
+	[PFWL_PROTO_L7_TOR]      = {"Tor"     , check_tor     , PFWL_L7_TRANSPORT_TCP       , NULL},
+  [PFWL_PROTO_L7_GIT]      = {"Git"     , check_git     , PFWL_L7_TRANSPORT_TCP       , NULL}
 };
     
 typedef struct {

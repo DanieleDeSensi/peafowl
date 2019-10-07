@@ -310,7 +310,7 @@ pfwl_flow_table_t *pfwl_flow_table_create(uint32_t size,
 
 #else
 pfwl_flow_table_t *pfwl_flow_table_create(uint32_t expected_flows,
-                                          uint8_t strict,
+                                          pfwl_flows_strategy_t strategy,
                                           uint16_t num_partitions);
 #endif
 
@@ -320,7 +320,8 @@ void pflw_flow_table_set_flow_cleaner_callback(
 void pflw_flow_table_set_flow_termination_callback(
     pfwl_flow_table_t *db, pfwl_flow_termination_callback_t *flow_termination_callback);
 
-void pfwl_flow_table_delete(pfwl_flow_table_t *db);
+void pfwl_flow_table_delete(pfwl_flow_table_t *db, pfwl_timestamp_unit_t unit);
+
 
 pfwl_flow_t *pfwl_flow_table_find_flow(pfwl_flow_table_t *db, uint32_t index,
                                        pfwl_dissection_info_t *pkt_info);
@@ -329,7 +330,7 @@ pfwl_flow_t *pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, pfwl_dis
     char *protocols_to_inspect, uint8_t tcp_reordering_enabled,
     uint32_t timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
 
-void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db, pfwl_flow_t *to_delete);
+void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db, pfwl_flow_t *to_delete, pfwl_timestamp_unit_t unit);
 void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t *db,
                                        pfwl_flow_t *to_delete);
 
@@ -356,9 +357,6 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, uint1
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t *table,
                                       uint16_t num_partitions);
 
-void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
-                                    uint16_t partition_id,
-                                    pfwl_flow_t *to_delete);
 void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t *db,
                                           uint16_t partition_id,
                                           pfwl_flow_t *to_delete);
