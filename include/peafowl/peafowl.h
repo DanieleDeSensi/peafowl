@@ -1063,6 +1063,24 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
                               pfwl_flow_info_private_t *flow_info_private);
 
 /**
+ * Creates a new Peafowl flow info (to be called only if pfwl_dissect_L7 is
+ * called directly by the user).
+ * @param state A pointer to the state of the library.
+ * @param dissection_info Info about the flow (user needs to fill info up to
+ * L4 included).
+ * @return The new Peafowl flow, needs to be deleted with pfwl_destroy_flow.
+ */
+pfwl_flow_info_private_t* pfwl_create_flow_info_private(pfwl_state_t* state,
+                                                        const pfwl_dissection_info_t *dissection_info);
+
+/**
+ * Destroys a flow info created with pfwl_create_flow.
+ * @param info The flow to be destroyed.
+ */
+void pfwl_destroy_flow_info_private(pfwl_flow_info_private_t* info);
+
+/**
+ * DEPRECATED.
  * Initialize the flow informations passed as argument.
  * @param state             A pointer to the state of the library.
  * @param flow_info_private The private flow information, will be initialized
@@ -1584,6 +1602,9 @@ typedef struct pfwl_state {
   /** Tags **/
   void* tags_matchers[PFWL_FIELDS_L7_NUM];
   size_t tags_matchers_num;
+
+  /** Flow id when calling directly dissect_L7 **/
+  size_t next_flow_id;
 
   /********************************************************************/
   /** The content of these structures can be modified during the     **/

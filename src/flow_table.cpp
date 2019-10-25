@@ -579,9 +579,40 @@ static void pfwl_init_flow_info_public_internal(pfwl_flow_info_t *flow_info) {
   flow_info->statistics[PFWL_STAT_L4_TCP_WINDOW_SCALING][1] = -1;
 }
 
+void pfwl_init_flow(pfwl_flow_t* flow,
+                    const pfwl_dissection_info_t* dissection_info,
+                    char *protocols_to_inspect,
+                    uint8_t tcp_reordering_enabled,
+                    uint64_t id,
+                    uint32_t id_hash,
+                    uint16_t thread_id){
+  pfwl_flow_info_t* info = &(flow->info);
+  pfwl_flow_info_private_t* info_private = &(flow->info_private);
+  pfwl_init_flow_info_public_internal(info);
+  pfwl_init_flow_info_internal(info_private,
+                               protocols_to_inspect,
+                               tcp_reordering_enabled);
+  info->addr_src = dissection_info->l3.addr_src;
+  info->addr_dst = dissection_info->l3.addr_dst;
+  info->port_src = dissection_info->l4.port_src;
+  info->port_dst = dissection_info->l4.port_dst;
+  info->protocol_l2 = dissection_info->l2.protocol;
+  info->protocol_l3 = dissection_info->l3.protocol;
+  info->protocol_l4 = dissection_info->l4.protocol;
+  info->udata = &(info_private->udata_private);
+  info->id = id;
+  info->id_hash = id_hash;
+  info->thread_id = thread_id;
+  info->protocols_l7_num = 0;
+  info->protocols_l7[0] = PFWL_PROTO_L7_NOT_DETERMINED;
+
+  info_private->info_public = info;
+  info_private->flow = flow;
+}
+
 pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t *db, uint16_t partition_id, uint32_t index,
-    pfwl_dissection_info_t *pkt_info, char *protocols_to_inspect,
+    pfwl_dissection_info_t *dissection_info, char *protocols_to_inspect,
     uint8_t tcp_reordering_enabled, uint32_t timestamp, uint8_t syn,
     pfwl_timestamp_unit_t unit) {
   debug_print("%s\n", "[flow_table.c]: "
@@ -597,7 +628,7 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   /** Flow searching. **/
   pfwl_flow_t *head = &(db->table[index]);
   pfwl_flow_t *iterator = head->next;
-  while (iterator != head && !flow_equals(iterator, pkt_info)) {
+  while (iterator != head && !flow_equals(iterator, dissection_info)) {
     iterator = iterator->next;
   }
 
@@ -610,7 +641,7 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
    * Expiration check is done in another place, here we need to check if
    * a SYN has been received on a connection where some RSTs where received.
    **/
-  if (iterator != head && pkt_info->l4.protocol == IPPROTO_TCP &&
+  if (iterator != head && dissection_info->l4.protocol == IPPROTO_TCP &&
       iterator->info_private.seen_rst && syn) {
     // Delete old flow.
     mc_pfwl_flow_table_delete_flow(db, partition_id, iterator, unit);
@@ -649,26 +680,9 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     assert(iterator);
 
     /**Creates new flow and inserts it in the list.**/
-    pfwl_flow_info_t* finfo = &iterator->info;
-    pfwl_init_flow_info_public_internal(finfo);
-    pfwl_init_flow_info_internal(&(iterator->info_private),
-                                 protocols_to_inspect, tcp_reordering_enabled);
-    finfo->addr_src = pkt_info->l3.addr_src;
-    finfo->addr_dst = pkt_info->l3.addr_dst;
-    finfo->port_src = pkt_info->l4.port_src;
-    finfo->port_dst = pkt_info->l4.port_dst;
-    finfo->protocol_l2 = pkt_info->l2.protocol;
-    finfo->protocol_l3 = pkt_info->l3.protocol;
-    finfo->protocol_l4 = pkt_info->l4.protocol;
-    finfo->udata = &(iterator->info_private.udata_private);
-    finfo->id = partition.next_flow_id++;
-    finfo->id_hash = index;
-    finfo->thread_id = partition_id;
-    finfo->protocols_l7_num = 0;
-    finfo->protocols_l7[0] = PFWL_PROTO_L7_NOT_DETERMINED;
-
-    iterator->info_private.info_public = finfo;
-    iterator->info_private.flow = iterator;
+    pfwl_init_flow(iterator, dissection_info, protocols_to_inspect,
+                   tcp_reordering_enabled, partition.next_flow_id++,
+                   index, partition_id);
 
     iterator->prev = head;
     iterator->next = head->next;
@@ -694,12 +708,12 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   }
 #endif
   pfwl_flow_info_t* finfo = &iterator->info;
-  if (memcmp(&(finfo->addr_src), &(pkt_info->l3.addr_src),
-             sizeof(pkt_info->l3.addr_src)) == 0 &&
-      finfo->port_src == pkt_info->l4.port_src) {
-    pkt_info->l4.direction = PFWL_DIRECTION_OUTBOUND;
+  if (memcmp(&(finfo->addr_src), &(dissection_info->l3.addr_src),
+             sizeof(dissection_info->l3.addr_src)) == 0 &&
+      finfo->port_src == dissection_info->l4.port_src) {
+    dissection_info->l4.direction = PFWL_DIRECTION_OUTBOUND;
   } else {
-    pkt_info->l4.direction = PFWL_DIRECTION_INBOUND;
+    dissection_info->l4.direction = PFWL_DIRECTION_INBOUND;
   }
 
 
@@ -717,12 +731,12 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
 
 
   // Update timestamps
-  if (!finfo->timestamp_first[pkt_info->l4.direction]) {
-    finfo->timestamp_first[pkt_info->l4.direction] = timestamp;
-    finfo->statistics[PFWL_STAT_TIMESTAMP_FIRST][pkt_info->l4.direction] = timestamp;
+  if (!finfo->timestamp_first[dissection_info->l4.direction]) {
+    finfo->timestamp_first[dissection_info->l4.direction] = timestamp;
+    finfo->statistics[PFWL_STAT_TIMESTAMP_FIRST][dissection_info->l4.direction] = timestamp;
   }
-  finfo->timestamp_last[pkt_info->l4.direction] = timestamp;
-  finfo->statistics[PFWL_STAT_TIMESTAMP_LAST][pkt_info->l4.direction] = timestamp;
+  finfo->timestamp_last[dissection_info->l4.direction] = timestamp;
+  finfo->statistics[PFWL_STAT_TIMESTAMP_LAST][dissection_info->l4.direction] = timestamp;
 
   // Check expiration
   uint32_t expired_bucket = get_bucket_expiring_id(timestamp, unit);
