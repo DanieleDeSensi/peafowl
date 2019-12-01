@@ -382,8 +382,16 @@ typedef enum {
   PFWL_FIELDS_L7_DNS_NS_IP_1, ///< [STRING] Server name IP address
   PFWL_FIELDS_L7_DNS_NS_IP_2, ///< [STRING] Server name IP address
   PFWL_FIELDS_L7_DNS_AUTH_SRV, ///< [STRING] Authority name
+  PFWL_FIELDS_L7_SSL_VERSION, ///< [NUMBER] SSL Version
+  PFWL_FIELDS_L7_SSL_VERSION_HANDSHAKE, ///< [NUMBER] SSL Handshake Version (for client and server hellos)
+  PFWL_FIELDS_L7_SSL_HANDSHAKE_TYPE, ///< [NUMBER] SSL Handshake type
+  PFWL_FIELDS_L7_SSL_CIPHER_SUITES, ///< [STRING] Cypher Suites
+  PFWL_FIELDS_L7_SSL_EXTENSIONS, ///< [STRING] Extensions
+  PFWL_FIELDS_L7_SSL_ELLIPTIC_CURVES, ///< [STRING] Supported elliptic curves
+  PFWL_FIELDS_L7_SSL_ELLIPTIC_CURVES_POINT_FMTS, ///< [STRING] Supported elliptic curves point formats
   PFWL_FIELDS_L7_SSL_SNI, ///< [STRING] Server name extension found in client certificate
   PFWL_FIELDS_L7_SSL_CERTIFICATE, ///< [STRING] Server name found in server certificate
+  PFWL_FIELDS_L7_SSL_JA3, ///< [STRING] SSL JA3 Fingerprint (https://github.com/salesforce/ja3). If HANDSHAKE_TYPE == 0x01
   PFWL_FIELDS_L7_HTTP_VERSION_MAJOR, ///< [NUMBER] HTTP Version - Major
   PFWL_FIELDS_L7_HTTP_VERSION_MINOR, ///< [NUMBER] HTTP Version - Minor
   PFWL_FIELDS_L7_HTTP_METHOD, ///< [NUMBER] HTTP Method. For the possible values
@@ -1605,6 +1613,11 @@ typedef struct pfwl_state {
 
   /** Flow id when calling directly dissect_L7 **/
   size_t next_flow_id;
+
+  /** Scratchpad. Is used by dissectors and may be overwritten after the next
+      packet is read. TODO: We need one scratchpad per thread. **/
+  char scratchpad[1024*1024];
+  size_t scratchpad_next_byte;
 
   /********************************************************************/
   /** The content of these structures can be modified during the     **/
