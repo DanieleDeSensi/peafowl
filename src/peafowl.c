@@ -456,6 +456,20 @@ uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
   }
 }
 
+pfwl_flow_info_private_t* pfwl_create_flow_info_private(pfwl_state_t* state,
+                                                        const pfwl_dissection_info_t *dissection_info){
+  pfwl_flow_t* flow = malloc(sizeof(pfwl_flow_t));
+  pfwl_init_flow(flow, dissection_info, state->protocols_to_inspect,
+                 state->tcp_reordering_enabled, state->next_flow_id++,
+                 0, 0);
+  return &(flow->info_private);
+}
+
+void pfwl_destroy_flow_info_private(pfwl_flow_info_private_t* info){
+  free(info->flow);
+}
+
+
 void pfwl_init_flow_info(pfwl_state_t *state,
                          pfwl_flow_info_private_t *flow_info_private) {
   pfwl_init_flow_info_internal(flow_info_private, state->protocols_to_inspect,

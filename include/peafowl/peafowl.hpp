@@ -871,6 +871,7 @@ public:
  * The result of the identification process.
  **/
 class DissectionInfo{
+  friend class FlowInfoPrivate;
 private:
   pfwl_dissection_info_t _dissectionInfo;
   DissectionInfoL2 _l2;
@@ -978,7 +979,8 @@ class FlowInfoPrivate{
 private:
   pfwl_flow_info_private_t* _info;
 public:
-  FlowInfoPrivate(const Peafowl& state);
+  FlowInfoPrivate(const Peafowl& state, const DissectionInfo &info);
+  ~FlowInfoPrivate();
 };
 /// @endcond
 

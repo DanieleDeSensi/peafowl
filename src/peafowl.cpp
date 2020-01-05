@@ -27,6 +27,7 @@
  * =========================================================================
  **/
 #include <peafowl/peafowl.hpp>
+#include <peafowl/flow_table.h>
 #include <stdexcept>
 #include <algorithm>
 #include <string.h>
@@ -766,8 +767,12 @@ DissectionInfo Peafowl::dissectL7(const std::string &pkt, const DissectionInfo &
   return DissectionInfo(d, s);
 }
 
-FlowInfoPrivate::FlowInfoPrivate(const Peafowl& state){
-  pfwl_init_flow_info(state._state, _info);
+FlowInfoPrivate::FlowInfoPrivate(const Peafowl& state, const DissectionInfo& info){
+  _info = pfwl_create_flow_info_private(state._state, &(info._dissectionInfo));
+}
+
+FlowInfoPrivate::~FlowInfoPrivate(){
+  delete _info;
 }
 
 std::string getL2ProtocolName(ProtocolL2 protocol){

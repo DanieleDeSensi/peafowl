@@ -34,7 +34,8 @@ At the moment, data and metadata extraction is supported for the following proto
 +==========+==========================================================+
 | HTTP     | Any kind of HTTP header, HTTP body, HTTP version, etc... |
 +----------+----------------------------------------------------------+
-| SSL      | Certificate                                              |
+| SSL      | Version, Cipher Suite, Server Name, Extensions,          |
+|          | Elliptic Curves, JA3, JA3S                               |
 +----------+----------------------------------------------------------+
 | SIP      | Request URI, Contact URI, Call ID, Method, etc...        |
 +----------+----------------------------------------------------------+

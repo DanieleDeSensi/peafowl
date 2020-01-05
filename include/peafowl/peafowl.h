@@ -382,8 +382,16 @@ typedef enum {
   PFWL_FIELDS_L7_DNS_NS_IP_1, ///< [STRING] Server name IP address
   PFWL_FIELDS_L7_DNS_NS_IP_2, ///< [STRING] Server name IP address
   PFWL_FIELDS_L7_DNS_AUTH_SRV, ///< [STRING] Authority name
+  PFWL_FIELDS_L7_SSL_VERSION, ///< [NUMBER] SSL Version
+  PFWL_FIELDS_L7_SSL_VERSION_HANDSHAKE, ///< [NUMBER] SSL Handshake Version (for client and server hellos)
+  PFWL_FIELDS_L7_SSL_HANDSHAKE_TYPE, ///< [NUMBER] SSL Handshake type
+  PFWL_FIELDS_L7_SSL_CIPHER_SUITES, ///< [STRING] Cypher Suites
+  PFWL_FIELDS_L7_SSL_EXTENSIONS, ///< [STRING] Extensions
+  PFWL_FIELDS_L7_SSL_ELLIPTIC_CURVES, ///< [STRING] Supported elliptic curves
+  PFWL_FIELDS_L7_SSL_ELLIPTIC_CURVES_POINT_FMTS, ///< [STRING] Supported elliptic curves point formats
   PFWL_FIELDS_L7_SSL_SNI, ///< [STRING] Server name extension found in client certificate
   PFWL_FIELDS_L7_SSL_CERTIFICATE, ///< [STRING] Server name found in server certificate
+  PFWL_FIELDS_L7_SSL_JA3, ///< [STRING] SSL JA3 Fingerprint (https://github.com/salesforce/ja3). If HANDSHAKE_TYPE == 0x01
   PFWL_FIELDS_L7_HTTP_VERSION_MAJOR, ///< [NUMBER] HTTP Version - Major
   PFWL_FIELDS_L7_HTTP_VERSION_MINOR, ///< [NUMBER] HTTP Version - Minor
   PFWL_FIELDS_L7_HTTP_METHOD, ///< [NUMBER] HTTP Method. For the possible values
@@ -1063,6 +1071,24 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
                               pfwl_flow_info_private_t *flow_info_private);
 
 /**
+ * Creates a new Peafowl flow info (to be called only if pfwl_dissect_L7 is
+ * called directly by the user).
+ * @param state A pointer to the state of the library.
+ * @param dissection_info Info about the flow (user needs to fill info up to
+ * L4 included).
+ * @return The new Peafowl flow, needs to be deleted with pfwl_destroy_flow.
+ */
+pfwl_flow_info_private_t* pfwl_create_flow_info_private(pfwl_state_t* state,
+                                                        const pfwl_dissection_info_t *dissection_info);
+
+/**
+ * Destroys a flow info created with pfwl_create_flow.
+ * @param info The flow to be destroyed.
+ */
+void pfwl_destroy_flow_info_private(pfwl_flow_info_private_t* info);
+
+/**
+ * DEPRECATED.
  * Initialize the flow informations passed as argument.
  * @param state             A pointer to the state of the library.
  * @param flow_info_private The private flow information, will be initialized
@@ -1584,6 +1610,14 @@ typedef struct pfwl_state {
   /** Tags **/
   void* tags_matchers[PFWL_FIELDS_L7_NUM];
   size_t tags_matchers_num;
+
+  /** Flow id when calling directly dissect_L7 **/
+  size_t next_flow_id;
+
+  /** Scratchpad. Is used by dissectors and may be overwritten after the next
+      packet is read. TODO: We need one scratchpad per thread. **/
+  char scratchpad[1024*1024];
+  size_t scratchpad_next_byte;
 
   /********************************************************************/
   /** The content of these structures can be modified during the     **/

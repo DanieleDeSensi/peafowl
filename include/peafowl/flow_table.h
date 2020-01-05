@@ -349,6 +349,13 @@ pfwl_compute_v6_hash_function(pfwl_flow_table_t *db,
 void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
                                   char *protocols_to_inspect,
                                   uint8_t tcp_reordering_enabled);
+void pfwl_init_flow(pfwl_flow_t* flow,
+                    const pfwl_dissection_info_t *dissection_info,
+                    char *protocols_to_inspect,
+                    uint8_t tcp_reordering_enabled,
+                    uint64_t id,
+                    uint32_t id_hash,
+                    uint16_t thread_id);
 
 pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, uint16_t partition_id, uint32_t index,
     pfwl_dissection_info_t *pkt_info, char *protocols_to_inspect,
