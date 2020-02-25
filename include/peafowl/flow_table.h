@@ -139,13 +139,19 @@ typedef struct pfwl_http_internal_informations {
 /********************** SSL ************************/
 typedef enum{
   PFWL_SSLV2 = 0,
-  PFWL_SSLV3
+  PFWL_SSLV3,
+  PFWL_TLSV1_2
 }pfwl_ssl_version_t;
 
 typedef struct pfwl_ssl_internal_information_new {
   uint8_t stage;
   uint8_t certificate_num_checks;
   uint8_t certificates_detected;
+  unsigned char first_bytes[2][6];
+  uint8_t next_first_bytes[2];
+  uint32_t processed_bytes[2];
+  uint32_t next_server_extension;
+  uint32_t remaining_extension_len;
   pfwl_ssl_version_t version;
 } pfwl_ssl_internal_information_t;
 /********************** SSL (END) ************************/
@@ -306,7 +312,7 @@ pfwl_flow_table_t *pfwl_flow_table_create(uint32_t size,
 
 #else
 pfwl_flow_table_t *pfwl_flow_table_create(uint32_t expected_flows,
-                                          uint8_t strict,
+                                          pfwl_flows_strategy_t strategy,
                                           uint16_t num_partitions);
 #endif
 
@@ -316,7 +322,8 @@ void pflw_flow_table_set_flow_cleaner_callback(
 void pflw_flow_table_set_flow_termination_callback(
     pfwl_flow_table_t *db, pfwl_flow_termination_callback_t *flow_termination_callback);
 
-void pfwl_flow_table_delete(pfwl_flow_table_t *db);
+void pfwl_flow_table_delete(pfwl_flow_table_t *db, pfwl_timestamp_unit_t unit);
+
 
 pfwl_flow_t *pfwl_flow_table_find_flow(pfwl_flow_table_t *db, uint32_t index,
                                        pfwl_dissection_info_t *pkt_info);
@@ -325,7 +332,7 @@ pfwl_flow_t *pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, pfwl_dis
     char *protocols_to_inspect, uint8_t tcp_reordering_enabled,
     double timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
 
-void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db, pfwl_flow_t *to_delete);
+void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db, pfwl_flow_t *to_delete, pfwl_timestamp_unit_t unit);
 void pfwl_flow_table_delete_flow_later(pfwl_flow_table_t *db,
                                        pfwl_flow_t *to_delete);
 
@@ -344,17 +351,17 @@ pfwl_compute_v6_hash_function(pfwl_flow_table_t *db,
 void pfwl_init_flow_info_internal(pfwl_flow_info_private_t *flow_info_private,
                                   char *protocols_to_inspect,
                                   uint8_t tcp_reordering_enabled);
-
-pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(pfwl_flow_table_t *db, uint16_t partition_id, uint32_t index,
-    pfwl_dissection_info_t *pkt_info, char *protocols_to_inspect,
-    uint8_t tcp_reordering_enabled, double timestamp, uint8_t syn, pfwl_timestamp_unit_t unit);
+void pfwl_init_flow(pfwl_flow_t* flow,
+                    const pfwl_dissection_info_t *dissection_info,
+                    char *protocols_to_inspect,
+                    uint8_t tcp_reordering_enabled,
+                    uint64_t id,
+                    uint32_t id_hash,
+                    uint16_t thread_id);
 
 void pfwl_flow_table_setup_partitions(pfwl_flow_table_t *table,
                                       uint16_t num_partitions);
 
-void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
-                                    uint16_t partition_id,
-                                    pfwl_flow_t *to_delete);
 void mc_pfwl_flow_table_delete_flow_later(pfwl_flow_table_t *db,
                                           uint16_t partition_id,
                                           pfwl_flow_t *to_delete);

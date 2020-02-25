@@ -1121,7 +1121,7 @@ uint8_t parse_message(pfwl_state_t *state, pfwl_flow_info_private_t *flow_info_p
 
         continue;
       } else if (parseVIA && ((*tmp == 'V' || *tmp == 'v') &&
-                              (*(tmp + 1) == 'i' || *(tmp + 1) == 'i') &&
+                              (*(tmp + 1) == 'I' || *(tmp + 1) == 'i') &&
                               *(tmp + VIA_LEN) == ':')) {
         if (pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_SIP_VIA)) {
           pfwl_field_t *via = &(extracted_fields_sip[PFWL_FIELDS_L7_SIP_VIA]);

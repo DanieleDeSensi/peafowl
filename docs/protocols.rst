@@ -24,7 +24,7 @@ The supported protocols are:
 +----------+---------+----------+---------+----------+---------+----------+---------+
 | STUN     | 5/5     | QUIC     | 5/5     | MQTT     | 5/5     | Viber    | 3/5     |
 +----------+---------+----------+---------+----------+---------+----------+---------+
-| Kerberos | 3/5     | MySQL    | 5/5     |          |         |          |         |
+| Kerberos | 3/5     | MySQL    | 5/5     | Git      | 5/5     |          |         |
 +----------+---------+----------+---------+----------+---------+----------+---------+
 
 At the moment, data and metadata extraction is supported for the following protocols (for a full list of fields please refer to the [Peafowl](include/peafowl/peafowl.h) header:
@@ -34,7 +34,8 @@ At the moment, data and metadata extraction is supported for the following proto
 +==========+==========================================================+
 | HTTP     | Any kind of HTTP header, HTTP body, HTTP version, etc... |
 +----------+----------------------------------------------------------+
-| SSL      | Certificate                                              |
+| SSL      | Version, Cipher Suite, Server Name, Extensions,          |
+|          | Elliptic Curves, JA3, JA3S                               |
 +----------+----------------------------------------------------------+
 | SIP      | Request URI, Contact URI, Call ID, Method, etc...        |
 +----------+----------------------------------------------------------+

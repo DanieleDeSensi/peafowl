@@ -1,5 +1,0 @@
-{
-"rules": [
-    {"value": "load.html", "matchingType": "SUFFIX", "tag": "TAG_SUFFIX"}
-  ]
-}

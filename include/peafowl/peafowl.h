@@ -85,6 +85,7 @@ extern "C" {
 #include <peafowl/config.h>
 #include <peafowl/utils.h>
 #include <sys/types.h>
+#include <net/ethernet.h>
 
 /// @cond EXTERNAL
 typedef struct pfwl_flow_info_private pfwl_flow_info_private_t;
@@ -209,6 +210,7 @@ typedef enum {
   PFWL_PROTO_L7_VIBER,    ///< Viber
   PFWL_PROTO_L7_KERBEROS, ///< Kerberos
   PFWL_PROTO_L7_TOR,      ///< Tor
+  PFWL_PROTO_L7_GIT,      ///< Git
   PFWL_PROTO_L7_NUM,      ///< Dummy value to indicate the number of protocols
   PFWL_PROTO_L7_NOT_DETERMINED, ///< Dummy value to indicate that the protocol
                                 ///< has not been identified yet
@@ -264,6 +266,19 @@ typedef enum {
   PFWL_TIMESTAMP_UNIT_MILLISECONDS, ///< Milliseconds
   PFWL_TIMESTAMP_UNIT_SECONDS     , ///< Seconds
 } pfwl_timestamp_unit_t;
+
+/**
+ * Possible strategies to adopt when there are
+ * too many flows in the flows table.
+ **/
+typedef enum{
+  PFWL_FLOWS_STRATEGY_NONE, ///< Flows are always added to the table.
+  PFWL_FLOWS_STRATEGY_SKIP, ///< If the maximum capacity of the table 
+                            ///< is reached, new flows are not stored.
+  PFWL_FLOWS_STRATEGY_EVICT ///< If the maximum capacity of the table 
+                            ///< is reached, when a new flow is added
+                            ///< the oldest flow is evicted.
+}pfwl_flows_strategy_t;
 
 /**
  * A string as represented by peafowl.
@@ -368,8 +383,16 @@ typedef enum {
   PFWL_FIELDS_L7_DNS_NS_IP_1, ///< [STRING] Server name IP address
   PFWL_FIELDS_L7_DNS_NS_IP_2, ///< [STRING] Server name IP address
   PFWL_FIELDS_L7_DNS_AUTH_SRV, ///< [STRING] Authority name
+  PFWL_FIELDS_L7_SSL_VERSION, ///< [NUMBER] SSL Version
+  PFWL_FIELDS_L7_SSL_VERSION_HANDSHAKE, ///< [NUMBER] SSL Handshake Version (for client and server hellos)
+  PFWL_FIELDS_L7_SSL_HANDSHAKE_TYPE, ///< [NUMBER] SSL Handshake type
+  PFWL_FIELDS_L7_SSL_CIPHER_SUITES, ///< [STRING] Cypher Suites
+  PFWL_FIELDS_L7_SSL_EXTENSIONS, ///< [STRING] Extensions
+  PFWL_FIELDS_L7_SSL_ELLIPTIC_CURVES, ///< [STRING] Supported elliptic curves
+  PFWL_FIELDS_L7_SSL_ELLIPTIC_CURVES_POINT_FMTS, ///< [STRING] Supported elliptic curves point formats
   PFWL_FIELDS_L7_SSL_SNI, ///< [STRING] Server name extension found in client certificate
   PFWL_FIELDS_L7_SSL_CERTIFICATE, ///< [STRING] Server name found in server certificate
+  PFWL_FIELDS_L7_SSL_JA3, ///< [STRING] SSL JA3 Fingerprint (https://github.com/salesforce/ja3). If HANDSHAKE_TYPE == 0x01
   PFWL_FIELDS_L7_HTTP_VERSION_MAJOR, ///< [NUMBER] HTTP Version - Major
   PFWL_FIELDS_L7_HTTP_VERSION_MINOR, ///< [NUMBER] HTTP Version - Minor
   PFWL_FIELDS_L7_HTTP_METHOD, ///< [NUMBER] HTTP Method. For the possible values
@@ -442,6 +465,7 @@ typedef struct pfwl_flow_info {
                ///< id is per-thread unique, i.e. two different flows, managed by two
                ///< different threads may have the same id. If multithreaded Peafowl
                ///< is used, the unique identifier will be the pair <thread_id, id>
+  uint32_t id_hash;  ///< Hash value associated with flow id
   uint16_t thread_id; ///< Identifier of the thread that managed this flow.
   pfwl_ip_addr_t addr_src; ///< Source address, in network byte order.
   pfwl_ip_addr_t addr_dst; ///< Destination address, in network byte order.
@@ -476,9 +500,9 @@ typedef struct pfwl_flow_info {
                          ///< Use statistics field instead.
 
   pfwl_protocol_l2_t protocol_l2; ///< L2 (datalink) protocol
-  pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
-                                  ///< PFWL_IP_VERSION_6 in IPv6.
-  uint8_t protocol_l4; ///< The Level 4 protocol.
+  pfwl_protocol_l3_t protocol_l3; ///< IP version, PFWL_PROTO_L3_IPV4 if IPv4,
+                                  ///< PFWL_PROTO_L3_IPV6 in IPv6.
+  pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol.
   double statistics[PFWL_STAT_NUM][2]; ///< The flow statistics (one set per direction).
   double splt_lengths[PFWL_MAX_SPLT_LENGTH][2]; ///< Length of the first PFWL_MAX_SPLT_LENGTH packets 
                                                 ///< (with non-empy application payload) 
@@ -531,6 +555,8 @@ typedef struct pfwl_flow_info {
 typedef struct pfwl_dissection_info_l2 {
   size_t length;               ///< Length of L2 header
   pfwl_protocol_l2_t protocol; ///< L2 (datalink) protocol
+  uint8_t mac_src[ETH_ALEN];           ///< source MAC address 
+  uint8_t mac_dst[ETH_ALEN];           ///< dest MAC address
 }pfwl_dissection_info_l2_t;
 
 /**
@@ -545,8 +571,8 @@ typedef struct pfwl_dissection_info_l3 {
                                    ///< the first byte of L3 packet).
   size_t refrag_pkt_len; ///< Length of the refragmented packet (without L2
                          ///< trailer).
-  pfwl_protocol_l3_t protocol; ///< IP version, PFWL_IP_VERSION_4 if IPv4,
-                               ///< PFWL_IP_VERSION_6 in IPv6.
+  pfwl_protocol_l3_t protocol; ///< IP version, PFWL_PROTO_L3_IPV4 if IPv4,
+                               ///< PFWL_PROTO_L3_IPV6 in IPv6.
 }pfwl_dissection_info_l3_t;
 
 /**
@@ -673,15 +699,18 @@ void pfwl_terminate(pfwl_state_t *state);
  * @brief Sets the number of simultaneously active flows to be expected.
  * @param state A pointer to the state of the library.
  * @param flows The number of simultaneously active flows.
- * @param strict If 1, when that number of active flows is reached,
- * an error will be returned (PFWL_ERROR_MAX_FLOWS) and new flows
- * will not be created. If 0, there will not be any limit to the number
- * of simultaneously active flows. However, this could lead to slowdown
- * when retrieving flow information.
+ * @param strategy If PFWL_FLOWS_STRATEGY_NONE, there will not be any limit 
+ * to the number of simultaneously active flows. However, this could lead 
+ * to slowdown when retrieving flow information.
+ * If PFWL_FLOWS_STRATEGY_SKIP, when that number of active flows is reached,
+ * if a new flow is created an error will be returned (PFWL_ERROR_MAX_FLOWS) 
+ * and new flows will not be created. 
+ * If PFWL_FLOWS_STRATEGY_EVICT, when when that number of active flows 
+ * is reached, if a new flow is created the oldest flow will be evicted.
  * @return 0 if succeeded, 1 otherwise.
  */
 uint8_t pfwl_set_expected_flows(pfwl_state_t *state, uint32_t flows,
-                                uint8_t strict);
+                                pfwl_flows_strategy_t strategy);
 
 /**
  * Sets the maximum number of packets to use to identify the protocol.
@@ -929,7 +958,8 @@ pfwl_status_t pfwl_dissect_from_L2(pfwl_state_t *state,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l3, dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information from L3 to L7 will be filled in by this call.
  * @return  The status of the identification process.
@@ -949,10 +979,12 @@ pfwl_status_t pfwl_dissect_from_L3(pfwl_state_t *state,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 header must be filled in by the
- * caller. Dissection information from L4 to L7 will be filled in by this call.
+ *          caller. Dissection information from L4 to L7 will be filled in by 
+*           this call.
  * @return  The status of the identification process.
  */
 pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
@@ -983,7 +1015,8 @@ pfwl_status_t pfwl_dissect_L2(const unsigned char *packet,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l3, dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 headers will be filled in by this
  * call.
@@ -1002,7 +1035,8 @@ pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
  * @param timestamp The current time. The time unit depends on the timers used by the
  * caller and can be set through the pfwl_set_timestamp_unit call. By default
  * it is assumed that the timestamps unit is 'seconds'.
- * @param   dissection_info The result of the dissection. All its bytes must be
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l4, dissection_info.l7 must be
  *          set to 0 before calling this call.
  *          Dissection information about L3 headers must be filled in by the
  * caller. l4.protocol must be filled in by the caller as well. Dissection
@@ -1031,8 +1065,8 @@ pfwl_status_t pfwl_dissect_L4(pfwl_state_t *state, const unsigned char *pkt,
  * @param   pkt The pointer to the beginning of application data.
  * @param   length Length of the packet (from the beginning of the
  *          L7 header).
- * @param   dissection_info The result of the dissection. All its bytes must be
- *          set to 0 before calling this call.
+ * @param   dissection_info The result of the dissection. Bytes of 
+ *          dissection_info.l7 must be set to 0 before calling this call.
  *          Dissection information about L3 and L4 headers must be filled in by
  * the caller. Dissection information about L7 packet will be filled in by this
  * call.
@@ -1047,6 +1081,24 @@ pfwl_status_t pfwl_dissect_L7(pfwl_state_t *state, const unsigned char *pkt,
                               pfwl_flow_info_private_t *flow_info_private);
 
 /**
+ * Creates a new Peafowl flow info (to be called only if pfwl_dissect_L7 is
+ * called directly by the user).
+ * @param state A pointer to the state of the library.
+ * @param dissection_info Info about the flow (user needs to fill info up to
+ * L4 included).
+ * @return The new Peafowl flow, needs to be deleted with pfwl_destroy_flow.
+ */
+pfwl_flow_info_private_t* pfwl_create_flow_info_private(pfwl_state_t* state,
+                                                        const pfwl_dissection_info_t *dissection_info);
+
+/**
+ * Destroys a flow info created with pfwl_create_flow.
+ * @param info The flow to be destroyed.
+ */
+void pfwl_destroy_flow_info_private(pfwl_flow_info_private_t* info);
+
+/**
+ * DEPRECATED.
  * Initialize the flow informations passed as argument.
  * @param state             A pointer to the state of the library.
  * @param flow_info_private The private flow information, will be initialized
@@ -1568,6 +1620,14 @@ typedef struct pfwl_state {
   /** Tags **/
   void* tags_matchers[PFWL_FIELDS_L7_NUM];
   size_t tags_matchers_num;
+
+  /** Flow id when calling directly dissect_L7 **/
+  size_t next_flow_id;
+
+  /** Scratchpad. Is used by dissectors and may be overwritten after the next
+      packet is read. TODO: We need one scratchpad per thread. **/
+  char scratchpad[1024*1024];
+  size_t scratchpad_next_byte;
 
   /********************************************************************/
   /** The content of these structures can be modified during the     **/

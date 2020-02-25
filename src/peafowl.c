@@ -54,11 +54,11 @@
   } while (0)
 
 uint8_t pfwl_set_expected_flows(pfwl_state_t *state, uint32_t flows,
-                                uint8_t strict) {
+                                pfwl_flows_strategy_t strategy) {
   if (state) {
     assert(state->flow_table);
-    pfwl_flow_table_delete(state->flow_table);
-    state->flow_table = pfwl_flow_table_create(flows, strict, 1);
+    pfwl_flow_table_delete(state->flow_table, state->ts_unit);
+    state->flow_table = pfwl_flow_table_create(flows, strategy, 1);
     return 0;
   }else{
     return 1;
@@ -111,6 +111,7 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
 
 pfwl_state_t *pfwl_init() {
   return pfwl_init_stateful_num_partitions(PFWL_DEFAULT_EXPECTED_FLOWS, 0, 1);
+  // IF setting strict = 1, check that MTF macro is enabled
 }
 
 uint8_t pfwl_set_max_trials(pfwl_state_t *state, uint16_t max_trials) {
@@ -266,7 +267,7 @@ void pfwl_terminate(pfwl_state_t *state) {
     pfwl_defragmentation_disable_ipv6(state);
     pfwl_tcp_reordering_disable(state);
 
-    pfwl_flow_table_delete(state->flow_table);
+    pfwl_flow_table_delete(state->flow_table, state->ts_unit);
     free(state);
   }
 }
@@ -454,6 +455,20 @@ uint8_t pfwl_protocol_field_required(pfwl_state_t *state,
     return 0;
   }
 }
+
+pfwl_flow_info_private_t* pfwl_create_flow_info_private(pfwl_state_t* state,
+                                                        const pfwl_dissection_info_t *dissection_info){
+  pfwl_flow_t* flow = malloc(sizeof(pfwl_flow_t));
+  pfwl_init_flow(flow, dissection_info, state->protocols_to_inspect,
+                 state->tcp_reordering_enabled, state->next_flow_id++,
+                 0, 0);
+  return &(flow->info_private);
+}
+
+void pfwl_destroy_flow_info_private(pfwl_flow_info_private_t* info){
+  free(info->flow);
+}
+
 
 void pfwl_init_flow_info(pfwl_state_t *state,
                          pfwl_flow_info_private_t *flow_info_private) {

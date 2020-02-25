@@ -106,6 +106,12 @@ typedef pfwl_statistic_t Statistic;
 typedef pfwl_timestamp_unit_t TimestampUnit;
 
 /**
+ * Possible strategies to adopt when there are
+ * too many flows in the flows table.
+ **/
+typedef pfwl_flows_strategy_t FlowsStrategy;
+
+/**
  * A generic field extracted by peafowl.
  **/
 class Field {
@@ -865,6 +871,7 @@ public:
  * The result of the identification process.
  **/
 class DissectionInfo{
+  friend class FlowInfoPrivate;
 private:
   pfwl_dissection_info_t _dissectionInfo;
   DissectionInfoL2 _l2;
@@ -972,7 +979,8 @@ class FlowInfoPrivate{
 private:
   pfwl_flow_info_private_t* _info;
 public:
-  FlowInfoPrivate(const Peafowl& state);
+  FlowInfoPrivate(const Peafowl& state, const DissectionInfo &info);
+  ~FlowInfoPrivate();
 };
 /// @endcond
 
@@ -1136,13 +1144,16 @@ public:
   /**
    * @brief Sets the number of simultaneously active flows to be expected.
    * @param flows The number of simultaneously active flows.
-   * @param strict If 1, when that number of active flows is reached,
-   * an error will be returned (PFWL_ERROR_MAX_FLOWS) and new flows
-   * will not be created. If 0, there will not be any limit to the number
-   * of simultaneously active flows. However, this could lead to slowdown
-   * when retrieving flow information.
+   * @param strategy If PFWL_FLOWS_STRATEGY_NONE, there will not be any limit 
+   * to the number of simultaneously active flows. However, this could lead 
+   * to slowdown when retrieving flow information.
+   * If PFWL_FLOWS_STRATEGY_SKIP, when that number of active flows is reached,
+   * if a new flow is created an error will be returned (PFWL_ERROR_MAX_FLOWS) 
+   * and new flows will not be created. 
+   * If PFWL_FLOWS_STRATEGY_EVICT, when when that number of active flows 
+   * is reached, if a new flow is created the oldest flow will be evicted.
    */
-  void setExpectedFlows(uint32_t flows, uint8_t strict);
+  void setExpectedFlows(uint32_t flows, FlowsStrategy strategy);
 
 
   /**

@@ -247,6 +247,9 @@ pfwl_status_t pfwl_dissect_L2(const unsigned char *packet,
     ether_header = (struct ether_header *) (packet);
     // set datalink offset
     dlink_offset = ETHHDR_SIZE;
+    // assign MAC to l2 structure dissection info
+    memcpy(dissection_info->l2.mac_src, ether_header->ether_shost, ETH_ALEN);
+    memcpy(dissection_info->l2.mac_dst, ether_header->ether_dhost, ETH_ALEN);
     type = ntohs(ether_header->ether_type);
     if (type <= 1500)
       eth_type_1 = 1; // ethernet I - followed by llc snap 05DC

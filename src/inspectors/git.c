@@ -1,10 +1,9 @@
 /*
- * tor.c
- * author: (https://github.com/InSdi) (indu.mss@gmail.com)
- * Created on: 07/06/2019
+ * git.c
+ *
  * This protocol inspector is adapted from
- * the nDPI tor dissector
- * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/tor.c)
+ * the nDPI Git dissector
+ * (https://github.com/ntop/nDPI/blob/dev/src/lib/protocols/git.c)
  *
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
@@ -28,19 +27,37 @@
  * SOFTWARE.
  * =========================================================================
  */
+
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 
-uint8_t check_tor(pfwl_state_t *state, const unsigned char *app_data,
+uint8_t check_git(pfwl_state_t *state, const unsigned char *app_data,
                   size_t data_length, pfwl_dissection_info_t *pkt_info,
-                  pfwl_flow_info_private_t *flow_info_private){
-  if (((app_data[0] == 0x17) || (app_data[0] == 0x16)) 
-	    && (app_data[1] == 0x03) 
-	    && (app_data[2] == 0x01) 
-	    && (app_data[3] == 0x00)
-      && (pkt_info->l4.port_src == port_tor || pkt_info->l4.port_dst == port_tor)){ // If we do not match port, the rest of the rule is the same as SSL
-      return PFWL_PROTOCOL_MATCHES;
-  }else{
-      return PFWL_PROTOCOL_NO_MATCHES;
-  } 
+                  pfwl_flow_info_private_t *flow_info_private) {
+  if(data_length > 4 && (pkt_info->l4.port_src == port_git || pkt_info->l4.port_dst == port_git)){
+      uint8_t found_git = 1;
+      uint16_t offset = 0;
+      
+      while((offset + 4) < data_length) {
+        char len[5];
+        uint32_t git_pkt_len;      
+        memcpy(&len, &app_data[offset], 4);
+        len[4] = 0;
+        git_pkt_len = atoi(len);
+      
+        if((data_length < git_pkt_len) || (git_pkt_len == 0 /* Bad */)) {
+          found_git = 0;
+          break;
+        }else{
+          offset += git_pkt_len;
+          data_length -= git_pkt_len;      
+        }
+      }
+
+      if(found_git) {
+        return PFWL_PROTOCOL_MATCHES;
+      }
+  }
+  return PFWL_PROTOCOL_NO_MATCHES;
 }
+
