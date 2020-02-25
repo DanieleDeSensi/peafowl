@@ -112,7 +112,7 @@ static void parse_tcp_opt_hdrs(pfwl_state_t *state, const unsigned char *pkt,
 
 pfwl_status_t
 mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
-                        size_t length, uint32_t timestamp, int tid,
+                        size_t length, double timestamp, int tid,
                         pfwl_dissection_info_t *dissection_info,
                         pfwl_flow_info_private_t **flow_info_private) {
   uint8_t syn = 0;
@@ -150,7 +150,6 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
   if (unlikely(flow == NULL)) {
     return PFWL_ERROR_MAX_FLOWS;
   }
-
   *flow_info_private = &flow->info_private;
   pfwl_direction_t direction = dissection_info->l4.direction;
   // Set flags statistics
@@ -177,6 +176,21 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
       flow->info.statistics[PFWL_STAT_L4_TCP_RTT_SYN_ACK][1 - direction] = timestamp - flow->info.statistics[PFWL_STAT_TIMESTAMP_LAST][1 - direction];
     }
     parse_tcp_opt_hdrs(state, pkt, length, flow, direction);
+  }
+
+  // SPLT
+  if(dissection_info->l4.payload_length){
+    uint8_t id = flow->info.splt_stored_records[direction];
+    double* ts_last_payload = &((*flow_info_private)->timestamp_last_payload[direction]);
+    if(!(*ts_last_payload)){
+      *ts_last_payload = timestamp;
+    }
+    if(id < PFWL_MAX_SPLT_LENGTH){
+      flow->info.splt_times[id][direction] = timestamp - *ts_last_payload;
+      flow->info.splt_lengths[id][direction] = dissection_info->l4.payload_length;
+      ++flow->info.splt_stored_records[direction];
+    }
+    *ts_last_payload = timestamp;
   }
 
   ++flow->info.num_packets[direction];
@@ -223,7 +237,7 @@ mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *pkt,
 }
 
 pfwl_status_t pfwl_dissect_L4(pfwl_state_t *state, const unsigned char *pkt,
-                              size_t length, uint32_t current_time,
+                              size_t length, double current_time,
                               pfwl_dissection_info_t *dissection_info,
                               pfwl_flow_info_private_t **flow_info_private) {
   /**
@@ -236,7 +250,7 @@ pfwl_status_t pfwl_dissect_L4(pfwl_state_t *state, const unsigned char *pkt,
 
 pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
                                    const unsigned char *pkt, size_t length,
-                                   uint32_t timestamp,
+                                   double timestamp,
                                    pfwl_dissection_info_t *dissection_info) {
   pfwl_status_t status;
   pfwl_flow_info_private_t *flow_info_private;
