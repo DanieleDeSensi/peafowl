@@ -126,7 +126,7 @@ int main(int argc, char** argv){
   while((packet = pcap_next(handle, &header)) != NULL){
     std::string pkt;
     pkt.assign((const char*) packet, header.caplen);
-    peafowl::DissectionInfo r = pfwl->dissectFromL2(pkt, time(NULL), dlt);
+    peafowl::DissectionInfo r = pfwl->dissectFromL2(pkt, header.ts.tv_sec, dlt);
     if(!r.getStatus().isError()){
       if(r.getL4().getProtocol() == IPPROTO_TCP ||
          r.getL4().getProtocol() == IPPROTO_UDP){
