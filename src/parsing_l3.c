@@ -48,7 +48,7 @@
 
 pfwl_status_t mc_pfwl_parse_L3_header(pfwl_state_t *state,
                                       const unsigned char *p_pkt,
-                                      size_t p_length, uint32_t current_time,
+                                      size_t p_length, double current_time,
                                       int tid,
                                       pfwl_dissection_info_t *dissection_info) {
   if (unlikely(p_length == 0)) {
@@ -359,7 +359,7 @@ pfwl_status_t mc_pfwl_parse_L3_header(pfwl_state_t *state,
 }
 
 pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
-                              size_t length, uint32_t current_time,
+                              size_t length, double current_time,
                               pfwl_dissection_info_t *dissection_info) {
   /**
    * We can pass any thread id, indeed in this case we don't

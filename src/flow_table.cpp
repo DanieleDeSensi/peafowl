@@ -471,7 +471,8 @@ static void mc_pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   }
 
   if (db->flow_termination_callback){
-    (*(db->flow_termination_callback))(&(to_delete->info));
+    pfwl_flow_info_t* info = &(to_delete->info);
+    (*(db->flow_termination_callback))(info);
   }
   --db->partitions[partition_id].active_flows;
   free(to_delete->info_private.http_informations[0].temp_buffer);
@@ -530,9 +531,10 @@ void pfwl_flow_table_delete_flow(pfwl_flow_table_t *db,
   mc_pfwl_flow_table_delete_flow(db, 0, to_delete, unit);
 }
 
-static uint32_t get_max_idle_time(pfwl_timestamp_unit_t unit){
+static double get_max_idle_time(pfwl_timestamp_unit_t unit){
   return convert_time(PFWL_FLOW_TABLE_MAX_IDLE_TIME, unit);
 }
+
 
 #if 0
 #include <arpa/inet.h>
@@ -716,19 +718,8 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
     dissection_info->l4.direction = PFWL_DIRECTION_INBOUND;
   }
 
-
-  // Update bucket
-  uint32_t bucket_id = get_bucket_by_timestamp(timestamp, unit);
-  debug_print("[flow_table.c]: Adding flow %ld to bucket %u\n", finfo->id, bucket_id);
-  partition.expiration_buckets[bucket_id]->insert(iterator);
-  if(!new_flow){
-    uint32_t old_bucket_id = get_bucket_by_timestamp(get_last_timestamp(iterator), unit);
-    if(old_bucket_id != bucket_id){
-      partition.expiration_buckets[old_bucket_id]->erase(iterator);
-      debug_print("[flow_table.c]: Removing flow %ld from bucket %u\n", finfo->id, old_bucket_id);
-    }
-  }
-
+  // save the old expiration bucket id before updating the timestamps
+  uint32_t old_bucket_id = get_bucket_by_timestamp(get_last_timestamp(iterator), unit);
 
   // Update timestamps
   if (!finfo->timestamp_first[dissection_info->l4.direction]) {
@@ -737,6 +728,17 @@ pfwl_flow_t *mc_pfwl_flow_table_find_or_create_flow(
   }
   finfo->timestamp_last[dissection_info->l4.direction] = timestamp;
   finfo->statistics[PFWL_STAT_TIMESTAMP_LAST][dissection_info->l4.direction] = timestamp;
+
+  // check if the expiration bucket id has changed and move the flow, if necessary
+  uint32_t bucket_id = get_bucket_by_timestamp(get_last_timestamp(iterator), unit);
+  debug_print("[flow_table.c]: Adding flow %ld to bucket %u\n", finfo->id, bucket_id);
+  partition.expiration_buckets[bucket_id]->insert(iterator);
+  if(!new_flow){
+    if(old_bucket_id != bucket_id){
+      partition.expiration_buckets[old_bucket_id]->erase(iterator);
+      debug_print("[flow_table.c]: Removing flow %ld from bucket %u\n", finfo->id, old_bucket_id);
+    }
+  }
 
   // Check expiration
   uint32_t expired_bucket = get_bucket_expiring_id(timestamp, unit);
@@ -765,7 +767,7 @@ pfwl_compute_v4_hash_function(pfwl_flow_table_t *db,
 pfwl_flow_t *pfwl_flow_table_find_or_create_flow(
     pfwl_flow_table_t *db, pfwl_dissection_info_t *pkt_info,
     char *protocols_to_inspect, uint8_t tcp_reordering_enabled,
-    uint32_t timestamp, uint8_t syn, pfwl_timestamp_unit_t unit) {
+    double timestamp, uint8_t syn, pfwl_timestamp_unit_t unit) {
   return mc_pfwl_flow_table_find_or_create_flow(
       db, 0, pfwl_compute_v4_hash_function(db, pkt_info), pkt_info,
       protocols_to_inspect, tcp_reordering_enabled, timestamp, syn, unit);

@@ -101,6 +101,7 @@ static void* pfwl_field_tags_load_L7(pfwl_field_id_t field, const char* fileName
     d.ParseStream(isw);
 
     if (d.HasParseError()){
+      delete db;
       return NULL;
     }
 
