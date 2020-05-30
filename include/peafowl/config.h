@@ -1,3 +1,4 @@
+
 /*
  * config.h
  *
@@ -125,12 +126,10 @@
 #define PFWL_IPv6_FRAGMENTATION_DEFAULT_REASSEMBLY_TIMEOUT 60
 
 /** Hash functions choice. **/
-enum hashes {
-  PFWL_SIMPLE_HASH = 0,
-  PFWL_FNV_HASH,
-  PFWL_MURMUR3_HASH,
-  PFWL_BKDR_HASH,
-};
+#define PFWL_SIMPLE_HASH 0
+#define PFWL_FNV_HASH 1
+#define PFWL_MURMUR3_HASH 2
+#define PFWL_BKDR_HASH 3
 
 #ifndef PFWL_FLOW_TABLE_HASH_VERSION
 #define PFWL_FLOW_TABLE_HASH_VERSION PFWL_SIMPLE_HASH
@@ -140,6 +139,10 @@ enum hashes {
 
 #ifndef PFWL_THREAD_SAFETY_ENABLED
 #define PFWL_THREAD_SAFETY_ENABLED 0
+#endif
+
+#ifndef PFWL_MAX_SPLT_LENGTH
+#define PFWL_MAX_SPLT_LENGTH 10
 #endif
 
 #define __STDC_FORMAT_MACROS // To enable inttypes.h macros also for g++
