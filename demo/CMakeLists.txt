@@ -1,7 +1,7 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 if (PCAP_FOUND)
 	link_directories(${PCAP_LIBRARY})
-	include_directories($PCAP_INCLUDE_DIR)
+	include_directories(${PCAP_INCLUDE_DIR})
 	add_subdirectory(protocol_identification)
 	add_subdirectory(dump_jpeg)
 	add_subdirectory(sip_extraction)
