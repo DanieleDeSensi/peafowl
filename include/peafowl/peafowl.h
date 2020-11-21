@@ -82,6 +82,7 @@
 extern "C" {
 #endif
 
+#include <peafowl/config.h>
 #include <peafowl/utils.h>
 #include <sys/types.h>
 #include <net/ethernet.h>
@@ -503,6 +504,15 @@ typedef struct pfwl_flow_info {
                                   ///< PFWL_PROTO_L3_IPV6 in IPv6.
   pfwl_protocol_l4_t protocol_l4; ///< The Level 4 protocol.
   double statistics[PFWL_STAT_NUM][2]; ///< The flow statistics (one set per direction).
+  double splt_lengths[PFWL_MAX_SPLT_LENGTH][2]; ///< Length of the first PFWL_MAX_SPLT_LENGTH packets 
+                                                ///< (with non-empy application payload) 
+                                                ///< received for this flow, separated per direction. 
+  double splt_times[PFWL_MAX_SPLT_LENGTH][2]; ///< Inter-arrival time of the first PFWL_MAX_SPLT_LENGTH packets 
+                                              ///< (with non-empy application payload) 
+                                              ///< received for this flow, separated per direction.
+    										  ///< Resolution depends on the values provided through
+                                              ///< the pfwl_dissect_from_L* calls.
+  uint8_t splt_stored_records[2]; ///< How many SPLT records have been stored for each direction.
   pfwl_protocol_l7_t protocols_l7[PFWL_MAX_L7_SUBPROTO_DEPTH]; ///< Some L7 protocols may be carried by other L7 protocols.
                                                                ///< For example, Ethereum may be carried by JSON-RPC, which
                                                                ///< in turn may be carried by HTTP. If such a flow is found,
@@ -936,7 +946,7 @@ uint8_t pfwl_set_timestamp_unit(pfwl_state_t *state, pfwl_timestamp_unit_t unit)
  */
 pfwl_status_t pfwl_dissect_from_L2(pfwl_state_t *state,
                                    const unsigned char *pkt, size_t length,
-                                   uint32_t timestamp,
+                                   double timestamp,
                                    pfwl_protocol_l2_t datalink_type,
                                    pfwl_dissection_info_t *dissection_info);
 
@@ -956,7 +966,7 @@ pfwl_status_t pfwl_dissect_from_L2(pfwl_state_t *state,
  */
 pfwl_status_t pfwl_dissect_from_L3(pfwl_state_t *state,
                                    const unsigned char *pkt, size_t length,
-                                   uint32_t timestamp,
+                                   double timestamp,
                                    pfwl_dissection_info_t *dissection_info);
 
 /**
@@ -979,7 +989,7 @@ pfwl_status_t pfwl_dissect_from_L3(pfwl_state_t *state,
  */
 pfwl_status_t pfwl_dissect_from_L4(pfwl_state_t *state,
                                    const unsigned char *pkt, size_t length,
-                                   uint32_t timestamp,
+                                   double timestamp,
                                    pfwl_dissection_info_t *dissection_info);
 
 /**
@@ -1013,7 +1023,7 @@ pfwl_status_t pfwl_dissect_L2(const unsigned char *packet,
  * @return The status of the identification process.
  */
 pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
-                              size_t length, uint32_t timestamp,
+                              size_t length, double timestamp,
                               pfwl_dissection_info_t *dissection_info);
 
 /**
@@ -1036,7 +1046,7 @@ pfwl_status_t pfwl_dissect_L3(pfwl_state_t *state, const unsigned char *pkt,
  * @return  The status of the identification process.
  */
 pfwl_status_t pfwl_dissect_L4(pfwl_state_t *state, const unsigned char *pkt,
-                              size_t length, uint32_t timestamp,
+                              size_t length, double timestamp,
                               pfwl_dissection_info_t *dissection_info,
                               pfwl_flow_info_private_t **flow_info_private);
 
@@ -1520,13 +1530,13 @@ pfwl_state_t *pfwl_init_stateful_num_partitions(uint32_t expected_flows,
 
 pfwl_status_t mc_pfwl_parse_L3_header(pfwl_state_t *state,
                                       const unsigned char *p_pkt,
-                                      size_t p_length, uint32_t current_time,
+                                      size_t p_length, double current_time,
                                       int tid,
                                       pfwl_dissection_info_t *dissection_info);
 
 pfwl_status_t
 mc_pfwl_parse_L4_header(pfwl_state_t *state, const unsigned char *p_pkt,
-                        size_t p_length, uint32_t timestamp, int tid,
+                        size_t p_length, double timestamp, int tid,
                         pfwl_dissection_info_t *dissection_info,
                         pfwl_flow_info_private_t **flow_info_private);
 /// @endcond
@@ -1632,6 +1642,7 @@ typedef struct pfwl_state {
 } pfwl_state_t;
 
 // Bindings support structures
+// To be DEPRECATED
 typedef struct pfwl_dissection_info_for_bindings {
   size_t l2_length;
   pfwl_protocol_l2_t l2_protocol;

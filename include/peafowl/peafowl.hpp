@@ -1229,7 +1229,7 @@ public:
    * @return The result of the dissection from L2 to L7.
    */
   DissectionInfo dissectFromL2(const std::string& pkt,
-                               uint32_t timestamp,
+                               double timestamp,
                                ProtocolL2 datalinkType);
 
   /**
@@ -1241,7 +1241,7 @@ public:
    * @return The result of the dissection from L3 to L7.
    */
   DissectionInfo dissectFromL3(const std::string& pkt,
-                               uint32_t timestamp);
+                               double timestamp);
 
   /**
    * Dissects the packet starting from the beginning of the L4 (UDP or TCP)
@@ -1254,7 +1254,7 @@ public:
    * @return The result of the dissection from L3 to L7.
    */
   DissectionInfo dissectFromL4(const std::string& pkt,
-                               uint32_t timestamp,
+                               double timestamp,
                                const DissectionInfo& info);
 
   /**
@@ -1277,7 +1277,7 @@ public:
    * @return The result of the L3 dissection.
    */
   DissectionInfo dissectL3(const std::string& pkt,
-                           uint32_t timestamp);
+                           double timestamp);
 
   /**
    * Extracts from the packet the L4 information.
@@ -1291,7 +1291,7 @@ public:
    * @return  The result of the L4 dissection.
    */
   DissectionInfo dissectL4(const std::string& pkt,
-                           uint32_t timestamp,
+                           double timestamp,
                            const DissectionInfo& info,
                            FlowInfoPrivate &flowInfoPrivate);
 
