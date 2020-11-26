@@ -37,6 +37,7 @@
 
 #define MAX_CONNECTION_ID_LENGTH 20
 #define MAX_VERSION_LENGTH	 4
+#define MAX_STRING_LENGTH	 256
 
 #define HASH_SHA2_256_LENGTH		32
 #define TLS13_AEAD_NONCE_LENGTH		12
@@ -49,6 +50,8 @@ typedef struct {
 	unsigned char src_conn_id[MAX_CONNECTION_ID_LENGTH];
 	size_t header_len;
 	unsigned char version[MAX_VERSION_LENGTH];
+	unsigned char sni[MAX_STRING_LENGTH];
+	unsigned char uaid[MAX_STRING_LENGTH];
 	size_t packet_number;
 	size_t packet_number_len;
 	size_t payload_len;
@@ -68,6 +71,8 @@ typedef struct {
 	unsigned char quic_iv[TLS13_AEAD_NONCE_LENGTH];
 	size_t quic_iv_len;
 } quic_t;
+
+quic_t myQuic;
 
 /* Quic Versions */
 uint32_t lookup_table [] = {
@@ -502,12 +507,16 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			return PFWL_PROTOCOL_NO_MATCHES;
 		}
 
-		if(1 || pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)){
-			pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, quic_info.version, 4);
+		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)){
+		    memcpy(myQuic.version,  quic_info.version, 4);
+		    myQuic.version[0] = 'Q';
+		    myQuic.version[4] = '\0';
+		    printf("davidc: Setting ver: %s\n", myQuic.version);
+		    pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, myQuic.version, 5);
 		}
 
 
-		if(1 || pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)){
+		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)){
 			debug_print("%s\n", "Searching for SNI");
 			size_t sequence_len = convert_length_sequence(app_data[0] & 0x30);
 			const unsigned char* chlo_start = (const unsigned char*) pfwl_strnstr((const char*) quic_info.decrypted_payload, "CHLO", quic_info.decrypted_payload_len);
@@ -543,7 +552,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 						u_int32_t length = offset_end - last_offset_end;
 						u_int32_t offset = last_offset_end;
 						if(start_content + offset + length  <= data_length){
-							pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, app_data + start_content + offset, length);
+							pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, app_data + start_content + offset, length);
 							printf("Found UAID with length %u: ", length);
 							debug_print_charfield(quic_info.decrypted_payload, start_content + offset, length);
 						}
