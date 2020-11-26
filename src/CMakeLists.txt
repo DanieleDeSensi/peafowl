@@ -10,6 +10,11 @@ if (PCAP_FOUND)
   add_definitions(-DHAVE_PCAP)
 endif(PCAP_FOUND)
 
+if (OPENSSL_FOUND)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+  link_libraries(${OPENSSL_LIBRARIES})
+  add_definitions(-DHAVE_OPENSSL)
+endif(OPENSSL_FOUND)
 
 ####################
 # Parallel version #
