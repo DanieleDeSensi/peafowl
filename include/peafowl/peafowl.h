@@ -205,6 +205,7 @@ typedef enum {
   PFWL_PROTO_L7_SSDP,     ///< SSDP
   PFWL_PROTO_L7_STUN,     ///< STUN
   PFWL_PROTO_L7_QUIC,     ///< QUIC    
+  PFWL_PROTO_L7_QUIC5,    ///< QUIC5
   PFWL_PROTO_L7_MQTT,     ///< MQTT
   PFWL_PROTO_L7_MYSQL,    ///< MySQL
   PFWL_PROTO_L7_VIBER,    ///< Viber

@@ -196,6 +196,7 @@ static const pfwl_protocol_descriptor_t protocols_descriptors[PFWL_PROTO_L7_NUM]
   [PFWL_PROTO_L7_SSDP]     = {"SSDP"    , check_ssdp    , PFWL_L7_TRANSPORT_UDP       , NULL},
   [PFWL_PROTO_L7_STUN]     = {"STUN"    , check_stun    , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
   [PFWL_PROTO_L7_QUIC]     = {"QUIC"    , check_quic    , PFWL_L7_TRANSPORT_UDP       , NULL},
+  [PFWL_PROTO_L7_QUIC5]    = {"QUIC"    , check_quic5   , PFWL_L7_TRANSPORT_UDP       , NULL},
   [PFWL_PROTO_L7_MQTT]     = {"MQTT"    , check_mqtt    , PFWL_L7_TRANSPORT_TCP       , NULL},
   [PFWL_PROTO_L7_MYSQL]    = {"MySQL"   , check_mysql   , PFWL_L7_TRANSPORT_TCP       , NULL},
 	[PFWL_PROTO_L7_VIBER]    = {"Viber"   , check_viber   , PFWL_L7_TRANSPORT_TCP_OR_UDP, NULL},
