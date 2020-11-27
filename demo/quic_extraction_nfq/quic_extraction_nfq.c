@@ -42,13 +42,17 @@
 #include <libnetfilter_queue/libnetfilter_queue.h>
 
 pfwl_state_t* state = NULL;
-uint32_t protocols[PFWL_PROTO_L7_NUM];
 
 static u_int32_t print_pkt (struct nfq_data *tb)
-{	
+{
+	int 				print_once 	= 1;
 	int 				id 		= 0;
-	int 				caplen;	
+	int 				caplen		= -1;
+	int				hlen		= 0;
+	int				i		= 0;
+	uint32_t 			unknown 	= 0;
 	struct nfqnl_msg_packet_hdr 	*ph		= NULL;
+	struct nfqnl_msg_packet_hw 	*hwph		= NULL;
 	unsigned char 			*data		= NULL;
 	pfwl_dissection_info_t 		r;
 	pfwl_status_t 			pfwl_status;
@@ -59,7 +63,7 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 	caplen = nfq_get_payload(tb, &data);
 	ph = nfq_get_msg_packet_hdr(tb);
 	id = ntohl(ph->packet_id);
-
+	size_t flow_id;
 	if (caplen >= 0) {
 		memset(&r, 0, sizeof(pfwl_dissection_info_t));
 
@@ -67,19 +71,18 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 		if(pfwl_status >= PFWL_STATUS_OK){
 			if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
 				if(r.l7.protocol < PFWL_PROTO_L7_NUM){
-					++protocols[r.l7.protocol];
-					int print_once 	= 1;
-					if(print_once && !strcmp("QUIC", pfwl_get_L7_protocol_name(r.l7.protocol))) {
+					if(print_once && !strcmp("QUIC5", pfwl_get_L7_protocol_name(r.l7.protocol))) {
+
+						flow_id = r.flow_info.id;
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
-
-						printf("hw_protocol=0x%04x hook=%u id=%d ", ntohs(ph->hw_protocol), ph->hook, id);
-						struct nfqnl_msg_packet_hw *hwph = nfq_get_packet_hw(tb);
-						int hlen = ntohs(hwph->hw_addrlen);
+					
+						printf("Flow id= %u hw_protocol=0x%04x hook=%u id=%u ", flow_id, ntohs(ph->hw_protocol), ph->hook, id);
+						hwph = nfq_get_packet_hw(tb);
+						hlen = ntohs(hwph->hw_addrlen);
 
 						printf("hw_src_addr=");
-						int i = 0;
 						for (i = 0; i < hlen-1; i++)
 							printf("%02x:", hwph->hw_addr[i]);
 						printf("%02x ", hwph->hw_addr[hlen-1]);
@@ -153,7 +156,7 @@ int main(int argc, char **argv)
 	pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_VERSION);
 	pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_SNI);
 	pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_UAID);
-	memset(protocols, 0, sizeof(protocols));
+	
 	fd = nfq_fd(h);
 
 	// para el tema del loss:   while ((rv = recv(fd, buf, sizeof(buf), 0)) && rv >= 0)
