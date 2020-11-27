@@ -39,9 +39,8 @@ void processPacketdata(const unsigned char *packet, int caplen) {
 					pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);
 					pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
 					pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
-					printf("Version: (%.*s)\n", version.length, version.value);
-					printf("SNI: (%.*s)\n", sni.length, sni.value);
-					printf("UAID: (%.*s)\n", uaid.length, uaid.value);
+					printf("QUIC Version: %.*s SNI; %.*s UAID %.*s\n", 
+						version.length, version.value, sni.length, sni.value, uaid.length, uaid.value);
 					print_once = 0;
 				}
 			}else{
