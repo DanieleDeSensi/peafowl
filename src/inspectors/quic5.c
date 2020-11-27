@@ -507,7 +507,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 
 		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI) || 
-	  	   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)){
+	  	   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) {
 			unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
 			unsigned int 	offset 			= quic_info.decrypted_payload[1];
 			size_t 		crypto_data_size 	= 0;
@@ -520,10 +520,9 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 				size_t num_tags = (chlo_start[4] & 0xFF) + ((chlo_start[5] & 0xFF) << 8);
 				size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
 				size_t start_content = start_tags + num_tags*8;
-				debug_print("Num tags: %d\n", num_tags);
 				u_int32_t last_offset_end = 0;
 				
-				for(size_t i = start_tags; i < data_length; i += 8){
+				for(size_t i = start_tags; i < crypto_data_size; i += 8){
 					u_int32_t offset_end 	= 0;
 					u_int32_t length	= 0;
 					u_int32_t offset	= 0;
@@ -564,7 +563,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 					}
 					last_offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
 				}
-				printf("\n");
 			}
 		}
 		free(quic_info.decrypted_payload);
