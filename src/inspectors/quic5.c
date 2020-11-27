@@ -30,7 +30,6 @@
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
 #include <stdio.h>
-#include <gcrypt.h> /* Needs to be replaced with openssl counter parts */
 
 #include <openssl/bio.h>
 #include <openssl/evp.h>
@@ -72,41 +71,23 @@ typedef struct {
 } quic_t;
 
 /* Quic Versions */
-uint32_t lookup_table [] = {
-	0x51303234,
-	0x51303235,
-	0x51303330,
-	0x51303333,
-	0x51303334,
-	0x51303335,
-	0x51303337,
-	0x51303339,
-	0x51303433,
-	0x51303436,
-	0x51303530,
-	0x54303530,
-	0x54303531,
-	0xfaceb001,
-	0xfaceb002,
-	0xfaceb00e,
-};
 typedef enum {
-	V_Q02,
-	V_Q025,
-	V_Q030,
-	V_Q033,
-	V_Q034,
-	V_Q035,
-	V_Q037,
-	V_Q039,
-	V_Q043,
-	V_Q046,
-	V_Q050,
-	V_T050,
-	V_T051,
-	V_MVFST_22,
-	V_MVFST_27,
-	V_MVFST_EXP,
+	V_Q024=0x51303234,
+	V_Q025=0x51303235,
+	V_Q030=0x51303330,
+	V_Q033=0x51303333,
+	V_Q034=0x51303334,
+	V_Q035=0x51303335,
+	V_Q037=0x51303337,
+	V_Q039=0x51303339,
+	V_Q043=0x51303433,
+	V_Q046=0x51303436,
+	V_Q050=0x51303530,
+	V_T050=0x54303530,
+	V_T051=0x54303531,
+	V_MVFST_22=0xfaceb001,
+	V_MVFST_27=0xfaceb002,
+	V_MVFST_EXP=0xfaceb00e,
 } quic_version_t;
 
 #define PFWL_DEBUG_DISS_QUIC 1
