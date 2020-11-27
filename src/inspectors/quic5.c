@@ -538,7 +538,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 							} 
 						}	
 					}
-					if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)) { 
+					if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) { 
 						if (quic_info.decrypted_payload[i] == 'U' &&
 								quic_info.decrypted_payload[i+1] == 'A' &&
 								quic_info.decrypted_payload[i+2] == 'I' &&
