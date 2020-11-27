@@ -71,7 +71,7 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 		if(pfwl_status >= PFWL_STATUS_OK){
 			if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
 				if(r.l7.protocol < PFWL_PROTO_L7_NUM){
-					if(print_once && !strcmp("QUIC", pfwl_get_L7_protocol_name(r.l7.protocol))) {
+					if(print_once && !strcmp("QUIC5", pfwl_get_L7_protocol_name(r.l7.protocol))) {
 
 						flow_id = r.flow_info.id;
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);

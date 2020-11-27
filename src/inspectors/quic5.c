@@ -36,10 +36,11 @@
 #include <openssl/evp.h>
 #include "quic_ssl_utils.h"
 
-#define MAX_CONNECTION_ID_LENGTH 20
-#define MAX_VERSION_LENGTH	 4
-#define MAX_STRING_LENGTH	 256
-
+#define MAX_CONNECTION_ID_LENGTH 	20
+#define MAX_VERSION_LENGTH	 	4
+#define MAX_STRING_LENGTH	 	256
+#define MAX_SALT_LENGTH			20
+#define MAX_LABEL_LENGTH		32
 #define HASH_SHA2_256_LENGTH		32
 #define TLS13_AEAD_NONCE_LENGTH		12
 
@@ -73,22 +74,22 @@ typedef struct {
 
 /* Quic Versions */
 typedef enum {
-	V_Q024=0x51303234,
-	V_Q025=0x51303235,
-	V_Q030=0x51303330,
-	V_Q033=0x51303333,
-	V_Q034=0x51303334,
-	V_Q035=0x51303335,
-	V_Q037=0x51303337,
-	V_Q039=0x51303339,
-	V_Q043=0x51303433,
-	V_Q046=0x51303436,
-	V_Q050=0x51303530,
-	V_T050=0x54303530,
-	V_T051=0x54303531,
-	V_MVFST_22=0xfaceb001,
-	V_MVFST_27=0xfaceb002,
-	V_MVFST_EXP=0xfaceb00e,
+	VER_Q024=0x51303234,
+	VER_Q025=0x51303235,
+	VER_Q030=0x51303330,
+	VER_Q033=0x51303333,
+	VER_Q034=0x51303334,
+	VER_Q035=0x51303335,
+	VER_Q037=0x51303337,
+	VER_Q039=0x51303339,
+	VER_Q043=0x51303433,
+	VER_Q046=0x51303436,
+	VER_Q050=0x51303530,
+	VER_T050=0x54303530,
+	VER_T051=0x54303531,
+	VER_MVFST_22=0xfaceb001,
+	VER_MVFST_27=0xfaceb002,
+	VER_MVFST_EXP=0xfaceb00e,
 } quic_version_t;
 
 #define PFWL_DEBUG_DISS_QUIC 1
@@ -231,7 +232,7 @@ static void *memdup(const uint8_t *orig, size_t len) {
 /**
  * Compute the client and server initial secrets given Connection ID "cid".
  */
-static int quic_derive_initial_secrets(quic_t *quic_info, uint8_t client_initial_secret[HASH_SHA2_256_LENGTH]) {
+static int quic_derive_initial_secrets(quic_t *quic_info) {
 	/*
 	 * https://tools.ietf.org/html/draft-ietf-quic-tls-29#section-5.2
 	 *
@@ -242,44 +243,40 @@ static int quic_derive_initial_secrets(quic_t *quic_info, uint8_t client_initial
 	 *
 	 * Hash for handshake packets is SHA-256 (output size 32).
 	 */
-	static const uint8_t handshake_salt_draft_22[20] = {
-		0x7f, 0xbc, 0xdb, 0x0e, 0x7c, 0x66, 0xbb, 0xe9, 0x19, 0x3a,
-		0x96, 0xcd, 0x21, 0x51, 0x9e, 0xbd, 0x7a, 0x02, 0x64, 0x4a
-	};
-	static const uint8_t handshake_salt_draft_23[20] = {
-		0xc3, 0xee, 0xf7, 0x12, 0xc7, 0x2e, 0xbb, 0x5a, 0x11, 0xa7,
-		0xd2, 0x43, 0x2b, 0xb4, 0x63, 0x65, 0xbe, 0xf9, 0xf5, 0x02,
-	};
-	static const uint8_t handshake_salt_draft_29[20] = {
-		0xaf, 0xbf, 0xec, 0x28, 0x99, 0x93, 0xd2, 0x4c, 0x9e, 0x97,
-		0x86, 0xf1, 0x9c, 0x61, 0x11, 0xe0, 0x43, 0x90, 0xa8, 0x99
-	};
-	static const uint8_t hanshake_salt_draft_q50[20] = {
-		0x50, 0x45, 0x74, 0xEF, 0xD0, 0x66, 0xFE, 0x2F, 0x9D, 0x94,
-		0x5C, 0xFC, 0xDB, 0xD3, 0xA7, 0xF0, 0xD3, 0xB5, 0x6B, 0x45
-	};
-	static const uint8_t hanshake_salt_draft_t50[20] = {
-		0x7f, 0xf5, 0x79, 0xe5, 0xac, 0xd0, 0x72, 0x91, 0x55, 0x80,
-		0x30, 0x4c, 0x43, 0xa2, 0x36, 0x7c, 0x60, 0x48, 0x83, 0x10
-	};
-	static const uint8_t hanshake_salt_draft_t51[20] = {
-		0x7a, 0x4e, 0xde, 0xf4, 0xe7, 0xcc, 0xee, 0x5f, 0xa4, 0x50,
-		0x6c, 0x19, 0x12, 0x4f, 0xc8, 0xcc, 0xda, 0x6e, 0x03, 0x3d
-	};
+	static const uint8_t ver_q050_salt[MAX_SALT_LENGTH] = { 0x50, 0x45, 0x74, 0xEF, 0xD0, 0x66, 0xFE, 0x2F, 0x9D, 0x94, 0x5C, 0xFC, 0xDB, 0xD3, 0xA7, 0xF0, 0xD3, 0xB5, 0x6B, 0x45 };
+	static const uint8_t ver_t050_salt[MAX_SALT_LENGTH] = { 0x7f, 0xf5, 0x79, 0xe5, 0xac, 0xd0, 0x72, 0x91, 0x55, 0x80, 0x30, 0x4c, 0x43, 0xa2, 0x36, 0x7c, 0x60, 0x48, 0x83, 0x10 };
+	static const uint8_t ver_t051_salt[MAX_SALT_LENGTH] = { 0x7a, 0x4e, 0xde, 0xf4, 0xe7, 0xcc, 0xee, 0x5f, 0xa4, 0x50, 0x6c, 0x19, 0x12, 0x4f, 0xc8, 0xcc, 0xda, 0x6e, 0x03, 0x3d };
+	const uint8_t	*salt; 
+	uint32_t v	= ntohl(*(uint32_t *)(&quic_info->version[0]));
+
+	switch (v) {
+		case VER_Q050:
+			salt = ver_q050_salt;
+			break;
+
+		case VER_T050:
+			salt = ver_t050_salt;
+			break;
+
+		case VER_T051:
+			salt = ver_t051_salt;
+			break;
+		default:
+			printf("Error matching the quic version to a salt using standard salt instead\n");
+			salt = ver_q050_salt;
+	}
 
 	uint8_t secret[HASH_SHA2_256_LENGTH];
-	char buferr[128];
-	const size_t s_len 	= HASH_SHA2_256_LENGTH;
-	uint32_t v 		= ntohl(*(uint32_t *)(&quic_info->version[0]));
-	printf("!!! TODO IMPLEMENT SALT CHOOSER!!! %08x\n", v);
-	int len = HKDF_Extract(hanshake_salt_draft_q50, sizeof(hanshake_salt_draft_q50), quic_info->dst_conn_id, quic_info->dst_conn_id_len, secret, s_len);	
+	const size_t s_len = HASH_SHA2_256_LENGTH;
+	int len = HKDF_Extract(salt, (sizeof(uint8_t) * MAX_SALT_LENGTH), quic_info->dst_conn_id, quic_info->dst_conn_id_len, secret, s_len);	
 	if(0 > len) {
 		printf("Failed to extract secrets\n");
 		return -1;
 	}
 
-	unsigned char   label[32] = { 0 };
+	unsigned char   label[MAX_LABEL_LENGTH] = { 0 };
 	size_t          label_len = 0;
+	/* TODO MAKE 32 configurable or at least explain why it is 32 */
         label_len = hkdf_create_tls13_label(32, "client in", label, sizeof(label));
         quic_info->quic_secret_len = HKDF_Expand(secret, len, label, label_len, quic_info->quic_secret, s_len);
 	return 0;
@@ -294,11 +291,11 @@ static int quic_cipher_prepare(quic_t *quic_info)
 {
 	//TODO MAKE CIPHER LEN DYNAMIC
 	uint32_t 	cipher_keylen 	= 16; /* 128 bit cipher length == 16 bytes storage */
-        unsigned char   label_key[32] 	= { 0 };
+        unsigned char   label_key[MAX_LABEL_LENGTH] 	= { 0 };
         size_t          label_key_len 	= 0;
-	unsigned char   label_iv[32] 	= { 0 };
+	unsigned char   label_iv[MAX_LABEL_LENGTH] 	= { 0 };
         size_t          label_iv_len 	= 0;
-	unsigned char   label_hp[32] 	= { 0 };
+	unsigned char   label_hp[MAX_LABEL_LENGTH] 	= { 0 };
         size_t          label_hp_len 	= 0;
 
 	label_key_len 	= hkdf_create_tls13_label(cipher_keylen, "quic key", label_key, sizeof(label_key));
@@ -308,7 +305,7 @@ static int quic_cipher_prepare(quic_t *quic_info)
 	quic_info->quic_key_len = HKDF_Expand(quic_info->quic_secret, quic_info->quic_secret_len, label_key, label_key_len, quic_info->quic_key, cipher_keylen);
 	quic_info->quic_iv_len	= HKDF_Expand(quic_info->quic_secret, quic_info->quic_secret_len, label_iv, label_iv_len, quic_info->quic_iv, TLS13_AEAD_NONCE_LENGTH);
 	quic_info->quic_hp_len	= HKDF_Expand(quic_info->quic_secret, quic_info->quic_secret_len, label_hp, label_hp_len, quic_info->quic_hp, cipher_keylen);
-	return 1;
+	return 0;
 }
 
 /**
@@ -320,17 +317,16 @@ static int quic_cipher_prepare(quic_t *quic_info)
  * The actual packet number must be constructed according to
  * https://tools.ietf.org/html/draft-ietf-quic-transport-22#section-12.3
  */
-static void quic_decrypt_message(quic_t *quic_info, const uint8_t *packet_payload, uint32_t packet_payload_len)
+static int quic_decrypt_message(quic_t *quic_info, const uint8_t *packet_payload, uint32_t packet_payload_len)
 {
 	uint8_t *header;
 	uint8_t nonce[TLS13_AEAD_NONCE_LENGTH];
 	uint8_t atag[16];
-	char buferr[128];
 
 	/* Copy header, but replace encrypted first byte and PKN by plaintext. */
 	header = (uint8_t *)memdup(packet_payload, quic_info->header_len);
 	if(!header)
-		return;
+		return -1;
 	header[0] = quic_info->first_byte;
 	for(uint32_t i = 0; i < quic_info->packet_number_len; i++) {
 		header[quic_info->header_len - 1 - i] = (uint8_t)(quic_info->packet_number >> (8 * i));
@@ -341,12 +337,12 @@ static void quic_decrypt_message(quic_t *quic_info, const uint8_t *packet_payloa
 	if(quic_info->decrypted_payload_len == 0) {
 		printf("Decryption not possible, ciphertext is too short\n");
 		free(header);
-		return;
+		return -1;
 	}
 	quic_info->decrypted_payload = (unsigned char *)memdup(packet_payload + quic_info->header_len, quic_info->decrypted_payload_len);
 	if(!quic_info->decrypted_payload) {
 		free(header);
-		return;
+		return -1;
 	}
 	memcpy(atag, packet_payload + quic_info->header_len + quic_info->decrypted_payload_len, 16);
 	memcpy(nonce, quic_info->quic_iv, TLS13_AEAD_NONCE_LENGTH);
@@ -357,9 +353,10 @@ static void quic_decrypt_message(quic_t *quic_info, const uint8_t *packet_payloa
         quic_info->decrypted_payload_len = aes_gcm_decrypt(quic_info->decrypted_payload, quic_info->decrypted_payload_len,
 		EVP_aes_128_gcm(), header, quic_info->header_len, atag, quic_info->quic_key, nonce, sizeof(nonce), quic_info->decrypted_payload);
 	free(header);
+	return 0;
 }
 
-unsigned int remove_header_protection(quic_t *quic_info, const unsigned char *app_data) {
+static int remove_header_protection(quic_t *quic_info, const unsigned char *app_data) {
 	unsigned char 	ciphertext[128] = { 0 };
 	// https://tools.ietf.org/html/draft-ietf-quic-tls-22#section-5.4.1 
 	unsigned char 	first_byte  	= app_data[0];
@@ -377,7 +374,7 @@ unsigned int remove_header_protection(quic_t *quic_info, const unsigned char *ap
 	int res = aes_encrypt(sample, sample_len, EVP_aes_128_ecb(), quic_info->quic_hp, NULL, ciphertext);
 	if (0 > res) {
 		printf("Error encrypting sample\n");
-		return 0;	
+		return -1;
 	}
 
 	memcpy(mask, ciphertext, sizeof(mask));
@@ -397,24 +394,31 @@ unsigned int remove_header_protection(quic_t *quic_info, const unsigned char *ap
 	/* Increase header length with packet number length */
 	quic_info->header_len += quic_info->packet_number_len;
 	quic_info->first_byte = first_byte;
+	return 0;
 }
 
 int decrypt_first_packet(quic_t *quic_info, const unsigned char *app_data, size_t data_length) {
-	uint8_t client_secret[HASH_SHA2_256_LENGTH];
-
-	if(quic_derive_initial_secrets(quic_info, client_secret) != 0) {
+	
+	if(0 > quic_derive_initial_secrets(quic_info)) {
 		printf("Error quic_derive_initial_secrets\n");
 		return -1;
 	}
 
-	if(!quic_cipher_prepare(quic_info)) {
+	if(0 > quic_cipher_prepare(quic_info)) {
 		printf("Error quic_cipher_prepare\n");
 		return -1;
 	}
-	remove_header_protection(quic_info, app_data);
-	quic_decrypt_message(quic_info, app_data, data_length);
 
-	return -1;
+	if (0 > remove_header_protection(quic_info, app_data)) {
+		printf("Error removing error protection\n");
+		return -1;
+	}
+
+	if (0 > quic_decrypt_message(quic_info, app_data, data_length)) {
+		printf("Error decrypting message\n");
+		return -1;
+	}
+	return 0;
 }
 
 uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
@@ -469,11 +473,12 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 			quic_info.header_len += quic_get_variable_len(app_data, quic_info.header_len, &quic_info.payload_len);
 
-			decrypt_first_packet(&quic_info, app_data, data_length);
+			if (0 > decrypt_first_packet(&quic_info, app_data, data_length)) {
+				return PFWL_PROTOCOL_NO_MATCHES;
+			}
 			header_estimation  = quic_info.header_len;
 
 		} else { /* Short packet type */
-			printf("DEBUG no bit matches\n");
 			return PFWL_PROTOCOL_NO_MATCHES;
 		}
 
