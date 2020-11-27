@@ -29,7 +29,8 @@
 
 #include <peafowl/inspectors/inspectors.h>
 #include <peafowl/peafowl.h>
-#include <stdio.h>
+
+#ifdef HAVE_OPENSSL
 
 #include <openssl/bio.h>
 #include <openssl/evp.h>
@@ -545,3 +546,10 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 	}
 	return PFWL_PROTOCOL_NO_MATCHES;
 }
+#else
+uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
+                     size_t data_length, pfwl_dissection_info_t *pkt_info,
+                     pfwl_flow_info_private_t *flow_info_private){
+	return PFWL_PROTOCOL_NO_MATCHES;
+}
+#endif

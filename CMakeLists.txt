@@ -15,7 +15,7 @@ option (ENABLE_PYTHON "Enables generation of Python code" OFF)
 option (ENABLE_C "Enables generation of C/C++ libraries" ON)
 
 find_package(PCAP)
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL)
 
 # This must be the first thing done, since COVERAGE_COMPILER_FLAGS must be used by all the targets
 ###########

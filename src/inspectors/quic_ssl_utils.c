@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <arpa/inet.h>
+#ifdef HAVE_OPENSSL
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -437,3 +438,4 @@ int hkdf_create_tls13_label(const unsigned int a, const unsigned char *label, un
 	len += 1;
 	return len;
 }
+#endif
