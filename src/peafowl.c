@@ -476,6 +476,13 @@ void pfwl_init_flow_info(pfwl_state_t *state,
                                state->tcp_reordering_enabled);
 }
 
+void pfwl_field_string_init(pfwl_field_t *fields, pfwl_field_id_t id,
+                           const unsigned char *s, size_t len) {
+  fields[id].present = 1;
+  fields[id].basic.string.value = s;
+  fields[id].basic.string.length = len;
+}
+
 void pfwl_field_string_set(pfwl_field_t *fields, pfwl_field_id_t id,
                            const unsigned char *s, size_t len) {
   fields[id].present = 1;

@@ -50,8 +50,6 @@ typedef struct {
 	unsigned char src_conn_id[MAX_CONNECTION_ID_LENGTH];
 	size_t header_len;
 	unsigned char version[MAX_VERSION_LENGTH];
-	unsigned char sni[MAX_STRING_LENGTH];
-	unsigned char uaid[MAX_STRING_LENGTH];
 	size_t packet_number;
 	size_t packet_number_len;
 	size_t payload_len;
@@ -71,8 +69,6 @@ typedef struct {
 	unsigned char quic_iv[TLS13_AEAD_NONCE_LENGTH];
 	size_t quic_iv_len;
 } quic_t;
-
-quic_t myQuic;
 
 /* Quic Versions */
 uint32_t lookup_table [] = {
@@ -292,9 +288,9 @@ static int quic_derive_initial_secrets(quic_t *quic_info, uint8_t client_initial
 
 	uint8_t secret[HASH_SHA2_256_LENGTH];
 	char buferr[128];
-	const size_t s_len = HASH_SHA2_256_LENGTH;
-
-	printf("!!! TODO IMPLEMENT SALT CHOOSER!!!\n");
+	const size_t s_len 	= HASH_SHA2_256_LENGTH;
+	uint32_t v 		= ntohl(*(uint32_t *)(&quic_info->version[0]));
+	printf("!!! TODO IMPLEMENT SALT CHOOSER!!! %08x\n", v);
 	int len = HKDF_Extract(hanshake_salt_draft_q50, sizeof(hanshake_salt_draft_q50), quic_info->dst_conn_id, quic_info->dst_conn_id_len, secret, s_len);	
 	if(0 > len) {
 		printf("Failed to extract secrets\n");
@@ -379,6 +375,7 @@ static void quic_decrypt_message(quic_t *quic_info, const uint8_t *packet_payloa
         /* Initial packets are protected with AEAD_AES_128_GCM. */
         quic_info->decrypted_payload_len = aes_gcm_decrypt(quic_info->decrypted_payload, quic_info->decrypted_payload_len,
 		EVP_aes_128_gcm(), header, quic_info->header_len, atag, quic_info->quic_key, nonce, sizeof(nonce), quic_info->decrypted_payload);
+	free(header);
 }
 
 unsigned int remove_header_protection(quic_t *quic_info, const unsigned char *app_data) {
@@ -443,7 +440,8 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
                      size_t data_length, pfwl_dissection_info_t *pkt_info,
                      pfwl_flow_info_private_t *flow_info_private){
 
-	quic_t quic_info;
+	quic_t 	quic_info;
+	char	*scratchpad = state->scratchpad + state->scratchpad_next_byte;
 
 	memset(&quic_info, 0, sizeof(quic_t));
 	if(data_length >= 1200){
@@ -468,25 +466,22 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			quic_info.header_len++; // First byte header
 
 			memcpy(quic_info.version, &app_data[1], 4);
-			printf("VERSION: ");
+
+			uint32_t *t = (uint32_t *)&app_data[1];
+			printf("VERSION: %08X ", ntohl(*t));
 			debug_print_charfield(quic_info.version, 0, 4);
 			quic_info.header_len += 4; /* version (4 bytes) */
 
 			quic_info.dst_conn_id_len = app_data[quic_info.header_len];
-			printf("DST CONN-ID LEN %u\n", quic_info.dst_conn_id_len);
 			quic_info.header_len++; //1 byte destionation connection length 
 
-			printf("DST CONN-ID ");
 			memcpy(quic_info.dst_conn_id, &app_data[quic_info.header_len], quic_info.dst_conn_id_len);
-			debug_print_rawfield(quic_info.dst_conn_id, 0, quic_info.dst_conn_id_len);
 			quic_info.header_len = quic_info.header_len + quic_info.dst_conn_id_len; /* destination connection id length */
 
 			quic_info.src_conn_id_len = app_data[quic_info.header_len];
-			printf("SRC CONN-ID LEN %u\n", quic_info.src_conn_id_len);
 			quic_info.header_len++; //1 byte source connection length 
-			printf("SRC CONN-ID ");
+
 			memcpy(quic_info.src_conn_id, &app_data[quic_info.header_len], quic_info.src_conn_id_len);
-			debug_print_rawfield(quic_info.src_conn_id, 0, quic_info.src_conn_id_len);
 			quic_info.header_len = quic_info.header_len + quic_info.src_conn_id_len; /* source connection id length */ 	
 
 			size_t token_len = 0;
@@ -495,11 +490,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 			quic_info.header_len += quic_get_variable_len(app_data, quic_info.header_len, &quic_info.payload_len);
 
-			debug_print("HEADER OFFSET %u\n", quic_info.header_len);
-			debug_print("Token len %u\n", token_len);
-			debug_print("Payload len %u\n", quic_info.payload_len);
 			decrypt_first_packet(&quic_info, app_data, data_length);
-
 			header_estimation  = quic_info.header_len;
 
 		} else { /* Short packet type */
@@ -507,18 +498,22 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			return PFWL_PROTOCOL_NO_MATCHES;
 		}
 
-		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)){
-		    memcpy(myQuic.version,  quic_info.version, 4);
-		    myQuic.version[0] = 'Q';
-		    myQuic.version[4] = '\0';
-		    printf("davidc: Setting ver: %s\n", myQuic.version);
-		    pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, myQuic.version, 5);
+		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)) {
+		    scratchpad = state->scratchpad + state->scratchpad_next_byte;
+		    memcpy(scratchpad, quic_info.version, 4);
+		    pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, scratchpad, 4);
+		    state->scratchpad_next_byte += 4;
 		}
 
 
-		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)){
-			debug_print("%s\n", "Searching for SNI");
-			size_t sequence_len = convert_length_sequence(app_data[0] & 0x30);
+		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI) || 
+	  	   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)){
+			unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
+			unsigned int 	offset 			= quic_info.decrypted_payload[1];
+			size_t 		crypto_data_size 	= 0;
+			size_t 		crypto_data_len		= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
+			/* According to wireshark chlo_start could also be quic_info.decrypted_payload + 2 (frame_type || offset) + crypto_data_len */
+
 			const unsigned char* chlo_start = (const unsigned char*) pfwl_strnstr((const char*) quic_info.decrypted_payload, "CHLO", quic_info.decrypted_payload_len);
 			if(chlo_start){
 				debug_print("%s\n", "CHLO found");
@@ -529,40 +524,50 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 				u_int32_t last_offset_end = 0;
 				
 				for(size_t i = start_tags; i < data_length; i += 8){
-					if(quic_info.decrypted_payload[i]     == 'S' &&
-							quic_info.decrypted_payload[i + 1] == 'N' &&
-							quic_info.decrypted_payload[i + 2] == 'I' &&
-							quic_info.decrypted_payload[i + 3] == 0){ 
-						u_int32_t offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
-						debug_print("Offset end: %d Last offset end: %d\n", offset_end, last_offset_end);
-						u_int32_t length = offset_end - last_offset_end;
-						u_int32_t offset = last_offset_end;
-						if(start_content + offset + length  <= data_length){
-							pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, app_data + start_content + offset, length);
-							debug_print("Found SNI with length %u: ", length);
-                                                        debug_print_charfield(quic_info.decrypted_payload, start_content + offset, length);
+					u_int32_t offset_end 	= 0;
+					u_int32_t length	= 0;
+					u_int32_t offset	= 0;
+					if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)) {
+						if(quic_info.decrypted_payload[i]     == 'S' &&
+								quic_info.decrypted_payload[i + 1] == 'N' &&
+								quic_info.decrypted_payload[i + 2] == 'I' &&
+								quic_info.decrypted_payload[i + 3] == 0){ 
+							offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
+							debug_print("Offset end: %d Last offset end: %d\n", offset_end, last_offset_end);
+							length = offset_end - last_offset_end;
+							offset = last_offset_end;
+							if(start_content + offset + length  <= data_length){
+								scratchpad = state->scratchpad + state->scratchpad_next_byte;
+								memcpy(scratchpad, &quic_info.decrypted_payload[start_content + offset], length);
+								pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, scratchpad, length);
+								state->scratchpad_next_byte += length;
+							} 
+						}	
+					}
+					if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)) { 
+						if (quic_info.decrypted_payload[i] == 'U' &&
+								quic_info.decrypted_payload[i+1] == 'A' &&
+								quic_info.decrypted_payload[i+2] == 'I' &&
+								quic_info.decrypted_payload[i+3] == 'D') {
+							offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
+							debug_print("Offset end: %d Last offset end: %d\n", offset_end, last_offset_end);
+							length = offset_end - last_offset_end;
+							offset = last_offset_end;
+							if(start_content + offset + length  <= data_length){
+                                                                scratchpad = state->scratchpad + state->scratchpad_next_byte; 
+                                                                memcpy(scratchpad, &quic_info.decrypted_payload[start_content + offset], length);
+                                                                pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, scratchpad, length);
+                                                                state->scratchpad_next_byte += length;
+							}
 
-						} 
-					} else if (quic_info.decrypted_payload[i] == 'U' &&
-							quic_info.decrypted_payload[i+1] == 'A' &&
-							quic_info.decrypted_payload[i+2] == 'I' &&
-							quic_info.decrypted_payload[i+3] == 'D') {
-						u_int32_t offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
-						debug_print("Offset end: %d Last offset end: %d\n", offset_end, last_offset_end);
-						u_int32_t length = offset_end - last_offset_end;
-						u_int32_t offset = last_offset_end;
-						if(start_content + offset + length  <= data_length){
-							pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, app_data + start_content + offset, length);
-							printf("Found UAID with length %u: ", length);
-							debug_print_charfield(quic_info.decrypted_payload, start_content + offset, length);
 						}
-						
 					}
 					last_offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
 				}
 				printf("\n");
 			}
 		}
+		free(quic_info.decrypted_payload);
 		return PFWL_PROTOCOL_MATCHES;
 	}
 	return PFWL_PROTOCOL_NO_MATCHES;
