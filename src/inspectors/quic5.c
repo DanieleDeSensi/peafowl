@@ -1,10 +1,11 @@
 /*
- * quic.c
+ * quic5.c
  *
  * Protocol specification: https://tools.ietf.org/html/draft-tsvwg-quic-protocol-00
  *
  * =========================================================================
  * Copyright (c) 2016-2019 Daniele De Sensi (d.desensi.software@gmail.com)
+ * Copyright (c) 2020 SoftAtHome (david.cluytens@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
