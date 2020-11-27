@@ -516,7 +516,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 			const unsigned char* chlo_start = (const unsigned char*) pfwl_strnstr((const char*) quic_info.decrypted_payload, "CHLO", quic_info.decrypted_payload_len);
 			if(chlo_start){
-				debug_print("%s\n", "CHLO found");
 				size_t num_tags = (chlo_start[4] & 0xFF) + ((chlo_start[5] & 0xFF) << 8);
 				size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
 				size_t start_content = start_tags + num_tags*8;
