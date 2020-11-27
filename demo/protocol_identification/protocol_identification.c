@@ -40,7 +40,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <string.h>
 
 int main(int argc, char** argv){
   if(argc != 2){
@@ -60,19 +59,8 @@ int main(int argc, char** argv){
     fprintf(stderr, "Couldn't open device %s: %s\n", pcap_filename, errbuf);
     return (2);
   }
- 
-  int print_once = 1;
 
   pfwl_state_t* state = pfwl_init();
-
-  pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_VERSION);
-  pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_SNI);
-  pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_UAID);
-	
-  pfwl_string_t version;
-  pfwl_string_t sni;
-  pfwl_string_t uaid;
-
   pfwl_dissection_info_t r;
   pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
   while((packet = pcap_next(handle, &header)) != NULL){
@@ -80,15 +68,6 @@ int main(int argc, char** argv){
       if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
         if(r.l7.protocol < PFWL_PROTO_L7_NUM){
           ++protocols[r.l7.protocol];
-	  if(print_once && !strcmp("QUIC", pfwl_get_L7_protocol_name(r.l7.protocol))) {
-	    pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);
-  	    pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
-  	    pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
-	    printf("Version: (%.*s)\n", version.length, version.value);
-	    printf("SNI: (%.*s)\n", sni.length, sni.value);
-	    printf("UAID: (%.*s)\n", uaid.length, uaid.value);
-	    print_once = 0;
-	  }
         }else{
           ++unknown;
         }

@@ -18,3 +18,4 @@ if (ENABLE_PARALLEL)
     add_subdirectory(protocol_identification_mc)
 endif (ENABLE_PARALLEL)
 
+add_subdirectory(quic_extraction_nfq)
