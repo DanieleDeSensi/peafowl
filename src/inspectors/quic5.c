@@ -174,12 +174,10 @@ size_t quic_get_variable_len(const unsigned char *app_data, size_t offset, size_
 
 	switch(mbit) {
 		case 0:
-			debug_print("Converting RAW byte: %X\n", app_data[offset]);
 			len = 1;
 			*var_len = (app_data[offset] & 0x3F);
 			break;
 		case 1:
-			debug_print("Converting RAW bytes: %X %X\n", app_data[offset], app_data[offset + 1]);
 			*var_len = ((app_data[offset] & 0x3F) << 8) + (app_data[offset + 1] & 0xFF);
 			len = 2;
 			break;
@@ -468,8 +466,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			memcpy(quic_info.version, &app_data[1], 4);
 
 			uint32_t *t = (uint32_t *)&app_data[1];
-			printf("VERSION: %08X ", ntohl(*t));
-			debug_print_charfield(quic_info.version, 0, 4);
 			quic_info.header_len += 4; /* version (4 bytes) */
 
 			quic_info.dst_conn_id_len = app_data[quic_info.header_len];
@@ -531,7 +527,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 								quic_info.decrypted_payload[i + 2] == 'I' &&
 								quic_info.decrypted_payload[i + 3] == 0){ 
 							offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
-							debug_print("Offset end: %d Last offset end: %d\n", offset_end, last_offset_end);
 							length = offset_end - last_offset_end;
 							offset = last_offset_end;
 							if(start_content + offset + length  <= data_length){
@@ -548,7 +543,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 								quic_info.decrypted_payload[i+2] == 'I' &&
 								quic_info.decrypted_payload[i+3] == 'D') {
 							offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
-							debug_print("Offset end: %d Last offset end: %d\n", offset_end, last_offset_end);
 							length = offset_end - last_offset_end;
 							offset = last_offset_end;
 							if(start_content + offset + length  <= data_length){

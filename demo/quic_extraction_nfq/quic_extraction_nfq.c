@@ -17,10 +17,6 @@
 pfwl_state_t* state = NULL;
 uint32_t protocols[PFWL_PROTO_L7_NUM];
 
-void processPacketdata(const unsigned char *packet, int caplen) {
-
-}
-
 static u_int32_t print_pkt (struct nfq_data *tb)
 {
 	int 				print_once 	= 1;
@@ -39,6 +35,9 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 	pfwl_string_t 			uaid;
 
 	caplen = nfq_get_payload(tb, &data);
+	ph = nfq_get_msg_packet_hdr(tb);
+	id = ntohl(ph->packet_id);
+
 	if (caplen >= 0) {
 		memset(&r, 0, sizeof(pfwl_dissection_info_t));
 
@@ -52,12 +51,10 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
 
-						ph = nfq_get_msg_packet_hdr(tb);
-						id = ntohl(ph->packet_id);
 						printf("hw_protocol=0x%04x hook=%u id=%u ", ntohs(ph->hw_protocol), ph->hook, id);
-
 						hwph = nfq_get_packet_hw(tb);
 						hlen = ntohs(hwph->hw_addrlen);
+
 						printf("hw_src_addr=");
 						for (i = 0; i < hlen-1; i++)
 							printf("%02x:", hwph->hw_addr[i]);
