@@ -14,7 +14,7 @@ if (OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER 3.0.0)
   include_directories(${OPENSSL_INCLUDE_DIR})
   link_libraries(${OPENSSL_LIBRARIES})
   add_definitions(-DHAVE_OPENSSL)
-endif(OPENSSL_FOUND)
+endif(OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER 3.0.0)
 
 ####################
 # Parallel version #
