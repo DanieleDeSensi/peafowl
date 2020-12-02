@@ -45,15 +45,10 @@ pfwl_state_t* state = NULL;
 uint32_t protocols[PFWL_PROTO_L7_NUM];
 
 static u_int32_t print_pkt (struct nfq_data *tb)
-{
-	int 				print_once 	= 1;
+{	
 	int 				id 		= 0;
-	int 				caplen		= -1;
-	int				hlen		= 0;
-	int				i		= 0;
-	uint32_t 			unknown 	= 0;
+	int 				caplen;	
 	struct nfqnl_msg_packet_hdr 	*ph		= NULL;
-	struct nfqnl_msg_packet_hw 	*hwph		= NULL;
 	unsigned char 			*data		= NULL;
 	pfwl_dissection_info_t 		r;
 	pfwl_status_t 			pfwl_status;
@@ -73,16 +68,18 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 			if(r.l4.protocol == IPPROTO_TCP || r.l4.protocol == IPPROTO_UDP){
 				if(r.l7.protocol < PFWL_PROTO_L7_NUM){
 					++protocols[r.l7.protocol];
+					int print_once 	= 1;
 					if(print_once && !strcmp("QUIC", pfwl_get_L7_protocol_name(r.l7.protocol))) {
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
 
-						printf("hw_protocol=0x%04x hook=%u id=%u ", ntohs(ph->hw_protocol), ph->hook, id);
-						hwph = nfq_get_packet_hw(tb);
-						hlen = ntohs(hwph->hw_addrlen);
+						printf("hw_protocol=0x%04x hook=%u id=%d ", ntohs(ph->hw_protocol), ph->hook, id);
+						struct nfqnl_msg_packet_hw *hwph = nfq_get_packet_hw(tb);
+						int hlen = ntohs(hwph->hw_addrlen);
 
 						printf("hw_src_addr=");
+						int i = 0;
 						for (i = 0; i < hlen-1; i++)
 							printf("%02x:", hwph->hw_addr[i]);
 						printf("%02x ", hwph->hw_addr[hlen-1]);
