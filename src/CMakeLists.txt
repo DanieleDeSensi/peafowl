@@ -10,7 +10,7 @@ if (PCAP_FOUND)
   add_definitions(-DHAVE_PCAP)
 endif(PCAP_FOUND)
 
-if (OPENSSL_FOUND)
+if (OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER 3.0.0)
   include_directories(${OPENSSL_INCLUDE_DIR})
   link_libraries(${OPENSSL_LIBRARIES})
   add_definitions(-DHAVE_OPENSSL)
