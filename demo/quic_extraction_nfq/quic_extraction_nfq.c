@@ -69,7 +69,7 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 				if(r.l7.protocol < PFWL_PROTO_L7_NUM){
 					++protocols[r.l7.protocol];
 					int print_once 	= 1;
-					if(print_once && !strcmp("QUIC", pfwl_get_L7_protocol_name(r.l7.protocol))) {
+					if(print_once && !strcmp("QUIC5", pfwl_get_L7_protocol_name(r.l7.protocol))) {
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
 						pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
