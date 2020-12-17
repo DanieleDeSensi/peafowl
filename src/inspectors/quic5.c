@@ -70,6 +70,7 @@ typedef struct {
 	size_t quic_hp_len;
 	unsigned char quic_iv[TLS13_AEAD_NONCE_LENGTH];
 	size_t quic_iv_len;
+	unsigned int has_tls13_record;
 } quic_t;
 
 /* Quic Versions */
@@ -152,25 +153,29 @@ static uint32_t quic_getu32(const unsigned char* start, size_t offset){
 }
 
 /* Quic variable length Integer decoding algorithm */
-size_t quic_get_variable_len(const unsigned char *app_data, size_t offset, size_t *var_len) {
+size_t quic_get_variable_len(const unsigned char *app_data, size_t offset, uint64_t *var_len) {
 	size_t 		mbit	 	= app_data[offset] >> 6;
 	size_t 		len	 	= 0;
 
 	switch(mbit) {
 		case 0:
 			len = 1;
-			*var_len = (app_data[offset] & 0x3F);
+			*var_len = (uint64_t)(app_data[offset] & 0x3F);
 			break;
 		case 1:
-			*var_len = ((app_data[offset] & 0x3F) << 8) + (app_data[offset + 1] & 0xFF);
+			*var_len = ((uint64_t)(app_data[offset] & 0x3F) << 8) + (uint64_t)(app_data[offset + 1] & 0xFF);
 			len = 2;
 			break;
 		case 2:
-			/* TO DO */
+			*var_len = ((uint64_t)(app_data[offset] & 0x3F) << 24) + ((uint64_t)(app_data[offset + 1] & 0xFF) << 16)
+				 + ((uint64_t)(app_data[offset + 2] & 0xFF) << 8) + (uint64_t)(app_data[offset + 3] & 0xFF);
 			len = 4;
 			break;
 		case 3:
-			/* TO DO */
+			*var_len = ((uint64_t)(app_data[offset] & 0x3F) << 56) + ((uint64_t)(app_data[offset + 1] & 0xFF) << 48) 
+				+ ((uint64_t)(app_data[offset + 2] & 0xFF) << 40) + ((uint64_t)(app_data[offset + 3] & 0xFF) << 32)
+				+ ((uint64_t)(app_data[offset + 4] & 0xFF) << 24) + ((uint64_t)(app_data[offset + 5] & 0xFF) << 16) 
+				+ ((uint64_t)(app_data[offset + 6] & 0xFF) << 8) + (uint64_t)(app_data[offset + 7] & 0xFF);
 			len = 8;
 			break;
 		default:
@@ -252,18 +257,22 @@ static int quic_derive_initial_secrets(quic_t *quic_info) {
 	switch (v) {
 		case VER_Q050:
 			salt = ver_q050_salt;
+			quic_info->has_tls13_record = 0;
 			break;
 
 		case VER_T050:
 			salt = ver_t050_salt;
+			quic_info->has_tls13_record = 1;
 			break;
 
 		case VER_T051:
 			salt = ver_t051_salt;
+			quic_info->has_tls13_record = 1;
 			break;
 		default:
 			printf("Error matching the quic version to a salt using standard salt instead\n");
 			salt = ver_q050_salt;
+			quic_info->has_tls13_record = 0;
 	}
 
 	uint8_t secret[HASH_SHA2_256_LENGTH];
@@ -421,9 +430,147 @@ int decrypt_first_packet(quic_t *quic_info, const unsigned char *app_data, size_
 	return 0;
 }
 
+void quic_parse_google_user_agent(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
+        char *scratchpad = state->scratchpad + state->scratchpad_next_byte;
+        memcpy(scratchpad, data, len);
+        pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, scratchpad, len);
+        state->scratchpad_next_byte += len;
+}
+
+void tls_parse_quic_transport_params(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
+	size_t		pointer = 0;
+	size_t		TLVtype = 0;
+	size_t 		TLVlen 	= 0;
+	for (pointer = 0; pointer <len; pointer += TLVlen) {
+		pointer += quic_get_variable_len(data, pointer, &TLVtype);
+		TLVlen = data[pointer];
+		pointer++;
+		//printf("parameter TLV %08X TLV Size %02d\n", TLVtype, TLVlen);
+		switch(TLVtype) {
+			case 0x3129:
+				quic_parse_google_user_agent(state, data + pointer, TLVlen, pkt_info, flow_info_private);
+			default:
+				break;
+		}
+
+	}
+}
+
+void tls_parse_servername(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
+	size_t		pointer = 0;
+	uint16_t 	list_len = ntohs(*(uint16_t *)(data));
+	size_t 		type 	= data[2];
+	uint16_t 	server_len = ntohs(*(uint16_t *)(data + 3));
+	pointer	= 2 + 1 + 2;
+
+	char *scratchpad = state->scratchpad + state->scratchpad_next_byte;
+	memcpy(scratchpad, data + pointer, server_len);
+	pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, scratchpad, server_len);
+	state->scratchpad_next_byte += server_len;
+}
+
+void tls_parse_extensions(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
+	size_t pointer;
+	size_t TLVlen;
+	size_t TLVtype;
+	for (pointer = 0; pointer < len; pointer += TLVlen) {
+		TLVtype = ntohs(*(uint16_t *)(&data[pointer]));
+		pointer += 2;
+		TLVlen = ntohs(*(uint16_t *)(&data[pointer]));
+		pointer += 2;
+		//printf("TLV %02d TLV Size %02d\n", TLVtype, TLVlen);
+		switch(TLVtype) {
+			/* Server Name */
+			case 0:
+				tls_parse_servername(state, data + pointer, TLVlen, pkt_info, flow_info_private);
+				break;
+				/* Extension quic transport parameters */
+			case 65445:
+				tls_parse_quic_transport_params(state, data + pointer, TLVlen, pkt_info, flow_info_private);
+				break;
+			default:
+				break;
+		}	
+
+	}
+}
+
+void check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t tls_data_length, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
+        /* Finger printing */
+        unsigned char ja3_string[1024];
+        size_t ja3_string_len;
+
+	size_t 		tls_pointer	= 0;
+
+	/* Parse TLS record header */
+	size_t tls_record_frame_type = tls_data[tls_pointer];
+	tls_pointer++;
+
+	size_t tls_record_offset     = tls_data[tls_pointer];
+	tls_pointer++;
+
+	uint16_t tls_record_len	     = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
+	tls_pointer += 2;
+
+	/* Parse TLS Handshake protocol */
+	size_t	handshake_type = tls_data[tls_pointer];
+	tls_pointer++;
+
+	size_t 	length = (tls_data[tls_pointer] << 16) + (tls_data[tls_pointer+1] << 8) + tls_data[tls_pointer+2];
+	tls_pointer += 3;
+
+	uint16_t tls_version = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
+	tls_pointer += 2;
+
+	/* Build JA3 string */
+	ja3_string_len = sprintf(ja3_string, "%d,", tls_version);
+
+	if (handshake_type == 1) { /* We only inspect client hello which has a type equal to 1 */	
+		/* skipping random data 32 bytes */
+		tls_pointer += 32;
+
+		/* skipping legacy_session_id one byte */
+		tls_pointer += 1;
+
+		/* Cipher suites and length */
+		uint16_t cipher_suite_len = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
+		tls_pointer += 2;
+
+		/* use content of cipher suite for building the JA3 hash */
+		for (size_t i = 0; i < cipher_suite_len; i += 2) {
+			uint16_t cipher_suite = ntohs(*(uint16_t *)(tls_data + tls_pointer + i));
+			ja3_string_len += sprintf(ja3_string + ja3_string_len, "%d-", cipher_suite);
+		}
+		if (cipher_suite_len) {
+			ja3_string_len--; //remove last dash (-) from ja3_string
+		}
+		ja3_string_len += sprintf(ja3_string + ja3_string_len, ",");
+		tls_pointer += cipher_suite_len;
+
+		/* compression methods length */
+		size_t compression_methods_len = tls_data[tls_pointer];
+		tls_pointer++;
+
+		/* Skip compression methods */
+		tls_pointer += compression_methods_len;
+
+		/* Extension length */
+		uint16_t ext_len = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
+		tls_pointer += 2;
+
+		/* Add Extension length to the ja3 string */
+		ja3_string_len += sprintf(ja3_string + ja3_string_len, "%d,,", ext_len);
+
+		/* lets iterate over the exention list */
+		unsigned const char *ext_data = tls_data + tls_pointer;
+		tls_parse_extensions(state, ext_data, ext_len, pkt_info, flow_info_private);
+	}
+	printf("JA3 String %s\n", ja3_string);
+}
+
 uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
-                     size_t data_length, pfwl_dissection_info_t *pkt_info,
-                     pfwl_flow_info_private_t *flow_info_private){
+		size_t data_length, pfwl_dissection_info_t *pkt_info,
+		pfwl_flow_info_private_t *flow_info_private){
 
 	quic_t 	quic_info;
 	char	*scratchpad = state->scratchpad + state->scratchpad_next_byte;
@@ -483,66 +630,71 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 		}
 
 		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)) {
-		    scratchpad = state->scratchpad + state->scratchpad_next_byte;
-		    memcpy(scratchpad, quic_info.version, 4);
-		    pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, scratchpad, 4);
-		    state->scratchpad_next_byte += 4;
+			scratchpad = state->scratchpad + state->scratchpad_next_byte;
+			memcpy(scratchpad, quic_info.version, 4);
+			pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, scratchpad, 4);
+			state->scratchpad_next_byte += 4;
 		}
 
 
 		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI) || 
-	  	   pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) {
+				pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) {
 			unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
 			unsigned int 	offset 			= quic_info.decrypted_payload[1];
 			size_t 		crypto_data_size 	= 0;
 			size_t 		crypto_data_len		= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
 			/* According to wireshark chlo_start could also be quic_info.decrypted_payload + 2 (frame_type || offset) + crypto_data_len */
 
-			const unsigned char* chlo_start = (const unsigned char*) pfwl_strnstr((const char*) quic_info.decrypted_payload, "CHLO", quic_info.decrypted_payload_len);
-			if(chlo_start){
-				size_t num_tags = (chlo_start[4] & 0xFF) + ((chlo_start[5] & 0xFF) << 8);
-				size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
-				size_t start_content = start_tags + num_tags*8;
-				u_int32_t last_offset_end = 0;
-				
-				for(size_t i = start_tags; i < crypto_data_size; i += 8){
-					u_int32_t offset_end 	= 0;
-					u_int32_t length	= 0;
-					u_int32_t offset	= 0;
-					if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)) {
-						if(quic_info.decrypted_payload[i]     == 'S' &&
-								quic_info.decrypted_payload[i + 1] == 'N' &&
-								quic_info.decrypted_payload[i + 2] == 'I' &&
-								quic_info.decrypted_payload[i + 3] == 0){ 
-							offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
-							length = offset_end - last_offset_end;
-							offset = last_offset_end;
-							if(start_content + offset + length  <= data_length){
-								scratchpad = state->scratchpad + state->scratchpad_next_byte;
-								memcpy(scratchpad, &quic_info.decrypted_payload[start_content + offset], length);
-								pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, scratchpad, length);
-								state->scratchpad_next_byte += length;
-							} 
-						}	
-					}
-					if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) { 
-						if (quic_info.decrypted_payload[i] == 'U' &&
-								quic_info.decrypted_payload[i+1] == 'A' &&
-								quic_info.decrypted_payload[i+2] == 'I' &&
-								quic_info.decrypted_payload[i+3] == 'D') {
-							offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
-							length = offset_end - last_offset_end;
-							offset = last_offset_end;
-							if(start_content + offset + length  <= data_length){
-                                                                scratchpad = state->scratchpad + state->scratchpad_next_byte; 
-                                                                memcpy(scratchpad, &quic_info.decrypted_payload[start_content + offset], length);
-                                                                pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, scratchpad, length);
-                                                                state->scratchpad_next_byte += length;
-							}
+			if (quic_info.has_tls13_record) {
+				check_tls13(state, quic_info.decrypted_payload, quic_info.decrypted_payload_len, pkt_info, flow_info_private);
+			} else {
+				/* PLZ Move me to a function */
+				const unsigned char* chlo_start = (const unsigned char*) pfwl_strnstr((const char*) quic_info.decrypted_payload, "CHLO", quic_info.decrypted_payload_len);
+				if(chlo_start){
+					size_t num_tags = (chlo_start[4] & 0xFF) + ((chlo_start[5] & 0xFF) << 8);
+					size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
+					size_t start_content = start_tags + num_tags*8;
+					u_int32_t last_offset_end = 0;
 
+					for(size_t i = start_tags; i < crypto_data_size; i += 8){
+						u_int32_t offset_end 	= 0;
+						u_int32_t length	= 0;
+						u_int32_t offset	= 0;
+						if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)) {
+							if(quic_info.decrypted_payload[i]     == 'S' &&
+									quic_info.decrypted_payload[i + 1] == 'N' &&
+									quic_info.decrypted_payload[i + 2] == 'I' &&
+									quic_info.decrypted_payload[i + 3] == 0){ 
+								offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
+								length = offset_end - last_offset_end;
+								offset = last_offset_end;
+								if(start_content + offset + length  <= data_length){
+									scratchpad = state->scratchpad + state->scratchpad_next_byte;
+									memcpy(scratchpad, &quic_info.decrypted_payload[start_content + offset], length);
+									pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, scratchpad, length);
+									state->scratchpad_next_byte += length;
+								} 
+							}	
 						}
+						if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) { 
+							if (quic_info.decrypted_payload[i] == 'U' &&
+									quic_info.decrypted_payload[i+1] == 'A' &&
+									quic_info.decrypted_payload[i+2] == 'I' &&
+									quic_info.decrypted_payload[i+3] == 'D') {
+								offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
+								length = offset_end - last_offset_end;
+								offset = last_offset_end;
+								if(start_content + offset + length  <= data_length){
+									scratchpad = state->scratchpad + state->scratchpad_next_byte; 
+									memcpy(scratchpad, &quic_info.decrypted_payload[start_content + offset], length);
+									pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, scratchpad, length);
+									state->scratchpad_next_byte += length;
+								}
+
+							}
+						}
+						last_offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
 					}
-					last_offset_end = quic_getu32(quic_info.decrypted_payload, i + 4);
 				}
 			}
 		}
@@ -553,8 +705,8 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 }
 #else
 uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
-                     size_t data_length, pfwl_dissection_info_t *pkt_info,
-                     pfwl_flow_info_private_t *flow_info_private){
+		size_t data_length, pfwl_dissection_info_t *pkt_info,
+		pfwl_flow_info_private_t *flow_info_private){
 	return PFWL_PROTOCOL_NO_MATCHES;
 }
 #endif

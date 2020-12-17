@@ -20,4 +20,5 @@ endif (ENABLE_PARALLEL)
 
 if (OPENSSL_FOUND)
 	add_subdirectory(quic_extraction_nfq)
+	add_subdirectory(quic_extraction_pcap)
 endif (OPENSSL_FOUND)
