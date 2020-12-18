@@ -1,0 +1,2 @@
+add_executable(quic_extract_pcap quic_extraction_pcap.c)
+target_link_libraries(quic_extract_pcap LINK_PUBLIC peafowl pcap)
