@@ -387,7 +387,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 				pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) {
 			//unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
 			//unsigned int 	offset 			= quic_info.decrypted_payload[1];
-			size_t 		crypto_data_size 	= 0;
+		
 			//size_t 		crypto_data_len		= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
 			/* According to wireshark chlo_start could also be quic_info.decrypted_payload + 2 (frame_type || offset) + crypto_data_len */
 
@@ -401,7 +401,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 					size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
 					size_t start_content = start_tags + num_tags*8;
 					u_int32_t last_offset_end = 0;
-
+					size_t 		crypto_data_size 	= 0;
 					for(size_t i = start_tags; i < crypto_data_size; i += 8){
 						u_int32_t offset_end 	= 0;
 						u_int32_t length	= 0;
