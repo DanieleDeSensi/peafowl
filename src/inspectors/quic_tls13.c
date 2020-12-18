@@ -46,9 +46,9 @@ void tls13_parse_google_user_agent(pfwl_state_t *state, const unsigned char *dat
 
 void tls13_parse_quic_transport_params(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
 	size_t		pointer = 0;
-	size_t		TLVtype = 0;
 	size_t 		TLVlen 	= 0;
 	for (pointer = 0; pointer <len; pointer += TLVlen) {
+		size_t		TLVtype = 0;
 		pointer += quic_get_variable_len(data, pointer, &TLVtype);
 		TLVlen = data[pointer];
 		pointer++;
@@ -67,8 +67,8 @@ void tls13_parse_quic_transport_params(pfwl_state_t *state, const unsigned char 
 
 void tls13_parse_servername(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
 	size_t		pointer = 0;
-	uint16_t 	list_len = ntohs(*(uint16_t *)(data));
-	size_t 		type 	= data[2];
+	//uint16_t 	list_len = ntohs(*(uint16_t *)(data));
+	//size_t 		type 	= data[2];
 	uint16_t 	server_len = ntohs(*(uint16_t *)(data + 3));
 	pointer	= 2 + 1 + 2;
 
@@ -80,9 +80,9 @@ void tls13_parse_servername(pfwl_state_t *state, const unsigned char *data, size
 
 void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
 	size_t pointer;
-	size_t TLVlen;
-	size_t TLVtype;
+	size_t TLVlen;	
 	for (pointer = 0; pointer < len; pointer += TLVlen) {
+		size_t TLVtype;
 		TLVtype = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
 		TLVlen = ntohs(*(uint16_t *)(&data[pointer]));
@@ -114,20 +114,20 @@ uint8_t check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t t
 	size_t 		tls_pointer	= 0;
 
 	/* Parse TLS record header */
-	size_t tls_record_frame_type = tls_data[tls_pointer];
+	//size_t tls_record_frame_type = tls_data[tls_pointer];
 	tls_pointer++;
 
-	size_t tls_record_offset     = tls_data[tls_pointer];
+	//size_t tls_record_offset     = tls_data[tls_pointer];
 	tls_pointer++;
 
-	uint16_t tls_record_len	     = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
+	//uint16_t tls_record_len	     = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
 	tls_pointer += 2;
 
 	/* Parse TLS Handshake protocol */
 	size_t	handshake_type = tls_data[tls_pointer];
 	tls_pointer++;
 
-	size_t 	length = (tls_data[tls_pointer] << 16) + (tls_data[tls_pointer+1] << 8) + tls_data[tls_pointer+2];
+	//size_t 	length = (tls_data[tls_pointer] << 16) + (tls_data[tls_pointer+1] << 8) + tls_data[tls_pointer+2];
 	tls_pointer += 3;
 
 	uint16_t tls_version = ntohs(*(uint16_t *)(&tls_data[tls_pointer]));
