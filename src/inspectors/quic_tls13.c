@@ -82,11 +82,9 @@ void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size
 	unsigned char *ja3_string, size_t *ja3_string_len) {
 	size_t pointer;
 	size_t TLVlen;
-	size_t TLVtype;
 
 	for (pointer = 0; pointer < len; pointer += TLVlen) {
-		size_t TLVtype;
-		TLVtype = ntohs(*(uint16_t *)(&data[pointer]));
+		size_t TLVtype = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
 		TLVlen = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
