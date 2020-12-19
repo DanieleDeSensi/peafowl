@@ -36,6 +36,7 @@
 #include <openssl/evp.h>
 #include "quic_tls13.h"
 #include "quic_utils.h"
+#include "quic_ssl_utils.h"
 
 void tls13_parse_google_user_agent(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
         char *scratchpad = state->scratchpad + state->scratchpad_next_byte;
@@ -78,16 +79,18 @@ void tls13_parse_servername(pfwl_state_t *state, const unsigned char *data, size
 	state->scratchpad_next_byte += server_len;
 }
 
-void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
+void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private, 
+	unsigned char *ja3_string, size_t *ja3_string_len) {
 	size_t pointer;
-	size_t TLVlen;	
+	size_t TLVlen;
+
 	for (pointer = 0; pointer < len; pointer += TLVlen) {
-		size_t TLVtype;
-		TLVtype = ntohs(*(uint16_t *)(&data[pointer]));
+		size_t TLVtype = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
 		TLVlen = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
 		//printf("TLV %02d TLV Size %02d\n", TLVtype, TLVlen);
+		*ja3_string_len += sprintf(ja3_string + *ja3_string_len, "%d-", TLVtype);
 		switch(TLVtype) {
 			/* Server Name */
 			case 0:
@@ -103,6 +106,9 @@ void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size
 				break;
 		}	
 
+	}
+	if (len) {
+		*ja3_string_len = *ja3_string_len - 1; //remove last dash (-) from ja3_string
 	}
 }
 
@@ -170,13 +176,18 @@ uint8_t check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t t
 		tls_pointer += 2;
 
 		/* Add Extension length to the ja3 string */
-		ja3_string_len += sprintf(ja3_string + ja3_string_len, "%d,,", ext_len);
+		unsigned const char *ext_data = tls_data + tls_pointer;
 
 		/* lets iterate over the exention list */
-		unsigned const char *ext_data = tls_data + tls_pointer;
-		tls13_parse_extensions(state, ext_data, ext_len, pkt_info, flow_info_private);
+		tls13_parse_extensions(state, ext_data, ext_len, pkt_info, flow_info_private, ja3_string, &ja3_string_len);
+		 ja3_string_len += sprintf(ja3_string + ja3_string_len, ",,");
 	}
 	printf("JA3 String %s\n", ja3_string);
+	unsigned char md5sum[16] = { 0 }; /* MD5 are cryptographic hash functions with a 128 bit output. */
+
+	md5_digest_message(ja3_string, ja3_string_len, md5sum);
+	printf("JA3:");
+	debug_print_rawfield(md5sum, 0, 16);
 	return PFWL_PROTOCOL_MATCHES;
 }
 

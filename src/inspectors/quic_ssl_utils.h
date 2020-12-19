@@ -58,3 +58,5 @@ int HKDF_Expand(const unsigned char *key, const size_t key_len, const unsigned c
 
 /* HKDF/TLS13 Create compatible label(s) */
 int hkdf_create_tls13_label(const unsigned int a, const unsigned char *label, unsigned char *out, size_t out_len);
+
+int md5_digest_message(const unsigned char *message, size_t message_len, unsigned char *digest);

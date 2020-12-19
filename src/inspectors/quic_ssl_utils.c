@@ -438,4 +438,37 @@ int hkdf_create_tls13_label(const unsigned int a, const unsigned char *label, un
 	len += 1;
 	return len;
 }
+
+int md5_digest_message(const unsigned char *message, size_t message_len, unsigned char *digest) {
+	unsigned int digest_len = 0;
+	EVP_MD_CTX *mdctx;
+
+	if((mdctx = EVP_MD_CTX_new()) == NULL) {
+		printf("Creating context\n");
+		return -1;
+	}
+
+	if(1 != EVP_DigestInit_ex(mdctx, EVP_md5(), NULL)) {
+		printf("Initialising digest\n");
+		EVP_MD_CTX_free(mdctx);
+		return -1;
+	}
+
+
+	if(1 != EVP_DigestUpdate(mdctx, message, message_len)) {
+		printf("Error updating digest\n");
+		EVP_MD_CTX_free(mdctx);
+		return -1;
+	}
+
+	if(1 != EVP_DigestFinal_ex(mdctx, digest, &digest_len)) {
+		printf("Error finalising digest\n");
+		EVP_MD_CTX_free(mdctx);
+		return -1;
+	}
+
+	EVP_MD_CTX_free(mdctx);
+	return digest_len;
+}
+
 #endif

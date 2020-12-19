@@ -339,7 +339,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 		if(header_form) { /* Long packet type */
 			//size_t version_offset 		= 0;
-			//size_t header_estimation 	= 0;
 			//version_offset = 1; // 1 byte
 			quic_info.header_len++; // First byte header
 
@@ -369,7 +368,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			if (0 > decrypt_first_packet(&quic_info, app_data, data_length)) {
 				return PFWL_PROTOCOL_NO_MATCHES;
 			}
-			//header_estimation  = quic_info.header_len;
 
 		} else { /* Short packet type */
 			return PFWL_PROTOCOL_NO_MATCHES;
@@ -387,8 +385,9 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 				pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) {
 			//unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
 			//unsigned int 	offset 			= quic_info.decrypted_payload[1];
-		
-			//size_t 		crypto_data_len		= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
+	
+			size_t  crypto_data_size = 0;	
+			size_t	crypto_data_len	= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
 			/* According to wireshark chlo_start could also be quic_info.decrypted_payload + 2 (frame_type || offset) + crypto_data_len */
 
 			if (quic_info.has_tls13_record) {
@@ -401,7 +400,6 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 					size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
 					size_t start_content = start_tags + num_tags*8;
 					u_int32_t last_offset_end = 0;
-					size_t 		crypto_data_size 	= 0;
 					for(size_t i = start_tags; i < crypto_data_size; i += 8){
 						u_int32_t offset_end 	= 0;
 						u_int32_t length	= 0;
