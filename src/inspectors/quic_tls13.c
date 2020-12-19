@@ -36,6 +36,7 @@
 #include <openssl/evp.h>
 #include "quic_tls13.h"
 #include "quic_utils.h"
+#include "quic_ssl_utils.h"
 
 void tls13_parse_google_user_agent(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
         char *scratchpad = state->scratchpad + state->scratchpad_next_byte;
@@ -182,6 +183,11 @@ uint8_t check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t t
 		 ja3_string_len += sprintf(ja3_string + ja3_string_len, ",,");
 	}
 	printf("JA3 String %s\n", ja3_string);
+	unsigned char md5sum[16] = { 0 }; /* MD5 are cryptographic hash functions with a 128 bit output. */
+
+	md5_digest_message(ja3_string, ja3_string_len, md5sum);
+	printf("JA3:");
+	debug_print_rawfield(md5sum, 0, 16);
 	return PFWL_PROTOCOL_MATCHES;
 }
 
