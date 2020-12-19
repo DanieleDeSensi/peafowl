@@ -109,9 +109,7 @@ void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size
 
 	}
 	if (len) {
-		printf("%d\n", *ja3_string_len);
 		*ja3_string_len = *ja3_string_len - 1; //remove last dash (-) from ja3_string
-		printf("%d\n", *ja3_string_len);
 	}
 }
 
