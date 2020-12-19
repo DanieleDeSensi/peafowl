@@ -324,29 +324,28 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 	memset(&quic_info, 0, sizeof(quic_t));
 	if(data_length >= 1200){
-		size_t connection_id_len = convert_length_connection(app_data[0] & 0x0C);
-		size_t unused_bits = app_data[0] & 0xC0;
-		int has_version = app_data[0] & 0x01;
+		//size_t connection_id_len = convert_length_connection(app_data[0] & 0x0C);
+		//size_t unused_bits = app_data[0] & 0xC0;
+		//int has_version = app_data[0] & 0x01;
 
 		size_t header_form = (app_data[0] & 0x80) >> 7; // 1000 0000
-		size_t bit2 = (app_data[0] & 0x40) >> 6; // 0100 0000
-		size_t bit3 = (app_data[0] & 0x20) >> 5; // 0010 0000
-		size_t bit4 = (app_data[0] & 0x10) >> 4; // 0001 0000
-		size_t bit5 = (app_data[0] & 0x08) >> 3; // 0000 1000
-		size_t bit6 = (app_data[0] & 0x04) >> 2; // 0000 0100
-		size_t bit7 = (app_data[0] & 0x02) >> 1; // 0000 0010
-		size_t bit8 = (app_data[0] & 0x01);      // 0000 0001	
-
-		size_t version_offset 		= 0;
-		size_t header_estimation 	= 0;
+		//size_t bit2 = (app_data[0] & 0x40) >> 6; // 0100 0000
+		//size_t bit3 = (app_data[0] & 0x20) >> 5; // 0010 0000
+		//size_t bit4 = (app_data[0] & 0x10) >> 4; // 0001 0000
+		//size_t bit5 = (app_data[0] & 0x08) >> 3; // 0000 1000
+		//size_t bit6 = (app_data[0] & 0x04) >> 2; // 0000 0100
+		//size_t bit7 = (app_data[0] & 0x02) >> 1; // 0000 0010
+		//size_t bit8 = (app_data[0] & 0x01);      // 0000 0001	
 
 		if(header_form) { /* Long packet type */
-			version_offset = 1; // 1 byte
+			//size_t version_offset 		= 0;
+			//size_t header_estimation 	= 0;
+			//version_offset = 1; // 1 byte
 			quic_info.header_len++; // First byte header
 
 			memcpy(quic_info.version, &app_data[1], 4);
 
-			uint32_t *t = (uint32_t *)&app_data[1];
+			//uint32_t *t = (uint32_t *)&app_data[1];
 			quic_info.header_len += 4; /* version (4 bytes) */
 
 			quic_info.dst_conn_id_len = app_data[quic_info.header_len];
@@ -370,7 +369,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			if (0 > decrypt_first_packet(&quic_info, app_data, data_length)) {
 				return PFWL_PROTOCOL_NO_MATCHES;
 			}
-			header_estimation  = quic_info.header_len;
+			//header_estimation  = quic_info.header_len;
 
 		} else { /* Short packet type */
 			return PFWL_PROTOCOL_NO_MATCHES;
@@ -386,10 +385,10 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI) || 
 				pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_UAID)) {
-			unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
-			unsigned int 	offset 			= quic_info.decrypted_payload[1];
-			size_t 		crypto_data_size 	= 0;
-			size_t 		crypto_data_len		= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
+			//unsigned int 	frame_type 		= quic_info.decrypted_payload[0];
+			//unsigned int 	offset 			= quic_info.decrypted_payload[1];
+		
+			//size_t 		crypto_data_len		= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
 			/* According to wireshark chlo_start could also be quic_info.decrypted_payload + 2 (frame_type || offset) + crypto_data_len */
 
 			if (quic_info.has_tls13_record) {
@@ -402,7 +401,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 					size_t start_tags = ((const unsigned char*) chlo_start - quic_info.decrypted_payload)  + 8;
 					size_t start_content = start_tags + num_tags*8;
 					u_int32_t last_offset_end = 0;
-
+					size_t 		crypto_data_size 	= 0;
 					for(size_t i = start_tags; i < crypto_data_size; i += 8){
 						u_int32_t offset_end 	= 0;
 						u_int32_t length	= 0;
