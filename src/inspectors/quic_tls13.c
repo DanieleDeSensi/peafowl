@@ -240,15 +240,15 @@ uint8_t check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t t
 		tls13_parse_extensions(state, ext_data, ext_len, pkt_info, flow_info_private, ja3_string, &ja3_string_len);
 		ja3_string_len += sprintf(ja3_string + ja3_string_len, ",,");
 	}
-	printf("JA3 String %s\n", ja3_string);
+	//printf("JA3 String %s\n", ja3_string);
         char *md5sum = state->scratchpad + state->scratchpad_next_byte;
 	size_t md5sum_len = md5_digest_message(ja3_string, ja3_string_len, md5sum);
         
 	pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_JA3, md5sum, md5sum_len);
         state->scratchpad_next_byte += md5sum_len;
 
-	printf("JA3:");
-	debug_print_rawfield(md5sum, 0, md5sum_len);
+	//printf("JA3:");
+	//debug_print_rawfield(md5sum, 0, md5sum_len);
 	return PFWL_PROTOCOL_MATCHES;
 }
 
