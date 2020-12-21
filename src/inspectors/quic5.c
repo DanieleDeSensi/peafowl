@@ -148,9 +148,12 @@ static int quic_version_tostring(const uint32_t qver, unsigned char *ver, const 
 		case VER_DRAFT27:
 		case VER_DRAFT28:
 		case VER_DRAFT29:
+			len = snprintf(ver, ver_len, "draft-%d", qver & 0xff);
+			break;
+
 		case VER_MVFST_27:
         	case VER_MVFST_EXP:
-			len = snprintf(ver, ver_len, "draft-%d", qver & 0xff);
+			len = snprintf(ver, ver_len, "facebook mvfst draft-27");
 			break;
 
 		default:
@@ -439,7 +442,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)) {
 			scratchpad = state->scratchpad + state->scratchpad_next_byte;
-			size_t ver_str_len = quic_version_tostring(quic_info.version, scratchpad, 10);
+			size_t ver_str_len = quic_version_tostring(quic_info.version, scratchpad, 32);
 			pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, scratchpad, ver_str_len);
 			state->scratchpad_next_byte += ver_str_len;
 		}
