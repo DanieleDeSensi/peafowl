@@ -454,7 +454,8 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			//unsigned int 	offset 			= quic_info.decrypted_payload[1];
 	
 			size_t  crypto_data_size = 0;	
-			size_t	crypto_data_len	= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
+			//size_t	crypto_data_len	= quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
+			quic_get_variable_len(quic_info.decrypted_payload, 2, &crypto_data_size);
 			/* According to wireshark chlo_start could also be quic_info.decrypted_payload + 2 (frame_type || offset) + crypto_data_len */
 
 			if (quic_info.has_tls13_record) {

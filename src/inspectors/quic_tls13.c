@@ -90,7 +90,7 @@ void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size
 		TLVlen = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
 		//printf("TLV %02d TLV Size %02d\n", TLVtype, TLVlen);
-		*ja3_string_len += sprintf(ja3_string + *ja3_string_len, "%d-", TLVtype);
+		*ja3_string_len += sprintf(ja3_string + *ja3_string_len, "%u-", TLVtype);
 		switch(TLVtype) {
 			/* Server Name */
 			case 0:
