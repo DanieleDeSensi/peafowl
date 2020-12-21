@@ -9,6 +9,9 @@ TEST(QUICTest, Generic) {
     EXPECT_EQ(protocols[PFWL_PROTO_L7_QUIC5], (uint) 65);
     getProtocols("./pcaps/quic-t51.pcap", protocols);
     EXPECT_EQ(protocols[PFWL_PROTO_L7_QUIC5], (uint) 642);
+    getProtocols("./pcaps/quic-draft29.pcap", protocols);
+    EXPECT_EQ(protocols[PFWL_PROTO_L7_QUIC5], (uint) 9);
+
 }
 
 static void checkSNI(const char* pcap, const char* sni, pfwl_field_matching_t matchType){
@@ -34,6 +37,7 @@ static void checkSNI(const char* pcap, const char* sni, pfwl_field_matching_t ma
 TEST(QUICTest, ServerName) {
   checkSNI("./pcaps/quic-050.pcap", "www.google.com", PFWL_FIELD_MATCHING_EXACT);
   checkSNI("./pcaps/quic-t51.pcap", "www.google.com", PFWL_FIELD_MATCHING_EXACT);
+  checkSNI("./pcaps/quic-draft29.pcap", "ssl.gstatic.com", PFWL_FIELD_MATCHING_EXACT);
 }
 
 static void checkVersion(const char* pcap, const char* expectedVersion){
@@ -57,6 +61,7 @@ static void checkVersion(const char* pcap, const char* expectedVersion){
 TEST(QUICTest, Version) {
   checkVersion("./pcaps/quic-050.pcap", "Q050");
   checkVersion("./pcaps/quic-t51.pcap", "T051");
+  checkVersion("./pcaps/quic-draft29.pcap", "draft-29");
 }
 
 static void checkUserAgent(const char* pcap, const char* expectedUAID){
@@ -80,4 +85,5 @@ static void checkUserAgent(const char* pcap, const char* expectedUAID){
 TEST(QUICTest, Useragent) {
   checkUserAgent("./pcaps/quic-050.pcap", "Chrome/86.0.4240.198 Intel Mac OS X 10_15_7");
   checkUserAgent("./pcaps/quic-t51.pcap", "dev Chrome/86.0.4240.9 Windows NT 6.1; Win64; x64");
+  checkUserAgent("./pcaps/quic-draft29.pcap", "Chrome/87.0.4280.88 Intel Mac OS X 10_15_7");
 }
