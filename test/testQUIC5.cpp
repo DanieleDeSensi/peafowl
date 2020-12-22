@@ -3,6 +3,7 @@
  **/
 #include "common.h"
 
+#ifdef HAVE_OPENSSL
 TEST(QUICTest, Generic) {
     std::vector<uint> protocols;
     getProtocols("./pcaps/quic-050.pcap", protocols);
@@ -81,3 +82,4 @@ TEST(QUICTest, Useragent) {
   checkUserAgent("./pcaps/quic-050.pcap", "Chrome/86.0.4240.198 Intel Mac OS X 10_15_7");
   checkUserAgent("./pcaps/quic-t51.pcap", "dev Chrome/86.0.4240.9 Windows NT 6.1; Win64; x64");
 }
+#endif
