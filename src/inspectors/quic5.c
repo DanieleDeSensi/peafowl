@@ -39,7 +39,6 @@
 #include "quic_utils.h"
 
 #define MAX_CONNECTION_ID_LENGTH 	20
-#define MAX_VERSION_LENGTH	 	4
 #define MAX_STRING_LENGTH	 	256
 #define MAX_SALT_LENGTH			20
 #define MAX_LABEL_LENGTH		32
@@ -53,7 +52,7 @@ typedef struct {
 	size_t src_conn_id_len;
 	unsigned char src_conn_id[MAX_CONNECTION_ID_LENGTH];
 	size_t header_len;
-	unsigned char version[MAX_VERSION_LENGTH];
+	uint32_t version;
 	size_t packet_number;
 	size_t packet_number_len;
 	size_t payload_len;
@@ -93,6 +92,14 @@ typedef enum {
 	VER_MVFST_22=0xfaceb001,
 	VER_MVFST_27=0xfaceb002,
 	VER_MVFST_EXP=0xfaceb00e,
+	VER_DRAFT22=0xff000016,
+	VER_DRAFT23=0xff000017,
+	VER_DRAFT24=0xff000018,
+	VER_DRAFT25=0xff000019,
+	VER_DRAFT26=0xff00001a,
+	VER_DRAFT27=0xff00001b,
+	VER_DRAFT28=0xff00001c,
+	VER_DRAFT29=0xff00001d,
 } quic_version_t;
 
 #define PFWL_DEBUG_DISS_QUIC 1
@@ -117,7 +124,43 @@ static size_t convert_length_connection(size_t len){
   }
 }
 
-#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+static int quic_version_tostring(const uint32_t qver, unsigned char *ver, const size_t ver_len) {
+	size_t len = 0;
+
+	switch (qver) {
+		case VER_Q050:
+			len = snprintf(ver, ver_len, "Q050");
+			break;
+
+		case VER_T050:
+			len = snprintf(ver, ver_len, "T050");
+			break;
+
+		case VER_T051:
+			len = snprintf(ver, ver_len, "T051");
+			break;
+
+		case VER_DRAFT22:
+		case VER_DRAFT23:
+		case VER_DRAFT24:
+		case VER_DRAFT25:
+		case VER_DRAFT26:
+		case VER_DRAFT27:
+		case VER_DRAFT28:
+		case VER_DRAFT29:
+			len = snprintf(ver, ver_len, "draft-%d", qver & 0xff);
+			break;
+
+		case VER_MVFST_27:
+        	case VER_MVFST_EXP:
+			len = snprintf(ver, ver_len, "facebook mvfst draft-27");
+			break;
+
+		default:
+			len = snprintf(ver, ver_len, "unknown");
+	}
+	return len;
+}
 
 /**
  * Compute the client and server initial secrets given Connection ID "cid".
@@ -136,10 +179,12 @@ static int quic_derive_initial_secrets(quic_t *quic_info) {
 	static const uint8_t ver_q050_salt[MAX_SALT_LENGTH] = { 0x50, 0x45, 0x74, 0xEF, 0xD0, 0x66, 0xFE, 0x2F, 0x9D, 0x94, 0x5C, 0xFC, 0xDB, 0xD3, 0xA7, 0xF0, 0xD3, 0xB5, 0x6B, 0x45 };
 	static const uint8_t ver_t050_salt[MAX_SALT_LENGTH] = { 0x7f, 0xf5, 0x79, 0xe5, 0xac, 0xd0, 0x72, 0x91, 0x55, 0x80, 0x30, 0x4c, 0x43, 0xa2, 0x36, 0x7c, 0x60, 0x48, 0x83, 0x10 };
 	static const uint8_t ver_t051_salt[MAX_SALT_LENGTH] = { 0x7a, 0x4e, 0xde, 0xf4, 0xe7, 0xcc, 0xee, 0x5f, 0xa4, 0x50, 0x6c, 0x19, 0x12, 0x4f, 0xc8, 0xcc, 0xda, 0x6e, 0x03, 0x3d };
+	static const uint8_t draft22_salt[MAX_SALT_LENGTH] = { 0x7f, 0xbc, 0xdb, 0x0e, 0x7c, 0x66, 0xbb, 0xe9, 0x19, 0x3a, 0x96, 0xcd, 0x21, 0x51, 0x9e, 0xbd, 0x7a, 0x02, 0x64, 0x4a };
+ 	static const uint8_t draft23_salt[MAX_SALT_LENGTH] = { 0xc3, 0xee, 0xf7, 0x12, 0xc7, 0x2e, 0xbb, 0x5a, 0x11, 0xa7, 0xd2, 0x43, 0x2b, 0xb4, 0x63, 0x65, 0xbe, 0xf9, 0xf5, 0x02 };
+	static const uint8_t draft29_salt[MAX_SALT_LENGTH] = { 0xaf, 0xbf, 0xec, 0x28, 0x99, 0x93, 0xd2, 0x4c, 0x9e, 0x97, 0x86, 0xf1, 0x9c, 0x61, 0x11, 0xe0, 0x43, 0x90, 0xa8, 0x99 };
 	const uint8_t	*salt; 
-	uint32_t v	= ntohl(*(uint32_t *)(&quic_info->version[0]));
 
-	switch (v) {
+	switch (quic_info->version) {
 		case VER_Q050:
 			salt = ver_q050_salt;
 			quic_info->has_tls13_record = 0;
@@ -154,6 +199,29 @@ static int quic_derive_initial_secrets(quic_t *quic_info) {
 			salt = ver_t051_salt;
 			quic_info->has_tls13_record = 1;
 			break;
+
+		case VER_DRAFT22:
+			salt = draft22_salt;
+			quic_info->has_tls13_record = 1;
+			break;
+
+		case VER_DRAFT23:
+		case VER_DRAFT24:
+		case VER_DRAFT25:
+		case VER_DRAFT26:
+		case VER_DRAFT27:
+		case VER_DRAFT28:
+		case VER_MVFST_27:
+        	case VER_MVFST_EXP:
+			salt = draft23_salt;
+			quic_info->has_tls13_record = 1;
+			break;
+
+		case VER_DRAFT29:
+			salt = draft29_salt;
+			quic_info->has_tls13_record = 1;
+			break;
+
 		default:
 			printf("Error matching the quic version to a salt using standard salt instead\n");
 			salt = ver_q050_salt;
@@ -341,8 +409,7 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 			//size_t version_offset 		= 0;
 			//version_offset = 1; // 1 byte
 			quic_info.header_len++; // First byte header
-
-			memcpy(quic_info.version, &app_data[1], 4);
+        		quic_info.version = ntohl(*(uint32_t *)(&app_data[1]));
 
 			//uint32_t *t = (uint32_t *)&app_data[1];
 			quic_info.header_len += 4; /* version (4 bytes) */
@@ -375,9 +442,9 @@ uint8_t check_quic5(pfwl_state_t *state, const unsigned char *app_data,
 
 		if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_VERSION)) {
 			scratchpad = state->scratchpad + state->scratchpad_next_byte;
-			memcpy(scratchpad, quic_info.version, 4);
-			pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, scratchpad, 4);
-			state->scratchpad_next_byte += 4;
+			size_t ver_str_len = quic_version_tostring(quic_info.version, scratchpad, 32);
+			pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, scratchpad, ver_str_len);
+			state->scratchpad_next_byte += ver_str_len;
 		}
 
 
