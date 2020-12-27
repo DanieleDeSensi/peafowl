@@ -46,30 +46,21 @@
 
 #define SIZE 24
 typedef enum {
-  G_711_U_Law = 0,
-  GSM_6_10 = 3,
-  G_723_1 = 4,
-  G_711_A_Law = 8,
+  PCMU = 0,
+  GSM = 3,
+  G_723 = 4,
+  LPC = 7,
+  PCMA = 8,
   G_722 = 9,
-  Comfort_Noise = 13,
+  CN = 13,
+  MPA = 14,
+  G_728 = 15,
   G_729 = 18,
+  JPEG = 26,
+  H_261 = 31,
+  MPV = 32,
+  MP2T = 33,
   H_263 = 34,
-  Dynamic_RTP = 96,
-  RADP = 97,
-  DTMF = 101,
-  SILK_Narrow = 103,
-  SILK_Wide = 104,
-  Siren = 111,
-  G_722_1 = 112,
-  RT_Audio_Wide = 114,
-  RT_Audio_Narrow = 115,
-  G_726 = 116,
-  G_722b = 117,
-  Comfort_Noise_Wide = 118,
-  RT_Video = 121,
-  H_264 = 122,
-  H_264_FEC = 123,
-  X_data = 127,
 } RTPpayloadType;
 
 /* typedef enum { */
@@ -107,33 +98,26 @@ struct rtp_header {
 
 static int8_t is_valid_payload_type(uint8_t PT) {
   switch (PT) {
-  case G_711_U_Law:
-  case GSM_6_10:
-  case G_723_1:
-  case G_711_A_Law:
+  case PCMU:
+  case GSM:
+  case G_723:
+  case LPC:
+  case PCMA:
   case G_722:
-  case Comfort_Noise:
+  case CN:
+  case MPA:
+  case G_728:
   case G_729:
+  case JPEG:
+  case H_261:
+  case MPV:
+  case MP2T:
   case H_263:
-  case Dynamic_RTP:
-  case RADP:
-  case DTMF:
-  case SILK_Narrow:
-  case SILK_Wide:
-  case Siren:
-  case G_722_1:
-  case RT_Audio_Wide:
-  case RT_Audio_Narrow:
-  case G_726:
-  case G_722b:
-  case Comfort_Noise_Wide:
-  case RT_Video:
-  case H_264:
-  case H_264_FEC:
-  case X_data:
     return PT;
   default:
-    return -1;
+      if(PT >= 96 || PT <= 110)
+          return PT;
+      return -1;
   }
 }
 
@@ -156,7 +140,7 @@ uint8_t check_rtp(pfwl_state_t *state, const unsigned char *app_data,
 
       if(rtp->version == 2) { // check Version
         if(rtp->marker == 0 || rtp->marker == 1) { // check Marker
-          pType = is_valid_payload_type(rtp->pType); // check Payload Type
+          pType = is_valid_payload_type(rtp->pType); // check Payload Type - NOTE: fixed value + dynamic type range from 96 to 110
           if(pType != -1) {
             if(accuracy == PFWL_DISSECTOR_ACCURACY_HIGH) {
               pfwl_field_t* extracted_fields = pkt_info->l7.protocol_fields;
