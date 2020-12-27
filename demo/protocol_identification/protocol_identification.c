@@ -84,5 +84,6 @@ int main(int argc, char** argv){
       printf("%s packets: %"PRIu32"\n", pfwl_get_L7_protocol_name(i), protocols[i]);
     }
   }
+  pcap_close(handle);
   return 0;
 }

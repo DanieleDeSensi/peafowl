@@ -205,6 +205,7 @@ typedef enum {
   PFWL_PROTO_L7_SSDP,     ///< SSDP
   PFWL_PROTO_L7_STUN,     ///< STUN
   PFWL_PROTO_L7_QUIC,     ///< QUIC    
+  PFWL_PROTO_L7_QUIC5,    ///< QUIC5
   PFWL_PROTO_L7_MQTT,     ///< MQTT
   PFWL_PROTO_L7_MYSQL,    ///< MySQL
   PFWL_PROTO_L7_VIBER,    ///< Viber
@@ -439,6 +440,7 @@ typedef enum {
   PFWL_FIELDS_L7_JSON_RPC_LAST, ///< [NUMBER] Dummy value to mark last JSON RPC field.
   PFWL_FIELDS_L7_QUIC_VERSION, ///< [STRING] Version.
   PFWL_FIELDS_L7_QUIC_SNI, ///< [STRING] Server Name Indication.
+  PFWL_FIELDS_L7_QUIC_UAID, ///< [STRING] User Agent Identifier.
   PFWL_FIELDS_L7_STUN_MAPPED_ADDRESS, ///< [STRING] Mapped address (or xor-mapped address) (format x.y.z.w for IPv4 and a:b:c:d:e:f:g:h for IPv6).
   PFWL_FIELDS_L7_STUN_MAPPED_ADDRESS_PORT, ///< [NUMBER] Mapped address port (or xor-mapped port) .
   PFWL_FIELDS_L7_NUM, ///< [STRING] Dummy value to indicate number of fields. Must be the last field specified.

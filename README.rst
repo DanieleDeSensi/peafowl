@@ -74,6 +74,7 @@ The following people contributed to Peafowl:
 - InSdi (https://github.com/InSdi) (indu.mss@gmail.com): Viber, Kerberos and MySQL dissectors
 - QXIP B.V. (http://qxip.net/) sponsored the development of some Peafowl features (e.g. SIP, RTP, RTCP dissectors and others) 
 - CounterFlowAI (https://www.counterflow.ai/) sponsored the development of some Peafowl features (e.g. TCP statistics)
+- David Cluytens (https://github.com/cldavid): QUIC5 dissector
 
 I would like to thank Prof. Marco Danelutto, Dr. Luca Deri and
 Dr. Massimo Torquati for their essential help and valuable advices.

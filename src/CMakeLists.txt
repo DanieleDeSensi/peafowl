@@ -6,10 +6,15 @@ file(GLOB SOURCES "*.cpp" "*.c" "inspectors/*.cpp" "inspectors/*.c" "external/md
 list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/worker.cpp" "${CMAKE_SOURCE_DIR}/src/peafowl_mc.cpp" "${CMAKE_SOURCE_DIR}/src/peafowl_py.cpp")
 
 if (PCAP_FOUND)
-  include_directories($PCAP_INCLUDE_DIR)
+  include_directories(${PCAP_INCLUDE_DIR})
   add_definitions(-DHAVE_PCAP)
 endif(PCAP_FOUND)
 
+if (OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER_EQUAL 3.0.0)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+  link_libraries(${OPENSSL_LIBRARIES})
+  add_definitions(-DHAVE_OPENSSL)
+endif(OPENSSL_FOUND AND OPENSSL_VERSION VERSION_GREATER_EQUAL 3.0.0)
 
 ####################
 # Parallel version #
