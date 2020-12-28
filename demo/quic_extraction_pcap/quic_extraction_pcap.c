@@ -63,6 +63,7 @@ int main(int argc, char** argv){
         pfwl_string_t   version;
         pfwl_string_t 	sni;
         pfwl_string_t	uaid;
+        pfwl_string_t	ja3;
 	int		first_packet = 1;
 
 	pfwl_state_t* state = pfwl_init();
@@ -70,6 +71,7 @@ int main(int argc, char** argv){
         pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_VERSION);
         pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_SNI);
         pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_UAID);
+        pfwl_field_add_L7(state, PFWL_FIELDS_L7_QUIC_JA3);
 
 	pfwl_dissection_info_t r;
 	pfwl_protocol_l2_t dlt = pfwl_convert_pcap_dlt(pcap_datalink(handle));
@@ -79,11 +81,12 @@ int main(int argc, char** argv){
 				if(r.l7.protocol < PFWL_PROTO_L7_NUM){
 					++protocols[r.l7.protocol];
 					if( first_packet && (!strcmp("QUIC5", pfwl_get_L7_protocol_name(r.l7.protocol)))) {
-						int res, res1, res2;
+						int res, res1, res2, res3;
 						res 	= pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_VERSION, &version);
 						res1	= pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_SNI, &sni);
 						res2    = pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_UAID, &uaid);
-						printf("RES %d %d %d\n", res, res1, res2);
+						res3    = pfwl_field_string_get(r.l7.protocol_fields, PFWL_FIELDS_L7_QUIC_JA3, &ja3);
+						printf("RES %d %d %d %d\n", res, res1, res2, res3);
 						if (!res) {
 							printf("Quic Version: %.*s\n", version.length, version.value);
 						} else {
@@ -100,6 +103,17 @@ int main(int argc, char** argv){
 							printf("Quic UAID: %.*s\n", uaid.length, uaid.value);
 						} else {
 							printf("Quic UAID: unknown\n");
+						}
+
+						if (!res3) {
+							printf("Quic JA3: ");
+							int i;
+							for(i = 0; i < ja3.length; i++) {
+								printf("%X", ja3.value[i]);	
+							}
+							printf("\n");
+						} else {
+							printf("Quic JA3: unknown\n");
 						}
 						first_packet = 0;
 					}
