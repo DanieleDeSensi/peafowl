@@ -115,7 +115,7 @@ static int8_t is_valid_payload_type(uint8_t PT) {
   case H_263:
     return PT;
   default:
-      if(PT >= 96 || PT <= 110)
+      if(PT >= 96 && PT <= 110)
           return PT;
       return -1;
   }
