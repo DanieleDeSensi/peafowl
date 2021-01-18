@@ -38,6 +38,39 @@
 #include "quic_utils.h"
 #include "quic_ssl_utils.h"
 
+/*
+ *	 GREASE_TABLE Ref: 
+ * 		- https://tools.ietf.org/html/draft-davidben-tls-grease-00
+ * 		- https://tools.ietf.org/html/draft-davidben-tls-grease-01
+ *
+ * 	switch grease-table is much faster than looping and testing a lookup grease table 
+ *
+ */
+static unsigned int is_grease(uint32_t x){
+	switch(x) {
+		case 0x0a0a:
+		case 0x1a1a:
+		case 0x2a2a:
+		case 0x3a3a:
+		case 0x4a4a:
+		case 0x5a5a:
+		case 0x6a6a:
+		case 0x7a7a:
+		case 0x8a8a:
+		case 0x9a9a:
+		case 0xaaaa:
+		case 0xbaba:
+		case 0xcaca:
+		case 0xdada:
+		case 0xeaea:
+		case 0xfafa:
+			return 1;
+		default:
+			return 0;
+	}
+	return 0;
+}
+
 void tls13_parse_google_user_agent(pfwl_state_t *state, const unsigned char *data, size_t len, pfwl_dissection_info_t *pkt_info, pfwl_flow_info_private_t *flow_info_private) {
         char *scratchpad = state->scratchpad + state->scratchpad_next_byte;
         memcpy(scratchpad, data, len);
@@ -90,8 +123,29 @@ void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size
 		TLVlen = ntohs(*(uint16_t *)(&data[pointer]));
 		pointer += 2;
 		//printf("TLV %02d TLV Size %02d\n", TLVtype, TLVlen);
-		*ja3_string_len += sprintf(ja3_string + *ja3_string_len, "%u-", TLVtype);
+
 		switch(TLVtype) {
+			/* skip grease values */
+			case 0x0a0a:
+			case 0x1a1a:
+			case 0x2a2a:
+			case 0x3a3a:
+                        case 0x4a4a:
+			case 0x5a5a:
+			case 0x6a6a:
+			case 0x7a7a:
+                        case 0x8a8a:
+			case 0x9a9a:
+			case 0xaaaa:
+			case 0xbaba:
+                        case 0xcaca:
+			case 0xdada:
+			case 0xeaea:
+			case 0xfafa:
+				/* Grease values must be ignored */
+				continue;
+				break;
+
 			/* Server Name */
 			case 0:
 				if(pfwl_protocol_field_required(state, flow_info_private, PFWL_FIELDS_L7_QUIC_SNI)) {
@@ -105,6 +159,7 @@ void tls13_parse_extensions(pfwl_state_t *state, const unsigned char *data, size
 			default:
 				break;
 		}	
+		*ja3_string_len += sprintf(ja3_string + *ja3_string_len, "%u-", TLVtype);
 
 	}
 	if (len) {
@@ -156,6 +211,9 @@ uint8_t check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t t
 		/* use content of cipher suite for building the JA3 hash */
 		for (size_t i = 0; i < cipher_suite_len; i += 2) {
 			uint16_t cipher_suite = ntohs(*(uint16_t *)(tls_data + tls_pointer + i));
+			if(is_grease(cipher_suite)) {
+				continue; // skip grease value
+			}
 			ja3_string_len += sprintf(ja3_string + ja3_string_len, "%d-", cipher_suite);
 		}
 		if (cipher_suite_len) {
@@ -180,14 +238,17 @@ uint8_t check_tls13(pfwl_state_t *state, const unsigned char *tls_data, size_t t
 
 		/* lets iterate over the exention list */
 		tls13_parse_extensions(state, ext_data, ext_len, pkt_info, flow_info_private, ja3_string, &ja3_string_len);
-		 ja3_string_len += sprintf(ja3_string + ja3_string_len, ",,");
+		ja3_string_len += sprintf(ja3_string + ja3_string_len, ",,");
 	}
-	printf("JA3 String %s\n", ja3_string);
-	unsigned char md5sum[16] = { 0 }; /* MD5 are cryptographic hash functions with a 128 bit output. */
+	//printf("JA3 String %s\n", ja3_string);
+        char *md5sum = state->scratchpad + state->scratchpad_next_byte;
+	size_t md5sum_len = md5_digest_message(ja3_string, ja3_string_len, md5sum);
+        
+	pfwl_field_string_set(pkt_info->l7.protocol_fields, PFWL_FIELDS_L7_QUIC_JA3, md5sum, md5sum_len);
+        state->scratchpad_next_byte += md5sum_len;
 
-	md5_digest_message(ja3_string, ja3_string_len, md5sum);
-	printf("JA3:");
-	debug_print_rawfield(md5sum, 0, 16);
+	//printf("JA3:");
+	//debug_print_rawfield(md5sum, 0, md5sum_len);
 	return PFWL_PROTOCOL_MATCHES;
 }
 
