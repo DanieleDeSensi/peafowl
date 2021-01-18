@@ -5,6 +5,20 @@ compiler:
 sudo: required
 dist: trusty
 
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      # Update the default 'trusty' linker and gcc version for tests to link and pass.
+      - g++-5
+      - binutils-2.26
+before_script:
+# Update the default 'trusty' linker version for tests to link and pass.  # Update the default 'trusty' linker and gcc version for tests to link and pass.
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  sudo apt-get install -y binutils-2.26 && sudo update-alternatives --install   sudo update-alternatives --install /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90;
+  /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90; fi   fi
+
 install:
   # Cmake
   - sudo apt-get install cmake
