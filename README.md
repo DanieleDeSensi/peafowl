@@ -3,7 +3,6 @@
 [![Documentation Status](https://readthedocs.org/projects/peafowl/badge/?version=latest)](https://peafowl.readthedocs.io/en/latest/?badge=latest)
 [![CodeFactor](https://www.codefactor.io/repository/github/danieledesensi/peafowl/badge)](https://www.codefactor.io/repository/github/danieledesensi/peafowl/)
 [![Generic badge](https://img.shields.io/badge/API-C/C++/Python-green.svg)](https://peafowl.readthedocs.io/en/latest/)
-[![HitCount](http://hits.dwyl.io/DanieleDeSensi/Peafowl.svg)](http://hits.dwyl.io/DanieleDeSensi/Peafowl)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.svg?v=103)](https://opensource.org/licenses/mit-license.php)
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/DanieleDeSensi)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](http://paypal.me/DanieleDeSensi)
@@ -11,7 +10,7 @@
 
 Introduction
 ================================================================================================================
-Peafowl is a flexible and extensible Deep Packet Inspection (DPI) framework which can be used to identify the 
+Peafowl is a flexible and extensible Deep Packet Inspection (DPI) framework that can be used to identify the 
 application protocols carried by IP (IPv4 and IPv6) packets and to extract and process data and metadata at
 different layers. 
 Peafowl is implemented in **C**. However, **C++** and **Python** APIs are also provided. Since **C++** and **Python** 
@@ -35,7 +34,7 @@ and to avoid the possibility of evasion attacks, if required, the framework can 
 TCP stream reassembly.
 
 
-For a detailed description of the framework, of its usage, its API and on how to extend it, please refer to 
+For a detailed description of the framework, its usage, its API and how to extend it, please refer to 
 the [documentation](https://peafowl.readthedocs.io/en/latest/).
 
 > If you use Peafowl for scientific purposes, please cite our paper:
@@ -83,5 +82,5 @@ the [documentation](https://peafowl.readthedocs.io/en/latest/customize.html).
 Disclaimer
 ================================================================================================================
 The authors of Peafowl are strongly against any form of censorship.
-Please make sure that you respect the privacy of users and you have proper authorization to listen, 
+Please make sure that you respect the privacy of users and that you have proper authorization to listen, 
 capture and inspect network traffic.  
