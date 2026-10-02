@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Peafowl-logo.png" alt="Peafowl logo" width="400">
+</p>
+
 [![Build Status](https://travis-ci.org/DanieleDeSensi/peafowl.svg?branch=master)](https://travis-ci.org/DanieleDeSensi/peafowl) 
 [![release](https://img.shields.io/github/release/danieledesensi/peafowl.svg)](https://github.com/danieledesensi/peafowl/releases/latest)
 [![Documentation Status](https://readthedocs.org/projects/peafowl/badge/?version=latest)](https://peafowl.readthedocs.io/en/latest/?badge=latest)
